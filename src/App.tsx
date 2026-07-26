@@ -1,4 +1,5 @@
 import GameCanvas from './components/GameCanvas'
+import StatsPanel from './components/StatsPanel'
 
 function App() {
   return (
@@ -24,6 +25,8 @@ function App() {
               Placeholder panel for future inventory, abilities, and status panels.
             </p>
           </div>
+
+          <StatsPanel />
 
           <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
             <p className="text-sm font-medium text-slate-200">Current focus</p>
