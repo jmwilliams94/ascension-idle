@@ -14,64 +14,95 @@ Hybrid action/idle RPG. While actively playing, the player moves on an isometric
 
 ### Classes
 
-4 classes: Hunter (ranged), Twin-soul (dual-wield melee), Wuxia (mystic backsword), Juggernaut (heavy tank).
+4 classes, with confirmed real-game mapping: Hunter = Archer (ranged), Twin-soul = Trojan (dual-wield melee), Wuxia = Taoist (mystic backsword — Taoist's real signature weapon is genuinely called the "Backsword," so no change needed there), Juggernaut = Warrior (heavy tank).
 
-- Base stats, gear slot names, and unlock levels are placeholders — need real Conquer Online reference data.
 - No abilities are implemented yet — planned but deferred until we reach that stage of development.
 - Hunter has a quiver/ammo mechanic (arrow tiers, must equip arrows to fight).
+- Gear unlock levels are still placeholders — need real reference data.
+
+**Stats — attribute-point system** (confirmed, replaces flat ATK/DEF/HP/Speed per class):
+
+- Characters have four attribute points: Strength, Agility, Vitality, Spirit.
+- Vitality → +24 HP per point. Strength/Agility/Spirit → +3 HP per point each. Spirit → +5 MP per point.
+- Physical attack scales off Strength. Magic attack scales off Spirit.
+- Attack speed is **not** stat-driven — it's fixed by the equipped weapon type's innate frequency.
+- Agility governs accuracy/dodge, not damage.
+- Class starting attributes: Warrior (Juggernaut) and Trojan (Twin-soul) = Str 5, Agi 2, Vit 3, Spi 0. Taoist (Wuxia) = Str 0, Agi 2, Vit 3, Spi 5. Archer (Hunter) starting attributes are **unresolved — needs sourcing**.
+
+**Gear slots** (confirmed, replaces placeholder list): Headgear, Body armor, Shield (Warrior/Juggernaut only), Boots, Earrings, Necklace, Ring, Heavy Ring, Bracelet, Bag, Riding Crop, plus class-specific one-handed weapons (Sword, Backsword, Blade, Hook, Whip, Axe, Hammer, Club, Scepter, Dagger, Arrows) and two-handed weapons (Bow, Glaive, Poleaxe, Spear, Wand, Halberd), plus special slots: Talisman, Garment, Dragon Soul, Martial Soul. Exact per-class slot assignment is still **unresolved — needs a follow-up finalization pass**.
 
 ### Combat
 
 Manual grid-based combat when actively playing (no queue, no auto-target). Floating combat text on hit.
 
-- Damage formula is a placeholder needing real reference or proper design.
+- Damage formula is **unresolved — needs deliberate design, not sourced**. Real-game reference points to draw inspiration from (not to copy exactly): Magic Attack +1% damage per point, Magic Defense -1% incoming damage per point, and a later-patch "minimum damage" floor (Attack-minus-Defense vs. a class-specific % of Attack, whichever is higher).
 - Rare monsters: 5% chance per monster, 2× HP, 5× gold/EXP, distinct visual treatment (TBD).
 
 ### Zones
 
 Zones are real explorable maps populated with enemies placed throughout — not a summon/queue system.
 
-- 7 zones exist conceptually; names need finalizing (working direction: similar theme to original names but not copies).
-- All economy numbers (gold/kill, EXP/kill, monster HP, gear level per zone) are placeholders needing real reference data.
+- 7 zones exist conceptually; final zone names are **unresolved — needs deliberate design, not sourced** (working direction: similar theme to original names but not copies).
+- Zone-by-zone gold/EXP-per-kill tables and monster HP scaling by zone/level are **unresolved — needs deliberate design, not sourced**. Gear level per zone is still a placeholder.
 
 ### Progression
 
 - Promotion tiers at levels 1, 15, 40, 70, 100, 110, 120 — confirmed, keep as-is.
-- Currencies: Gold, Meteors, Dragonballs — confirmed names, keep as-is.
-- EXP curve formula and meteor/dragonball drop rates are placeholders needing real reference data.
+- Currencies: Gold, Meteors, Dragonballs — confirmed names. **Corrected**: Meteors and Dragonballs are separate, parallel currencies, not used together for the same upgrade. Meteors = Level Upgrade currency only. Dragonballs = Quality Upgrade currency **and** weapon-socket currency.
+- EXP curve/leveling formula and meteor/dragonball drop rates are **unresolved — needs deliberate design, not sourced** (no reliable real-game data found).
 
 ### Loot
 
-- Gear/meteor/dragonball drop rates are placeholders needing real reference data.
+- Gear/meteor/dragonball drop-rate percentages are **unresolved — needs deliberate design, not sourced**.
 - Rare-monster status affects the existing roll rather than being a separate roll.
 
 ### Gear system
 
-Quality tiers, in order: Normal → Refined → Unique → Elite → Super — confirmed tier names, keep as-is.
+Quality tiers, in order: Normal → Refined → Unique → Elite → Super — confirmed tier names, matches real game, no change.
 
-- Drop weights, stat multipliers, tier colors, the stat-scaling formula, and level caps are all placeholders needing real reference data.
+- Real battle-power weighting is available as a reference for relative stat multipliers, use this instead of inventing new ones: Refined = 1, Unique = 2, Elite = 3, Super = 4 (Normal = 0 baseline).
+- Drop weights and tier colors are **unresolved — needs deliberate design, not sourced**.
+- Level caps: real-game data is low-confidence (historically ~130, with conflicting later references to 140+) — treat our cap as a **deliberate design choice**, not a sourced fact. 130 weapons / 120 armor remains a reasonable placeholder to keep using unless we decide otherwise.
 - Gear naming chains (e.g. "Wooden Bow → Eternal Bow +10") are placeholder flavor text, not yet finalized.
 
 Three separate item-progression systems — do not conflate:
 
 1. **Quality tier** — Normal through Super, as above.
-2. **Composition** — a separate "+N" enhancement stat (+1 to +4 confirmed so far, likely extends further).
-   - Progression: +0→+1 costs 2 base stones; each subsequent tier (+1→+2, +2→+3, +3→+4) costs 2 items/stones already at the previous tier.
+2. **Composition** — a separate "+N" enhancement stat, distinct from Quality tier and Level Upgrade.
+   - Real point-cost curve (confirmed as default, replaces the earlier simplified "always exactly 2 of previous tier" description, unless told otherwise): exponential, not flat doubling — e.g. +1→+2 needs 20 points, a +3 stone is worth 120 points, +5→+6 needs 2,160 points.
    - Stones are a fungible stacked currency.
-   - Real gear can also be fed in as fuel — only its composition_level counts, all other stats/quality/enchants are discarded, and the fed item is destroyed.
+   - Real gear can also be fed in as fuel — only its composition_level/points count, all other stats/quality/enchants are discarded, and the fed item is destroyed.
    - Rare monster drops can occasionally roll in with non-zero composition already applied straight from the loot table.
-3. **Level Upgrade** — a distinct system from Composition, raising item level (placeholder cap 130 weapons/120 armor, needs real reference), paid for with Meteors, with a success chance that can fail and consume materials.
+   - "Quick Compose" (spend to instantly resolve, success chance = current points ÷ points required) exists in the real game — optional feature to consider later, not required for MVP.
+3. **Level Upgrade** — a distinct system from Composition, raising item level, paid for with Meteors, with a success chance that can fail and consume materials. Level cap: see Gear system note above.
 
 ### Sockets
 
-- Max 2 per item. Not present on drop — unlocked via a chance proc when performing a Quality or Level Upgrade (rates currently placeholder, need real reference or deliberate design).
+Finalized, asymmetric by item type:
+
+- **Weapons**: guaranteed unlock via Dragonballs, no RNG. 1 Dragonball for the first socket, 5 Dragonballs for the second. Max 2 sockets.
+- **Armor**: RNG-based unlock — a chance (placeholder ~1/100) to gain a socket as a side effect when performing a Quality or Level Upgrade. Max 2 sockets. (We're keeping this simpler RNG-based armor system rather than adopting the real game's separate guaranteed-DB + pity-drill armor mechanic — weapons and armor are intentionally asymmetric here.)
 - Once a socket exists, gems can be inserted (gems are their own tradable items before insertion).
 - Socketing is permanent/destructive — an existing gem cannot be extracted, only overwritten by a new gem, which destroys the old one's effect.
-- 8 gem types (Dragon, Moon, Violet, Kylin, Fury, Tortoise, Phoenix, Rainbow) per Conquer Online reference, each in normal/refined/super quality, granting a randomized enchant value on insertion (e.g. health, up to a max per real reference — confirm exact cap).
+
+**Gem system** (fully resolved, use exactly as follows — 8 gem types, each in Normal/Refined/Super quality):
+
+| Gem | Effect | Normal | Refined | Super |
+|---|---|---|---|---|
+| Dragon | Physical attack | +5% | +10% | +15% |
+| Phoenix | Magic attack | +5% | +10% | +15% |
+| Fury | Hit accuracy | +5% | +10% | +15% |
+| Tortoise | Damage reduction | +2% | +4% | +6% |
+| Violet | Weapon proficiency (skill-crit) | +30% | +50% | +100% |
+| Kylin | Weapon durability | +50% | +100% | +200% |
+| Moon | Skill EXP gain | +15% | +30% | +50% |
+| Rainbow | Character EXP gain | +10% | +15% | +25% |
+
+Gem upgrade costs: 15 Normal gems + 10,000 gold → 1 Refined gem. 15 Refined gems + 800,000 gold → 1 Super gem. (Tortoise has a special cross-type recipe in the real game — needs a follow-up detail check before implementing.)
 
 ### Inventory
 
-- Slot cap is a placeholder needing real reference data.
+- Slot cap: use the real scaling model as default rather than a flat number — cap grows via bag item upgrades, from 30 up to 40 slots, maxing around character level 67. Exact intermediate tier breakpoints are **unresolved — needs a follow-up detail pass** if we want to replicate them precisely.
 - If the bag is full: while AFK, drops are simply wasted; while actively playing, the player is prompted to drop an existing item to make room instead.
 - Items display as square icons with quality-colored borders; hover tooltips show name, quality, slot, level, stats, and level requirement (Diablo/PoE-style).
 
@@ -81,9 +112,9 @@ Paper-doll layout with class-specific slot arrangement, quality-glowing equipped
 
 ### Forge
 
-Two upgrade paths: Level Upgrade (via Meteors) and Quality Upgrade (via Meteors + Dragonballs), each with a success chance that reduces with item level/tier and consumes materials on failure.
+Two upgrade paths: Level Upgrade (via Meteors only) and Quality Upgrade (via Dragonballs only — see corrected currency split under Progression), each with a success chance that reduces with item level/tier and consumes materials on failure.
 
-- All specific costs and success percentages are placeholders needing real reference data.
+- Specific costs and success percentages for both paths are **unresolved — needs deliberate design, not sourced**.
 - Drag-and-drop before/after preview is a planned but unbuilt UI feature.
 
 ### Persistence
