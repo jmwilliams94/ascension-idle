@@ -17,6 +17,9 @@ dist-ssr
 .env.*
 !.env.example
 
+# Personal Claude Code overrides
+.claude/settings.local.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
