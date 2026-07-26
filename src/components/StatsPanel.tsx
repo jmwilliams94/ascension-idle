@@ -3,7 +3,8 @@ import { computeDerivedStats } from '../game/stats/derivedStats'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 
 // There's no leveling system yet, so this is a stand-in "current level" purely to
-// gate class selection against each class's unlockLevel (Wuxia unlocks at 30).
+// gate class selection against each class's unlockLevel (Hunter is the only
+// starter class; everyone else unlocks at 40).
 const CURRENT_LEVEL = 1
 
 const ATTRIBUTE_LABELS = {

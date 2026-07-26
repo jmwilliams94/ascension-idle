@@ -8,8 +8,8 @@ interface CharacterState {
 }
 
 export const useCharacterStore = create<CharacterState>((set) => ({
-  selectedClassId: 'juggernaut',
-  attributes: { ...CLASS_DEFINITIONS.juggernaut.baseAttributes },
+  selectedClassId: 'hunter',
+  attributes: { ...CLASS_DEFINITIONS.hunter.baseAttributes },
   selectClass: (classId) =>
     set({
       selectedClassId: classId,

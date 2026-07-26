@@ -1,0 +1,103 @@
+import { useState, type FormEvent } from 'react'
+import { useAuthStore } from '../lib/useAuthStore'
+
+type Mode = 'sign-in' | 'sign-up'
+
+export default function LoginForm() {
+  const signIn = useAuthStore((state) => state.signIn)
+  const signUp = useAuthStore((state) => state.signUp)
+
+  const [mode, setMode] = useState<Mode>('sign-in')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [info, setInfo] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault()
+    setError(null)
+    setInfo(null)
+    setSubmitting(true)
+
+    const errorMessage = mode === 'sign-in' ? await signIn(email, password) : await signUp(email, password)
+
+    setSubmitting(false)
+
+    if (errorMessage) {
+      setError(errorMessage)
+      return
+    }
+
+    if (mode === 'sign-up') {
+      setInfo('Check your email to confirm your account, then sign in.')
+    }
+  }
+
+  const toggleMode = () => {
+    setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in')
+    setError(null)
+    setInfo(null)
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_#1e293b,_#020617_70%)] px-4 text-slate-100">
+      <div className="w-full max-w-sm space-y-6 rounded-3xl border border-slate-800/80 bg-slate-900/70 p-8 shadow-xl shadow-slate-950/30">
+        <div>
+          <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Greybox Idle</p>
+          <h1 className="text-xl font-semibold text-white">
+            {mode === 'sign-in' ? 'Sign in' : 'Create an account'}
+          </h1>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="email" className="block text-sm text-slate-400">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-sm text-slate-400">
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
+              required
+              minLength={6}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none"
+            />
+          </div>
+
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          {info && <p className="text-sm text-emerald-400">{info}</p>}
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full rounded-lg bg-sky-500 px-3 py-2 text-sm font-medium text-white hover:bg-sky-400 disabled:opacity-50"
+          >
+            {submitting ? 'Please wait…' : mode === 'sign-in' ? 'Sign in' : 'Sign up'}
+          </button>
+        </form>
+
+        <button type="button" onClick={toggleMode} className="text-sm text-slate-400 hover:text-slate-200">
+          {mode === 'sign-in' ? 'Need an account? Sign up' : 'Already have an account? Sign in'}
+        </button>
+      </div>
+    </div>
+  )
+}
