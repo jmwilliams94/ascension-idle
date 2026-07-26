@@ -7,10 +7,7 @@ function App() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div>
             <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Greybox Idle</p>
-            <h1 className="text-xl font-semibold text-white">Isometric grid foundation</h1>
-          </div>
-          <div className="rounded-full border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-sm text-amber-200">
-            Click tiles or use arrow keys to move
+            <h1 className="text-xl font-semibold text-white">Isometric movement demo</h1>
           </div>
         </div>
       </header>

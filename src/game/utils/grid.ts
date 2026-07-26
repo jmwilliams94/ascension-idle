@@ -3,9 +3,9 @@ export interface TileCoord {
   y: number
 }
 
-export const GRID_SIZE = 10
-export const TILE_WIDTH = 64
-export const TILE_HEIGHT = 32
+export const GRID_SIZE = 100
+export const TILE_WIDTH = 96
+export const TILE_HEIGHT = 48
 export const GRID_ORIGIN = { x: 320, y: 180 }
 
 export function tileToWorld(
