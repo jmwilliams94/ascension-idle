@@ -1,0 +1,8 @@
+npm warn idealTree Removing dependencies.phaser in favor of devDependencies.phaser
+
+added 14 packages, and audited 167 packages in 15s
+
+45 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
