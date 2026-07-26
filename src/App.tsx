@@ -6,7 +6,7 @@ function App() {
       <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Greybox Idle</p>
+            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Greybox Idle v1</p>
             <h1 className="text-xl font-semibold text-white">Isometric movement demo</h1>
           </div>
         </div>
