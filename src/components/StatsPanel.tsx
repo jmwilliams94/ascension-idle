@@ -2,10 +2,9 @@ import { CLASS_DEFINITIONS, CLASS_ORDER } from '../game/stats/classes'
 import { computeDerivedStats } from '../game/stats/derivedStats'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 
-// There's no leveling system yet, so this is a stand-in "current level" purely to
-// gate class selection against each class's unlockLevel (Hunter is the only
-// starter class; everyone else unlocks at 40).
-const CURRENT_LEVEL = 1
+// There's no leveling system yet. Class locking is disabled for now so every
+// class can be inspected during stats development.
+const CURRENT_LEVEL = Infinity
 
 const ATTRIBUTE_LABELS = {
   strength: 'Strength',

@@ -29,14 +29,7 @@ export default function GameCanvas() {
       scene: [IsometricScene],
     })
 
-    const handleResize = () => {
-      game.scale.resize(parent.clientWidth || 960, parent.clientHeight || 640)
-    }
-
-    window.addEventListener('resize', handleResize)
-
     return () => {
-      window.removeEventListener('resize', handleResize)
       game.destroy(true)
     }
   }, [])
