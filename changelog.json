@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.8.0",
+    "date": "2026-07-27",
+    "changes": [
+      "Added a Shop (new 5th button in the bottom nav) where Hunters can buy Iron, Lucky, and Speed arrows with gold",
+      "Hunters must now equip and manage arrows to attack — running out shows a clear warning until you restock",
+      "Added an arrow counter to the bottom-left of the game view for Hunter"
+    ]
+  },
+  {
     "version": "1.7.1",
     "date": "2026-07-27",
     "changes": [

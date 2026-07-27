@@ -18,6 +18,8 @@ import { computeEquipmentBonus, formatItemDisplayName, getQualityColor } from '.
 import { useEquipmentStore } from '../items/useEquipmentStore'
 import { useInventoryStore } from '../items/useInventoryStore'
 import { useItemTemplatesStore } from '../items/useItemTemplatesStore'
+import { useArrowStore } from '../items/useArrowStore'
+import { useOutOfArrowsWarningStore } from '../items/useOutOfArrowsWarningStore'
 import {
   ENEMY_SPAWNS,
   ENEMY_TYPES,
@@ -637,6 +639,15 @@ export default class IsometricScene extends Phaser.Scene {
     }
 
     this.lastAttackAt = now
+
+    // Hunter must have an equipped arrow type with remaining count to attack at
+    // all — set lastAttackAt above regardless, so a blocked attempt still respects
+    // the attack-speed cooldown instead of re-checking (and re-flashing the
+    // warning) every single frame.
+    if (selectedClassId === 'hunter' && !useArrowStore.getState().consumeArrow()) {
+      useOutOfArrowsWarningStore.getState().trigger()
+      return
+    }
 
     // PLACEHOLDER damage formula: raw Physical Attack applied directly as damage, no
     // mitigation (enemies have no Defense stat yet). Real damage formula is unresolved

@@ -1,4 +1,5 @@
 import { useHudTabStore, type HudTabId } from '../game/hud/useHudTabStore'
+import { useShopStore } from '../game/hud/useShopStore'
 
 // A second, more thumb-reachable way to reach a subset of the same World HUD tabs
 // HudTabs already controls (shares state via useHudTabStore, doesn't duplicate it) —
@@ -13,9 +14,10 @@ const BOTTOM_NAV_TABS: { id: HudTabId; label: string }[] = [
 export default function BottomNav() {
   const activeTab = useHudTabStore((state) => state.activeTab)
   const setActiveTab = useHudTabStore((state) => state.setActiveTab)
+  const openShop = useShopStore((state) => state.open)
 
   return (
-    <div className="mt-4 grid grid-cols-4 gap-2">
+    <div className="mt-4 grid grid-cols-5 gap-2">
       {BOTTOM_NAV_TABS.map((tab) => (
         <button
           key={tab.id}
@@ -30,6 +32,16 @@ export default function BottomNav() {
           {tab.label}
         </button>
       ))}
+
+      {/* Shop opens an overlay in this same reserved rectangle (see GameShell),
+          it doesn't switch the sidebar tab like the buttons above. */}
+      <button
+        type="button"
+        onClick={openShop}
+        className="rounded-xl border border-slate-700 px-3 py-3 text-sm font-medium text-slate-300 hover:border-slate-500"
+      >
+        Shop
+      </button>
     </div>
   )
 }

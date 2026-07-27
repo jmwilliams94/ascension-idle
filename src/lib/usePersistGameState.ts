@@ -3,6 +3,7 @@ import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
+import { useArrowStore } from '../game/items/useArrowStore'
 import { useCharacterRecordStore } from './useCharacterRecordStore'
 
 const AUTOSAVE_DEBOUNCE_MS = 2000
@@ -51,6 +52,7 @@ export function usePersistGameState(characterId: string | undefined, loaded: boo
     const unsubscribeCharacter = useCharacterStore.subscribe(() => scheduleSave())
     const unsubscribeZone = useZoneStore.subscribe(() => scheduleSave())
     const unsubscribeEquipment = useEquipmentStore.subscribe(() => scheduleSave())
+    const unsubscribeArrows = useArrowStore.subscribe(() => scheduleSave())
 
     // beforeunload isn't reliable (browsers may not wait for the fetch to complete),
     // and visibilitychange 'hidden' fires on tab switch/backgrounding too, giving the
@@ -76,6 +78,7 @@ export function usePersistGameState(characterId: string | undefined, loaded: boo
       unsubscribeCharacter()
       unsubscribeZone()
       unsubscribeEquipment()
+      unsubscribeArrows()
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('beforeunload', handleBeforeUnload)
     }

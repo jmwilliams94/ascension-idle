@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react'
+import ArrowCounterHud from './ArrowCounterHud'
 import BottomNav from './BottomNav'
 import GameCanvas from './GameCanvas'
 import HudTabs from './HudTabs'
 import ProgressionPanel from './ProgressionPanel'
 import SettingsModal from './SettingsModal'
+import ShopOverlay from './ShopOverlay'
 import { useAuthStore } from '../lib/useAuthStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { usePersistGameState } from '../lib/usePersistGameState'
 import { useInventoryStore } from '../game/items/useInventoryStore'
+import { useShopStore } from '../game/hud/useShopStore'
 
 // Rendered once a character is active (see App.tsx) — everything that was the whole
 // app before the character-slots restructure. Account-level concerns (What's New,
@@ -23,6 +26,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
   const loaded = useCharacterRecordStore((state) => state.loaded)
   const loadCharacterRecord = useCharacterRecordStore((state) => state.loadCharacterRecord)
   const loadInventory = useInventoryStore((state) => state.loadInventory)
+  const shopOpen = useShopStore((state) => state.isOpen)
 
   useEffect(() => {
     loadCharacterRecord(characterId)
@@ -88,8 +92,12 @@ export default function GameShell({ characterId }: { characterId: string }) {
             it, any sub-pixel growth in the Phaser canvas forces this 1.6fr track to grow
             and steal space from the 0.7fr sidebar track next to it. */}
         <section className="min-w-0 rounded-3xl border border-slate-800/80 bg-slate-900/70 p-4 shadow-xl shadow-slate-950/30">
-          <GameCanvas />
-          <BottomNav />
+          <div className="relative">
+            <GameCanvas />
+            <ArrowCounterHud />
+          </div>
+
+          {shopOpen ? <ShopOverlay /> : <BottomNav />}
         </section>
 
         <aside className="space-y-4 rounded-3xl border border-slate-800/80 bg-slate-900/70 p-5 shadow-xl shadow-slate-950/20">

@@ -19,6 +19,9 @@ interface ProgressionState {
   // Sets saved values loaded from persistence directly, bypassing the level-up loop
   // and toast in addRewards — this is restoring state, not a gameplay event.
   hydrate: (saved: { level: number; gold: number; exp: number }) => void
+  // Deducts gold for a purchase (e.g. the arrow shop). Returns false and leaves gold
+  // untouched if the player can't afford it.
+  spendGold: (amount: number) => boolean
 }
 
 export const useProgressionStore = create<ProgressionState>((set, get) => ({
@@ -49,4 +52,15 @@ export const useProgressionStore = create<ProgressionState>((set, get) => ({
   clearLevelUpNotice: () => set({ lastLevelUp: null }),
 
   hydrate: (saved) => set({ level: saved.level, gold: saved.gold, exp: saved.exp, lastLevelUp: null }),
+
+  spendGold: (amount) => {
+    const { gold } = get()
+
+    if (gold < amount) {
+      return false
+    }
+
+    set({ gold: gold - amount })
+    return true
+  },
 }))
