@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from './supabaseClient'
+import { useActiveCharacterStore } from './useActiveCharacterStore'
 import { CLASS_DEFINITIONS, type ClassId } from '../game/stats/classes'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
@@ -46,6 +47,10 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
 
     if (error || !data) {
       console.error('Failed to load character record', error)
+      // The stored characterId (e.g. from last-played persistence) no longer
+      // resolves to a real, owned character — bounce back to character select
+      // instead of soft-locking on a character that can't load.
+      useActiveCharacterStore.getState().setActiveCharacterId(null)
       return
     }
 

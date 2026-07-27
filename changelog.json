@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.7.1",
+    "date": "2026-07-27",
+    "changes": [
+      "Refreshing the page now resumes your last-played character instead of always returning to character select"
+    ]
+  },
+  {
     "version": "1.7.0",
     "date": "2026-07-27",
     "changes": [
