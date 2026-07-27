@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.4.2",
+    "date": "2026-07-27",
+    "changes": [
+      "Fixed item drops and inventory failing to load with a permission error"
+    ]
+  },
+  {
     "version": "1.4.1",
     "date": "2026-07-27",
     "changes": [

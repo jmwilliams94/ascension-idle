@@ -142,6 +142,7 @@ Confirmed and implemented (base progress only — no promotion tiers, gear, or A
 - On login, the row is fetched and used to hydrate local state (class, level, gold, EXP, zone). A genuinely new player (no row yet) gets one created from sensible defaults (level 1, 0 gold, 0 EXP, starting zone, whatever class is currently selected locally) rather than erroring.
 - Save strategy is a combination, not a single trigger: a ~2s debounce after any gold/EXP/level/class/zone change, an immediate bypass-the-debounce save on level-up specifically, and a best-effort safety-net save on `visibilitychange` (tab hidden) + `beforeunload`.
 - This intentionally does **not** replicate the old debounced-autosave/last-tick-time approach from a prior iteration of this project — it's a fresh design built around the current stores (`usePlayerRecordStore`, `usePersistGameState`).
+- **Migration gotcha (learned the hard way on `item_templates`/`item_instances`)**: creating a table via raw SQL migration does **not** automatically grant `anon`/`authenticated` roles table-level access — RLS policies only govern row-level access on top of that. The Supabase Table Editor UI auto-grants; a SQL migration must do it explicitly (`grant select on public.foo to anon, authenticated;` etc.) or every request 403s with `permission denied for table foo` regardless of how correct the RLS policies are. Always include explicit `GRANT` statements for new tables going forward.
 
 ### Explicitly cut — do not implement
 
