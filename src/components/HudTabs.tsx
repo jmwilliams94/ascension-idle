@@ -1,16 +1,18 @@
 import { useState } from 'react'
 import EquipmentPanel from './EquipmentPanel'
+import ForgePanel from './ForgePanel'
 import InventoryPanel from './InventoryPanel'
 import StatsPanel from './StatsPanel'
 import ZonePanel from './ZonePanel'
 
-type HudTabId = 'stats' | 'zone' | 'inventory' | 'equipment'
+type HudTabId = 'stats' | 'zone' | 'inventory' | 'equipment' | 'forge'
 
 const TABS: { id: HudTabId; label: string }[] = [
   { id: 'stats', label: 'Stats' },
   { id: 'zone', label: 'Zone' },
   { id: 'inventory', label: 'Inventory' },
   { id: 'equipment', label: 'Equipment' },
+  { id: 'forge', label: 'Forge' },
 ]
 
 export default function HudTabs() {
@@ -40,6 +42,7 @@ export default function HudTabs() {
         {activeTab === 'zone' && <ZonePanel />}
         {activeTab === 'inventory' && <InventoryPanel />}
         {activeTab === 'equipment' && <EquipmentPanel />}
+        {activeTab === 'forge' && <ForgePanel />}
       </div>
     </div>
   )

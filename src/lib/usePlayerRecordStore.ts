@@ -8,6 +8,7 @@ import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
+import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 
 interface PlayerRow {
   last_seen_version: string | null
@@ -17,6 +18,8 @@ interface PlayerRow {
   exp: number
   current_zone: string
   equipped_item_id: string | null
+  meteors: number
+  dragonballs: number
 }
 
 interface PlayerRecordState {
@@ -39,7 +42,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set, get) => ({
   loadPlayerRecord: async (userId) => {
     const { data, error } = await supabase
       .from('players')
-      .select('last_seen_version, class, level, gold, exp, current_zone, equipped_item_id')
+      .select('last_seen_version, class, level, gold, exp, current_zone, equipped_item_id, meteors, dragonballs')
       .eq('id', userId)
       .maybeSingle<PlayerRow>()
 
@@ -80,6 +83,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set, get) => ({
     useProgressionStore.getState().hydrate({ level: data.level, gold: data.gold, exp: data.exp })
     useZoneStore.getState().setCurrentZoneName(data.current_zone)
     useEquipmentStore.getState().hydrate(data.equipped_item_id)
+    useCurrencyStore.getState().hydrate({ meteors: data.meteors, dragonballs: data.dragonballs })
 
     if (!data.last_seen_version) {
       // Row predates version tracking (or somehow has none) — record it silently.

@@ -1,4 +1,4 @@
-import { formatBaseStats } from '../game/items/equipmentBonus'
+import { formatBaseStats, formatQualityAndLevel } from '../game/items/equipmentBonus'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
@@ -34,6 +34,7 @@ export default function InventoryPanel() {
               </div>
               <div>
                 <p className="text-sm font-medium text-slate-200">{template?.name ?? 'Unknown item'}</p>
+                <p className="text-xs text-slate-500">{formatQualityAndLevel(item.quality_tier, item.level)}</p>
                 {template && <p className="text-xs text-slate-500">{formatBaseStats(template.base_stats)}</p>}
               </div>
             </div>

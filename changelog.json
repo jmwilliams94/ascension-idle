@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.5.0",
+    "date": "2026-07-27",
+    "changes": [
+      "Added a Forge tab — spend DragonBalls to upgrade an item's quality, or Meteors to upgrade its level",
+      "Items now show their quality tier and level throughout Inventory, Equipment, and Forge",
+      "All upgrade rolls happen securely on the server so results can't be tampered with"
+    ]
+  },
+  {
     "version": "1.4.2",
     "date": "2026-07-27",
     "changes": [

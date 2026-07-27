@@ -33,3 +33,15 @@ export function formatBaseStats(baseStats: Record<string, number>): string {
     .map(([key, value]) => `+${value} ${key.replace(/_/g, ' ')}`)
     .join(', ')
 }
+
+const QUALITY_LABELS: Record<string, string> = {
+  normal: 'Normal',
+  refined: 'Refined',
+  unique: 'Unique',
+  elite: 'Elite',
+  super: 'Super',
+}
+
+export function formatQualityAndLevel(qualityTier: string, level: number): string {
+  return `${QUALITY_LABELS[qualityTier] ?? qualityTier} · Lv ${level}`
+}
