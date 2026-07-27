@@ -16,6 +16,9 @@ interface ProgressionState {
   lastLevelUp: number | null
   addRewards: (gold: number, exp: number) => void
   clearLevelUpNotice: () => void
+  // Sets saved values loaded from persistence directly, bypassing the level-up loop
+  // and toast in addRewards — this is restoring state, not a gameplay event.
+  hydrate: (saved: { level: number; gold: number; exp: number }) => void
 }
 
 export const useProgressionStore = create<ProgressionState>((set, get) => ({
@@ -44,4 +47,6 @@ export const useProgressionStore = create<ProgressionState>((set, get) => ({
   },
 
   clearLevelUpNotice: () => set({ lastLevelUp: null }),
+
+  hydrate: (saved) => set({ level: saved.level, gold: saved.gold, exp: saved.exp, lastLevelUp: null }),
 }))

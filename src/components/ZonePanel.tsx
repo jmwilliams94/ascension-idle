@@ -1,11 +1,14 @@
-import { ENEMY_SPAWNS, ENEMY_TYPES, ZONE_NAME } from '../game/zones/twincrossOutskirts'
+import { ENEMY_SPAWNS, ENEMY_TYPES } from '../game/zones/twincrossOutskirts'
+import { useZoneStore } from '../game/zones/useZoneStore'
 
 const ROSTER = [...new Set(ENEMY_SPAWNS.map((spawn) => spawn.typeId))].map((typeId) => ENEMY_TYPES[typeId])
 
 export default function ZonePanel() {
+  const currentZoneName = useZoneStore((state) => state.currentZoneName)
+
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-      <p className="text-sm font-medium text-slate-200">{ZONE_NAME}</p>
+      <p className="text-sm font-medium text-slate-200">{currentZoneName}</p>
       <p className="mt-1 text-xs text-slate-500">
         Placeholder zone name — final zone naming is still unresolved per CLAUDE.md.
       </p>

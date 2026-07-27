@@ -133,7 +133,12 @@ Two upgrade paths: Level Upgrade (via Meteors only) and Quality Upgrade (via Dra
 
 ### Persistence
 
-To be designed from scratch against Supabase — do not port the old debounced-autosave/last-tick-time approach without discussion first.
+Confirmed and implemented (base progress only — no promotion tiers, gear, or AFK simulation persisted yet):
+
+- The `players` table (Supabase) holds one row per player: `class`, `level`, `gold`, `exp`, `current_zone`, plus `last_seen_version` from the versioning system. Migrations in `supabase/migrations/`.
+- On login, the row is fetched and used to hydrate local state (class, level, gold, EXP, zone). A genuinely new player (no row yet) gets one created from sensible defaults (level 1, 0 gold, 0 EXP, starting zone, whatever class is currently selected locally) rather than erroring.
+- Save strategy is a combination, not a single trigger: a ~2s debounce after any gold/EXP/level/class/zone change, an immediate bypass-the-debounce save on level-up specifically, and a best-effort safety-net save on `visibilitychange` (tab hidden) + `beforeunload`.
+- This intentionally does **not** replicate the old debounced-autosave/last-tick-time approach from a prior iteration of this project — it's a fresh design built around the current stores (`usePlayerRecordStore`, `usePersistGameState`).
 
 ### Explicitly cut — do not implement
 

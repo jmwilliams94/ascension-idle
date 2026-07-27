@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.3.0",
+    "date": "2026-07-27",
+    "changes": [
+      "Your class, level, gold, and EXP now save automatically and survive a page refresh or signing back in",
+      "New accounts start clean with sensible defaults instead of any risk of errors on first login"
+    ]
+  },
+  {
     "version": "1.2.5",
     "date": "2026-07-27",
     "changes": [

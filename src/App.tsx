@@ -6,24 +6,28 @@ import ProgressionPanel from './components/ProgressionPanel'
 import SettingsModal from './components/SettingsModal'
 import WhatsNewModal from './components/WhatsNewModal'
 import { useAuthStore } from './lib/useAuthStore'
-import { usePlayerVersionStore } from './lib/usePlayerVersionStore'
+import { usePersistGameState } from './lib/usePersistGameState'
+import { usePlayerRecordStore } from './lib/usePlayerRecordStore'
 
 function App() {
   const session = useAuthStore((state) => state.session)
   const signOut = useAuthStore((state) => state.signOut)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
-  const whatsNewEntries = usePlayerVersionStore((state) => state.whatsNewEntries)
-  const loadPlayerVersionInfo = usePlayerVersionStore((state) => state.loadPlayerVersionInfo)
-  const dismissWhatsNew = usePlayerVersionStore((state) => state.dismissWhatsNew)
+  const loaded = usePlayerRecordStore((state) => state.loaded)
+  const whatsNewEntries = usePlayerRecordStore((state) => state.whatsNewEntries)
+  const loadPlayerRecord = usePlayerRecordStore((state) => state.loadPlayerRecord)
+  const dismissWhatsNew = usePlayerRecordStore((state) => state.dismissWhatsNew)
 
   const userId = session?.user.id
 
   useEffect(() => {
     if (userId) {
-      loadPlayerVersionInfo(userId)
+      loadPlayerRecord(userId)
     }
-  }, [userId, loadPlayerVersionInfo])
+  }, [userId, loadPlayerRecord])
+
+  usePersistGameState(userId, loaded)
 
   return (
     <AuthGate>
