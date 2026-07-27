@@ -24,7 +24,7 @@ with numbered as (
   where name is null
 )
 update public.characters c
-set name = 'Legacy' || chr(96 + numbered.rn)
+set name = 'Legacy' || chr((96 + numbered.rn)::int)
 from numbered
 where c.id = numbered.id;
 
