@@ -69,6 +69,7 @@ Zones are real explorable maps populated with enemies placed throughout — not 
 
 - Gear/meteor/dragonball drop-rate percentages are **unresolved — needs deliberate design, not sourced**.
 - Rare-monster status affects the existing roll rather than being a separate roll.
+- **Known limitation, not fixed yet**: item drops are granted via a direct client-side `insert` into `item_instances` (the 10% roll happens in the browser, not server-side), since combat itself is fully client-authoritative right now with no server that could independently verify a kill happened. A player could currently forge themselves items by calling the insert directly. Revisit if/when server-side combat validation or anti-cheat becomes a priority — not in scope for the current client-driven combat model.
 
 ### Gear system
 
@@ -79,6 +80,7 @@ Quality tiers, in order: Normal → Refined → Unique → Elite → Super — c
 - Level caps: real-game data is low-confidence (historically ~130, with conflicting later references to 140+) — treat our cap as a **deliberate design choice**, not a sourced fact. 130 weapons / 120 armor remains a reasonable placeholder to keep using unless we decide otherwise.
 - Gear naming chains (e.g. "Wooden Bow → Eternal Bow +10") are placeholder flavor text, not yet finalized.
 - First minimal gear-drop implementation exists: `item_templates` (static reference data) and `item_instances` (owned copies) tables, seeded with a single placeholder item ("Wooden Sword", flat `physical_attack` only). Drop chance on kill is a flat 10% placeholder, unresolved per CLAUDE.md. `quality_tier`/`composition_level`/`sockets`/`enchant` columns already exist on `item_instances` (inert this step) so the systems below don't need a schema rework when built. Equip state is a single-slot shortcut (`players.equipped_item_id`, weapon only) — it'll need to become a multi-slot shape once other gear slots exist.
+- **Security constraint for Composition/Quality Upgrade/Forge (whichever step implements them)**: `item_instances` intentionally has **no client-side UPDATE policy** (dropped in `20260727030000_drop_item_instances_update_policy.sql` — it's unused this step, since equipping only writes `players.equipped_item_id`, never the item row). When these systems need to mutate `quality_tier`/`composition_level`/`sockets`/`enchant`, do **not** re-add a blanket `auth.uid() = owner_id` update policy — that would let a client set `composition_level: 999` directly, bypassing materials/costs/RNG entirely. Use a `SECURITY DEFINER` Postgres function (or equivalent server-side RPC) that validates and applies the change itself; the client calls the function, never the table.
 
 Three separate item-progression systems — do not conflate:
 

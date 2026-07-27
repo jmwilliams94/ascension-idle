@@ -1,0 +1,16 @@
+-- Tightens item_instances RLS: this step never needed client-side UPDATE on item
+-- rows (equipping only writes players.equipped_item_id, never touches item_instances
+-- itself), so the broad "own row" update policy from the previous migration was
+-- unused surface area — and a real problem once step 6 lands. quality_tier,
+-- composition_level, sockets, and enchant are exactly the fields Composition/Quality
+-- Upgrade/Forge mechanics are meant to control via server-enforced rolls and material
+-- costs; a client-writable update policy would let a player set
+-- composition_level: 999 directly, bypassing all of that.
+--
+-- When step 6 (or whatever implements Composition/Quality Upgrade/Forge) needs to
+-- mutate these columns, do NOT re-add a blanket "auth.uid() = owner_id" update
+-- policy. Use a SECURITY DEFINER Postgres function (or equivalent server-side RPC)
+-- that validates materials/costs/RNG itself and is the only thing allowed to write
+-- to these columns — the client should call the function, never update the table
+-- directly.
+drop policy if exists "Players can update their own item instances" on public.item_instances;

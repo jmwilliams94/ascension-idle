@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.4.1",
+    "date": "2026-07-27",
+    "changes": [
+      "Backend hardening: closed an unused permission on item data ahead of future gear-upgrade features (no visible change)"
+    ]
+  },
+  {
     "version": "1.4.0",
     "date": "2026-07-27",
     "changes": [
