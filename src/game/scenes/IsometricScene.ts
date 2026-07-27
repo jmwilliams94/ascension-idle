@@ -195,6 +195,11 @@ export default class IsometricScene extends Phaser.Scene {
     }
 
     this.renderCenterTile = centerTile
+    // Captured before this.heroTile updates (that only happens in the move tween's
+    // onComplete), so this is genuinely "where the camera was centered before this
+    // rebuild" — used to stagger the outgoing fade the same way distance-from-
+    // centerTile staggers the incoming one.
+    const previousCenterTile = this.heroTile
 
     const visibleTiles: TileCoord[] = []
     const startX = Math.max(0, centerTile.x - VISIBLE_RADIUS_BEFORE)
@@ -232,11 +237,17 @@ export default class IsometricScene extends Phaser.Scene {
 
     stayingMarkers.forEach((marker) => marker.graphic.destroy())
     outgoingMarkers.forEach((marker) => {
+      // Same stagger formula as the incoming fade below, mirrored: tiles near where
+      // the hero *was* standing fade out first, tiles at the old view's edge last —
+      // a ripple leaving from the old position instead of every outgoing tile
+      // vanishing in lockstep regardless of how far the move was.
+      const distance = Math.abs(marker.coord.x - previousCenterTile.x) + Math.abs(marker.coord.y - previousCenterTile.y)
       this.tweens.add({
         targets: marker.graphic,
         alpha: 0,
         scale: 0.75,
         duration: 260,
+        delay: distance * 25,
         ease: 'Cubic.In',
         onComplete: () => marker.graphic.destroy(),
       })
@@ -291,20 +302,26 @@ export default class IsometricScene extends Phaser.Scene {
       this.tileContainer!.add(enemy.container)
 
       if (isVisibleNow && !wasVisibleBefore) {
+        // Same stagger as its own tile's fade-in, so the two move in lockstep.
+        const distance = Math.abs(enemy.tile.x - centerTile.x) + Math.abs(enemy.tile.y - centerTile.y)
         enemy.container.setVisible(true).setAlpha(0).setScale(0.75)
         this.tweens.add({
           targets: enemy.container,
           alpha: 1,
           scale: 1,
           duration: 260,
+          delay: distance * 25,
           ease: 'Cubic.Out',
         })
       } else if (!isVisibleNow && wasVisibleBefore) {
+        // Same stagger as its own tile's fade-out.
+        const distance = Math.abs(enemy.tile.x - previousCenterTile.x) + Math.abs(enemy.tile.y - previousCenterTile.y)
         this.tweens.add({
           targets: enemy.container,
           alpha: 0,
           scale: 0.75,
           duration: 260,
+          delay: distance * 25,
           ease: 'Cubic.In',
           onComplete: () => enemy.container?.setVisible(false),
         })

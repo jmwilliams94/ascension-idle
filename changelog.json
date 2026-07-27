@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.2.4",
+    "date": "2026-07-27",
+    "changes": [
+      "Fixed long jumps across the map making tiles behind you vanish instantly instead of rippling out the way new tiles ripple in"
+    ]
+  },
+  {
     "version": "1.2.3",
     "date": "2026-07-27",
     "changes": [
