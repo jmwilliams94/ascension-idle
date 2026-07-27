@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.2.3",
+    "date": "2026-07-27",
+    "changes": [
+      "Fixed a respawning monster occasionally appearing stuck at the edge of view instead of staying hidden until you're close enough to see it"
+    ]
+  },
+  {
     "version": "1.2.2",
     "date": "2026-07-27",
     "changes": [

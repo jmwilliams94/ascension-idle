@@ -464,6 +464,14 @@ export default class IsometricScene extends Phaser.Scene {
 
     this.positionEnemy(enemy, this.renderCenterTile)
     this.tileContainer?.add(enemy.container)
+
+    // A respawn can land outside the currently-visible window (there are enough
+    // enemies now that some are always respawning near the edge of view) — only
+    // show it immediately if its tile is actually in view; otherwise leave it
+    // hidden and let buildVisibleTiles's normal fade-in reveal it once the player
+    // gets close, instead of it popping in fully visible off in the distance.
+    const isCurrentlyVisible = this.previousVisible.has(`${enemy.tile.x},${enemy.tile.y}`)
+    enemy.container.setVisible(isCurrentlyVisible)
   }
 
   // Shows/hides monster name labels and health bars per the Settings > Display
