@@ -4,10 +4,14 @@ import {
   TILE_HEIGHT,
   TILE_WIDTH,
   type TileCoord,
+  chebyshevDistance,
   isInBounds,
   tileToWorld,
   worldToTile,
 } from '../utils/grid'
+import { CLASS_DEFINITIONS } from '../stats/classes'
+import { computeDerivedStats } from '../stats/derivedStats'
+import { useCharacterStore } from '../stats/useCharacterStore'
 
 type TileMarker = {
   graphic: Phaser.GameObjects.Graphics
@@ -25,6 +29,18 @@ const HERO_HALF_WIDTH = (TILE_WIDTH / 2) * HERO_FOOTPRINT_SCALE
 const HERO_HALF_DEPTH = (TILE_HEIGHT / 2) * HERO_FOOTPRINT_SCALE
 const HERO_BOX_HEIGHT = 32
 
+const ENEMY_FOOTPRINT_SCALE = 0.4
+const ENEMY_HALF_WIDTH = (TILE_WIDTH / 2) * ENEMY_FOOTPRINT_SCALE
+const ENEMY_HALF_DEPTH = (TILE_HEIGHT / 2) * ENEMY_FOOTPRINT_SCALE
+const ENEMY_BOX_HEIGHT = 28
+
+// Small enough to die in a few hits for easy testing — not a real balance value.
+const ENEMY_MAX_HP = 50
+// Testing convenience only, not real zone/spawn design (see spawnEnemy/killEnemy).
+const ENEMY_RESPAWN_DELAY_MS = 3000
+const FLOATING_TEXT_RISE_PX = 36
+const FLOATING_TEXT_DURATION_MS = 1800
+
 export default class IsometricScene extends Phaser.Scene {
   private tileMarkers: TileMarker[] = []
   private tileContainer?: Phaser.GameObjects.Container
@@ -33,6 +49,13 @@ export default class IsometricScene extends Phaser.Scene {
   private origin = { x: 0, y: 0 }
   private isMoving = false
   private previousVisible = new Set<string>()
+
+  private enemyTile: TileCoord = { x: 53, y: 50 }
+  private enemyContainer?: Phaser.GameObjects.Container
+  private enemyHpText?: Phaser.GameObjects.Text
+  private enemyHp = ENEMY_MAX_HP
+  private enemyAlive = false
+  private lastAttackAt = -Infinity
 
   constructor() {
     super('IsometricScene')
@@ -50,11 +73,13 @@ export default class IsometricScene extends Phaser.Scene {
 
     this.buildVisibleTiles()
     this.placeHero()
+    this.spawnEnemy()
 
     this.input.keyboard?.on('keydown-LEFT', () => this.moveToTile({ x: this.heroTile.x - 1, y: this.heroTile.y }))
     this.input.keyboard?.on('keydown-RIGHT', () => this.moveToTile({ x: this.heroTile.x + 1, y: this.heroTile.y }))
     this.input.keyboard?.on('keydown-UP', () => this.moveToTile({ x: this.heroTile.x, y: this.heroTile.y - 1 }))
     this.input.keyboard?.on('keydown-DOWN', () => this.moveToTile({ x: this.heroTile.x, y: this.heroTile.y + 1 }))
+    this.input.keyboard?.on('keydown-SPACE', () => this.attemptAttack())
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (!pointer.leftButtonDown() || this.isMoving) {
@@ -66,6 +91,11 @@ export default class IsometricScene extends Phaser.Scene {
       const targetTile = {
         x: this.heroTile.x + relativeTile.x,
         y: this.heroTile.y + relativeTile.y,
+      }
+
+      if (this.enemyAlive && targetTile.x === this.enemyTile.x && targetTile.y === this.enemyTile.y) {
+        this.attemptAttack()
+        return
       }
 
       this.moveToTile(targetTile)
@@ -97,6 +127,12 @@ export default class IsometricScene extends Phaser.Scene {
       return aDist - bDist
     })
 
+    // Detach (don't destroy) the enemy before wiping the container's children below —
+    // it's re-added and repositioned relative to the new center tile further down.
+    if (this.enemyContainer) {
+      this.tileContainer.remove(this.enemyContainer)
+    }
+
     this.tileContainer.removeAll(true)
     this.tileMarkers = []
     this.tileContainer.setPosition(
@@ -126,6 +162,11 @@ export default class IsometricScene extends Phaser.Scene {
       this.tileContainer!.add(graphic)
       this.tileMarkers.push({ graphic, coord: tile })
     })
+
+    if (this.enemyContainer && this.enemyAlive) {
+      this.positionEnemy(centerTile)
+      this.tileContainer.add(this.enemyContainer)
+    }
 
     sortedNewTiles.forEach((tile) => {
       const marker = this.tileMarkers.find((entry) => entry.coord.x === tile.x && entry.coord.y === tile.y)
@@ -217,6 +258,178 @@ export default class IsometricScene extends Phaser.Scene {
     leftFace.fillPath()
 
     return [topFace, rightFace, leftFace]
+  }
+
+  // Placeholder stationary target for testing the combat loop. Not real zone/spawn
+  // design — a single fixed enemy at a fixed tile, no movement, no aggro, no attacking back.
+  private spawnEnemy() {
+    this.enemyHp = ENEMY_MAX_HP
+    this.enemyAlive = true
+    this.enemyContainer = this.add.container(0, 0, this.buildEnemyBox())
+    this.enemyHpText = this.add.text(0, -ENEMY_BOX_HEIGHT - ENEMY_HALF_DEPTH - 16, '', {
+      fontSize: '13px',
+      color: '#fca5a5',
+      fontStyle: 'bold',
+    }).setOrigin(0.5, 1)
+    this.enemyContainer.add(this.enemyHpText)
+    this.updateEnemyHpDisplay()
+
+    this.positionEnemy(this.heroTile)
+    this.tileContainer?.add(this.enemyContainer)
+  }
+
+  private buildEnemyBox() {
+    const hw = ENEMY_HALF_WIDTH
+    const hd = ENEMY_HALF_DEPTH
+    const height = ENEMY_BOX_HEIGHT
+
+    // Same shaded-box construction as the hero, but red-toned and slightly smaller
+    // so it reads as a distinct, stationary target rather than another hero.
+    const topFace = this.add.graphics()
+    topFace.fillStyle(0xfca5a5, 1)
+    topFace.beginPath()
+    topFace.moveTo(0, -hd - height)
+    topFace.lineTo(hw, -height)
+    topFace.lineTo(0, hd - height)
+    topFace.lineTo(-hw, -height)
+    topFace.closePath()
+    topFace.fillPath()
+
+    const rightFace = this.add.graphics()
+    rightFace.fillStyle(0xef4444, 1)
+    rightFace.beginPath()
+    rightFace.moveTo(0, hd)
+    rightFace.lineTo(hw, 0)
+    rightFace.lineTo(hw, -height)
+    rightFace.lineTo(0, hd - height)
+    rightFace.closePath()
+    rightFace.fillPath()
+
+    const leftFace = this.add.graphics()
+    leftFace.fillStyle(0xb91c1c, 1)
+    leftFace.beginPath()
+    leftFace.moveTo(0, hd)
+    leftFace.lineTo(-hw, 0)
+    leftFace.lineTo(-hw, -height)
+    leftFace.lineTo(0, hd - height)
+    leftFace.closePath()
+    leftFace.fillPath()
+
+    return [topFace, rightFace, leftFace]
+  }
+
+  private positionEnemy(centerTile: TileCoord) {
+    if (!this.enemyContainer) {
+      return
+    }
+
+    const relative = { x: this.enemyTile.x - centerTile.x, y: this.enemyTile.y - centerTile.y }
+    const local = tileToWorld(relative, TILE_WIDTH, TILE_HEIGHT, 0, 0)
+    this.enemyContainer.setPosition(local.x, local.y)
+  }
+
+  private updateEnemyHpDisplay() {
+    this.enemyHpText?.setText(`${this.enemyHp}/${ENEMY_MAX_HP}`)
+  }
+
+  private attemptAttack() {
+    if (!this.enemyAlive) {
+      return
+    }
+
+    const distance = chebyshevDistance(this.heroTile, this.enemyTile)
+    const { selectedClassId, attributes } = useCharacterStore.getState()
+    const classDef = CLASS_DEFINITIONS[selectedClassId]
+
+    if (distance > classDef.attackRange) {
+      return
+    }
+
+    const derived = computeDerivedStats(attributes)
+    const attackIntervalMs = 1000 / derived.attackSpeed
+    const now = this.time.now
+
+    // On-cooldown inputs are simply dropped (not queued) — simplest option that still
+    // respects the fixed attack-speed interval from the stats system.
+    if (now - this.lastAttackAt < attackIntervalMs) {
+      return
+    }
+
+    this.lastAttackAt = now
+
+    // PLACEHOLDER damage formula: raw Physical Attack applied directly as damage, no
+    // mitigation (the enemy has no Defense stat yet). Real damage formula is unresolved
+    // per CLAUDE.md. Note this only wires up physical basic attacks — a Spirit-based
+    // class like Wuxia will deal 0 damage here until magic-based attacks are in scope.
+    const damage = derived.physicalAttack
+    this.dealDamageToEnemy(damage)
+  }
+
+  private dealDamageToEnemy(damage: number) {
+    if (!this.enemyAlive || !this.enemyContainer) {
+      return
+    }
+
+    this.enemyHp = Math.max(0, this.enemyHp - damage)
+    this.updateEnemyHpDisplay()
+    this.showFloatingDamage(damage)
+
+    if (this.enemyHp <= 0) {
+      this.killEnemy()
+    }
+  }
+
+  private showFloatingDamage(damage: number) {
+    if (!this.tileContainer || !this.enemyContainer) {
+      return
+    }
+
+    // Positioned in absolute scene space (not parented to the enemy/tile containers)
+    // so it survives the enemy dying or the tile container rebuilding mid-fade.
+    const worldX = this.tileContainer.x + this.enemyContainer.x
+    const worldY = this.tileContainer.y + this.enemyContainer.y - ENEMY_BOX_HEIGHT
+
+    const text = this.add
+      .text(worldX, worldY, `-${damage}`, {
+        fontSize: '18px',
+        color: '#fde047',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(2000)
+
+    this.tweens.add({
+      targets: text,
+      y: worldY - FLOATING_TEXT_RISE_PX,
+      alpha: 0,
+      duration: FLOATING_TEXT_DURATION_MS,
+      ease: 'Cubic.Out',
+      onComplete: () => text.destroy(),
+    })
+  }
+
+  private killEnemy() {
+    this.enemyAlive = false
+    const container = this.enemyContainer
+    this.enemyContainer = undefined
+    this.enemyHpText = undefined
+
+    if (container) {
+      this.tweens.add({
+        targets: container,
+        alpha: 0,
+        scaleX: 0.6,
+        scaleY: 0.6,
+        duration: 300,
+        ease: 'Cubic.In',
+        onComplete: () => container.destroy(true),
+      })
+    }
+
+    // Respawning on a timer is a temporary testing convenience so combat can be
+    // re-tested without a page reload — not real zone/spawn design, which is a
+    // separate, later step.
+    this.time.delayedCall(ENEMY_RESPAWN_DELAY_MS, () => this.spawnEnemy())
   }
 
   private moveToTile(targetTile: TileCoord) {

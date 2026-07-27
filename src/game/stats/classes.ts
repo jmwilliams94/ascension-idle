@@ -16,6 +16,10 @@ export interface ClassDefinition {
   unlockLevel: number
   // True if these starting attributes are an unresolved placeholder guess, not sourced data.
   placeholder?: boolean
+  // PLACEHOLDER: attack range in tiles (Chebyshev distance). Real per-class/per-weapon
+  // ranges are unresolved per CLAUDE.md — melee classes get 1 (adjacent only), Hunter
+  // and Wuxia get a longer reach since they're ranged/mystic classes, not sourced values.
+  attackRange: number
 }
 
 export const CLASS_DEFINITIONS: Record<ClassId, ClassDefinition> = {
@@ -25,6 +29,7 @@ export const CLASS_DEFINITIONS: Record<ClassId, ClassDefinition> = {
     realGameName: 'Warrior',
     baseAttributes: { strength: 5, agility: 2, vitality: 3, spirit: 0 },
     unlockLevel: 40,
+    attackRange: 1,
   },
   'twin-soul': {
     id: 'twin-soul',
@@ -32,6 +37,7 @@ export const CLASS_DEFINITIONS: Record<ClassId, ClassDefinition> = {
     realGameName: 'Trojan',
     baseAttributes: { strength: 5, agility: 2, vitality: 3, spirit: 0 },
     unlockLevel: 40,
+    attackRange: 1,
   },
   wuxia: {
     id: 'wuxia',
@@ -39,6 +45,7 @@ export const CLASS_DEFINITIONS: Record<ClassId, ClassDefinition> = {
     realGameName: 'Taoist',
     baseAttributes: { strength: 0, agility: 2, vitality: 3, spirit: 5 },
     unlockLevel: 40,
+    attackRange: 4,
   },
   hunter: {
     id: 'hunter',
@@ -49,6 +56,7 @@ export const CLASS_DEFINITIONS: Record<ClassId, ClassDefinition> = {
     baseAttributes: { strength: 3, agility: 5, vitality: 2, spirit: 0 },
     unlockLevel: 1,
     placeholder: true,
+    attackRange: 5,
   },
 }
 

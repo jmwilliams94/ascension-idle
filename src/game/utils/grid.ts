@@ -41,3 +41,9 @@ export function worldToTile(
 export function isInBounds(tile: TileCoord) {
   return tile.x >= 0 && tile.x < GRID_SIZE && tile.y >= 0 && tile.y < GRID_SIZE
 }
+
+// Diagonal moves count as 1 step (matches the grid's diagonal movement), so range
+// checks use Chebyshev distance rather than Manhattan distance.
+export function chebyshevDistance(a: TileCoord, b: TileCoord) {
+  return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y))
+}
