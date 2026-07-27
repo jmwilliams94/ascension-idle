@@ -13,6 +13,7 @@ import { CLASS_DEFINITIONS } from '../stats/classes'
 import { computeDerivedStats } from '../stats/derivedStats'
 import { useCharacterStore } from '../stats/useCharacterStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
+import { useDisplaySettingsStore } from '../../lib/useDisplaySettingsStore'
 import {
   ENEMY_SPAWNS,
   ENEMY_TYPES,
@@ -33,7 +34,9 @@ interface EnemyInstance {
   hp: number
   alive: boolean
   container?: Phaser.GameObjects.Container
-  hpText?: Phaser.GameObjects.Text
+  nameText?: Phaser.GameObjects.Text
+  healthBarBg?: Phaser.GameObjects.Graphics
+  healthBarFill?: Phaser.GameObjects.Graphics
 }
 
 const VISIBLE_SIZE = 16
@@ -57,6 +60,12 @@ const ENEMY_BOX_HEIGHT = 28
 const ENEMY_RESPAWN_DELAY_MS = 3000
 const FLOATING_TEXT_RISE_PX = 36
 const FLOATING_TEXT_DURATION_MS = 1800
+
+const HEALTH_BAR_WIDTH = 40
+const HEALTH_BAR_HEIGHT = 6
+const HEALTH_BAR_RADIUS = HEALTH_BAR_HEIGHT / 2
+const HEALTH_BAR_Y = -ENEMY_BOX_HEIGHT - ENEMY_HALF_DEPTH - 10
+const NAME_TEXT_Y = HEALTH_BAR_Y - 14
 
 export default class IsometricScene extends Phaser.Scene {
   private tileMarkers: TileMarker[] = []
@@ -98,6 +107,11 @@ export default class IsometricScene extends Phaser.Scene {
     this.buildVisibleTiles()
     this.placeHero()
     this.initEnemies()
+
+    // Live-updates already-spawned enemies when a Settings toggle changes; each
+    // enemy's initial visibility is also set from the store at spawn time.
+    const unsubscribeDisplaySettings = useDisplaySettingsStore.subscribe((state) => this.applyDisplaySettings(state))
+    this.events.once('shutdown', unsubscribeDisplaySettings)
 
     this.input.keyboard?.on('keydown-LEFT', () => this.moveToTile({ x: this.heroTile.x - 1, y: this.heroTile.y }))
     this.input.keyboard?.on('keydown-RIGHT', () => this.moveToTile({ x: this.heroTile.x + 1, y: this.heroTile.y }))
@@ -366,19 +380,48 @@ export default class IsometricScene extends Phaser.Scene {
 
     enemy.hp = type.maxHp
     enemy.alive = true
-    enemy.container = this.add.container(0, 0, this.buildEnemyBox(type))
-    enemy.hpText = this.add
-      .text(0, -ENEMY_BOX_HEIGHT - ENEMY_HALF_DEPTH - 16, '', {
-        fontSize: '13px',
-        color: '#fca5a5',
+
+    enemy.nameText = this.add
+      .text(0, NAME_TEXT_Y, type.displayName, {
+        fontSize: '12px',
+        color: '#e2e8f0',
         fontStyle: 'bold',
       })
       .setOrigin(0.5, 1)
-    enemy.container.add(enemy.hpText)
+
+    enemy.healthBarBg = this.add.graphics()
+    enemy.healthBarBg.fillStyle(0x1e293b, 0.9)
+    enemy.healthBarBg.fillRoundedRect(
+      -HEALTH_BAR_WIDTH / 2,
+      HEALTH_BAR_Y - HEALTH_BAR_HEIGHT / 2,
+      HEALTH_BAR_WIDTH,
+      HEALTH_BAR_HEIGHT,
+      HEALTH_BAR_RADIUS,
+    )
+
+    enemy.healthBarFill = this.add.graphics()
+
+    enemy.container = this.add.container(0, 0, [
+      ...this.buildEnemyBox(type),
+      enemy.healthBarBg,
+      enemy.healthBarFill,
+      enemy.nameText,
+    ])
     this.updateEnemyHpDisplay(enemy)
+    this.applyDisplaySettings(useDisplaySettingsStore.getState())
 
     this.positionEnemy(enemy, this.renderCenterTile)
     this.tileContainer?.add(enemy.container)
+  }
+
+  // Shows/hides monster name labels and health bars per the Settings > Display
+  // toggles — applied to every currently-spawned enemy (cheap at this roster size).
+  private applyDisplaySettings(settings: { showMonsterNames: boolean; showMonsterHealth: boolean }) {
+    this.enemies.forEach((enemy) => {
+      enemy.nameText?.setVisible(settings.showMonsterNames)
+      enemy.healthBarBg?.setVisible(settings.showMonsterHealth)
+      enemy.healthBarFill?.setVisible(settings.showMonsterHealth)
+    })
   }
 
   private buildEnemyBox(type: EnemyTypeDef) {
@@ -432,8 +475,27 @@ export default class IsometricScene extends Phaser.Scene {
   }
 
   private updateEnemyHpDisplay(enemy: EnemyInstance) {
+    if (!enemy.healthBarFill) {
+      return
+    }
+
     const maxHp = ENEMY_TYPES[enemy.typeId].maxHp
-    enemy.hpText?.setText(`${enemy.hp}/${maxHp}`)
+    const fraction = Phaser.Math.Clamp(enemy.hp / maxHp, 0, 1)
+    const width = HEALTH_BAR_WIDTH * fraction
+
+    enemy.healthBarFill.clear()
+
+    if (width > 0) {
+      const radius = Math.min(HEALTH_BAR_RADIUS, width / 2)
+      enemy.healthBarFill.fillStyle(0x4ade80, 1)
+      enemy.healthBarFill.fillRoundedRect(
+        -HEALTH_BAR_WIDTH / 2,
+        HEALTH_BAR_Y - HEALTH_BAR_HEIGHT / 2,
+        width,
+        HEALTH_BAR_HEIGHT,
+        radius,
+      )
+    }
   }
 
   private attemptAttack() {
@@ -527,7 +589,9 @@ export default class IsometricScene extends Phaser.Scene {
 
     const container = enemy.container
     enemy.container = undefined
-    enemy.hpText = undefined
+    enemy.nameText = undefined
+    enemy.healthBarBg = undefined
+    enemy.healthBarFill = undefined
 
     const type = ENEMY_TYPES[enemy.typeId]
     useProgressionStore.getState().addRewards(type.goldReward, type.expReward)

@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.2.1",
+    "date": "2026-07-27",
+    "changes": [
+      "Replaced monster HP numbers with health bars, plus a name label above each monster",
+      "Reorganized Twincross Outskirts so each monster type has its own area of the map",
+      "Added Display settings to toggle monster names and health bars on or off"
+    ]
+  },
+  {
     "version": "1.2.0",
     "date": "2026-07-27",
     "changes": [

@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { changelogNewestFirst } from '../lib/changelog'
 import ChangelogEntries from './ChangelogEntries'
+import DisplaySettingsSection from './DisplaySettingsSection'
 
 interface SettingsSection {
   id: string
@@ -8,9 +9,14 @@ interface SettingsSection {
   content: ReactNode
 }
 
-// Add more sections here later (audio, display, etc.) — the modal itself doesn't
-// need to change, just this list.
+// Add more sections here later (audio, etc.) — the modal itself doesn't need to
+// change, just this list.
 const SECTIONS: SettingsSection[] = [
+  {
+    id: 'display',
+    label: 'Display',
+    content: <DisplaySettingsSection />,
+  },
   {
     id: 'changelog',
     label: 'Changelog',

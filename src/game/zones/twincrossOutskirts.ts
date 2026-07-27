@@ -52,12 +52,24 @@ export interface EnemySpawnDef {
   tile: TileCoord
 }
 
-// Fixed spawn points scattered around the hero's starting tile (50, 50) — all
-// within the default visible radius so the roster is visible without moving first.
+// Zone layout convention: the map is quartered by enemy type — one type per quadrant
+// around the hero's starting tile (50, 50), which sits exactly on the corner where
+// all four quadrants meet. With 3 types we use 3 of the 4 quadrants (NW/NE/SW); SE is
+// intentionally left empty for now (a 4th type, or repurposed later — see the
+// instanced-farming-map idea in CLAUDE.md's Zones section).
 export const ENEMY_SPAWNS: EnemySpawnDef[] = [
-  { id: 'mudrat-1', typeId: 'mudrat', tile: { x: 53, y: 50 } },
-  { id: 'mudrat-2', typeId: 'mudrat', tile: { x: 47, y: 53 } },
-  { id: 'brushfowl-1', typeId: 'brushfowl', tile: { x: 55, y: 47 } },
-  { id: 'brushfowl-2', typeId: 'brushfowl', tile: { x: 45, y: 49 } },
-  { id: 'fernvale-dove-1', typeId: 'fernvale-dove', tile: { x: 50, y: 56 } },
+  // NW quadrant (x < 50, y < 50) — Mudrat
+  { id: 'mudrat-1', typeId: 'mudrat', tile: { x: 47, y: 47 } },
+  { id: 'mudrat-2', typeId: 'mudrat', tile: { x: 44, y: 45 } },
+  { id: 'mudrat-3', typeId: 'mudrat', tile: { x: 46, y: 42 } },
+
+  // NE quadrant (x >= 50, y < 50) — Brushfowl
+  { id: 'brushfowl-1', typeId: 'brushfowl', tile: { x: 53, y: 47 } },
+  { id: 'brushfowl-2', typeId: 'brushfowl', tile: { x: 56, y: 45 } },
+  { id: 'brushfowl-3', typeId: 'brushfowl', tile: { x: 54, y: 42 } },
+
+  // SW quadrant (x < 50, y >= 50) — Fernvale Dove
+  { id: 'fernvale-dove-1', typeId: 'fernvale-dove', tile: { x: 47, y: 53 } },
+  { id: 'fernvale-dove-2', typeId: 'fernvale-dove', tile: { x: 44, y: 56 } },
+  { id: 'fernvale-dove-3', typeId: 'fernvale-dove', tile: { x: 46, y: 58 } },
 ]
