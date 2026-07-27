@@ -236,7 +236,21 @@ export default class IsometricScene extends Phaser.Scene {
     const stayingMarkers = this.tileMarkers.filter((marker) => visibleKeys.has(`${marker.coord.x},${marker.coord.y}`))
 
     stayingMarkers.forEach((marker) => marker.graphic.destroy())
+
+    // The container itself is about to snap to origin + initialOffset (below), which
+    // is how the camera-pan illusion works — but outgoing tiles still have their local
+    // position set relative to the *old* center, so without this they'd get carried
+    // along with that jump and end up rendered far outside the view instantly (fine
+    // for a one-tile walk step where the offset is tiny, very obvious on a long jump).
+    // Shifting their local position by the same amount, in the opposite direction,
+    // keeps their absolute screen position continuous so the fade is actually visible.
+    const outgoingOffsetX = initialOffset?.x ?? 0
+    const outgoingOffsetY = initialOffset?.y ?? 0
+
     outgoingMarkers.forEach((marker) => {
+      marker.graphic.x -= outgoingOffsetX
+      marker.graphic.y -= outgoingOffsetY
+
       // Same stagger formula as the incoming fade below, mirrored: tiles near where
       // the hero *was* standing fade out first, tiles at the old view's edge last —
       // a ripple leaving from the old position instead of every outgoing tile
