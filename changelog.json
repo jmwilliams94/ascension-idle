@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.6.0",
+    "date": "2026-07-27",
+    "changes": [
+      "Added a bottom navigation bar under the game view for quicker access to Zone, Equipment, Forge, and the new Marketplace tab",
+      "Forge upgrade costs now increase the further an item is upgraded, and show the real cost before you commit",
+      "Item quality now shows as a colored border and name prefix (e.g. \"Refined Wooden Sword\") across Inventory, Equipment, and Forge",
+      "Item drops now show a quality-colored name near where the enemy died — toggle it off in Settings > Display if you'd rather not see it"
+    ]
+  },
+  {
     "version": "1.5.0",
     "date": "2026-07-27",
     "changes": [

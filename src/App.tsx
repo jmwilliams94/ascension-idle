@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import AuthGate from './components/AuthGate'
+import BottomNav from './components/BottomNav'
 import GameCanvas from './components/GameCanvas'
 import HudTabs from './components/HudTabs'
 import ProgressionPanel from './components/ProgressionPanel'
@@ -94,6 +95,7 @@ function App() {
               and steal space from the 0.7fr sidebar track next to it. */}
           <section className="min-w-0 rounded-3xl border border-slate-800/80 bg-slate-900/70 p-4 shadow-xl shadow-slate-950/30">
             <GameCanvas />
+            <BottomNav />
           </section>
 
           <aside className="space-y-4 rounded-3xl border border-slate-800/80 bg-slate-900/70 p-5 shadow-xl shadow-slate-950/20">

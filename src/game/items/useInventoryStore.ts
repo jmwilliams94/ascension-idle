@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuthStore } from '../../lib/useAuthStore'
-import { useItemTemplatesStore } from './useItemTemplatesStore'
+import { useItemTemplatesStore, type ItemTemplate } from './useItemTemplatesStore'
 
 // Mirrors the item_instances table. composition_level/sockets/enchant are unused
 // this step — they exist so a later step doesn't need a schema rework. quality_tier
@@ -26,7 +26,10 @@ interface InventoryState {
   items: ItemInstance[]
   loaded: boolean
   loadInventory: (userId: string) => Promise<void>
-  rollDropForKill: () => Promise<void>
+  // Returns the granted item + its template on a successful drop, or null (no drop,
+  // no user, or an error) — lets the caller (the combat scene) show ground-drop text
+  // without this store needing to know anything about tiles/rendering.
+  rollDropForKill: () => Promise<{ item: ItemInstance; template: ItemTemplate } | null>
   // Reflects a successful quality_upgrade/level_upgrade RPC result in the local
   // cache — the functions already wrote the real values server-side, this just
   // keeps the client's copy in sync without a full refetch.
@@ -53,7 +56,7 @@ export const useInventoryStore = create<InventoryState>((set) => ({
     const templates = useItemTemplatesStore.getState().templates
 
     if (!userId || templates.length === 0 || Math.random() >= DROP_CHANCE) {
-      return
+      return null
     }
 
     // Only one item type exists this step, so there's nothing to pick between yet —
@@ -68,10 +71,12 @@ export const useInventoryStore = create<InventoryState>((set) => ({
 
     if (error) {
       console.error('Failed to grant item drop', error)
-      return
+      return null
     }
 
-    set((state) => ({ items: [...state.items, data as ItemInstance] }))
+    const item = data as ItemInstance
+    set((state) => ({ items: [...state.items, item] }))
+    return { item, template }
   },
 
   patchItem: (itemId, patch) => {

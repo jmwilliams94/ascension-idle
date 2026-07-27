@@ -42,6 +42,32 @@ const QUALITY_LABELS: Record<string, string> = {
   super: 'Super',
 }
 
+// PLACEHOLDER color mapping — no official quality-tier color chart was found in
+// research (see CLAUDE.md's Gear system section), these are just a reasonable
+// common-to-rare gradient (gray -> blue -> purple -> orange -> red).
+export const QUALITY_COLORS: Record<string, string> = {
+  normal: '#9ca3af',
+  refined: '#3b82f6',
+  unique: '#a855f7',
+  elite: '#f97316',
+  super: '#ef4444',
+}
+
+export function getQualityColor(qualityTier: string): string {
+  return QUALITY_COLORS[qualityTier] ?? QUALITY_COLORS.normal
+}
+
 export function formatQualityAndLevel(qualityTier: string, level: number): string {
   return `${QUALITY_LABELS[qualityTier] ?? qualityTier} · Lv ${level}`
+}
+
+// Display-layer only — the stored item_templates.name is never renamed. Normal
+// quality shows the plain name; anything above gets the tier prefixed.
+export function formatItemDisplayName(templateName: string, qualityTier: string): string {
+  if (qualityTier === 'normal') {
+    return templateName
+  }
+
+  const label = QUALITY_LABELS[qualityTier] ?? qualityTier
+  return `${label} ${templateName}`
 }

@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
-import { formatQualityAndLevel } from '../game/items/equipmentBonus'
+import { formatItemDisplayName, formatQualityAndLevel, getQualityColor } from '../game/items/equipmentBonus'
+import { previewLevelUpgradeCost, previewQualityUpgradeCost } from '../game/items/forgeCosts'
 import { useForgeStore } from '../game/items/useForgeStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 
-const QUALITY_UPGRADE_COST = 1 // PLACEHOLDER — matches the migration's flat cost, unresolved per CLAUDE.md
-const LEVEL_UPGRADE_COST = 1 // PLACEHOLDER — matches the migration's flat cost, unresolved per CLAUDE.md
+// Mirrors the migration's v_level_cap placeholder — only used here to show "Max" on
+// the button instead of a cost; the real cap enforcement lives server-side.
+const ITEM_LEVEL_CAP = 130
 
 function describeResult(
   result: { ok: boolean; error?: string; upgraded?: boolean },
@@ -56,6 +58,9 @@ export default function ForgePanel() {
     )
   }
 
+  const isMaxQuality = selectedItem?.quality_tier === 'super'
+  const isMaxLevel = (selectedItem?.level ?? 0) >= ITEM_LEVEL_CAP
+
   return (
     <div className="space-y-3">
       <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
@@ -90,7 +95,13 @@ export default function ForgePanel() {
                   : 'border-slate-800 bg-slate-950/80 text-slate-300 hover:border-slate-600'
               }`}
             >
-              <p className="font-medium">{template?.name ?? 'Unknown item'}</p>
+              <p className="flex items-center gap-2 font-medium">
+                <span
+                  className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: getQualityColor(item.quality_tier) }}
+                />
+                {template ? formatItemDisplayName(template.name, item.quality_tier) : 'Unknown item'}
+              </p>
               <p className="text-xs text-slate-500">{formatQualityAndLevel(item.quality_tier, item.level)}</p>
             </button>
           )
@@ -99,34 +110,48 @@ export default function ForgePanel() {
 
       {selectedItem && (
         <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-          <p className="text-sm font-medium text-slate-200">{selectedTemplate?.name ?? 'Unknown item'}</p>
-          <p className="mt-1 text-xs text-slate-500">
-            {formatQualityAndLevel(selectedItem.quality_tier, selectedItem.level)}
-          </p>
+          <div className="flex items-center gap-3">
+            <div
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-lg"
+              style={{ borderColor: getQualityColor(selectedItem.quality_tier) }}
+            >
+              🗡️
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-200">
+                {selectedTemplate ? formatItemDisplayName(selectedTemplate.name, selectedItem.quality_tier) : 'Unknown item'}
+              </p>
+              <p className="text-xs text-slate-500">
+                {formatQualityAndLevel(selectedItem.quality_tier, selectedItem.level)}
+              </p>
+            </div>
+          </div>
 
           <div className="mt-3 flex gap-2">
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || isMaxQuality}
               onClick={async () => {
                 const result = await qualityUpgrade(selectedItem.id)
                 setStatusMessage(describeResult(result, 'Quality upgrade'))
               }}
               className="flex-1 rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-2 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Upgrade Quality ({QUALITY_UPGRADE_COST} DragonBall)
+              {isMaxQuality
+                ? 'Upgrade Quality (Max)'
+                : `Upgrade Quality (${previewQualityUpgradeCost(selectedItem.quality_tier)} DragonBall)`}
             </button>
 
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || isMaxLevel}
               onClick={async () => {
                 const result = await levelUpgrade(selectedItem.id)
                 setStatusMessage(describeResult(result, 'Level upgrade'))
               }}
               className="flex-1 rounded-lg border border-amber-500 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Upgrade Level ({LEVEL_UPGRADE_COST} Meteor)
+              {isMaxLevel ? 'Upgrade Level (Max)' : `Upgrade Level (${previewLevelUpgradeCost(selectedItem.level)} Meteor)`}
             </button>
           </div>
 

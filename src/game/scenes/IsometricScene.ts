@@ -14,7 +14,7 @@ import { computeDerivedStats } from '../stats/derivedStats'
 import { useCharacterStore } from '../stats/useCharacterStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
 import { useDisplaySettingsStore } from '../../lib/useDisplaySettingsStore'
-import { computeEquipmentBonus } from '../items/equipmentBonus'
+import { computeEquipmentBonus, formatItemDisplayName, getQualityColor } from '../items/equipmentBonus'
 import { useEquipmentStore } from '../items/useEquipmentStore'
 import { useInventoryStore } from '../items/useInventoryStore'
 import { useItemTemplatesStore } from '../items/useItemTemplatesStore'
@@ -65,6 +65,12 @@ const ENEMY_RESPAWN_DELAY_MS = 3000
 const FLOATING_TEXT_RISE_PX = 36
 const FLOATING_TEXT_DURATION_MS = 1800
 
+// How long an item-drop ground label sits fully visible before fading, and how long
+// the fade itself takes — held longer than damage numbers since it's a full item
+// name, not a short number.
+const ITEM_DROP_TEXT_HOLD_MS = 1200
+const ITEM_DROP_TEXT_FADE_MS = 1000
+
 const HEALTH_BAR_WIDTH = 40
 const HEALTH_BAR_HEIGHT = 6
 const HEALTH_BAR_RADIUS = HEALTH_BAR_HEIGHT / 2
@@ -93,6 +99,9 @@ export default class IsometricScene extends Phaser.Scene {
   // update(). Cleared by clicking elsewhere, clicking a different enemy, or the
   // engaged enemy dying.
   private engagedEnemyId: string | null = null
+  // Tile keys currently showing an item-drop ground label — avoids two drops
+  // overlapping on the same tile while their labels are still visible.
+  private activeDropLabelTiles = new Set<string>()
 
   constructor() {
     super('IsometricScene')
@@ -680,6 +689,90 @@ export default class IsometricScene extends Phaser.Scene {
     })
   }
 
+  private async handleItemDrop(deathTile: TileCoord) {
+    const drop = await useInventoryStore.getState().rollDropForKill()
+
+    if (!drop) {
+      return
+    }
+
+    this.showItemDropLabel(deathTile, drop.template.name, drop.item.quality_tier)
+  }
+
+  private showItemDropLabel(deathTile: TileCoord, templateName: string, qualityTier: string) {
+    if (!useDisplaySettingsStore.getState().showItemDropText || !this.tileContainer) {
+      return
+    }
+
+    const tile = this.pickDropLabelTile(deathTile)
+    const tileKey = `${tile.x},${tile.y}`
+    this.activeDropLabelTiles.add(tileKey)
+
+    const relative = { x: tile.x - this.renderCenterTile.x, y: tile.y - this.renderCenterTile.y }
+    const local = tileToWorld(relative, TILE_WIDTH, TILE_HEIGHT, 0, 0)
+    const worldX = this.tileContainer.x + local.x
+    const worldY = this.tileContainer.y + local.y
+
+    const text = this.add
+      .text(worldX, worldY, formatItemDisplayName(templateName, qualityTier), {
+        fontSize: '13px',
+        color: getQualityColor(qualityTier),
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5, 1)
+      .setDepth(2000)
+
+    this.tweens.add({
+      targets: text,
+      y: worldY - FLOATING_TEXT_RISE_PX,
+      alpha: 0,
+      delay: ITEM_DROP_TEXT_HOLD_MS,
+      duration: ITEM_DROP_TEXT_FADE_MS,
+      ease: 'Cubic.Out',
+      onComplete: () => {
+        text.destroy()
+        this.activeDropLabelTiles.delete(tileKey)
+      },
+    })
+  }
+
+  // Prefers a free tile within 1 square of the death tile (the 9 tiles including
+  // the death tile itself); if every one of those already has a label showing,
+  // expands to within 2 tiles instead of overlapping.
+  private pickDropLabelTile(center: TileCoord): TileCoord {
+    const nearby = this.tilesWithinRadius(center, 1).filter((tile) => !this.activeDropLabelTiles.has(`${tile.x},${tile.y}`))
+
+    if (nearby.length > 0) {
+      return nearby[Math.floor(Math.random() * nearby.length)]
+    }
+
+    const wider = this.tilesWithinRadius(center, 2).filter((tile) => !this.activeDropLabelTiles.has(`${tile.x},${tile.y}`))
+
+    if (wider.length > 0) {
+      return wider[Math.floor(Math.random() * wider.length)]
+    }
+
+    // Every tile within 2 squares already has a label — extremely unlikely. Fall
+    // back to the death tile itself rather than not showing anything.
+    return center
+  }
+
+  private tilesWithinRadius(center: TileCoord, radius: number): TileCoord[] {
+    const tiles: TileCoord[] = []
+
+    for (let dx = -radius; dx <= radius; dx += 1) {
+      for (let dy = -radius; dy <= radius; dy += 1) {
+        const tile = { x: center.x + dx, y: center.y + dy }
+
+        if (isInBounds(tile)) {
+          tiles.push(tile)
+        }
+      }
+    }
+
+    return tiles
+  }
+
   private killEnemy(enemy: EnemyInstance) {
     enemy.alive = false
 
@@ -695,7 +788,7 @@ export default class IsometricScene extends Phaser.Scene {
 
     const type = ENEMY_TYPES[enemy.typeId]
     useProgressionStore.getState().addRewards(type.goldReward, type.expReward)
-    void useInventoryStore.getState().rollDropForKill()
+    void this.handleItemDrop(enemy.tile)
 
     if (container) {
       this.tweens.add({
