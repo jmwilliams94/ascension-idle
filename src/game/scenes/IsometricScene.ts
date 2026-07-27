@@ -12,6 +12,7 @@ import {
 import { CLASS_DEFINITIONS } from '../stats/classes'
 import { computeDerivedStats } from '../stats/derivedStats'
 import { useCharacterStore } from '../stats/useCharacterStore'
+import { useProgressionStore } from '../stats/useProgressionStore'
 
 type TileMarker = {
   graphic: Phaser.GameObjects.Graphics
@@ -41,6 +42,11 @@ const ENEMY_RESPAWN_DELAY_MS = 3000
 const FLOATING_TEXT_RISE_PX = 36
 const FLOATING_TEXT_DURATION_MS = 1800
 
+// PLACEHOLDER flat rewards — real zone economy (gold/EXP per kill, scaled by
+// monster/zone) is unresolved per CLAUDE.md.
+const ENEMY_GOLD_REWARD = 5
+const ENEMY_EXP_REWARD = 18
+
 export default class IsometricScene extends Phaser.Scene {
   private tileMarkers: TileMarker[] = []
   private tileContainer?: Phaser.GameObjects.Container
@@ -56,6 +62,9 @@ export default class IsometricScene extends Phaser.Scene {
   private enemyHp = ENEMY_MAX_HP
   private enemyAlive = false
   private lastAttackAt = -Infinity
+  // Set when the player clicks the enemy — drives the auto-approach/auto-attack loop
+  // in update(). Cleared by clicking elsewhere or when the enemy dies.
+  private isEngaged = false
 
   constructor() {
     super('IsometricScene')
@@ -94,12 +103,43 @@ export default class IsometricScene extends Phaser.Scene {
       }
 
       if (this.enemyAlive && targetTile.x === this.enemyTile.x && targetTile.y === this.enemyTile.y) {
+        // Engage: update() will approach (if needed) and then auto-attack every
+        // interval until the enemy dies or a different click cancels engagement.
+        this.isEngaged = true
         this.attemptAttack()
         return
       }
 
+      this.isEngaged = false
       this.moveToTile(targetTile)
     })
+  }
+
+  update() {
+    if (!this.isEngaged || !this.enemyAlive) {
+      return
+    }
+
+    const distance = chebyshevDistance(this.heroTile, this.enemyTile)
+    const { selectedClassId } = useCharacterStore.getState()
+    const classDef = CLASS_DEFINITIONS[selectedClassId]
+
+    if (distance > classDef.attackRange) {
+      if (!this.isMoving) {
+        this.stepToward(this.enemyTile)
+      }
+      return
+    }
+
+    this.attemptAttack()
+  }
+
+  // Greedily moves one tile closer (diagonals count as one step, matching
+  // chebyshevDistance) — enough for a single stationary target with no obstacles.
+  private stepToward(target: TileCoord) {
+    const stepX = Math.sign(target.x - this.heroTile.x)
+    const stepY = Math.sign(target.y - this.heroTile.y)
+    this.moveToTile({ x: this.heroTile.x + stepX, y: this.heroTile.y + stepY })
   }
 
   private buildVisibleTiles(centerTile: TileCoord = this.heroTile, initialOffset?: { x: number; y: number }) {
@@ -410,9 +450,12 @@ export default class IsometricScene extends Phaser.Scene {
 
   private killEnemy() {
     this.enemyAlive = false
+    this.isEngaged = false
     const container = this.enemyContainer
     this.enemyContainer = undefined
     this.enemyHpText = undefined
+
+    useProgressionStore.getState().addRewards(ENEMY_GOLD_REWARD, ENEMY_EXP_REWARD)
 
     if (container) {
       this.tweens.add({

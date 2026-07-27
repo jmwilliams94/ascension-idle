@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import AuthGate from './components/AuthGate'
 import GameCanvas from './components/GameCanvas'
+import ProgressionPanel from './components/ProgressionPanel'
 import SettingsModal from './components/SettingsModal'
 import StatsPanel from './components/StatsPanel'
 import WhatsNewModal from './components/WhatsNewModal'
@@ -89,6 +90,8 @@ function App() {
                 Placeholder panel for future inventory, abilities, and status panels.
               </p>
             </div>
+
+            <ProgressionPanel />
 
             <StatsPanel />
 

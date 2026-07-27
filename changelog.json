@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.1.0",
+    "date": "2026-07-27",
+    "changes": [
+      "Killing enemies now grants Gold and EXP, shown in a new Progression panel",
+      "Added character leveling — gain levels as you earn EXP, with a level-up notification",
+      "Ranged classes (Hunter, Wuxia) can now attack from much farther away than melee classes",
+      "Click an enemy to auto-engage it — your hero walks over and keeps attacking until it dies"
+    ]
+  },
+  {
     "version": "1.0.0",
     "date": "2026-07-27",
     "changes": [
