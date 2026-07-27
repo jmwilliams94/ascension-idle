@@ -224,7 +224,24 @@ export default class IsometricScene extends Phaser.Scene {
       }
     })
 
-    this.tileContainer.removeAll(true)
+    // Tiles that are staying visible get redrawn fresh below, so destroy them now —
+    // but tiles leaving view get a mirror-image fade/scale-out of the new-tile fade-in
+    // further down, instead of vanishing instantly, so keep them around for that tween.
+    const outgoingMarkers = this.tileMarkers.filter((marker) => !visibleKeys.has(`${marker.coord.x},${marker.coord.y}`))
+    const stayingMarkers = this.tileMarkers.filter((marker) => visibleKeys.has(`${marker.coord.x},${marker.coord.y}`))
+
+    stayingMarkers.forEach((marker) => marker.graphic.destroy())
+    outgoingMarkers.forEach((marker) => {
+      this.tweens.add({
+        targets: marker.graphic,
+        alpha: 0,
+        scale: 0.75,
+        duration: 260,
+        ease: 'Cubic.In',
+        onComplete: () => marker.graphic.destroy(),
+      })
+    })
+
     this.tileMarkers = []
     this.tileContainer.setPosition(
       this.origin.x + (initialOffset?.x ?? 0),
@@ -254,10 +271,45 @@ export default class IsometricScene extends Phaser.Scene {
       this.tileMarkers.push({ graphic, coord: tile })
     })
 
+    // Enemies fade/scale in and out with their tile exactly like the tiles themselves,
+    // rather than popping in/out or silently drifting off-camera while still rendered.
     this.enemies.forEach((enemy) => {
-      if (enemy.alive && enemy.container) {
-        this.positionEnemy(enemy, centerTile)
-        this.tileContainer!.add(enemy.container)
+      if (!enemy.alive || !enemy.container) {
+        return
+      }
+
+      const key = `${enemy.tile.x},${enemy.tile.y}`
+      const isVisibleNow = visibleKeys.has(key)
+      const wasVisibleBefore = this.previousVisible.has(key)
+
+      if (!isVisibleNow && !wasVisibleBefore) {
+        // Stayed out of view on both sides of this rebuild — leave it detached.
+        return
+      }
+
+      this.positionEnemy(enemy, centerTile)
+      this.tileContainer!.add(enemy.container)
+
+      if (isVisibleNow && !wasVisibleBefore) {
+        enemy.container.setVisible(true).setAlpha(0).setScale(0.75)
+        this.tweens.add({
+          targets: enemy.container,
+          alpha: 1,
+          scale: 1,
+          duration: 260,
+          ease: 'Cubic.Out',
+        })
+      } else if (!isVisibleNow && wasVisibleBefore) {
+        this.tweens.add({
+          targets: enemy.container,
+          alpha: 0,
+          scale: 0.75,
+          duration: 260,
+          ease: 'Cubic.In',
+          onComplete: () => enemy.container?.setVisible(false),
+        })
+      } else {
+        enemy.container.setVisible(true).setAlpha(1).setScale(1)
       }
     })
 

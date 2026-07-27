@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.2.2",
+    "date": "2026-07-27",
+    "changes": [
+      "Fixed tiles leaving view popping out instantly instead of fading out like they fade in",
+      "Monsters now fade in/out along with their tile instead of just appearing or vanishing",
+      "Spread each monster type across its entire quarter of the map, not just a small cluster near the start"
+    ]
+  },
+  {
     "version": "1.2.1",
     "date": "2026-07-27",
     "changes": [

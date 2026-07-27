@@ -55,7 +55,7 @@ Zones are real explorable maps populated with enemies placed throughout — not 
 
 - 7 zones exist conceptually; final zone names are **unresolved — needs deliberate design, not sourced** (working direction: similar theme to original names but not copies).
 - Zone-by-zone gold/EXP-per-kill tables and monster HP scaling by zone/level are **unresolved — needs deliberate design, not sourced**. Gear level per zone is still a placeholder.
-- First zone implemented as a placeholder: **Twincross Outskirts** (`src/game/zones/twincrossOutskirts.ts`), our renamed take on the original starting zone, with a placeholder low-level roster (Mudrat, Brushfowl, Fernvale Dove) at fixed spawn points — flat HP/gold/EXP per type, not real economy data.
+- First zone implemented as a placeholder: **Twincross Outskirts** (`src/game/zones/twincrossOutskirts.ts`), our renamed take on the original starting zone, with a placeholder low-level roster (Mudrat, Brushfowl, Fernvale Dove) spread across the full 100×100 grid per the quadrant convention below — flat HP/gold/EXP per type, not real economy data; spawn density/spacing is also a placeholder.
 - **Zone layout convention (confirmed)**: each zone's map is quartered by enemy type — one type predominantly populates each quadrant, leaving room for a 4th type (or other use) per zone. Twincross Outskirts currently fills 3 of its 4 quadrants (NW/NE/SW); SE is intentionally reserved.
 - **Future idea, not built**: a paid, time-limited instanced map (up to the full 100×100 grid) dedicated to a single monster type for manual farming — e.g. spend 1000 Gold for 1 hour of an all-Mudrat instance, separate from the shared zone. Flag this for later design/scoping, not part of the current zone system.
 

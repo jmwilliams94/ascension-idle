@@ -52,24 +52,42 @@ export interface EnemySpawnDef {
   tile: TileCoord
 }
 
-// Zone layout convention: the map is quartered by enemy type — one type per quadrant
-// around the hero's starting tile (50, 50), which sits exactly on the corner where
-// all four quadrants meet. With 3 types we use 3 of the 4 quadrants (NW/NE/SW); SE is
-// intentionally left empty for now (a 4th type, or repurposed later — see the
-// instanced-farming-map idea in CLAUDE.md's Zones section).
+// Generates an evenly-spaced grid of spawn points filling a quadrant, rather than
+// hand-placing dozens of coordinates. Placeholder density/spacing, not tuned design.
+function generateQuadrantSpawns(
+  typeId: EnemyTypeId,
+  idPrefix: string,
+  xRange: [number, number],
+  yRange: [number, number],
+  spacing: number,
+): EnemySpawnDef[] {
+  const spawns: EnemySpawnDef[] = []
+  let index = 1
+
+  for (let x = xRange[0]; x <= xRange[1]; x += spacing) {
+    for (let y = yRange[0]; y <= yRange[1]; y += spacing) {
+      spawns.push({ id: `${idPrefix}-${index}`, typeId, tile: { x, y } })
+      index += 1
+    }
+  }
+
+  return spawns
+}
+
+const QUADRANT_SPACING = 11
+
+// Zone layout convention: the map is quartered by enemy type — one type spread across
+// each quadrant of the full 100x100 grid, around the hero's starting tile (50, 50),
+// which sits exactly on the corner where all four quadrants meet. With 3 types we use
+// 3 of the 4 quadrants (NW/NE/SW); SE is intentionally left empty for now (a 4th type,
+// or repurposed later — see the instanced-farming-map idea in CLAUDE.md's Zones section).
 export const ENEMY_SPAWNS: EnemySpawnDef[] = [
   // NW quadrant (x < 50, y < 50) — Mudrat
-  { id: 'mudrat-1', typeId: 'mudrat', tile: { x: 47, y: 47 } },
-  { id: 'mudrat-2', typeId: 'mudrat', tile: { x: 44, y: 45 } },
-  { id: 'mudrat-3', typeId: 'mudrat', tile: { x: 46, y: 42 } },
+  ...generateQuadrantSpawns('mudrat', 'mudrat', [3, 47], [3, 47], QUADRANT_SPACING),
 
   // NE quadrant (x >= 50, y < 50) — Brushfowl
-  { id: 'brushfowl-1', typeId: 'brushfowl', tile: { x: 53, y: 47 } },
-  { id: 'brushfowl-2', typeId: 'brushfowl', tile: { x: 56, y: 45 } },
-  { id: 'brushfowl-3', typeId: 'brushfowl', tile: { x: 54, y: 42 } },
+  ...generateQuadrantSpawns('brushfowl', 'brushfowl', [53, 97], [3, 47], QUADRANT_SPACING),
 
   // SW quadrant (x < 50, y >= 50) — Fernvale Dove
-  { id: 'fernvale-dove-1', typeId: 'fernvale-dove', tile: { x: 47, y: 53 } },
-  { id: 'fernvale-dove-2', typeId: 'fernvale-dove', tile: { x: 44, y: 56 } },
-  { id: 'fernvale-dove-3', typeId: 'fernvale-dove', tile: { x: 46, y: 58 } },
+  ...generateQuadrantSpawns('fernvale-dove', 'fernvale-dove', [3, 47], [53, 97], QUADRANT_SPACING),
 ]
