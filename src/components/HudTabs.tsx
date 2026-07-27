@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import EquipmentPanel from './EquipmentPanel'
+import InventoryPanel from './InventoryPanel'
 import StatsPanel from './StatsPanel'
 import ZonePanel from './ZonePanel'
 
@@ -10,16 +12,6 @@ const TABS: { id: HudTabId; label: string }[] = [
   { id: 'inventory', label: 'Inventory' },
   { id: 'equipment', label: 'Equipment' },
 ]
-
-// Reserving the Inventory/Equipment tab structure now so the HUD doesn't need
-// another restructuring pass once those systems are actually built.
-function ComingSoon({ label }: { label: string }) {
-  return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-6 text-center text-sm text-slate-500">
-      {label} — Coming soon
-    </div>
-  )
-}
 
 export default function HudTabs() {
   const [activeTab, setActiveTab] = useState<HudTabId>('stats')
@@ -46,8 +38,8 @@ export default function HudTabs() {
       <div className="mt-3">
         {activeTab === 'stats' && <StatsPanel />}
         {activeTab === 'zone' && <ZonePanel />}
-        {activeTab === 'inventory' && <ComingSoon label="Inventory" />}
-        {activeTab === 'equipment' && <ComingSoon label="Equipment" />}
+        {activeTab === 'inventory' && <InventoryPanel />}
+        {activeTab === 'equipment' && <EquipmentPanel />}
       </div>
     </div>
   )

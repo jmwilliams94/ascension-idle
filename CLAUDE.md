@@ -78,6 +78,7 @@ Quality tiers, in order: Normal → Refined → Unique → Elite → Super — c
 - Drop weights and tier colors are **unresolved — needs deliberate design, not sourced**.
 - Level caps: real-game data is low-confidence (historically ~130, with conflicting later references to 140+) — treat our cap as a **deliberate design choice**, not a sourced fact. 130 weapons / 120 armor remains a reasonable placeholder to keep using unless we decide otherwise.
 - Gear naming chains (e.g. "Wooden Bow → Eternal Bow +10") are placeholder flavor text, not yet finalized.
+- First minimal gear-drop implementation exists: `item_templates` (static reference data) and `item_instances` (owned copies) tables, seeded with a single placeholder item ("Wooden Sword", flat `physical_attack` only). Drop chance on kill is a flat 10% placeholder, unresolved per CLAUDE.md. `quality_tier`/`composition_level`/`sockets`/`enchant` columns already exist on `item_instances` (inert this step) so the systems below don't need a schema rework when built. Equip state is a single-slot shortcut (`players.equipped_item_id`, weapon only) — it'll need to become a multi-slot shape once other gear slots exist.
 
 Three separate item-progression systems — do not conflate:
 

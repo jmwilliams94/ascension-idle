@@ -7,6 +7,7 @@ import { CLASS_DEFINITIONS, type ClassId } from '../game/stats/classes'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useZoneStore } from '../game/zones/useZoneStore'
+import { useEquipmentStore } from '../game/items/useEquipmentStore'
 
 interface PlayerRow {
   last_seen_version: string | null
@@ -15,6 +16,7 @@ interface PlayerRow {
   gold: number
   exp: number
   current_zone: string
+  equipped_item_id: string | null
 }
 
 interface PlayerRecordState {
@@ -37,7 +39,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set, get) => ({
   loadPlayerRecord: async (userId) => {
     const { data, error } = await supabase
       .from('players')
-      .select('last_seen_version, class, level, gold, exp, current_zone')
+      .select('last_seen_version, class, level, gold, exp, current_zone, equipped_item_id')
       .eq('id', userId)
       .maybeSingle<PlayerRow>()
 
@@ -77,6 +79,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set, get) => ({
     }
     useProgressionStore.getState().hydrate({ level: data.level, gold: data.gold, exp: data.exp })
     useZoneStore.getState().setCurrentZoneName(data.current_zone)
+    useEquipmentStore.getState().hydrate(data.equipped_item_id)
 
     if (!data.last_seen_version) {
       // Row predates version tracking (or somehow has none) — record it silently.
@@ -109,6 +112,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set, get) => ({
     const character = useCharacterStore.getState()
     const progression = useProgressionStore.getState()
     const zone = useZoneStore.getState()
+    const equipment = useEquipmentStore.getState()
 
     const { error } = await supabase
       .from('players')
@@ -118,6 +122,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set, get) => ({
         gold: progression.gold,
         exp: progression.exp,
         current_zone: zone.currentZoneName,
+        equipped_item_id: equipment.equippedItemId,
       })
       .eq('id', userId)
 

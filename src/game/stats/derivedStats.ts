@@ -23,13 +23,20 @@ export interface DerivedStats {
   attackSpeed: number
 }
 
-export function computeDerivedStats(attributes: Attributes): DerivedStats {
+// Flat stat bonuses from the currently equipped item(s) — stacks on top of the
+// attribute-derived values. See game/items/equipmentBonus.ts.
+export interface EquipmentBonus {
+  physicalAttack?: number
+  magicAttack?: number
+}
+
+export function computeDerivedStats(attributes: Attributes, equipmentBonus: EquipmentBonus = {}): DerivedStats {
   const { strength, agility, vitality, spirit } = attributes
 
   const hp = BASE_HP + vitality * 24 + strength * 3 + agility * 3 + spirit * 3
   const mp = BASE_MP + spirit * 5
-  const physicalAttack = strength * PHYSICAL_ATTACK_PER_STRENGTH
-  const magicAttack = spirit * MAGIC_ATTACK_PER_SPIRIT
+  const physicalAttack = strength * PHYSICAL_ATTACK_PER_STRENGTH + (equipmentBonus.physicalAttack ?? 0)
+  const magicAttack = spirit * MAGIC_ATTACK_PER_SPIRIT + (equipmentBonus.magicAttack ?? 0)
 
   return {
     hp,

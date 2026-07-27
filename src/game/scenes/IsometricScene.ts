@@ -14,6 +14,10 @@ import { computeDerivedStats } from '../stats/derivedStats'
 import { useCharacterStore } from '../stats/useCharacterStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
 import { useDisplaySettingsStore } from '../../lib/useDisplaySettingsStore'
+import { computeEquipmentBonus } from '../items/equipmentBonus'
+import { useEquipmentStore } from '../items/useEquipmentStore'
+import { useInventoryStore } from '../items/useInventoryStore'
+import { useItemTemplatesStore } from '../items/useItemTemplatesStore'
 import {
   ENEMY_SPAWNS,
   ENEMY_TYPES,
@@ -608,7 +612,12 @@ export default class IsometricScene extends Phaser.Scene {
       return
     }
 
-    const derived = computeDerivedStats(attributes)
+    const equipmentBonus = computeEquipmentBonus(
+      useEquipmentStore.getState().equippedItemId,
+      useInventoryStore.getState().items,
+      useItemTemplatesStore.getState().templates,
+    )
+    const derived = computeDerivedStats(attributes, equipmentBonus)
     const attackIntervalMs = 1000 / derived.attackSpeed
     const now = this.time.now
 
@@ -686,6 +695,7 @@ export default class IsometricScene extends Phaser.Scene {
 
     const type = ENEMY_TYPES[enemy.typeId]
     useProgressionStore.getState().addRewards(type.goldReward, type.expReward)
+    void useInventoryStore.getState().rollDropForKill()
 
     if (container) {
       this.tweens.add({

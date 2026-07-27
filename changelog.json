@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.4.0",
+    "date": "2026-07-27",
+    "changes": [
+      "Enemies now have a small chance to drop a weapon when defeated",
+      "Added Inventory and Equipment tabs — equip a dropped weapon to boost your Physical Attack",
+      "Equipped gear now saves and survives a refresh, just like the rest of your progress"
+    ]
+  },
+  {
     "version": "1.3.0",
     "date": "2026-07-27",
     "changes": [

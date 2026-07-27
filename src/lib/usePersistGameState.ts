@@ -2,15 +2,16 @@ import { useEffect } from 'react'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useZoneStore } from '../game/zones/useZoneStore'
+import { useEquipmentStore } from '../game/items/useEquipmentStore'
 import { usePlayerRecordStore } from './usePlayerRecordStore'
 
 const AUTOSAVE_DEBOUNCE_MS = 2000
 
 // Wires up the save side of persistence once the initial load has finished: a
-// debounced autosave on any gold/exp/level/class/zone change, an immediate save on
-// level-up (bypassing the debounce — too meaningful a moment to risk losing), and a
-// best-effort save when the tab is hidden or closed as a safety net for whatever the
-// debounce hasn't flushed yet.
+// debounced autosave on any gold/exp/level/class/zone/equipped-item change, an
+// immediate save on level-up (bypassing the debounce — too meaningful a moment to
+// risk losing), and a best-effort save when the tab is hidden or closed as a safety
+// net for whatever the debounce hasn't flushed yet.
 export function usePersistGameState(userId: string | undefined, loaded: boolean) {
   useEffect(() => {
     if (!userId || !loaded) {
@@ -48,6 +49,7 @@ export function usePersistGameState(userId: string | undefined, loaded: boolean)
 
     const unsubscribeCharacter = useCharacterStore.subscribe(() => scheduleSave())
     const unsubscribeZone = useZoneStore.subscribe(() => scheduleSave())
+    const unsubscribeEquipment = useEquipmentStore.subscribe(() => scheduleSave())
 
     // beforeunload isn't reliable (browsers may not wait for the fetch to complete),
     // and visibilitychange 'hidden' fires on tab switch/backgrounding too, giving the
@@ -72,6 +74,7 @@ export function usePersistGameState(userId: string | undefined, loaded: boolean)
       unsubscribeProgression()
       unsubscribeCharacter()
       unsubscribeZone()
+      unsubscribeEquipment()
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('beforeunload', handleBeforeUnload)
     }

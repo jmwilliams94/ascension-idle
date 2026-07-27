@@ -1,6 +1,10 @@
 import { CLASS_DEFINITIONS, CLASS_ORDER } from '../game/stats/classes'
 import { computeDerivedStats } from '../game/stats/derivedStats'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
+import { computeEquipmentBonus } from '../game/items/equipmentBonus'
+import { useEquipmentStore } from '../game/items/useEquipmentStore'
+import { useInventoryStore } from '../game/items/useInventoryStore'
+import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 
 // There's no leveling system yet. Class locking is disabled for now so every
 // class can be inspected during stats development.
@@ -18,8 +22,13 @@ export default function StatsPanel() {
   const attributes = useCharacterStore((state) => state.attributes)
   const selectClass = useCharacterStore((state) => state.selectClass)
 
+  const equippedItemId = useEquipmentStore((state) => state.equippedItemId)
+  const items = useInventoryStore((state) => state.items)
+  const templates = useItemTemplatesStore((state) => state.templates)
+
   const selectedClass = CLASS_DEFINITIONS[selectedClassId]
-  const derived = computeDerivedStats(attributes)
+  const equipmentBonus = computeEquipmentBonus(equippedItemId, items, templates)
+  const derived = computeDerivedStats(attributes, equipmentBonus)
 
   return (
     <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/80 p-4">

@@ -8,6 +8,8 @@ import WhatsNewModal from './components/WhatsNewModal'
 import { useAuthStore } from './lib/useAuthStore'
 import { usePersistGameState } from './lib/usePersistGameState'
 import { usePlayerRecordStore } from './lib/usePlayerRecordStore'
+import { useInventoryStore } from './game/items/useInventoryStore'
+import { useItemTemplatesStore } from './game/items/useItemTemplatesStore'
 
 function App() {
   const session = useAuthStore((state) => state.session)
@@ -18,14 +20,21 @@ function App() {
   const whatsNewEntries = usePlayerRecordStore((state) => state.whatsNewEntries)
   const loadPlayerRecord = usePlayerRecordStore((state) => state.loadPlayerRecord)
   const dismissWhatsNew = usePlayerRecordStore((state) => state.dismissWhatsNew)
+  const loadTemplates = useItemTemplatesStore((state) => state.loadTemplates)
+  const loadInventory = useInventoryStore((state) => state.loadInventory)
 
   const userId = session?.user.id
 
   useEffect(() => {
+    loadTemplates()
+  }, [loadTemplates])
+
+  useEffect(() => {
     if (userId) {
       loadPlayerRecord(userId)
+      loadInventory(userId)
     }
-  }, [userId, loadPlayerRecord])
+  }, [userId, loadPlayerRecord, loadInventory])
 
   usePersistGameState(userId, loaded)
 
