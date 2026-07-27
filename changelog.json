@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.9.0",
+    "date": "2026-07-27",
+    "changes": [
+      "Arrows are now a real stacked item — Lucky Arrows stack in groups of 50, Iron Arrows in 500, and Speed Arrows in 5000, shown right in your Inventory",
+      "You can now equip a specific stack of arrows from Inventory; a partially used stack stays untouched in your bag when you switch to a fresh one",
+      "Character creation now requires a name (capital letter first, lowercase after) that's unique across every account",
+      "Added the ability to delete a character from character select — you must type its name to confirm",
+      "Every new character now starts with 5,000 gold",
+      "Fixed the email confirmation link sometimes leading to an unreachable page (signing in afterward already worked regardless)"
+    ]
+  },
+  {
     "version": "1.8.0",
     "date": "2026-07-27",
     "changes": [

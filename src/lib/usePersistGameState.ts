@@ -28,6 +28,9 @@ export function usePersistGameState(characterId: string | undefined, loaded: boo
         debounceTimer = undefined
       }
       void useCharacterRecordStore.getState().saveNow(characterId)
+      // Arrow stack counts live in their own table (arrow_stacks), not a column on
+      // characters, so they need their own bulk save alongside the row update above.
+      void useArrowStore.getState().saveStackCounts(characterId)
     }
 
     const scheduleSave = () => {

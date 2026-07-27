@@ -1,5 +1,5 @@
-// PLACEHOLDER arrow roster — prices and effects are unresolved per CLAUDE.md, no
-// real reference data yet. Only Hunter uses these.
+// PLACEHOLDER arrow roster — prices, stack sizes, and effects are unresolved per
+// CLAUDE.md, no real reference data yet. Only Hunter uses these.
 export type ArrowTypeId = 'iron' | 'lucky' | 'speed'
 
 export interface ArrowTypeDef {
@@ -7,6 +7,9 @@ export interface ArrowTypeDef {
   displayName: string
   price: number
   description: string
+  // Max arrows a single stack of this type can hold. A purchase tops up existing
+  // non-full stacks of the same type before creating new ones.
+  stackSize: number
 }
 
 // PLACEHOLDER bonus magnitudes, unresolved per CLAUDE.md. Not wired into actual drop
@@ -22,23 +25,22 @@ export const ARROW_TYPES: Record<ArrowTypeId, ArrowTypeDef> = {
     displayName: 'Iron Arrow',
     price: 1,
     description: 'Standard ammo, no bonus effect.',
+    stackSize: 500,
   },
   lucky: {
     id: 'lucky',
     displayName: 'Lucky Arrow',
     price: 3,
     description: `+${Math.round(LUCKY_ARROW_DROP_BONUS_PLACEHOLDER * 100)}% gear drop chance while equipped (placeholder).`,
+    stackSize: 50,
   },
   speed: {
     id: 'speed',
     displayName: 'Speed Arrow',
     price: 3,
     description: `+${Math.round(SPEED_ARROW_ATTACK_SPEED_BONUS_PLACEHOLDER * 100)}% attack speed while equipped (placeholder).`,
+    stackSize: 5000,
   },
 }
 
 export const ARROW_TYPE_ORDER: ArrowTypeId[] = ['iron', 'lucky', 'speed']
-
-export function createEmptyArrowCounts(): Record<ArrowTypeId, number> {
-  return { iron: 0, lucky: 0, speed: 0 }
-}

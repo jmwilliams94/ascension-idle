@@ -8,14 +8,14 @@ import { useZoneStore } from '../game/zones/useZoneStore'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useArrowStore } from '../game/items/useArrowStore'
-import type { ArrowTypeId } from '../game/items/arrowTypes'
 
 // Loads/saves the active character's row (characters table) — class, level, gold,
-// exp, zone, equipped item, arrows. Replaces what usePlayerRecordStore used to do
-// before the character-slots restructure; that store is now account-level only.
-// meteors/dragonballs are intentionally excluded from both load-hydration-triggers-
-// save and saveNow — see useCurrencyStore for why (server-authoritative via the
-// forge RPCs).
+// exp, zone, equipped item, equipped arrow stack. Replaces what usePlayerRecordStore
+// used to do before the character-slots restructure; that store is now
+// account-level only. meteors/dragonballs are intentionally excluded from both
+// load-hydration-triggers-save and saveNow — see useCurrencyStore for why
+// (server-authoritative via the forge RPCs). The arrow stacks themselves live in
+// arrow_stacks (see useArrowStore), not on this row — only the equipped pointer does.
 interface CharacterRow {
   class: string | null
   level: number
@@ -25,8 +25,7 @@ interface CharacterRow {
   equipped_item_id: string | null
   meteors: number
   dragonballs: number
-  arrows: Record<string, number>
-  equipped_arrow_type: string | null
+  equipped_arrow_stack_id: string | null
 }
 
 interface CharacterRecordState {
@@ -46,7 +45,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
 
     const { data, error } = await supabase
       .from('characters')
-      .select('class, level, gold, exp, current_zone, equipped_item_id, meteors, dragonballs, arrows, equipped_arrow_type')
+      .select('class, level, gold, exp, current_zone, equipped_item_id, meteors, dragonballs, equipped_arrow_stack_id')
       .eq('id', characterId)
       .maybeSingle<CharacterRow>()
 
@@ -66,10 +65,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     useZoneStore.getState().setCurrentZoneName(data.current_zone)
     useEquipmentStore.getState().hydrate(data.equipped_item_id)
     useCurrencyStore.getState().hydrate({ meteors: data.meteors, dragonballs: data.dragonballs })
-    useArrowStore.getState().hydrate({
-      arrows: data.arrows,
-      equippedArrowType: data.equipped_arrow_type as ArrowTypeId | null,
-    })
+    useArrowStore.getState().setEquippedStackId(data.equipped_arrow_stack_id)
 
     set({ loaded: true })
   },
@@ -94,8 +90,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
         exp: progression.exp,
         current_zone: zone.currentZoneName,
         equipped_item_id: equipment.equippedItemId,
-        arrows: arrows.arrows,
-        equipped_arrow_type: arrows.equippedArrowType,
+        equipped_arrow_stack_id: arrows.equippedStackId,
       })
       .eq('id', characterId)
 

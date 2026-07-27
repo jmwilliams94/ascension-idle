@@ -11,6 +11,7 @@ import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { usePersistGameState } from '../lib/usePersistGameState'
 import { useInventoryStore } from '../game/items/useInventoryStore'
+import { useArrowStore } from '../game/items/useArrowStore'
 import { useShopStore } from '../game/hud/useShopStore'
 
 // Rendered once a character is active (see App.tsx) — everything that was the whole
@@ -26,12 +27,14 @@ export default function GameShell({ characterId }: { characterId: string }) {
   const loaded = useCharacterRecordStore((state) => state.loaded)
   const loadCharacterRecord = useCharacterRecordStore((state) => state.loadCharacterRecord)
   const loadInventory = useInventoryStore((state) => state.loadInventory)
+  const loadArrowStacks = useArrowStore((state) => state.loadStacks)
   const shopOpen = useShopStore((state) => state.isOpen)
 
   useEffect(() => {
     loadCharacterRecord(characterId)
     loadInventory(characterId)
-  }, [characterId, loadCharacterRecord, loadInventory])
+    loadArrowStacks(characterId)
+  }, [characterId, loadCharacterRecord, loadInventory, loadArrowStacks])
 
   usePersistGameState(characterId, loaded)
 

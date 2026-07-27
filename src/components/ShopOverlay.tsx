@@ -1,32 +1,39 @@
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useArrowStore } from '../game/items/useArrowStore'
+import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { useShopStore } from '../game/hud/useShopStore'
 import { ARROW_TYPES, ARROW_TYPE_ORDER, type ArrowTypeId } from '../game/items/arrowTypes'
 
 // Renders in the same reserved rectangle BottomNav normally occupies (see
 // GameShell), closable via the X — an overlay, not another HudTabs tab. Only
-// Hunter has anything to buy this step.
+// Hunter has anything to buy this step. Buying tops up existing stacks before
+// creating new ones (see useArrowStore.buyArrows) — equipping a specific stack
+// happens from the Inventory tab, not here.
 export default function ShopOverlay() {
   const close = useShopStore((state) => state.close)
+  const characterId = useActiveCharacterStore((state) => state.characterId)
 
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
   const gold = useProgressionStore((state) => state.gold)
   const spendGold = useProgressionStore((state) => state.spendGold)
 
-  const arrows = useArrowStore((state) => state.arrows)
-  const equippedArrowType = useArrowStore((state) => state.equippedArrowType)
-  const addArrows = useArrowStore((state) => state.addArrows)
-  const setEquippedArrowType = useArrowStore((state) => state.setEquippedArrowType)
+  const stacks = useArrowStore((state) => state.stacks)
+  const buyArrows = useArrowStore((state) => state.buyArrows)
 
   const isHunter = selectedClassId === 'hunter'
 
   const buy = (typeId: ArrowTypeId, quantity: number) => {
+    if (!characterId) {
+      return
+    }
+
     const cost = ARROW_TYPES[typeId].price * quantity
     if (!spendGold(cost)) {
       return
     }
-    addArrows(typeId, quantity)
+
+    void buyArrows(characterId, typeId, quantity)
   }
 
   return (
@@ -51,8 +58,9 @@ export default function ShopOverlay() {
 
           {ARROW_TYPE_ORDER.map((typeId) => {
             const type = ARROW_TYPES[typeId]
-            const owned = arrows[typeId]
-            const isEquipped = equippedArrowType === typeId
+            const owned = stacks
+              .filter((stack) => stack.arrowType === typeId)
+              .reduce((sum, stack) => sum + stack.count, 0)
             const canAffordOne = gold >= type.price
             const canAffordTen = gold >= type.price * 10
 
@@ -65,40 +73,26 @@ export default function ShopOverlay() {
                   <p className="font-medium text-slate-200">{type.displayName}</p>
                   <p className="text-slate-500">{type.description}</p>
                   <p className="text-slate-500">
-                    Owned: {owned} · {type.price}g each
+                    Owned: {owned} (stack of {type.stackSize}) · {type.price}g each
                   </p>
                 </div>
 
-                <div className="flex shrink-0 flex-col items-stretch gap-1">
-                  <div className="flex gap-1">
-                    <button
-                      type="button"
-                      disabled={!canAffordOne}
-                      onClick={() => buy(typeId, 1)}
-                      className="rounded border border-slate-700 px-2 py-1 text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      Buy 1
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!canAffordTen}
-                      onClick={() => buy(typeId, 10)}
-                      className="rounded border border-slate-700 px-2 py-1 text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      Buy 10
-                    </button>
-                  </div>
+                <div className="flex shrink-0 gap-1">
                   <button
                     type="button"
-                    disabled={isEquipped}
-                    onClick={() => setEquippedArrowType(typeId)}
-                    className={`rounded border px-2 py-1 ${
-                      isEquipped
-                        ? 'cursor-not-allowed border-slate-800 text-slate-600'
-                        : 'border-sky-500 text-sky-300 hover:bg-sky-500/10'
-                    }`}
+                    disabled={!canAffordOne}
+                    onClick={() => buy(typeId, 1)}
+                    className="rounded border border-slate-700 px-2 py-1 text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    {isEquipped ? 'Equipped' : 'Equip'}
+                    Buy 1
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!canAffordTen}
+                    onClick={() => buy(typeId, 10)}
+                    className="rounded border border-slate-700 px-2 py-1 text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Buy 10
                   </button>
                 </div>
               </div>

@@ -29,7 +29,14 @@ export const useAuthStore = create<AuthState>((set) => {
       return error?.message ?? null
     },
     signUp: async (email, password) => {
-      const { error } = await supabase.auth.signUp({ email, password })
+      // Without an explicit emailRedirectTo, Supabase sends the confirmation link to
+      // whatever "Site URL" is configured in the dashboard's Auth settings — if that's
+      // stale/unset, the confirm button lands on an unreachable page (the account
+      // still gets confirmed server-side, so signing in afterward works regardless).
+      // Deriving it from window.location keeps this correct for both local dev and
+      // the deployed GitHub Pages URL without hardcoding a domain.
+      const emailRedirectTo = `${window.location.origin}${import.meta.env.BASE_URL}`
+      const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo } })
       return error?.message ?? null
     },
     signOut: async () => {
