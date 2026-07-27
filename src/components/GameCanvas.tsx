@@ -25,6 +25,9 @@ export default function GameCanvas() {
         parent,
         width,
         height,
+        // Floors every size calculation to a whole pixel. Without this, RESIZE mode
+        // can accumulate fractional-pixel growth across repeated resize events.
+        autoRound: true,
       },
       scene: [IsometricScene],
     })

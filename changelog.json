@@ -1,0 +1,12 @@
+[
+  {
+    "version": "1.0.0",
+    "date": "2026-07-27",
+    "changes": [
+      "Initial project setup with sign-in and an isometric world to walk around in",
+      "Added the four classes (Hunter, Twin-soul, Wuxia, Juggernaut) with attribute-based stats",
+      "Added a first pass at combat: attack a nearby enemy and watch it take damage and fall",
+      "Added version tracking, a changelog, and What's New notifications"
+    ]
+  }
+]

@@ -4,6 +4,17 @@
 
 - Commits should always be followed by a push to `main`, unless explicitly told otherwise.
 
+## Versioning & changelog
+
+`package.json`'s `version` field is the single source of truth — `src/version.ts` reads it at build time via Vite's `define` config (see `vite.config.ts`), so bump `package.json` only.
+
+After completing each feature step, as part of the same commit (before pushing):
+
+- Bump the **patch** version by default (e.g. 1.0.0 → 1.0.1) for typical feature/fix work.
+- Bump the **minor** version instead (e.g. 1.0.x → 1.1.0) when the step is a significant new system, not a small addition. Use judgment, and call out the choice in the commit message and changelog entry so it's easy to review.
+- Never bump the **major** version without being explicitly told to.
+- Add a corresponding entry to `changelog.json` in plain, player-facing language (e.g. "Added combat" — not "Refactored GameCanvas component").
+
 ## Game design (source of truth)
 
 This section is the confirmed design source of truth for Greybox Idle. Anything marked "placeholder" is a stand-in value that must be replaced with real reference data (primarily from Conquer Online) before it's treated as final; anything not marked placeholder is confirmed and should not be changed without discussion.
