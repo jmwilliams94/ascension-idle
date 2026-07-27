@@ -3,7 +3,7 @@ import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
-import { usePlayerRecordStore } from './usePlayerRecordStore'
+import { useCharacterRecordStore } from './useCharacterRecordStore'
 
 const AUTOSAVE_DEBOUNCE_MS = 2000
 
@@ -11,10 +11,11 @@ const AUTOSAVE_DEBOUNCE_MS = 2000
 // debounced autosave on any gold/exp/level/class/zone/equipped-item change, an
 // immediate save on level-up (bypassing the debounce — too meaningful a moment to
 // risk losing), and a best-effort save when the tab is hidden or closed as a safety
-// net for whatever the debounce hasn't flushed yet.
-export function usePersistGameState(userId: string | undefined, loaded: boolean) {
+// net for whatever the debounce hasn't flushed yet. Saves to the active character's
+// row (characters table), not the account (players table).
+export function usePersistGameState(characterId: string | undefined, loaded: boolean) {
   useEffect(() => {
-    if (!userId || !loaded) {
+    if (!characterId || !loaded) {
       return undefined
     }
 
@@ -25,7 +26,7 @@ export function usePersistGameState(userId: string | undefined, loaded: boolean)
         clearTimeout(debounceTimer)
         debounceTimer = undefined
       }
-      void usePlayerRecordStore.getState().saveNow(userId)
+      void useCharacterRecordStore.getState().saveNow(characterId)
     }
 
     const scheduleSave = () => {
@@ -78,5 +79,5 @@ export function usePersistGameState(userId: string | undefined, loaded: boolean)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('beforeunload', handleBeforeUnload)
     }
-  }, [userId, loaded])
+  }, [characterId, loaded])
 }

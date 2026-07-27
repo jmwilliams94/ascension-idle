@@ -3,46 +3,42 @@ import { changelogEntriesAfter, type ChangelogEntry } from './changelog'
 import { compareVersions } from './semver'
 import { supabase } from './supabaseClient'
 import { APP_VERSION } from '../version'
-import { CLASS_DEFINITIONS, type ClassId } from '../game/stats/classes'
-import { useCharacterStore } from '../game/stats/useCharacterStore'
-import { useProgressionStore } from '../game/stats/useProgressionStore'
-import { useZoneStore } from '../game/zones/useZoneStore'
-import { useEquipmentStore } from '../game/items/useEquipmentStore'
-import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 
+// Account-level only — class/level/gold/exp/zone/equipped/meteors/dragonballs all
+// moved to the characters table (see useCharacterRecordStore) as part of the
+// character-slots restructure. This store now only concerns itself with things that
+// apply to the whole account, not any one character.
 interface PlayerRow {
   last_seen_version: string | null
-  class: string | null
-  level: number
-  gold: number
-  exp: number
-  current_zone: string
-  equipped_item_id: string | null
-  meteors: number
-  dragonballs: number
+  bank_gold: number
+  unlocked_classes: string[]
 }
 
 interface PlayerRecordState {
-  // False until loadPlayerRecord's initial fetch (and any hydration) has finished —
-  // autosave must not start before this, or it could overwrite a saved row with
-  // whatever defaults the local stores happened to start with.
+  // False until loadPlayerRecord's initial fetch has finished.
   loaded: boolean
   // Entries to show in the "What's New" modal. Null means nothing to show (either
   // not loaded yet, already up to date, or already dismissed this session).
   whatsNewEntries: ChangelogEntry[] | null
+  // Shared account-wide bank — schema/read only this step, no deposit/withdraw UI yet.
+  bankGold: number
+  // Account-wide class-unlock milestones (e.g. a Hunter reaching max level), not
+  // per-character. Only 'hunter' by default until a real unlock mechanic exists.
+  unlockedClasses: string[]
   loadPlayerRecord: (userId: string) => Promise<void>
   dismissWhatsNew: (userId: string) => Promise<void>
-  saveNow: (userId: string) => Promise<void>
 }
 
-export const usePlayerRecordStore = create<PlayerRecordState>((set, get) => ({
+export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
   loaded: false,
   whatsNewEntries: null,
+  bankGold: 0,
+  unlockedClasses: ['hunter'],
 
   loadPlayerRecord: async (userId) => {
     const { data, error } = await supabase
       .from('players')
-      .select('last_seen_version, class, level, gold, exp, current_zone, equipped_item_id, meteors, dragonballs')
+      .select('last_seen_version, bank_gold, unlocked_classes')
       .eq('id', userId)
       .maybeSingle<PlayerRow>()
 
@@ -52,38 +48,21 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set, get) => ({
     }
 
     if (!data) {
-      // Genuinely new player — create their row from the (already-default) local
-      // state instead of resetting anything, and skip the What's New popup.
-      const character = useCharacterStore.getState()
-      const progression = useProgressionStore.getState()
-      const zone = useZoneStore.getState()
-
+      // Genuinely new account — create their row with defaults, skip the What's New popup.
       const { error: insertError } = await supabase.from('players').insert({
         id: userId,
         last_seen_version: APP_VERSION,
-        class: character.selectedClassId,
-        level: progression.level,
-        gold: progression.gold,
-        exp: progression.exp,
-        current_zone: zone.currentZoneName,
       })
 
       if (insertError) {
         console.error('Failed to create new player record', insertError)
       }
 
-      set({ loaded: true, whatsNewEntries: null })
+      set({ loaded: true, whatsNewEntries: null, bankGold: 0, unlockedClasses: ['hunter'] })
       return
     }
 
-    // Existing player — hydrate local state from the saved row instead of defaults.
-    if (data.class && data.class in CLASS_DEFINITIONS) {
-      useCharacterStore.getState().selectClass(data.class as ClassId)
-    }
-    useProgressionStore.getState().hydrate({ level: data.level, gold: data.gold, exp: data.exp })
-    useZoneStore.getState().setCurrentZoneName(data.current_zone)
-    useEquipmentStore.getState().hydrate(data.equipped_item_id)
-    useCurrencyStore.getState().hydrate({ meteors: data.meteors, dragonballs: data.dragonballs })
+    set({ bankGold: data.bank_gold, unlockedClasses: data.unlocked_classes })
 
     if (!data.last_seen_version) {
       // Row predates version tracking (or somehow has none) — record it silently.
@@ -105,33 +84,6 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set, get) => ({
 
     if (error) {
       console.error('Failed to record last seen version', error)
-    }
-  },
-
-  saveNow: async (userId) => {
-    if (!get().loaded) {
-      return
-    }
-
-    const character = useCharacterStore.getState()
-    const progression = useProgressionStore.getState()
-    const zone = useZoneStore.getState()
-    const equipment = useEquipmentStore.getState()
-
-    const { error } = await supabase
-      .from('players')
-      .update({
-        class: character.selectedClassId,
-        level: progression.level,
-        gold: progression.gold,
-        exp: progression.exp,
-        current_zone: zone.currentZoneName,
-        equipped_item_id: equipment.equippedItemId,
-      })
-      .eq('id', userId)
-
-    if (error) {
-      console.error('Failed to save player record', error)
     }
   },
 }))

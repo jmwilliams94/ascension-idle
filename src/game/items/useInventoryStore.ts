@@ -1,12 +1,13 @@
 import { create } from 'zustand'
 import { supabase } from '../../lib/supabaseClient'
-import { useAuthStore } from '../../lib/useAuthStore'
+import { useActiveCharacterStore } from '../../lib/useActiveCharacterStore'
 import { useItemTemplatesStore, type ItemTemplate } from './useItemTemplatesStore'
 
 // Mirrors the item_instances table. composition_level/sockets/enchant are unused
 // this step — they exist so a later step doesn't need a schema rework. quality_tier
 // and level are only ever changed server-side via the quality_upgrade/level_upgrade
 // Postgres functions (see useForgeStore) — never write them via a normal update().
+// owner_id references characters.id (a specific character), not the account.
 export interface ItemInstance {
   id: string
   template_id: string
@@ -25,10 +26,10 @@ const DROP_CHANCE = 0.1
 interface InventoryState {
   items: ItemInstance[]
   loaded: boolean
-  loadInventory: (userId: string) => Promise<void>
+  loadInventory: (characterId: string) => Promise<void>
   // Returns the granted item + its template on a successful drop, or null (no drop,
-  // no user, or an error) — lets the caller (the combat scene) show ground-drop text
-  // without this store needing to know anything about tiles/rendering.
+  // no active character, or an error) — lets the caller (the combat scene) show
+  // ground-drop text without this store needing to know anything about tiles/rendering.
   rollDropForKill: () => Promise<{ item: ItemInstance; template: ItemTemplate } | null>
   // Reflects a successful quality_upgrade/level_upgrade RPC result in the local
   // cache — the functions already wrote the real values server-side, this just
@@ -40,8 +41,8 @@ export const useInventoryStore = create<InventoryState>((set) => ({
   items: [],
   loaded: false,
 
-  loadInventory: async (userId) => {
-    const { data, error } = await supabase.from('item_instances').select('*').eq('owner_id', userId)
+  loadInventory: async (characterId) => {
+    const { data, error } = await supabase.from('item_instances').select('*').eq('owner_id', characterId)
 
     if (error) {
       console.error('Failed to load inventory', error)
@@ -52,10 +53,10 @@ export const useInventoryStore = create<InventoryState>((set) => ({
   },
 
   rollDropForKill: async () => {
-    const userId = useAuthStore.getState().session?.user.id
+    const characterId = useActiveCharacterStore.getState().characterId
     const templates = useItemTemplatesStore.getState().templates
 
-    if (!userId || templates.length === 0 || Math.random() >= DROP_CHANCE) {
+    if (!characterId || templates.length === 0 || Math.random() >= DROP_CHANCE) {
       return null
     }
 
@@ -65,7 +66,7 @@ export const useInventoryStore = create<InventoryState>((set) => ({
 
     const { data, error } = await supabase
       .from('item_instances')
-      .insert({ template_id: template.id, owner_id: userId })
+      .insert({ template_id: template.id, owner_id: characterId })
       .select('*')
       .single()
 

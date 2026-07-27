@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.7.0",
+    "date": "2026-07-27",
+    "changes": [
+      "Added character slots — each account can now have up to 5 characters, chosen from a new character-select screen after login",
+      "Your existing character and progress were automatically carried over as your first character slot",
+      "Creating a new character currently only offers Hunter; other classes show as locked",
+      "Gold, gear, and Forge currencies now belong to the specific character playing, not the account as a whole"
+    ]
+  },
+  {
     "version": "1.6.0",
     "date": "2026-07-27",
     "changes": [
