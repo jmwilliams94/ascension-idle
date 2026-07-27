@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.2.0",
+    "date": "2026-07-27",
+    "changes": [
+      "Added the first real zone, Twincross Outskirts, with a small roster of enemies (Mudrat, Brushfowl, Fernvale Dove) scattered around the map instead of one single training dummy",
+      "Added HUD tabs to switch between Stats and Zone info, with Inventory and Equipment reserved for later"
+    ]
+  },
+  {
     "version": "1.1.0",
     "date": "2026-07-27",
     "changes": [

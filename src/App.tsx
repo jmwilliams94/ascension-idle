@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import AuthGate from './components/AuthGate'
 import GameCanvas from './components/GameCanvas'
+import HudTabs from './components/HudTabs'
 import ProgressionPanel from './components/ProgressionPanel'
 import SettingsModal from './components/SettingsModal'
-import StatsPanel from './components/StatsPanel'
 import WhatsNewModal from './components/WhatsNewModal'
 import { useAuthStore } from './lib/useAuthStore'
 import { usePlayerVersionStore } from './lib/usePlayerVersionStore'
@@ -86,30 +86,11 @@ function App() {
           <aside className="space-y-4 rounded-3xl border border-slate-800/80 bg-slate-900/70 p-5 shadow-xl shadow-slate-950/20">
             <div>
               <h2 className="text-lg font-semibold text-white">World HUD</h2>
-              <p className="mt-2 text-sm text-slate-400">
-                Placeholder panel for future inventory, abilities, and status panels.
-              </p>
             </div>
 
             <ProgressionPanel />
 
-            <StatsPanel />
-
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-              <p className="text-sm font-medium text-slate-200">Current focus</p>
-              <p className="mt-2 text-sm text-slate-400">
-                The game viewport is intentionally isolated from the React chrome so it can be expanded later.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-              <p className="text-sm font-medium text-slate-200">Next steps</p>
-              <ul className="mt-2 space-y-2 text-sm text-slate-400">
-                <li>• Add units and interactable tiles</li>
-                <li>• Expand the HUD and inventory</li>
-                <li>• Introduce richer tile visuals</li>
-              </ul>
-            </div>
+            <HudTabs />
           </aside>
         </main>
       </div>

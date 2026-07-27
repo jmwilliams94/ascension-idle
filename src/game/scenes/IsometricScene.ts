@@ -13,10 +13,27 @@ import { CLASS_DEFINITIONS } from '../stats/classes'
 import { computeDerivedStats } from '../stats/derivedStats'
 import { useCharacterStore } from '../stats/useCharacterStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
+import {
+  ENEMY_SPAWNS,
+  ENEMY_TYPES,
+  type EnemySpawnDef,
+  type EnemyTypeDef,
+  type EnemyTypeId,
+} from '../zones/twincrossOutskirts'
 
 type TileMarker = {
   graphic: Phaser.GameObjects.Graphics
   coord: TileCoord
+}
+
+interface EnemyInstance {
+  id: string
+  typeId: EnemyTypeId
+  tile: TileCoord
+  hp: number
+  alive: boolean
+  container?: Phaser.GameObjects.Container
+  hpText?: Phaser.GameObjects.Text
 }
 
 const VISIBLE_SIZE = 16
@@ -35,17 +52,11 @@ const ENEMY_HALF_WIDTH = (TILE_WIDTH / 2) * ENEMY_FOOTPRINT_SCALE
 const ENEMY_HALF_DEPTH = (TILE_HEIGHT / 2) * ENEMY_FOOTPRINT_SCALE
 const ENEMY_BOX_HEIGHT = 28
 
-// Small enough to die in a few hits for easy testing — not a real balance value.
-const ENEMY_MAX_HP = 50
-// Testing convenience only, not real zone/spawn design (see spawnEnemy/killEnemy).
+// Testing convenience only — a few seconds so re-testing doesn't need a page reload.
+// Not real zone/spawn design (see spawnEnemy/killEnemy).
 const ENEMY_RESPAWN_DELAY_MS = 3000
 const FLOATING_TEXT_RISE_PX = 36
 const FLOATING_TEXT_DURATION_MS = 1800
-
-// PLACEHOLDER flat rewards — real zone economy (gold/EXP per kill, scaled by
-// monster/zone) is unresolved per CLAUDE.md.
-const ENEMY_GOLD_REWARD = 5
-const ENEMY_EXP_REWARD = 18
 
 export default class IsometricScene extends Phaser.Scene {
   private tileMarkers: TileMarker[] = []
@@ -55,16 +66,20 @@ export default class IsometricScene extends Phaser.Scene {
   private origin = { x: 0, y: 0 }
   private isMoving = false
   private previousVisible = new Set<string>()
+  // The tile the world is currently rendered relative to — same as heroTile except
+  // mid-move, when buildVisibleTiles has already re-centered on the destination tile
+  // but heroTile itself doesn't update until the move animation completes. Anything
+  // that positions a new object into the world (e.g. a respawning enemy) must use
+  // this, not heroTile, or it'll be placed relative to a tile that's about to change
+  // out from under it and appear to jump on the next move.
+  private renderCenterTile: TileCoord = { x: 50, y: 50 }
 
-  private enemyTile: TileCoord = { x: 53, y: 50 }
-  private enemyContainer?: Phaser.GameObjects.Container
-  private enemyHpText?: Phaser.GameObjects.Text
-  private enemyHp = ENEMY_MAX_HP
-  private enemyAlive = false
+  private enemies = new Map<string, EnemyInstance>()
   private lastAttackAt = -Infinity
-  // Set when the player clicks the enemy — drives the auto-approach/auto-attack loop
-  // in update(). Cleared by clicking elsewhere or when the enemy dies.
-  private isEngaged = false
+  // Id of the enemy the player clicked — drives the auto-approach/auto-attack loop in
+  // update(). Cleared by clicking elsewhere, clicking a different enemy, or the
+  // engaged enemy dying.
+  private engagedEnemyId: string | null = null
 
   constructor() {
     super('IsometricScene')
@@ -82,7 +97,7 @@ export default class IsometricScene extends Phaser.Scene {
 
     this.buildVisibleTiles()
     this.placeHero()
-    this.spawnEnemy()
+    this.initEnemies()
 
     this.input.keyboard?.on('keydown-LEFT', () => this.moveToTile({ x: this.heroTile.x - 1, y: this.heroTile.y }))
     this.input.keyboard?.on('keydown-RIGHT', () => this.moveToTile({ x: this.heroTile.x + 1, y: this.heroTile.y }))
@@ -102,36 +117,54 @@ export default class IsometricScene extends Phaser.Scene {
         y: this.heroTile.y + relativeTile.y,
       }
 
-      if (this.enemyAlive && targetTile.x === this.enemyTile.x && targetTile.y === this.enemyTile.y) {
+      const clickedEnemy = this.findAliveEnemyAt(targetTile)
+
+      if (clickedEnemy) {
         // Engage: update() will approach (if needed) and then auto-attack every
-        // interval until the enemy dies or a different click cancels engagement.
-        this.isEngaged = true
+        // interval until this enemy dies or a different click cancels engagement.
+        this.engagedEnemyId = clickedEnemy.id
         this.attemptAttack()
         return
       }
 
-      this.isEngaged = false
+      this.engagedEnemyId = null
       this.moveToTile(targetTile)
     })
   }
 
   update() {
-    if (!this.isEngaged || !this.enemyAlive) {
+    if (!this.engagedEnemyId) {
       return
     }
 
-    const distance = chebyshevDistance(this.heroTile, this.enemyTile)
+    const enemy = this.enemies.get(this.engagedEnemyId)
+
+    if (!enemy || !enemy.alive) {
+      return
+    }
+
+    const distance = chebyshevDistance(this.heroTile, enemy.tile)
     const { selectedClassId } = useCharacterStore.getState()
     const classDef = CLASS_DEFINITIONS[selectedClassId]
 
     if (distance > classDef.attackRange) {
       if (!this.isMoving) {
-        this.stepToward(this.enemyTile)
+        this.stepToward(enemy.tile)
       }
       return
     }
 
     this.attemptAttack()
+  }
+
+  private findAliveEnemyAt(tile: TileCoord): EnemyInstance | undefined {
+    for (const enemy of this.enemies.values()) {
+      if (enemy.alive && enemy.tile.x === tile.x && enemy.tile.y === tile.y) {
+        return enemy
+      }
+    }
+
+    return undefined
   }
 
   // Greedily moves one tile closer (diagonals count as one step, matching
@@ -146,6 +179,8 @@ export default class IsometricScene extends Phaser.Scene {
     if (!this.tileContainer) {
       return
     }
+
+    this.renderCenterTile = centerTile
 
     const visibleTiles: TileCoord[] = []
     const startX = Math.max(0, centerTile.x - VISIBLE_RADIUS_BEFORE)
@@ -167,11 +202,13 @@ export default class IsometricScene extends Phaser.Scene {
       return aDist - bDist
     })
 
-    // Detach (don't destroy) the enemy before wiping the container's children below —
-    // it's re-added and repositioned relative to the new center tile further down.
-    if (this.enemyContainer) {
-      this.tileContainer.remove(this.enemyContainer)
-    }
+    // Detach (don't destroy) each enemy before wiping the container's children below —
+    // they're re-added and repositioned relative to the new center tile further down.
+    this.enemies.forEach((enemy) => {
+      if (enemy.container) {
+        this.tileContainer!.remove(enemy.container)
+      }
+    })
 
     this.tileContainer.removeAll(true)
     this.tileMarkers = []
@@ -203,10 +240,12 @@ export default class IsometricScene extends Phaser.Scene {
       this.tileMarkers.push({ graphic, coord: tile })
     })
 
-    if (this.enemyContainer && this.enemyAlive) {
-      this.positionEnemy(centerTile)
-      this.tileContainer.add(this.enemyContainer)
-    }
+    this.enemies.forEach((enemy) => {
+      if (enemy.alive && enemy.container) {
+        this.positionEnemy(enemy, centerTile)
+        this.tileContainer!.add(enemy.container)
+      }
+    })
 
     sortedNewTiles.forEach((tile) => {
       const marker = this.tileMarkers.find((entry) => entry.coord.x === tile.x && entry.coord.y === tile.y)
@@ -300,33 +339,57 @@ export default class IsometricScene extends Phaser.Scene {
     return [topFace, rightFace, leftFace]
   }
 
-  // Placeholder stationary target for testing the combat loop. Not real zone/spawn
-  // design — a single fixed enemy at a fixed tile, no movement, no aggro, no attacking back.
-  private spawnEnemy() {
-    this.enemyHp = ENEMY_MAX_HP
-    this.enemyAlive = true
-    this.enemyContainer = this.add.container(0, 0, this.buildEnemyBox())
-    this.enemyHpText = this.add.text(0, -ENEMY_BOX_HEIGHT - ENEMY_HALF_DEPTH - 16, '', {
-      fontSize: '13px',
-      color: '#fca5a5',
-      fontStyle: 'bold',
-    }).setOrigin(0.5, 1)
-    this.enemyContainer.add(this.enemyHpText)
-    this.updateEnemyHpDisplay()
-
-    this.positionEnemy(this.heroTile)
-    this.tileContainer?.add(this.enemyContainer)
+  // Populates the zone's fixed enemy roster (see ../zones/twincrossOutskirts). Each
+  // spawn point gets its own stationary, non-aggro instance — still a placeholder
+  // combat model (no movement/aggro/attacking back), just several of them now.
+  private initEnemies() {
+    ENEMY_SPAWNS.forEach((spawn) => {
+      this.enemies.set(spawn.id, {
+        id: spawn.id,
+        typeId: spawn.typeId,
+        tile: spawn.tile,
+        hp: 0,
+        alive: false,
+      })
+      this.spawnEnemy(spawn)
+    })
   }
 
-  private buildEnemyBox() {
+  private spawnEnemy(spawn: EnemySpawnDef) {
+    const enemy = this.enemies.get(spawn.id)
+
+    if (!enemy) {
+      return
+    }
+
+    const type = ENEMY_TYPES[spawn.typeId]
+
+    enemy.hp = type.maxHp
+    enemy.alive = true
+    enemy.container = this.add.container(0, 0, this.buildEnemyBox(type))
+    enemy.hpText = this.add
+      .text(0, -ENEMY_BOX_HEIGHT - ENEMY_HALF_DEPTH - 16, '', {
+        fontSize: '13px',
+        color: '#fca5a5',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5, 1)
+    enemy.container.add(enemy.hpText)
+    this.updateEnemyHpDisplay(enemy)
+
+    this.positionEnemy(enemy, this.renderCenterTile)
+    this.tileContainer?.add(enemy.container)
+  }
+
+  private buildEnemyBox(type: EnemyTypeDef) {
     const hw = ENEMY_HALF_WIDTH
     const hd = ENEMY_HALF_DEPTH
     const height = ENEMY_BOX_HEIGHT
 
-    // Same shaded-box construction as the hero, but red-toned and slightly smaller
-    // so it reads as a distinct, stationary target rather than another hero.
+    // Same shaded-box construction as the hero, tinted per enemy type so the roster
+    // reads as distinct targets rather than clones.
     const topFace = this.add.graphics()
-    topFace.fillStyle(0xfca5a5, 1)
+    topFace.fillStyle(type.bodyColor.top, 1)
     topFace.beginPath()
     topFace.moveTo(0, -hd - height)
     topFace.lineTo(hw, -height)
@@ -336,7 +399,7 @@ export default class IsometricScene extends Phaser.Scene {
     topFace.fillPath()
 
     const rightFace = this.add.graphics()
-    rightFace.fillStyle(0xef4444, 1)
+    rightFace.fillStyle(type.bodyColor.right, 1)
     rightFace.beginPath()
     rightFace.moveTo(0, hd)
     rightFace.lineTo(hw, 0)
@@ -346,7 +409,7 @@ export default class IsometricScene extends Phaser.Scene {
     rightFace.fillPath()
 
     const leftFace = this.add.graphics()
-    leftFace.fillStyle(0xb91c1c, 1)
+    leftFace.fillStyle(type.bodyColor.left, 1)
     leftFace.beginPath()
     leftFace.moveTo(0, hd)
     leftFace.lineTo(-hw, 0)
@@ -358,26 +421,33 @@ export default class IsometricScene extends Phaser.Scene {
     return [topFace, rightFace, leftFace]
   }
 
-  private positionEnemy(centerTile: TileCoord) {
-    if (!this.enemyContainer) {
+  private positionEnemy(enemy: EnemyInstance, centerTile: TileCoord) {
+    if (!enemy.container) {
       return
     }
 
-    const relative = { x: this.enemyTile.x - centerTile.x, y: this.enemyTile.y - centerTile.y }
+    const relative = { x: enemy.tile.x - centerTile.x, y: enemy.tile.y - centerTile.y }
     const local = tileToWorld(relative, TILE_WIDTH, TILE_HEIGHT, 0, 0)
-    this.enemyContainer.setPosition(local.x, local.y)
+    enemy.container.setPosition(local.x, local.y)
   }
 
-  private updateEnemyHpDisplay() {
-    this.enemyHpText?.setText(`${this.enemyHp}/${ENEMY_MAX_HP}`)
+  private updateEnemyHpDisplay(enemy: EnemyInstance) {
+    const maxHp = ENEMY_TYPES[enemy.typeId].maxHp
+    enemy.hpText?.setText(`${enemy.hp}/${maxHp}`)
   }
 
   private attemptAttack() {
-    if (!this.enemyAlive) {
+    if (!this.engagedEnemyId) {
       return
     }
 
-    const distance = chebyshevDistance(this.heroTile, this.enemyTile)
+    const enemy = this.enemies.get(this.engagedEnemyId)
+
+    if (!enemy || !enemy.alive) {
+      return
+    }
+
+    const distance = chebyshevDistance(this.heroTile, enemy.tile)
     const { selectedClassId, attributes } = useCharacterStore.getState()
     const classDef = CLASS_DEFINITIONS[selectedClassId]
 
@@ -398,36 +468,36 @@ export default class IsometricScene extends Phaser.Scene {
     this.lastAttackAt = now
 
     // PLACEHOLDER damage formula: raw Physical Attack applied directly as damage, no
-    // mitigation (the enemy has no Defense stat yet). Real damage formula is unresolved
+    // mitigation (enemies have no Defense stat yet). Real damage formula is unresolved
     // per CLAUDE.md. Note this only wires up physical basic attacks — a Spirit-based
     // class like Wuxia will deal 0 damage here until magic-based attacks are in scope.
     const damage = derived.physicalAttack
-    this.dealDamageToEnemy(damage)
+    this.dealDamageToEnemy(enemy, damage)
   }
 
-  private dealDamageToEnemy(damage: number) {
-    if (!this.enemyAlive || !this.enemyContainer) {
+  private dealDamageToEnemy(enemy: EnemyInstance, damage: number) {
+    if (!enemy.alive || !enemy.container) {
       return
     }
 
-    this.enemyHp = Math.max(0, this.enemyHp - damage)
-    this.updateEnemyHpDisplay()
-    this.showFloatingDamage(damage)
+    enemy.hp = Math.max(0, enemy.hp - damage)
+    this.updateEnemyHpDisplay(enemy)
+    this.showFloatingDamage(enemy, damage)
 
-    if (this.enemyHp <= 0) {
-      this.killEnemy()
+    if (enemy.hp <= 0) {
+      this.killEnemy(enemy)
     }
   }
 
-  private showFloatingDamage(damage: number) {
-    if (!this.tileContainer || !this.enemyContainer) {
+  private showFloatingDamage(enemy: EnemyInstance, damage: number) {
+    if (!this.tileContainer || !enemy.container) {
       return
     }
 
     // Positioned in absolute scene space (not parented to the enemy/tile containers)
     // so it survives the enemy dying or the tile container rebuilding mid-fade.
-    const worldX = this.tileContainer.x + this.enemyContainer.x
-    const worldY = this.tileContainer.y + this.enemyContainer.y - ENEMY_BOX_HEIGHT
+    const worldX = this.tileContainer.x + enemy.container.x
+    const worldY = this.tileContainer.y + enemy.container.y - ENEMY_BOX_HEIGHT
 
     const text = this.add
       .text(worldX, worldY, `-${damage}`, {
@@ -448,14 +518,19 @@ export default class IsometricScene extends Phaser.Scene {
     })
   }
 
-  private killEnemy() {
-    this.enemyAlive = false
-    this.isEngaged = false
-    const container = this.enemyContainer
-    this.enemyContainer = undefined
-    this.enemyHpText = undefined
+  private killEnemy(enemy: EnemyInstance) {
+    enemy.alive = false
 
-    useProgressionStore.getState().addRewards(ENEMY_GOLD_REWARD, ENEMY_EXP_REWARD)
+    if (this.engagedEnemyId === enemy.id) {
+      this.engagedEnemyId = null
+    }
+
+    const container = enemy.container
+    enemy.container = undefined
+    enemy.hpText = undefined
+
+    const type = ENEMY_TYPES[enemy.typeId]
+    useProgressionStore.getState().addRewards(type.goldReward, type.expReward)
 
     if (container) {
       this.tweens.add({
@@ -472,7 +547,8 @@ export default class IsometricScene extends Phaser.Scene {
     // Respawning on a timer is a temporary testing convenience so combat can be
     // re-tested without a page reload — not real zone/spawn design, which is a
     // separate, later step.
-    this.time.delayedCall(ENEMY_RESPAWN_DELAY_MS, () => this.spawnEnemy())
+    const spawn: EnemySpawnDef = { id: enemy.id, typeId: enemy.typeId, tile: enemy.tile }
+    this.time.delayedCall(ENEMY_RESPAWN_DELAY_MS, () => this.spawnEnemy(spawn))
   }
 
   private moveToTile(targetTile: TileCoord) {
