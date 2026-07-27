@@ -98,9 +98,10 @@ export default function GameShell({ characterId }: { characterId: string }) {
           <div className="relative">
             <GameCanvas />
             <ArrowCounterHud />
+            {shopOpen && <ShopOverlay />}
           </div>
 
-          {shopOpen ? <ShopOverlay /> : <BottomNav />}
+          <BottomNav />
         </section>
 
         <aside className="space-y-4 rounded-3xl border border-slate-800/80 bg-slate-900/70 p-5 shadow-xl shadow-slate-950/20">

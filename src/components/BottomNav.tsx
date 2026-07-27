@@ -33,8 +33,8 @@ export default function BottomNav() {
         </button>
       ))}
 
-      {/* Shop opens an overlay in this same reserved rectangle (see GameShell),
-          it doesn't switch the sidebar tab like the buttons above. */}
+      {/* Shop opens as an overlay on top of the game canvas (see GameShell) rather
+          than switching a sidebar tab like the buttons above. */}
       <button
         type="button"
         onClick={openShop}

@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.9.1",
+    "date": "2026-07-27",
+    "changes": [
+      "The Shop now sells arrows one full stack at a time (e.g. all 50 Lucky Arrows for one price) instead of one arrow at a time",
+      "The Shop now opens as a window over the game view instead of hiding the bottom navigation bar"
+    ]
+  },
+  {
     "version": "1.9.0",
     "date": "2026-07-27",
     "changes": [
