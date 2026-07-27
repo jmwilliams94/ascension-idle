@@ -1,18 +1,23 @@
 import { useEffect, useState } from 'react'
 import ArrowCounterHud from './ArrowCounterHud'
 import BottomNav from './BottomNav'
+import EquipmentOverlay from './EquipmentOverlay'
+import ForgeOverlay from './ForgeOverlay'
 import GameCanvas from './GameCanvas'
-import HudTabs from './HudTabs'
+import InventoryFullModal from './InventoryFullModal'
+import MarketplaceOverlay from './MarketplaceOverlay'
 import ProgressionPanel from './ProgressionPanel'
 import SettingsModal from './SettingsModal'
 import ShopOverlay from './ShopOverlay'
+import SideHud from './SideHud'
+import ZoneOverlay from './ZoneOverlay'
 import { useAuthStore } from '../lib/useAuthStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { usePersistGameState } from '../lib/usePersistGameState'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useArrowStore } from '../game/items/useArrowStore'
-import { useShopStore } from '../game/hud/useShopStore'
+import { useOverlayStore } from '../game/hud/useOverlayStore'
 
 // Rendered once a character is active (see App.tsx) — everything that was the whole
 // app before the character-slots restructure. Account-level concerns (What's New,
@@ -28,7 +33,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
   const loadCharacterRecord = useCharacterRecordStore((state) => state.loadCharacterRecord)
   const loadInventory = useInventoryStore((state) => state.loadInventory)
   const loadArrowStacks = useArrowStore((state) => state.loadStacks)
-  const shopOpen = useShopStore((state) => state.isOpen)
+  const activeOverlay = useOverlayStore((state) => state.activeOverlay)
 
   useEffect(() => {
     loadCharacterRecord(characterId)
@@ -89,6 +94,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       </header>
 
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+      <InventoryFullModal />
 
       <main className="mx-auto grid max-w-7xl gap-6 px-6 py-6 lg:grid-cols-[1.6fr_0.7fr]">
         {/* min-w-0 overrides the grid item's default content-based minimum width — without
@@ -98,7 +104,11 @@ export default function GameShell({ characterId }: { characterId: string }) {
           <div className="relative">
             <GameCanvas />
             <ArrowCounterHud />
-            {shopOpen && <ShopOverlay />}
+            {activeOverlay === 'shop' && <ShopOverlay />}
+            {activeOverlay === 'zone' && <ZoneOverlay />}
+            {activeOverlay === 'equipment' && <EquipmentOverlay />}
+            {activeOverlay === 'forge' && <ForgeOverlay />}
+            {activeOverlay === 'marketplace' && <MarketplaceOverlay />}
           </div>
 
           <BottomNav />
@@ -111,7 +121,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
 
           <ProgressionPanel />
 
-          <HudTabs />
+          <SideHud />
         </aside>
       </main>
     </div>

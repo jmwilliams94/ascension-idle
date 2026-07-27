@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.10.0",
+    "date": "2026-07-28",
+    "changes": [
+      "Inventory is now a fixed 40-slot grid, matching quality-colored tiles used in Equipment and the Forge — click a filled slot to see its details and equip it",
+      "If your inventory is full and you get a drop while playing, you'll now be asked to discard something to make room (or discard the new item) instead of it just failing silently",
+      "Zone, Equipment, Forge, and Market now only open from the bottom navigation bar as a window over the game view — they've been removed from the side panel",
+      "The side panel now only shows your Stats, plus your Inventory automatically while the Forge window is open"
+    ]
+  },
+  {
     "version": "1.9.1",
     "date": "2026-07-27",
     "changes": [

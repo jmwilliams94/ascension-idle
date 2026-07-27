@@ -1,18 +1,17 @@
+import OverlayPanel from './OverlayPanel'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useArrowStore } from '../game/items/useArrowStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
-import { useShopStore } from '../game/hud/useShopStore'
+import { useOverlayStore } from '../game/hud/useOverlayStore'
 import { ARROW_TYPES, ARROW_TYPE_ORDER, type ArrowTypeId } from '../game/items/arrowTypes'
 
-// Renders as an absolutely-positioned overlay on top of GameCanvas (see GameShell),
-// closable via the X — BottomNav stays visible/usable underneath rather than being
-// replaced. Only Hunter has anything to buy this step. Buying always purchases one
-// full stack at a time (stackSize arrows for stackSize × price gold) — a stack is
-// the actual purchasable unit, not the individual arrow. Equipping a specific stack
-// happens from the Inventory tab, not here.
+// Only Hunter has anything to buy this step. Buying always purchases one full stack
+// at a time (stackSize arrows for stackSize × price gold) — a stack is the actual
+// purchasable unit, not the individual arrow. Equipping a specific stack happens
+// from the Inventory panel, not here.
 export default function ShopOverlay() {
-  const close = useShopStore((state) => state.close)
+  const close = useOverlayStore((state) => state.close)
   const characterId = useActiveCharacterStore((state) => state.characterId)
 
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
@@ -39,23 +38,11 @@ export default function ShopOverlay() {
   }
 
   return (
-    <div className="absolute inset-0 z-10 flex flex-col rounded-3xl border border-slate-800 bg-slate-950/95 p-4 backdrop-blur">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-slate-200">Shop</p>
-        <button
-          type="button"
-          onClick={close}
-          aria-label="Close shop"
-          className="text-slate-400 hover:text-slate-200"
-        >
-          ✕
-        </button>
-      </div>
-
+    <OverlayPanel title="Shop" onClose={close}>
       {!isHunter ? (
-        <p className="mt-4 flex-1 text-center text-sm text-slate-500">Nothing available yet</p>
+        <p className="flex h-full items-center justify-center text-center text-sm text-slate-500">Nothing available yet</p>
       ) : (
-        <div className="mt-2 space-y-2 overflow-y-auto">
+        <div className="space-y-2">
           <p className="text-xs text-slate-500">Gold: {gold}</p>
 
           {ARROW_TYPE_ORDER.map((typeId) => {
@@ -92,6 +79,6 @@ export default function ShopOverlay() {
           })}
         </div>
       )}
-    </div>
+    </OverlayPanel>
   )
 }
