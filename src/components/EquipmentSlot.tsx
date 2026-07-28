@@ -1,3 +1,4 @@
+import HoverTooltip from './HoverTooltip'
 import ItemTooltip from './ItemTooltip'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
 
@@ -36,27 +37,27 @@ export default function EquipmentSlot({ label, icon, locked, filled, qualityColo
     )
   }
 
-  return (
-    <div className="group relative">
-      <button
-        type="button"
-        onClick={onClick}
-        title={tooltip ? undefined : label}
-        aria-label={label}
-        disabled={!onClick}
-        className={`flex h-16 w-16 items-center justify-center rounded-lg border-2 text-lg ${
-          filled ? 'bg-slate-800' : 'border-dashed border-slate-700 bg-slate-950/40'
-        } ${selected ? 'ring-2 ring-sky-400' : ''} ${!onClick ? 'cursor-default' : ''}`}
-        style={filled ? { borderColor: qualityColor, backgroundColor: qualityColor ? `${qualityColor}22` : undefined } : undefined}
-      >
-        {icon}
-      </button>
-
-      {tooltip && (
-        <div className="pointer-events-none invisible absolute bottom-full left-1/2 z-30 mb-1.5 -translate-x-1/2 opacity-0 transition-opacity duration-150 group-hover:visible group-hover:opacity-100">
-          <ItemTooltip {...tooltip} />
-        </div>
-      )}
-    </div>
+  const button = (
+    <button
+      type="button"
+      onClick={onClick}
+      title={tooltip ? undefined : label}
+      aria-label={label}
+      disabled={!onClick}
+      className={`flex h-16 w-16 items-center justify-center rounded-lg border-2 text-lg ${
+        filled ? 'bg-slate-800' : 'border-dashed border-slate-700 bg-slate-950/40'
+      } ${selected ? 'ring-2 ring-sky-400' : ''} ${!onClick ? 'cursor-default' : ''}`}
+      style={filled ? { borderColor: qualityColor, backgroundColor: qualityColor ? `${qualityColor}22` : undefined } : undefined}
+    >
+      {icon}
+    </button>
   )
+
+  if (!tooltip) {
+    return button
+  }
+
+  // Portaled (see HoverTooltip/InventorySlot) so it isn't clipped by the paper-doll
+  // grid's own bounds.
+  return <HoverTooltip content={<ItemTooltip {...tooltip} />}>{button}</HoverTooltip>
 }

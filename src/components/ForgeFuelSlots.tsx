@@ -1,6 +1,6 @@
 import type { DragEvent } from 'react'
 import InventorySlot from './InventorySlot'
-import { buildGearTooltip, getQualityColor } from '../game/items/equipmentBonus'
+import { buildGearTooltip, formatItemDisplayName, getQualityColor } from '../game/items/equipmentBonus'
 import { buildStoneTooltip, compositionPointValue } from '../game/items/forgeCosts'
 import type { ItemInstance } from '../game/items/useInventoryStore'
 import type { ItemTemplate } from '../game/items/useItemTemplatesStore'
@@ -83,7 +83,7 @@ export default function ForgeFuelSlots({ slots, templates, onDropSlot, onRemoveS
                 icon="🗡️"
                 badge={`${compositionPointValue(entry.item.composition_level)}`}
                 qualityColor={getQualityColor(entry.item.quality_tier)}
-                label={template?.name ?? 'Unknown item'}
+                label={template ? formatItemDisplayName(template.name, entry.item.quality_tier, entry.item.composition_level) : 'Unknown item'}
                 tooltip={buildGearTooltip(entry.item, template)}
                 onClick={() => onRemoveSlot(index)}
               />

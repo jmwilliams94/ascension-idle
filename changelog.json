@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.14.1",
+    "date": "2026-07-28",
+    "changes": [
+      "Fixed item tooltips getting clipped near the edges of the Forge window",
+      "Composed items now show their tier right in the name, e.g. \"Refined Wooden Sword (+1)\""
+    ]
+  },
+  {
     "version": "1.14.0",
     "date": "2026-07-28",
     "changes": [

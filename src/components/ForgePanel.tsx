@@ -214,7 +214,7 @@ export default function ForgePanel() {
         return null
       }
       return {
-        name: formatItemDisplayName(selectedTemplate.name, next),
+        name: formatItemDisplayName(selectedTemplate.name, next, selectedItem.composition_level),
         qualityAndLevel: formatQualityAndLevel(next, selectedItem.level),
         color: getQualityColor(next),
       }
@@ -224,7 +224,7 @@ export default function ForgePanel() {
     // formula yet (see CLAUDE.md's Gear system section), so the preview honestly
     // shows the same stats with just the level incremented, not invented numbers.
     return {
-      name: formatItemDisplayName(selectedTemplate.name, selectedItem.quality_tier),
+      name: formatItemDisplayName(selectedTemplate.name, selectedItem.quality_tier, selectedItem.composition_level),
       qualityAndLevel: formatQualityAndLevel(selectedItem.quality_tier, selectedItem.level + 1),
       color: getQualityColor(selectedItem.quality_tier),
     }

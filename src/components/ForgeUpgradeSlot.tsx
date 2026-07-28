@@ -44,7 +44,7 @@ export default function ForgeUpgradeSlot({ item, template, onDropItemId, onRemov
           emptyHint="Drop item here"
           qualityColor={item ? getQualityColor(item.quality_tier) : undefined}
           icon={item ? '🗡️' : undefined}
-          label={item ? (template ? formatItemDisplayName(template.name, item.quality_tier) : 'Unknown item') : undefined}
+          label={item ? (template ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level) : 'Unknown item') : undefined}
           tooltip={item ? buildGearTooltip(item, template ?? undefined) : undefined}
           draggable={Boolean(item)}
           onDragEnd={item ? onRemove : undefined}
@@ -54,7 +54,7 @@ export default function ForgeUpgradeSlot({ item, template, onDropItemId, onRemov
       {item && (
         <div className="text-center">
           <p className="text-xs font-medium text-slate-200">
-            {template ? formatItemDisplayName(template.name, item.quality_tier) : 'Unknown item'}
+            {template ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level) : 'Unknown item'}
           </p>
           <p className="text-[10px] text-slate-500">{formatQualityAndLevel(item.quality_tier, item.level)}</p>
           <button

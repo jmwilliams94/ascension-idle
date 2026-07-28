@@ -707,10 +707,10 @@ export default class IsometricScene extends Phaser.Scene {
       return
     }
 
-    this.showItemDropLabel(deathTile, drop.template.name, drop.item.quality_tier)
+    this.showItemDropLabel(deathTile, drop.template.name, drop.item.quality_tier, drop.item.composition_level)
   }
 
-  private showItemDropLabel(deathTile: TileCoord, templateName: string, qualityTier: string) {
+  private showItemDropLabel(deathTile: TileCoord, templateName: string, qualityTier: string, compositionLevel: number) {
     if (!useDisplaySettingsStore.getState().showItemDropText || !this.tileContainer) {
       return
     }
@@ -725,7 +725,7 @@ export default class IsometricScene extends Phaser.Scene {
     const worldY = this.tileContainer.y + local.y
 
     const text = this.add
-      .text(worldX, worldY, formatItemDisplayName(templateName, qualityTier), {
+      .text(worldX, worldY, formatItemDisplayName(templateName, qualityTier, compositionLevel), {
         fontSize: '13px',
         color: getQualityColor(qualityTier),
         fontStyle: 'bold',

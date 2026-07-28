@@ -55,7 +55,7 @@ export default function EquipmentPanel() {
 
         <div style={{ gridArea: 'main' }} className="flex items-center justify-center">
           <EquipmentSlot
-            label={template ? formatItemDisplayName(template.name, equippedItem.quality_tier) : 'Main Hand — empty'}
+            label={template ? formatItemDisplayName(template.name, equippedItem.quality_tier, equippedItem.composition_level) : 'Main Hand — empty'}
             icon={template ? '🗡️' : undefined}
             filled={Boolean(template)}
             qualityColor={equippedItem ? getQualityColor(equippedItem.quality_tier) : undefined}
@@ -87,7 +87,7 @@ export default function EquipmentPanel() {
             </div>
             <div>
               <p className="text-sm font-medium text-slate-200">
-                {formatItemDisplayName(template.name, equippedItem.quality_tier)}
+                {formatItemDisplayName(template.name, equippedItem.quality_tier, equippedItem.composition_level)}
               </p>
               <p className="text-xs text-slate-500">{formatQualityAndLevel(equippedItem.quality_tier, equippedItem.level)}</p>
               <p className="text-xs text-slate-500">{formatBaseStats(template.base_stats)}</p>

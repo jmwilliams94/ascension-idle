@@ -1,4 +1,5 @@
 import type { DragEvent } from 'react'
+import HoverTooltip from './HoverTooltip'
 import ItemTooltip from './ItemTooltip'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
 
@@ -64,31 +65,33 @@ export default function InventorySlot({
     )
   }
 
-  return (
-    <div className="group relative">
-      <button
-        type="button"
-        data-slot-id={slotId}
-        onClick={onClick}
-        draggable={draggable}
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
-        title={tooltip ? undefined : label}
-        aria-label={label}
-        className={`relative flex aspect-square w-full items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg ${sizeClassName} ${
-          selected ? 'ring-2 ring-sky-400' : ''
-        } ${draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
-        style={{ borderColor: qualityColor, backgroundColor: qualityColor ? `${qualityColor}22` : undefined }}
-      >
-        {icon}
-        {badge && <span className="absolute bottom-0.5 right-1 text-[9px] font-semibold text-slate-200">{badge}</span>}
-      </button>
-
-      {tooltip && (
-        <div className="pointer-events-none invisible absolute bottom-full left-1/2 z-30 mb-1.5 -translate-x-1/2 opacity-0 transition-opacity duration-150 group-hover:visible group-hover:opacity-100">
-          <ItemTooltip {...tooltip} />
-        </div>
-      )}
-    </div>
+  const button = (
+    <button
+      type="button"
+      data-slot-id={slotId}
+      onClick={onClick}
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      title={tooltip ? undefined : label}
+      aria-label={label}
+      className={`relative flex aspect-square w-full items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg ${sizeClassName} ${
+        selected ? 'ring-2 ring-sky-400' : ''
+      } ${draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
+      style={{ borderColor: qualityColor, backgroundColor: qualityColor ? `${qualityColor}22` : undefined }}
+    >
+      {icon}
+      {badge && <span className="absolute bottom-0.5 right-1 text-[9px] font-semibold text-slate-200">{badge}</span>}
+    </button>
   )
+
+  if (!tooltip) {
+    return button
+  }
+
+  // Portaled to document.body (see HoverTooltip) rather than a plain CSS
+  // absolute-positioned overlay — a tile near the edge of a scrollable ancestor
+  // (e.g. the Forge overlay's scroll container) would otherwise get its tooltip
+  // clipped by that ancestor's overflow, which is exactly what a portal escapes.
+  return <HoverTooltip content={<ItemTooltip {...tooltip} />}>{button}</HoverTooltip>
 }

@@ -78,7 +78,7 @@ export default function InventoryFullModal() {
                     style={{ backgroundColor: getQualityColor(item.quality_tier) }}
                   />
                   <span className="truncate text-slate-200">
-                    {template ? formatItemDisplayName(template.name, item.quality_tier) : 'Unknown item'}
+                    {template ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level) : 'Unknown item'}
                   </span>
                   <span className="shrink-0 text-slate-500">{formatQualityAndLevel(item.quality_tier, item.level)}</span>
                 </div>

@@ -164,7 +164,7 @@ export default function InventoryPanel({ reservedItemIds = [], onItemDragStart, 
             }
 
             const template = templates.find((entry) => entry.id === item.template_id)
-            const label = template ? formatItemDisplayName(template.name, item.quality_tier) : 'Unknown item'
+            const label = template ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level) : 'Unknown item'
 
             return (
               <InventorySlot
@@ -245,7 +245,9 @@ export default function InventoryPanel({ reservedItemIds = [], onItemDragStart, 
             </div>
             <div>
               <p className="text-sm font-medium text-slate-200">
-                {selectedTemplate ? formatItemDisplayName(selectedTemplate.name, selectedItem.quality_tier) : 'Unknown item'}
+                {selectedTemplate
+                  ? formatItemDisplayName(selectedTemplate.name, selectedItem.quality_tier, selectedItem.composition_level)
+                  : 'Unknown item'}
               </p>
               <p className="text-xs text-slate-500">{formatQualityAndLevel(selectedItem.quality_tier, selectedItem.level)}</p>
               {selectedTemplate && <p className="text-xs text-slate-500">{formatBaseStats(selectedTemplate.base_stats)}</p>}
