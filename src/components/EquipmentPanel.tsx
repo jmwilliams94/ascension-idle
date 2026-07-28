@@ -6,11 +6,13 @@ import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 
 // Paper-doll layout, positioned around a central character placeholder (no art yet
-// — a plain silhouette box). Weapon (bottom-left of the bottom row) is the only
-// functional slot this step, matching equipped_item_id's current single-slot
-// shortcut — everything else is a non-clickable, greyed-out placeholder hinting at
-// a future gear type via a faint icon, since those slots don't exist in the schema
-// yet (see CLAUDE.md's Gear slots note — exact per-class slot assignment is still
+// — a plain silhouette box). Right column, top to bottom: Head, Necklace, Ring,
+// Main Hand — the only functional slot this step, matching equipped_item_id's
+// current single-slot shortcut. Bottom row lines up Boots (left), Off-hand/Shield
+// (center, below the character), and Armor (right, below Main Hand). Everything
+// except Main Hand is a non-clickable, greyed-out placeholder hinting at a future
+// gear type via a faint icon, since those slots don't exist in the schema yet (see
+// CLAUDE.md's Gear slots note — exact per-class slot assignment is still
 // unresolved, these are illustrative, not final).
 export default function EquipmentPanel() {
   const equippedItemId = useEquipmentStore((state) => state.equippedItemId)
@@ -29,23 +31,18 @@ export default function EquipmentPanel() {
         className="mx-auto grid max-w-xs gap-2"
         style={{
           gridTemplateColumns: '30% 40% 30%',
-          gridTemplateAreas: '"head character acc1" "boots character acc2" ". character acc3" "weapon armor1 armor2"',
+          gridTemplateAreas:
+            '". character head" ". character neck" ". character ring" ". character main" "boots offhand armor"',
         }}
       >
         <div style={{ gridArea: 'head' }} className="flex items-center justify-center">
-          <EquipmentSlot label="Headgear" icon="🪖" locked />
+          <EquipmentSlot label="Head" icon="🪖" locked />
         </div>
-        <div style={{ gridArea: 'boots' }} className="flex items-center justify-center">
-          <EquipmentSlot label="Boots" icon="👢" locked />
-        </div>
-        <div style={{ gridArea: 'acc1' }} className="flex items-center justify-center">
+        <div style={{ gridArea: 'neck' }} className="flex items-center justify-center">
           <EquipmentSlot label="Necklace" icon="📿" locked />
         </div>
-        <div style={{ gridArea: 'acc2' }} className="flex items-center justify-center">
+        <div style={{ gridArea: 'ring' }} className="flex items-center justify-center">
           <EquipmentSlot label="Ring" icon="💍" locked />
-        </div>
-        <div style={{ gridArea: 'acc3' }} className="flex items-center justify-center">
-          <EquipmentSlot label="Earring" icon="🧿" locked />
         </div>
 
         <div style={{ gridArea: 'character' }} className="flex items-center justify-center">
@@ -54,9 +51,9 @@ export default function EquipmentPanel() {
           </div>
         </div>
 
-        <div style={{ gridArea: 'weapon' }} className="flex items-center justify-center">
+        <div style={{ gridArea: 'main' }} className="flex items-center justify-center">
           <EquipmentSlot
-            label={template ? formatItemDisplayName(template.name, equippedItem.quality_tier) : 'Weapon — empty'}
+            label={template ? formatItemDisplayName(template.name, equippedItem.quality_tier) : 'Main Hand — empty'}
             icon={template ? '🗡️' : undefined}
             filled={Boolean(template)}
             qualityColor={equippedItem ? getQualityColor(equippedItem.quality_tier) : undefined}
@@ -64,11 +61,15 @@ export default function EquipmentPanel() {
             onClick={template ? () => setWeaponSelected((current) => !current) : undefined}
           />
         </div>
-        <div style={{ gridArea: 'armor1' }} className="flex items-center justify-center">
-          <EquipmentSlot label="Body Armor" icon="🛡️" locked />
+
+        <div style={{ gridArea: 'boots' }} className="flex items-center justify-center">
+          <EquipmentSlot label="Boots" icon="👢" locked />
         </div>
-        <div style={{ gridArea: 'armor2' }} className="flex items-center justify-center">
-          <EquipmentSlot label="Armor" icon="🛡️" locked />
+        <div style={{ gridArea: 'offhand' }} className="flex items-center justify-center">
+          <EquipmentSlot label="Off-hand / Shield" icon="🛡️" locked />
+        </div>
+        <div style={{ gridArea: 'armor' }} className="flex items-center justify-center">
+          <EquipmentSlot label="Armor" icon="🥋" locked />
         </div>
       </div>
 

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.11.2",
+    "date": "2026-07-28",
+    "changes": [
+      "Rearranged the Equipment paper-doll: Head, Necklace, Ring, and Main Hand now stack down the right side, with Boots, Off-hand/Shield, and Armor lined up along the bottom"
+    ]
+  },
+  {
     "version": "1.11.1",
     "date": "2026-07-28",
     "changes": [
