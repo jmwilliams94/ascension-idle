@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.10.2",
+    "date": "2026-07-28",
+    "changes": [
+      "Fixed a crash that showed a brief flash of the character-select screen and then went blank after logging in"
+    ]
+  },
+  {
     "version": "1.10.1",
     "date": "2026-07-28",
     "changes": [

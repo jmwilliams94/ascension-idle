@@ -15,7 +15,12 @@ export default function InventoryFullModal() {
   const items = useInventoryStore((state) => state.items)
   const resolvePendingDrop = useInventoryStore((state) => state.resolvePendingDrop)
   const templates = useItemTemplatesStore((state) => state.templates)
-  const arrowStacks = useArrowStore((state) => state.stacks.filter((stack) => stack.count > 0))
+  // Filtering must happen outside the selector — a selector that returns a fresh
+  // array every call (via .filter() inline) makes Zustand's useSyncExternalStore
+  // subscription see a "different" snapshot on every render, which triggers an
+  // infinite re-render loop (React error #185, "Maximum update depth exceeded").
+  const stacks = useArrowStore((state) => state.stacks)
+  const arrowStacks = stacks.filter((stack) => stack.count > 0)
 
   if (!pendingFullDrop) {
     return null
