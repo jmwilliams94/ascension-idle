@@ -1,14 +1,14 @@
-import ForgeFuelZone, { type FuelEntry } from './ForgeFuelZone'
+import ForgeFuelSlots, { type FuelEntry } from './ForgeFuelSlots'
 import { compositionPointValue, compositionPointsRequired, formatCompositionTier, simulateCompositionFeed } from '../game/items/forgeCosts'
 import type { ItemInstance } from '../game/items/useInventoryStore'
 import type { ItemTemplate } from '../game/items/useItemTemplatesStore'
 
 interface ForgeCompositionPanelProps {
   item: ItemInstance
-  fuelEntries: FuelEntry[]
+  fuelSlots: (FuelEntry | null)[]
   templates: ItemTemplate[]
-  onDropFuelId: (id: string) => void
-  onRemoveFuel: (id: string) => void
+  onDropFuelSlot: (slotIndex: number, id: string) => void
+  onRemoveFuelSlot: (slotIndex: number) => void
   busy: boolean
   onFeed: () => void
   feedError: string | null
@@ -33,23 +33,27 @@ function ProgressBar({ level, points, required }: { level: number; points: numbe
 }
 
 // Composition tab content — no RNG, no success/fail state (see ForgePanel): the
-// player drags stones and/or gear into the Fuel zone (same drag-and-drop as the
-// main Upgrade Slot — stones are items here, not a typed-in currency amount), sees
-// exactly what feeding them would do (including crossing one or more tiers at
-// once), and commits with "Feed", which always applies the full point value.
+// player drags up to two stones and/or gear items into the two fixed Fuel slots
+// (same drag-and-drop as the main Upgrade Slot — stones are items here, not a
+// typed-in currency amount), sees exactly what feeding them would do (including
+// crossing one or more tiers at once), and commits with "Feed", which always
+// applies the full point value.
 export default function ForgeCompositionPanel({
   item,
-  fuelEntries,
+  fuelSlots,
   templates,
-  onDropFuelId,
-  onRemoveFuel,
+  onDropFuelSlot,
+  onRemoveFuelSlot,
   busy,
   onFeed,
   feedError,
 }: ForgeCompositionPanelProps) {
   const required = compositionPointsRequired(item.composition_level)
 
-  const addedPoints = fuelEntries.reduce((sum, entry) => {
+  const addedPoints = fuelSlots.reduce((sum, entry) => {
+    if (!entry) {
+      return sum
+    }
     if (entry.kind === 'stone') {
       return sum + compositionPointValue(entry.tier)
     }
@@ -75,7 +79,7 @@ export default function ForgeCompositionPanel({
         </div>
       )}
 
-      <ForgeFuelZone fuelEntries={fuelEntries} templates={templates} onDropItemId={onDropFuelId} onRemove={onRemoveFuel} />
+      <ForgeFuelSlots slots={fuelSlots} templates={templates} onDropSlot={onDropFuelSlot} onRemoveSlot={onRemoveFuelSlot} />
 
       {feedError && <p className="text-center text-[10px] text-red-400">{feedError}</p>}
 

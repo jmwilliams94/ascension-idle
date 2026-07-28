@@ -1,3 +1,6 @@
+import ItemTooltip from './ItemTooltip'
+import type { ItemTooltipData } from '../game/items/itemTooltip'
+
 interface EquipmentSlotProps {
   label: string
   icon?: string
@@ -8,13 +11,16 @@ interface EquipmentSlotProps {
   qualityColor?: string
   selected?: boolean
   onClick?: () => void
+  // Universal Diablo/PoE-style hover tooltip (see ItemTooltip.tsx) — only Weapon
+  // ever passes this today, since it's the only functional slot.
+  tooltip?: ItemTooltipData
 }
 
 // One paper-doll tile. `locked` slots are inert placeholders (Headgear, Boots,
 // accessories, extra armor) for gear types that aren't implemented yet — everything
 // else (currently just Weapon) is functional: filled/qualityColor reflect the
 // equipped item, onClick toggles the detail card in EquipmentPanel.
-export default function EquipmentSlot({ label, icon, locked, filled, qualityColor, selected, onClick }: EquipmentSlotProps) {
+export default function EquipmentSlot({ label, icon, locked, filled, qualityColor, selected, onClick, tooltip }: EquipmentSlotProps) {
   // Fixed pixel size rather than aspect-square/w-full — this tile sits inside a
   // grid cell whose column can be much wider than the tile itself (the columns are
   // percentage-based so the paper-doll's positions stay proportional), so sizing
@@ -31,18 +37,26 @@ export default function EquipmentSlot({ label, icon, locked, filled, qualityColo
   }
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={label}
-      aria-label={label}
-      disabled={!onClick}
-      className={`flex h-16 w-16 items-center justify-center rounded-lg border-2 text-lg ${
-        filled ? 'bg-slate-800' : 'border-dashed border-slate-700 bg-slate-950/40'
-      } ${selected ? 'ring-2 ring-sky-400' : ''} ${!onClick ? 'cursor-default' : ''}`}
-      style={filled ? { borderColor: qualityColor, backgroundColor: qualityColor ? `${qualityColor}22` : undefined } : undefined}
-    >
-      {icon}
-    </button>
+    <div className="group relative">
+      <button
+        type="button"
+        onClick={onClick}
+        title={tooltip ? undefined : label}
+        aria-label={label}
+        disabled={!onClick}
+        className={`flex h-16 w-16 items-center justify-center rounded-lg border-2 text-lg ${
+          filled ? 'bg-slate-800' : 'border-dashed border-slate-700 bg-slate-950/40'
+        } ${selected ? 'ring-2 ring-sky-400' : ''} ${!onClick ? 'cursor-default' : ''}`}
+        style={filled ? { borderColor: qualityColor, backgroundColor: qualityColor ? `${qualityColor}22` : undefined } : undefined}
+      >
+        {icon}
+      </button>
+
+      {tooltip && (
+        <div className="pointer-events-none invisible absolute bottom-full left-1/2 z-30 mb-1.5 -translate-x-1/2 opacity-0 transition-opacity duration-150 group-hover:visible group-hover:opacity-100">
+          <ItemTooltip {...tooltip} />
+        </div>
+      )}
+    </div>
   )
 }

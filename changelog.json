@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.14.0",
+    "date": "2026-07-28",
+    "changes": [
+      "Added Diablo/PoE-style hover tooltips for items, arrows, and stones — hover any tile in your Inventory, the Forge, or your equipped weapon to see its details",
+      "The Forge now shows your Inventory below the Upgrade Slot and Result Preview instead of squeezed in beside them",
+      "Composition feeding is now done through two fixed Fuel slots instead of an open-ended drop zone — drag in up to two stones or items at a time"
+    ]
+  },
+  {
     "version": "1.13.2",
     "date": "2026-07-28",
     "changes": [

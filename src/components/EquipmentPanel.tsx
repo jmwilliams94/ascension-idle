@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import EquipmentSlot from './EquipmentSlot'
 import PaperDollBody from './PaperDollBody'
-import { formatBaseStats, formatItemDisplayName, formatQualityAndLevel, getQualityColor } from '../game/items/equipmentBonus'
+import { buildGearTooltip, formatBaseStats, formatItemDisplayName, formatQualityAndLevel, getQualityColor } from '../game/items/equipmentBonus'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
@@ -61,6 +61,7 @@ export default function EquipmentPanel() {
             qualityColor={equippedItem ? getQualityColor(equippedItem.quality_tier) : undefined}
             selected={weaponSelected}
             onClick={template ? () => setWeaponSelected((current) => !current) : undefined}
+            tooltip={equippedItem ? buildGearTooltip(equippedItem, template || undefined) : undefined}
           />
         </div>
 

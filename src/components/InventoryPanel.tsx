@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import type { DragEvent } from 'react'
 import InventorySlot from './InventorySlot'
-import { formatBaseStats, formatItemDisplayName, formatQualityAndLevel, getQualityColor } from '../game/items/equipmentBonus'
+import { buildGearTooltip, formatBaseStats, formatItemDisplayName, formatQualityAndLevel, getQualityColor } from '../game/items/equipmentBonus'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
-import { COMPOSITION_STONE_TIERS, compositionPointValue, stoneDragId } from '../game/items/forgeCosts'
+import { COMPOSITION_STONE_TIERS, buildStoneTooltip, compositionPointValue, stoneDragId } from '../game/items/forgeCosts'
+import type { ItemTooltipData } from '../game/items/itemTooltip'
 import { useCompositionStore } from '../game/items/useCompositionStore'
 import { INVENTORY_SLOT_CAP, useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
@@ -115,6 +116,11 @@ export default function InventoryPanel({ reservedItemIds = [], onItemDragStart, 
         <div className="mt-2 grid grid-cols-8 gap-1.5">
           {visibleArrowStacks.map((stack) => {
             const type = ARROW_TYPES[stack.arrowType]
+            const arrowTooltip: ItemTooltipData = {
+              title: type.displayName,
+              lines: ['Ammo', `${stack.count} / ${type.stackSize}`],
+              stats: [type.description],
+            }
 
             return (
               <InventorySlot
@@ -123,6 +129,7 @@ export default function InventoryPanel({ reservedItemIds = [], onItemDragStart, 
                 filled
                 icon="🏹"
                 label={`${type.displayName} (${stack.count}/${type.stackSize})`}
+                tooltip={arrowTooltip}
                 badge={`${stack.count}/${type.stackSize}`}
                 selected={selectedSlot?.kind === 'arrow' && selectedSlot.id === stack.id}
                 onClick={() => toggleSlot({ kind: 'arrow', id: stack.id })}
@@ -142,6 +149,7 @@ export default function InventoryPanel({ reservedItemIds = [], onItemDragStart, 
                 filled
                 icon="🔷"
                 label={`+${tier} Stone — ${compositionPointValue(tier)} pts`}
+                tooltip={buildStoneTooltip(tier)}
                 selected={selectedSlot?.kind === 'stone' && selectedSlot.dragId === dragId}
                 onClick={() => toggleSlot({ kind: 'stone', dragId, tier })}
                 draggable={Boolean(onStoneDragStart)}
@@ -166,6 +174,7 @@ export default function InventoryPanel({ reservedItemIds = [], onItemDragStart, 
                 qualityColor={getQualityColor(item.quality_tier)}
                 icon="🗡️"
                 label={label}
+                tooltip={buildGearTooltip(item, template)}
                 selected={selectedSlot?.kind === 'item' && selectedSlot.id === item.id}
                 onClick={() => toggleSlot({ kind: 'item', id: item.id })}
                 draggable={Boolean(onItemDragStart)}

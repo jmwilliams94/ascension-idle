@@ -1,5 +1,6 @@
 import type { DragEvent } from 'react'
-import { formatItemDisplayName, formatQualityAndLevel, getQualityColor } from '../game/items/equipmentBonus'
+import InventorySlot from './InventorySlot'
+import { buildGearTooltip, formatItemDisplayName, formatQualityAndLevel, getQualityColor } from '../game/items/equipmentBonus'
 import type { ItemInstance } from '../game/items/useInventoryStore'
 import type { ItemTemplate } from '../game/items/useItemTemplatesStore'
 
@@ -15,7 +16,8 @@ interface ForgeUpgradeSlotProps {
 // Occupied, the item itself becomes draggable so dragging it back out clears the
 // selection (there's nowhere else valid to drop it, so onDragEnd always clears,
 // regardless of where the drag ends) — a "Remove" button does the same thing for
-// anyone who'd rather click than drag.
+// anyone who'd rather click than drag. Reuses InventorySlot (rather than its own
+// bespoke tile markup) so the universal hover tooltip works here too.
 export default function ForgeUpgradeSlot({ item, template, onDropItemId, onRemove }: ForgeUpgradeSlotProps) {
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault()
@@ -34,28 +36,19 @@ export default function ForgeUpgradeSlot({ item, template, onDropItemId, onRemov
     <div className="flex flex-col items-center gap-2">
       <p className="text-xs uppercase tracking-wide text-slate-500">Upgrade Slot</p>
 
-      <div
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-        className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border-2 text-2xl ${
-          item ? 'bg-slate-800' : 'border-dashed border-slate-700 bg-slate-950/40'
-        }`}
-        style={item ? { borderColor: getQualityColor(item.quality_tier), backgroundColor: `${getQualityColor(item.quality_tier)}22` } : undefined}
-      >
-        {item ? (
-          <button
-            type="button"
-            draggable
-            onDragEnd={onRemove}
-            title="Drag out to remove"
-            aria-label="Drag out to remove from Upgrade Slot"
-            className="flex h-full w-full cursor-grab items-center justify-center active:cursor-grabbing"
-          >
-            🗡️
-          </button>
-        ) : (
-          <span className="px-1 text-center text-[10px] leading-tight text-slate-600">Drop item here</span>
-        )}
+      <div onDragOver={handleDragOver} onDrop={handleDrop} className="h-20 w-20 shrink-0">
+        <InventorySlot
+          slotId="forge-upgrade-slot"
+          filled={Boolean(item)}
+          sizeClassName="h-20 w-20"
+          emptyHint="Drop item here"
+          qualityColor={item ? getQualityColor(item.quality_tier) : undefined}
+          icon={item ? '🗡️' : undefined}
+          label={item ? (template ? formatItemDisplayName(template.name, item.quality_tier) : 'Unknown item') : undefined}
+          tooltip={item ? buildGearTooltip(item, template ?? undefined) : undefined}
+          draggable={Boolean(item)}
+          onDragEnd={item ? onRemove : undefined}
+        />
       </div>
 
       {item && (

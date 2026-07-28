@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import ForgeCompositionPanel from './ForgeCompositionPanel'
-import type { FuelEntry } from './ForgeFuelZone'
+import type { FuelEntry } from './ForgeFuelSlots'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import InventoryPanel from './InventoryPanel'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
@@ -18,6 +18,10 @@ const ITEM_LEVEL_CAP = 130
 // resets itself for the next item, per the spec's "return to empty" behavior.
 // Composition never uses this — see the Composition branch below.
 const RESULT_DISPLAY_MS = 2600
+
+// Confirmed: Composition feeds are capped at exactly two fuel inputs at a time —
+// see ForgeFuelSlots.
+const FUEL_SLOT_COUNT = 2
 
 type UpgradeType = 'quality' | 'level' | 'composition'
 
@@ -53,7 +57,7 @@ function describeFeedFailure(error?: string): string {
     case 'fuel_is_target_item':
       return "An item can't be fed into itself."
     case 'no_points_contributed':
-      return 'Select at least one stone or fuel item.'
+      return 'Place at least one stone or item in a Fuel slot.'
     case 'not_owner':
     case 'item_not_found':
       return "Couldn't find that item."
@@ -62,11 +66,12 @@ function describeFeedFailure(error?: string): string {
   }
 }
 
-// Forge overlay: Inventory (left, reused unmodified) feeds items into the Upgrade
-// Slot (center) via native HTML5 drag-and-drop; the right column previews what the
-// item would look like after the chosen upgrade path using the exact same logic
-// the real Postgres functions use — no success rate is ever shown for Quality/Level
-// (only the eventual outcome), and Composition has no RNG at all (see
+// Forge overlay: the Upgrade Slot + Result Preview sit on top, with the Inventory
+// grid (reused, drag-and-drop enabled) below feeding items into them — native
+// HTML5 drag-and-drop throughout. The Result Preview computes what the item would
+// look like after the chosen upgrade path using the exact same logic the real
+// Postgres functions use — no success rate is ever shown for Quality/Level (only
+// the eventual outcome), and Composition has no RNG at all (see
 // ForgeCompositionPanel).
 export default function ForgePanel() {
   const items = useInventoryStore((state) => state.items)
@@ -82,34 +87,37 @@ export default function ForgePanel() {
   const [selectedType, setSelectedType] = useState<UpgradeType | null>(null)
   const [attemptResult, setAttemptResult] = useState<AttemptResult | null>(null)
 
-  // Fuel ids are heterogeneous: either a real item's own id, or a synthetic
-  // stoneDragId("stone:N") for a stone tier — see forgeCosts.ts.
-  const [fuelIds, setFuelIds] = useState<string[]>([])
+  // Fixed-length (FUEL_SLOT_COUNT): each entry is either null (empty) or a
+  // heterogeneous drag id — a real item's own id, or a synthetic
+  // stoneDragId("stone:N:index") for a single stone — see forgeCosts.ts.
+  const [fuelSlotIds, setFuelSlotIds] = useState<(string | null)[]>(Array<string | null>(FUEL_SLOT_COUNT).fill(null))
   const [feedError, setFeedError] = useState<string | null>(null)
 
   const selectedItem = items.find((item) => item.id === selectedItemId) ?? null
   const selectedTemplate = selectedItem ? (templates.find((t) => t.id === selectedItem.template_id) ?? null) : null
 
-  // Stones don't stack — each fuelId for a stone represents exactly one stone of
-  // that tier, so multiple dragged-in tiles of the same tier show up as separate
-  // entries here and get summed below for the actual feed amount.
-  const fuelEntries: FuelEntry[] = fuelIds.flatMap((id): FuelEntry[] => {
+  const fuelSlots: (FuelEntry | null)[] = fuelSlotIds.map((id): FuelEntry | null => {
+    if (!id) {
+      return null
+    }
+
     const tier = parseStoneDragId(id)
     if (tier !== null) {
-      return [{ kind: 'stone', id, tier }]
+      return { kind: 'stone', id, tier }
     }
 
     const item = items.find((entry) => entry.id === id)
-    return item ? [{ kind: 'item', id, item }] : []
+    return item ? { kind: 'item', id, item } : null
   })
 
-  const stoneAmounts = fuelEntries.reduce<Record<string, number>>((amounts, entry) => {
-    if (entry.kind === 'stone') {
+  const stoneAmounts = fuelSlots.reduce<Record<string, number>>((amounts, entry) => {
+    if (entry?.kind === 'stone') {
       amounts[String(entry.tier)] = (amounts[String(entry.tier)] ?? 0) + 1
     }
     return amounts
   }, {})
-  const fuelItemIds = fuelEntries.filter((entry) => entry.kind === 'item').map((entry) => entry.id)
+  const fuelItemIds = fuelSlots.flatMap((entry) => (entry?.kind === 'item' ? [entry.id] : []))
+  const fuelIds = fuelSlotIds.filter((id): id is string => id !== null)
 
   // Auto-return to the empty Upgrade Slot after showing the result, per spec —
   // Quality/Level only; Composition never sets attemptResult.
@@ -128,7 +136,7 @@ export default function ForgePanel() {
   }, [attemptResult])
 
   const resetFeedState = () => {
-    setFuelIds([])
+    setFuelSlotIds(Array<string | null>(FUEL_SLOT_COUNT).fill(null))
     setFeedError(null)
   }
 
@@ -155,7 +163,7 @@ export default function ForgePanel() {
     resetFeedState()
   }
 
-  const handleDropFuelId = (id: string) => {
+  const handleDropFuelSlot = (slotIndex: number, id: string) => {
     if (id === selectedItemId || fuelIds.includes(id)) {
       return
     }
@@ -166,12 +174,12 @@ export default function ForgePanel() {
       return
     }
 
-    setFuelIds((current) => [...current, id])
+    setFuelSlotIds((current) => current.map((existing, index) => (index === slotIndex ? id : existing)))
     setFeedError(null)
   }
 
-  const handleRemoveFuel = (id: string) => {
-    setFuelIds((current) => current.filter((entryId) => entryId !== id))
+  const handleRemoveFuelSlot = (slotIndex: number) => {
+    setFuelSlotIds((current) => current.map((existing, index) => (index === slotIndex ? null : existing)))
     setFeedError(null)
   }
 
@@ -254,12 +262,12 @@ export default function ForgePanel() {
 
     // Feeding always works — no result banner needed, just clear this round's
     // picks so the (now-updated) progress bar is ready for the next feed.
-    setFuelIds([])
+    setFuelSlotIds(Array<string | null>(FUEL_SLOT_COUNT).fill(null))
     setFeedError(null)
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-3">
         <dl className="grid grid-cols-2 gap-2 text-sm text-slate-300">
           <div className="flex justify-between">
@@ -273,16 +281,7 @@ export default function ForgePanel() {
         </dl>
       </div>
 
-      <div className="flex gap-4">
-        <div className="min-w-0 flex-1">
-          {/* Draggable only here — opting into onItemDragStart/onStoneDragStart is what enables it. */}
-          <InventoryPanel
-            reservedItemIds={[...(selectedItemId ? [selectedItemId] : []), ...fuelIds]}
-            onItemDragStart={() => undefined}
-            onStoneDragStart={() => undefined}
-          />
-        </div>
-
+      <div className="flex justify-center gap-6">
         <ForgeUpgradeSlot
           item={selectedItem}
           template={selectedTemplate}
@@ -359,10 +358,10 @@ export default function ForgePanel() {
               {selectedType === 'composition' ? (
                 <ForgeCompositionPanel
                   item={selectedItem}
-                  fuelEntries={fuelEntries}
+                  fuelSlots={fuelSlots}
                   templates={templates}
-                  onDropFuelId={handleDropFuelId}
-                  onRemoveFuel={handleRemoveFuel}
+                  onDropFuelSlot={handleDropFuelSlot}
+                  onRemoveFuelSlot={handleRemoveFuelSlot}
                   busy={busy}
                   onFeed={() => void handleFeed()}
                   feedError={feedError}
@@ -411,6 +410,13 @@ export default function ForgePanel() {
           )}
         </div>
       </div>
+
+      {/* Draggable only here — opting into onItemDragStart/onStoneDragStart is what enables it. */}
+      <InventoryPanel
+        reservedItemIds={[...(selectedItemId ? [selectedItemId] : []), ...fuelIds]}
+        onItemDragStart={() => undefined}
+        onStoneDragStart={() => undefined}
+      />
     </div>
   )
 }

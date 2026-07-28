@@ -1,3 +1,5 @@
+import type { ItemTooltipData } from './itemTooltip'
+
 // Mirrors the cost formulas in
 // supabase/migrations/20260727060000_scale_upgrade_costs.sql — preview only, for
 // showing the player a cost before they commit. The actual cost/roll is always
@@ -98,4 +100,14 @@ export function parseStoneDragId(id: string): number | null {
   const [tierPart] = id.slice(STONE_DRAG_ID_PREFIX.length).split(':')
   const tier = Number(tierPart)
   return (COMPOSITION_STONE_TIERS as readonly number[]).includes(tier) ? tier : null
+}
+
+// Universal Diablo/PoE-style tooltip content for a single stone — see
+// buildGearTooltip in equipmentBonus.ts for the gear equivalent.
+export function buildStoneTooltip(tier: number): ItemTooltipData {
+  return {
+    title: `+${tier} Stone`,
+    lines: ['Composition material'],
+    stats: [`${compositionPointValue(tier)} pts`],
+  }
 }

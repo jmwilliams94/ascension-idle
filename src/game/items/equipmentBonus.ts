@@ -1,4 +1,6 @@
 import type { EquipmentBonus } from '../stats/derivedStats'
+import { formatCompositionTier } from './forgeCosts'
+import type { ItemTooltipData } from './itemTooltip'
 import type { ItemInstance } from './useInventoryStore'
 import type { ItemTemplate } from './useItemTemplatesStore'
 
@@ -108,4 +110,22 @@ export function formatItemDisplayName(templateName: string, qualityTier: string)
 
   const label = QUALITY_LABELS[qualityTier] ?? qualityTier
   return `${label} ${templateName}`
+}
+
+// Universal Diablo/PoE-style tooltip content for a gear item — the single source
+// of truth for what a gear tooltip shows, reused everywhere a gear tile renders
+// (InventoryPanel, ForgeUpgradeSlot, ForgeFuelSlots, EquipmentSlot's Main Hand)
+// via InventorySlot's `tooltip` prop, so hovering any of them looks the same.
+export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | undefined): ItemTooltipData {
+  const lines = [formatQualityAndLevel(item.quality_tier, item.level)]
+  if (item.composition_level > 0) {
+    lines.push(`Composition ${formatCompositionTier(item.composition_level)}`)
+  }
+
+  return {
+    title: template ? formatItemDisplayName(template.name, item.quality_tier) : 'Unknown item',
+    titleColor: getQualityColor(item.quality_tier),
+    lines,
+    stats: template ? formatBaseStats(template.base_stats).split(', ').filter(Boolean) : [],
+  }
 }
