@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import ForgeCompositionPanel from './ForgeCompositionPanel'
+import type { FuelEntry } from './ForgeFuelZone'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import InventoryPanel from './InventoryPanel'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { formatItemDisplayName, formatQualityAndLevel, getQualityColor, nextQualityTier } from '../game/items/equipmentBonus'
-import { previewLevelUpgradeCost, previewQualityUpgradeCost } from '../game/items/forgeCosts'
+import { parseStoneDragId, previewLevelUpgradeCost, previewQualityUpgradeCost } from '../game/items/forgeCosts'
 import { useCompositionStore } from '../game/items/useCompositionStore'
 import { useForgeStore } from '../game/items/useForgeStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
@@ -83,13 +84,31 @@ export default function ForgePanel() {
   const [selectedType, setSelectedType] = useState<UpgradeType | null>(null)
   const [attemptResult, setAttemptResult] = useState<AttemptResult | null>(null)
 
-  const [stoneAmounts, setStoneAmounts] = useState<Record<string, number>>({})
-  const [fuelItemIds, setFuelItemIds] = useState<string[]>([])
+  // Fuel ids are heterogeneous: either a real item's own id, or a synthetic
+  // stoneDragId("stone:N") for a stone tier — see forgeCosts.ts.
+  const [fuelIds, setFuelIds] = useState<string[]>([])
   const [feedError, setFeedError] = useState<string | null>(null)
 
   const selectedItem = items.find((item) => item.id === selectedItemId) ?? null
   const selectedTemplate = selectedItem ? (templates.find((t) => t.id === selectedItem.template_id) ?? null) : null
-  const fuelItems = items.filter((item) => fuelItemIds.includes(item.id))
+
+  const fuelEntries: FuelEntry[] = fuelIds.flatMap((id): FuelEntry[] => {
+    const tier = parseStoneDragId(id)
+    if (tier !== null) {
+      return [{ kind: 'stone', id, tier, count: stones[String(tier)] ?? 0 }]
+    }
+
+    const item = items.find((entry) => entry.id === id)
+    return item ? [{ kind: 'item', id, item }] : []
+  })
+
+  const stoneAmounts = fuelEntries.reduce<Record<string, number>>((amounts, entry) => {
+    if (entry.kind === 'stone') {
+      amounts[String(entry.tier)] = entry.count
+    }
+    return amounts
+  }, {})
+  const fuelItemIds = fuelEntries.filter((entry) => entry.kind === 'item').map((entry) => entry.id)
 
   // Auto-return to the empty Upgrade Slot after showing the result, per spec —
   // Quality/Level only; Composition never sets attemptResult.
@@ -108,13 +127,12 @@ export default function ForgePanel() {
   }, [attemptResult])
 
   const resetFeedState = () => {
-    setStoneAmounts({})
-    setFuelItemIds([])
+    setFuelIds([])
     setFeedError(null)
   }
 
   const handleDropItemId = (itemId: string) => {
-    if (!items.some((item) => item.id === itemId) || fuelItemIds.includes(itemId)) {
+    if (!items.some((item) => item.id === itemId) || fuelIds.includes(itemId)) {
       return
     }
 
@@ -136,22 +154,23 @@ export default function ForgePanel() {
     resetFeedState()
   }
 
-  const handleDropFuelItemId = (itemId: string) => {
-    if (itemId === selectedItemId || fuelItemIds.includes(itemId) || !items.some((item) => item.id === itemId)) {
+  const handleDropFuelId = (id: string) => {
+    if (id === selectedItemId || fuelIds.includes(id)) {
       return
     }
 
-    setFuelItemIds((current) => [...current, itemId])
+    // A stone tile is always valid to drop (its tier just needs to exist); a gear
+    // tile must be a real, currently-owned item.
+    if (parseStoneDragId(id) === null && !items.some((item) => item.id === id)) {
+      return
+    }
+
+    setFuelIds((current) => [...current, id])
     setFeedError(null)
   }
 
-  const handleRemoveFuel = (itemId: string) => {
-    setFuelItemIds((current) => current.filter((id) => id !== itemId))
-    setFeedError(null)
-  }
-
-  const handleStoneAmountChange = (tier: string, amount: number) => {
-    setStoneAmounts((current) => ({ ...current, [tier]: amount }))
+  const handleRemoveFuel = (id: string) => {
+    setFuelIds((current) => current.filter((entryId) => entryId !== id))
     setFeedError(null)
   }
 
@@ -234,8 +253,7 @@ export default function ForgePanel() {
 
     // Feeding always works — no result banner needed, just clear this round's
     // picks so the (now-updated) progress bar is ready for the next feed.
-    setStoneAmounts({})
-    setFuelItemIds([])
+    setFuelIds([])
     setFeedError(null)
   }
 
@@ -256,8 +274,12 @@ export default function ForgePanel() {
 
       <div className="flex gap-4">
         <div className="min-w-0 flex-1">
-          {/* Draggable only here — opting into onItemDragStart is what enables it. */}
-          <InventoryPanel reservedItemIds={[...(selectedItemId ? [selectedItemId] : []), ...fuelItemIds]} onItemDragStart={() => undefined} />
+          {/* Draggable only here — opting into onItemDragStart/onStoneDragStart is what enables it. */}
+          <InventoryPanel
+            reservedItemIds={[...(selectedItemId ? [selectedItemId] : []), ...fuelIds]}
+            onItemDragStart={() => undefined}
+            onStoneDragStart={() => undefined}
+          />
         </div>
 
         <ForgeUpgradeSlot
@@ -336,12 +358,9 @@ export default function ForgePanel() {
               {selectedType === 'composition' ? (
                 <ForgeCompositionPanel
                   item={selectedItem}
-                  fuelItems={fuelItems}
+                  fuelEntries={fuelEntries}
                   templates={templates}
-                  stones={stones}
-                  stoneAmounts={stoneAmounts}
-                  onStoneAmountChange={handleStoneAmountChange}
-                  onDropFuelItemId={handleDropFuelItemId}
+                  onDropFuelId={handleDropFuelId}
                   onRemoveFuel={handleRemoveFuel}
                   busy={busy}
                   onFeed={() => void handleFeed()}

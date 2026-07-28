@@ -72,3 +72,23 @@ export function simulateCompositionFeed(currentLevel: number, currentPoints: num
 
   return { level, points, required }
 }
+
+// Stones are drag-and-drop inventory items now (see InventoryPanel/ForgeFuelZone),
+// not a typed-in quantity — there's no per-item UUID for a stone stack (it's just a
+// running total per tier on the character), so drags use this synthetic id instead
+// of a real item id. Dragging a stone tile always feeds its *entire* current count
+// for that tier, same all-or-nothing behavior as dragging a real fuel item.
+const STONE_DRAG_ID_PREFIX = 'stone:'
+
+export function stoneDragId(tier: number): string {
+  return `${STONE_DRAG_ID_PREFIX}${tier}`
+}
+
+export function parseStoneDragId(id: string): number | null {
+  if (!id.startsWith(STONE_DRAG_ID_PREFIX)) {
+    return null
+  }
+
+  const tier = Number(id.slice(STONE_DRAG_ID_PREFIX.length))
+  return (COMPOSITION_STONE_TIERS as readonly number[]).includes(tier) ? tier : null
+}

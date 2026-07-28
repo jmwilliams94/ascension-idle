@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { supabase } from '../../lib/supabaseClient'
 import { useActiveCharacterStore } from '../../lib/useActiveCharacterStore'
 import { useArrowStore } from './useArrowStore'
+import { useCompositionStore } from './useCompositionStore'
 import { useItemTemplatesStore, type ItemTemplate } from './useItemTemplatesStore'
 
 // Mirrors the item_instances table. sockets/enchant are unused this step — they
@@ -31,10 +32,16 @@ const DROP_CHANCE = 0.1
 // max cap.
 export const INVENTORY_SLOT_CAP = 40
 
-// A stack of arrows takes up a slot just like a gear item does — both count against
-// the same 40-slot cap (depleted, 0-count stacks don't, since they're hidden/inert).
+// A stack of arrows, or a non-zero Composition stone tier, takes up a slot just
+// like a gear item does — all three count against the same 40-slot cap (depleted
+// arrow stacks and empty stone tiers don't, since both are hidden/inert). Stones
+// must be counted here, not just visually shown in InventoryPanel — otherwise the
+// grid's "always exactly 40 rendered cells" invariant breaks the moment a player
+// owns any stones (see InventoryPanel).
 function occupiedSlotCount(items: ItemInstance[]): number {
-  return items.length + useArrowStore.getState().stacks.filter((stack) => stack.count > 0).length
+  const arrowStackCount = useArrowStore.getState().stacks.filter((stack) => stack.count > 0).length
+  const stoneTierCount = Object.values(useCompositionStore.getState().stones).filter((count) => count > 0).length
+  return items.length + arrowStackCount + stoneTierCount
 }
 
 interface InventoryState {

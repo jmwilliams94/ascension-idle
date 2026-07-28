@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.13.1",
+    "date": "2026-07-28",
+    "changes": [
+      "Composition stones now show up as draggable items in your Inventory instead of a typed-in quantity — drag a stone tile into the Forge's Fuel zone the same way you drag in gear"
+    ]
+  },
+  {
     "version": "1.13.0",
     "date": "2026-07-28",
     "changes": [

@@ -3,31 +3,40 @@ import type { DragEvent } from 'react'
 import InventorySlot from './InventorySlot'
 import { formatBaseStats, formatItemDisplayName, formatQualityAndLevel, getQualityColor } from '../game/items/equipmentBonus'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
+import { COMPOSITION_STONE_TIERS, compositionPointValue, stoneDragId } from '../game/items/forgeCosts'
+import { useCompositionStore } from '../game/items/useCompositionStore'
 import { INVENTORY_SLOT_CAP, useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { useArrowStore } from '../game/items/useArrowStore'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { ARROW_TYPES } from '../game/items/arrowTypes'
 
-// A single fixed 40-cell grid shared by gear (item_instances) and Hunter arrow
-// stacks — a stack takes up a slot exactly like a gear item does, both counting
-// against the same cap (see occupiedSlotCount in useInventoryStore). Always renders
-// all 40 cells, empty ones dimmed/unclickable, so Forge's drag-and-drop has a
-// stable, always-present set of slots to pick gear up from.
-type SelectedSlot = { kind: 'item'; id: string } | { kind: 'arrow'; id: string } | null
+// A single fixed 40-cell grid shared by gear (item_instances), Hunter arrow
+// stacks, and Composition stones — a stack/stone tier takes up a slot exactly
+// like a gear item does, all counting against the same cap (see
+// occupiedSlotCount in useInventoryStore). Always renders all 40 cells, empty
+// ones dimmed/unclickable, so Forge's drag-and-drop has a stable, always-present
+// set of slots to pick gear/stones up from.
+type SelectedSlot = { kind: 'item'; id: string } | { kind: 'arrow'; id: string } | { kind: 'stone'; tier: number } | null
 
 interface InventoryPanelProps {
-  // Gear items currently sitting in Forge's Upgrade Slot and/or Fuel zone (if any)
-  // — their cells render empty here instead of filled, so an item is never shown
-  // in two Forge drop targets (or the grid and a drop target) at once. Only
-  // ForgePanel passes this; every other usage is unaffected.
+  // Gear items/stone tiers currently sitting in Forge's Upgrade Slot and/or Fuel
+  // zone (if any) — their cells render empty here instead of filled, so nothing is
+  // ever shown in two Forge drop targets (or the grid and a drop target) at once.
+  // Stone tiers use the synthetic id from stoneDragId, real items use their own id.
+  // Only ForgePanel passes this; every other usage is unaffected.
   reservedItemIds?: string[]
-  // Present only when rendered inside Forge — makes gear tiles (not arrow stacks,
-  // Forge never touches those) draggable, calling back with the item being dragged.
+  // Present only when rendered inside Forge — makes gear tiles draggable, calling
+  // back with the item being dragged.
   onItemDragStart?: (item: ItemInstance) => void
+  // Present only when rendered inside Forge — makes stone tiles draggable, calling
+  // back with the tier being dragged. Dragging a stone tile always represents its
+  // entire current count for that tier (there's no per-stack id to split, only a
+  // running total per tier), same all-or-nothing behavior as a real fuel item.
+  onStoneDragStart?: (tier: number) => void
 }
 
-export default function InventoryPanel({ reservedItemIds = [], onItemDragStart }: InventoryPanelProps) {
+export default function InventoryPanel({ reservedItemIds = [], onItemDragStart, onStoneDragStart }: InventoryPanelProps) {
   const items = useInventoryStore((state) => state.items)
   const templates = useItemTemplatesStore((state) => state.templates)
   const equippedItemId = useEquipmentStore((state) => state.equippedItemId)
@@ -37,6 +46,7 @@ export default function InventoryPanel({ reservedItemIds = [], onItemDragStart }
   const arrowStacks = useArrowStore((state) => state.stacks)
   const equippedStackId = useArrowStore((state) => state.equippedStackId)
   const setEquippedStackId = useArrowStore((state) => state.setEquippedStackId)
+  const stones = useCompositionStore((state) => state.stones)
 
   const [selectedSlot, setSelectedSlot] = useState<SelectedSlot>(null)
 
@@ -44,8 +54,11 @@ export default function InventoryPanel({ reservedItemIds = [], onItemDragStart }
   // Empty (fully depleted) stacks stay in the DB so the debounced autosave doesn't
   // need insert/delete diffing (see useArrowStore) — hide them from view here.
   const visibleArrowStacks = isHunter ? arrowStacks.filter((stack) => stack.count > 0) : []
+  // Only tiers the player actually owns get a tile — same "hide the empty ones"
+  // treatment as depleted arrow stacks.
+  const presentStoneTiers = COMPOSITION_STONE_TIERS.filter((tier) => (stones[String(tier)] ?? 0) > 0)
 
-  const occupiedCount = visibleArrowStacks.length + items.length
+  const occupiedCount = visibleArrowStacks.length + presentStoneTiers.length + items.length
   const emptySlotCount = Math.max(0, INVENTORY_SLOT_CAP - occupiedCount)
 
   const selectedItem =
@@ -55,15 +68,24 @@ export default function InventoryPanel({ reservedItemIds = [], onItemDragStart }
   const selectedTemplate = selectedItem && templates.find((entry) => entry.id === selectedItem.template_id)
   const selectedStack =
     selectedSlot?.kind === 'arrow' ? visibleArrowStacks.find((stack) => stack.id === selectedSlot.id) : undefined
+  const selectedStoneTier = selectedSlot?.kind === 'stone' ? selectedSlot.tier : undefined
+
+  const slotKey = (slot: NonNullable<SelectedSlot>): string => (slot.kind === 'stone' ? `stone:${slot.tier}` : `${slot.kind}:${slot.id}`)
 
   const toggleSlot = (slot: NonNullable<SelectedSlot>) => {
-    setSelectedSlot((current) => (current && current.kind === slot.kind && current.id === slot.id ? null : slot))
+    setSelectedSlot((current) => (current && slotKey(current) === slotKey(slot) ? null : slot))
   }
 
   const handleDragStart = (item: ItemInstance) => (event: DragEvent<HTMLButtonElement>) => {
     event.dataTransfer.effectAllowed = 'move'
     event.dataTransfer.setData('text/plain', item.id)
     onItemDragStart?.(item)
+  }
+
+  const handleStoneDragStart = (tier: number) => (event: DragEvent<HTMLButtonElement>) => {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', stoneDragId(tier))
+    onStoneDragStart?.(tier)
   }
 
   return (
@@ -87,6 +109,30 @@ export default function InventoryPanel({ reservedItemIds = [], onItemDragStart }
                 badge={`${stack.count}/${type.stackSize}`}
                 selected={selectedSlot?.kind === 'arrow' && selectedSlot.id === stack.id}
                 onClick={() => toggleSlot({ kind: 'arrow', id: stack.id })}
+              />
+            )
+          })}
+
+          {presentStoneTiers.map((tier) => {
+            const dragId = stoneDragId(tier)
+            if (reservedItemIds.includes(dragId)) {
+              return <InventorySlot key={dragId} slotId={dragId} filled={false} />
+            }
+
+            const count = stones[String(tier)] ?? 0
+
+            return (
+              <InventorySlot
+                key={dragId}
+                slotId={dragId}
+                filled
+                icon="🔷"
+                label={`+${tier} Stone (${count}) — ${compositionPointValue(tier)} pts each`}
+                badge={`${count}`}
+                selected={selectedStoneTier === tier}
+                onClick={() => toggleSlot({ kind: 'stone', tier })}
+                draggable={Boolean(onStoneDragStart)}
+                onDragStart={onStoneDragStart ? handleStoneDragStart(tier) : undefined}
               />
             )
           })}
@@ -147,6 +193,22 @@ export default function InventoryPanel({ reservedItemIds = [], onItemDragStart }
           >
             {selectedStack.id === equippedStackId ? 'Equipped' : 'Equip'}
           </button>
+        </div>
+      )}
+
+      {selectedStoneTier !== undefined && (
+        <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg">
+              🔷
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-200">+{selectedStoneTier} Stone</p>
+              <p className="text-xs text-slate-500">
+                Owned: {stones[String(selectedStoneTier)] ?? 0} · {compositionPointValue(selectedStoneTier)} pts each
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
