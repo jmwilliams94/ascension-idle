@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.15.0",
+    "date": "2026-07-28",
+    "changes": [
+      "Gold and item drops now sit on the ground where an enemy died instead of going straight into your bag — walk or jump within 1 tile of a drop to automatically pick it up",
+      "Redesigned the side panel: an always-visible Equipment bar now sits at the top, your Character stats are tucked behind a collapsible panel, and your Inventory grid has much more room to show",
+      "Added an EXP bar along the bottom of the game view",
+      "Arrows can now be equipped with a right-click, in addition to selecting them and pressing Equip"
+    ]
+  },
+  {
     "version": "1.14.1",
     "date": "2026-07-28",
     "changes": [

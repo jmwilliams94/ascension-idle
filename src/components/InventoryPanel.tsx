@@ -119,7 +119,7 @@ export default function InventoryPanel({ reservedItemIds = [], onItemDragStart, 
             const arrowTooltip: ItemTooltipData = {
               title: type.displayName,
               lines: ['Ammo', `${stack.count} / ${type.stackSize}`],
-              stats: [type.description],
+              stats: [type.description, 'Right-click to equip'],
             }
 
             return (
@@ -133,6 +133,7 @@ export default function InventoryPanel({ reservedItemIds = [], onItemDragStart, 
                 badge={`${stack.count}/${type.stackSize}`}
                 selected={selectedSlot?.kind === 'arrow' && selectedSlot.id === stack.id}
                 onClick={() => toggleSlot({ kind: 'arrow', id: stack.id })}
+                onContextMenu={() => setEquippedStackId(stack.id)}
               />
             )
           })}

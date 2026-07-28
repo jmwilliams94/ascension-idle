@@ -46,7 +46,7 @@ export default function ArrowCounterHud() {
 
   return (
     <div
-      className={`pointer-events-none absolute bottom-3 left-3 rounded-lg border px-3 py-1.5 text-xs font-medium backdrop-blur transition-colors ${toneClass}`}
+      className={`pointer-events-none absolute bottom-12 left-3 rounded-lg border px-3 py-1.5 text-xs font-medium backdrop-blur transition-colors ${toneClass}`}
     >
       {label}
     </div>

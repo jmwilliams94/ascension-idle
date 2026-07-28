@@ -55,14 +55,21 @@ interface InventoryState {
   // what to discard (see resolvePendingDrop). Null means no decision pending.
   pendingFullDrop: { template: ItemTemplate } | null
   loadInventory: (characterId: string) => Promise<void>
-  // Returns the granted item + its template on a successful drop, or null (no drop,
-  // no active character, an error, or the inventory is full) — lets the caller (the
-  // combat scene) show ground-drop text without this store needing to know anything
-  // about tiles/rendering. `interactive` distinguishes actively-played kills (the only
-  // path that exists today) from the not-yet-built AFK/offline simulation (see
-  // CLAUDE.md's Persistence section) — a full inventory silently wastes the drop when
-  // not interactive, or surfaces pendingFullDrop for the player to resolve when it is.
-  rollDropForKill: (interactive?: boolean) => Promise<{ item: ItemInstance; template: ItemTemplate } | null>
+  // Decides only whether an item drops and which template — no DB write, no
+  // inventory-full check. Called at kill time so the roll/odds are locked in the
+  // instant the enemy dies, matching the timing gold/EXP always used; the actual
+  // grant is deferred until the player walks up to the ground pickup (see
+  // grantItemDrop) since occupancy can change between the kill and the pickup.
+  rollItemDrop: () => { template: ItemTemplate } | null
+  // Performs the actual DB insert once a ground item pickup is collected. Returns
+  // the granted item + its template on success, or null (no active character, an
+  // error, or the inventory is full) — lets the caller (the combat scene) know
+  // whether to remove the ground pickup's visual. `interactive` distinguishes
+  // actively-played kills (the only path that exists today) from the not-yet-built
+  // AFK/offline simulation (see CLAUDE.md's Persistence section) — a full inventory
+  // silently wastes the drop when not interactive, or surfaces pendingFullDrop for
+  // the player to resolve when it is.
+  grantItemDrop: (template: ItemTemplate, interactive?: boolean) => Promise<{ item: ItemInstance; template: ItemTemplate } | null>
   // Reflects a successful quality_upgrade/level_upgrade/composition_feed RPC result
   // in the local cache — the functions already wrote the real values server-side,
   // this just keeps the client's copy in sync without a full refetch.
@@ -96,17 +103,24 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     set({ items: (data ?? []) as ItemInstance[], loaded: true })
   },
 
-  rollDropForKill: async (interactive = true) => {
-    const characterId = useActiveCharacterStore.getState().characterId
+  rollItemDrop: () => {
     const templates = useItemTemplatesStore.getState().templates
 
-    if (!characterId || templates.length === 0 || Math.random() >= DROP_CHANCE) {
+    if (templates.length === 0 || Math.random() >= DROP_CHANCE) {
       return null
     }
 
     // Only one item type exists this step, so there's nothing to pick between yet —
     // future steps will roll against a real weighted loot table here instead.
-    const template = templates[0]
+    return { template: templates[0] }
+  },
+
+  grantItemDrop: async (template, interactive = true) => {
+    const characterId = useActiveCharacterStore.getState().characterId
+
+    if (!characterId) {
+      return null
+    }
 
     if (occupiedSlotCount(get().items) >= INVENTORY_SLOT_CAP) {
       if (!interactive) {

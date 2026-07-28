@@ -17,7 +17,7 @@ import { useDisplaySettingsStore } from '../../lib/useDisplaySettingsStore'
 import { computeEquipmentBonus, formatItemDisplayName, getQualityColor } from '../items/equipmentBonus'
 import { useEquipmentStore } from '../items/useEquipmentStore'
 import { useInventoryStore } from '../items/useInventoryStore'
-import { useItemTemplatesStore } from '../items/useItemTemplatesStore'
+import { useItemTemplatesStore, type ItemTemplate } from '../items/useItemTemplatesStore'
 import { useArrowStore } from '../items/useArrowStore'
 import { useOutOfArrowsWarningStore } from '../items/useOutOfArrowsWarningStore'
 import {
@@ -45,6 +45,21 @@ interface EnemyInstance {
   healthBarFill?: Phaser.GameObjects.Graphics
 }
 
+// Sits on the ground from the moment it's rolled at kill time until the player
+// walks within pickup range of it (see checkGroundPickups) — the roll/amount is
+// locked in at kill time either way, only the actual grant is deferred. Gold and
+// item drops share this so they fade in/out with their tile the same way enemies do.
+type GroundPickupInstance = {
+  id: string
+  tile: TileCoord
+  container: Phaser.GameObjects.Container
+} & ({ kind: 'gold'; amount: number } | { kind: 'item'; template: ItemTemplate })
+
+// Chebyshev distance (matches chebyshevDistance/attackRange elsewhere) within which
+// a ground pickup is automatically collected as the hero moves — "within 1 tile"
+// per the confirmed design, walking or jumping both count.
+const GROUND_PICKUP_RANGE = 1
+
 const VISIBLE_SIZE = 16
 // VISIBLE_SIZE is even, so there's no single center tile: the hero's tile gets one
 // extra neighbor before it than after (still rendered dead-center on screen either way).
@@ -66,12 +81,6 @@ const ENEMY_BOX_HEIGHT = 28
 const ENEMY_RESPAWN_DELAY_MS = 3000
 const FLOATING_TEXT_RISE_PX = 36
 const FLOATING_TEXT_DURATION_MS = 1800
-
-// How long an item-drop ground label sits fully visible before fading, and how long
-// the fade itself takes — held longer than damage numbers since it's a full item
-// name, not a short number.
-const ITEM_DROP_TEXT_HOLD_MS = 1200
-const ITEM_DROP_TEXT_FADE_MS = 1000
 
 const HEALTH_BAR_WIDTH = 40
 const HEALTH_BAR_HEIGHT = 6
@@ -101,9 +110,11 @@ export default class IsometricScene extends Phaser.Scene {
   // update(). Cleared by clicking elsewhere, clicking a different enemy, or the
   // engaged enemy dying.
   private engagedEnemyId: string | null = null
-  // Tile keys currently showing an item-drop ground label — avoids two drops
-  // overlapping on the same tile while their labels are still visible.
-  private activeDropLabelTiles = new Set<string>()
+  // Gold/item drops sitting on the ground awaiting pickup (see spawnGoldPickup/
+  // spawnItemPickup/checkGroundPickups) — keyed by a synthetic id, not tile, since
+  // two pickups are placed on distinct tiles but the map itself just needs lookup.
+  private groundPickups = new Map<string, GroundPickupInstance>()
+  private groundPickupIdCounter = 0
 
   constructor() {
     super('IsometricScene')
@@ -244,6 +255,10 @@ export default class IsometricScene extends Phaser.Scene {
       }
     })
 
+    this.groundPickups.forEach((pickup) => {
+      this.tileContainer!.remove(pickup.container)
+    })
+
     // Tiles that are staying visible get redrawn fresh below, so destroy them now —
     // but tiles leaving view get a mirror-image fade/scale-out of the new-tile fade-in
     // further down, instead of vanishing instantly, so keep them around for that tween.
@@ -356,6 +371,46 @@ export default class IsometricScene extends Phaser.Scene {
         })
       } else {
         enemy.container.setVisible(true).setAlpha(1).setScale(1)
+      }
+    })
+
+    // Ground pickups fade/scale in and out with their tile exactly like enemies do.
+    this.groundPickups.forEach((pickup) => {
+      const key = `${pickup.tile.x},${pickup.tile.y}`
+      const isVisibleNow = visibleKeys.has(key)
+      const wasVisibleBefore = this.previousVisible.has(key)
+
+      if (!isVisibleNow && !wasVisibleBefore) {
+        return
+      }
+
+      this.positionGroundPickup(pickup, centerTile)
+      this.tileContainer!.add(pickup.container)
+
+      if (isVisibleNow && !wasVisibleBefore) {
+        const distance = Math.abs(pickup.tile.x - centerTile.x) + Math.abs(pickup.tile.y - centerTile.y)
+        pickup.container.setVisible(true).setAlpha(0).setScale(0.75)
+        this.tweens.add({
+          targets: pickup.container,
+          alpha: 1,
+          scale: 1,
+          duration: 260,
+          delay: distance * 25,
+          ease: 'Cubic.Out',
+        })
+      } else if (!isVisibleNow && wasVisibleBefore) {
+        const distance = Math.abs(pickup.tile.x - previousCenterTile.x) + Math.abs(pickup.tile.y - previousCenterTile.y)
+        this.tweens.add({
+          targets: pickup.container,
+          alpha: 0,
+          scale: 0.75,
+          duration: 260,
+          delay: distance * 25,
+          ease: 'Cubic.In',
+          onComplete: () => pickup.container.setVisible(false),
+        })
+      } else {
+        pickup.container.setVisible(true).setAlpha(1).setScale(1)
       }
     })
 
@@ -700,70 +755,24 @@ export default class IsometricScene extends Phaser.Scene {
     })
   }
 
-  private async handleItemDrop(deathTile: TileCoord) {
-    const drop = await useInventoryStore.getState().rollDropForKill()
-
-    if (!drop) {
-      return
-    }
-
-    this.showItemDropLabel(deathTile, drop.template.name, drop.item.quality_tier, drop.item.composition_level)
-  }
-
-  private showItemDropLabel(deathTile: TileCoord, templateName: string, qualityTier: string, compositionLevel: number) {
-    if (!useDisplaySettingsStore.getState().showItemDropText || !this.tileContainer) {
-      return
-    }
-
-    const tile = this.pickDropLabelTile(deathTile)
-    const tileKey = `${tile.x},${tile.y}`
-    this.activeDropLabelTiles.add(tileKey)
-
-    const relative = { x: tile.x - this.renderCenterTile.x, y: tile.y - this.renderCenterTile.y }
-    const local = tileToWorld(relative, TILE_WIDTH, TILE_HEIGHT, 0, 0)
-    const worldX = this.tileContainer.x + local.x
-    const worldY = this.tileContainer.y + local.y
-
-    const text = this.add
-      .text(worldX, worldY, formatItemDisplayName(templateName, qualityTier, compositionLevel), {
-        fontSize: '13px',
-        color: getQualityColor(qualityTier),
-        fontStyle: 'bold',
-      })
-      .setOrigin(0.5, 1)
-      .setDepth(2000)
-
-    this.tweens.add({
-      targets: text,
-      y: worldY - FLOATING_TEXT_RISE_PX,
-      alpha: 0,
-      delay: ITEM_DROP_TEXT_HOLD_MS,
-      duration: ITEM_DROP_TEXT_FADE_MS,
-      ease: 'Cubic.Out',
-      onComplete: () => {
-        text.destroy()
-        this.activeDropLabelTiles.delete(tileKey)
-      },
-    })
-  }
-
   // Prefers a free tile within 1 square of the death tile (the 9 tiles including
-  // the death tile itself); if every one of those already has a label showing,
-  // expands to within 2 tiles instead of overlapping.
-  private pickDropLabelTile(center: TileCoord): TileCoord {
-    const nearby = this.tilesWithinRadius(center, 1).filter((tile) => !this.activeDropLabelTiles.has(`${tile.x},${tile.y}`))
+  // the death tile itself); if every one of those already has a ground pickup
+  // sitting on it, expands to within 2 tiles instead of stacking two on one tile.
+  private pickFreeGroundTile(center: TileCoord): TileCoord {
+    const occupied = new Set(Array.from(this.groundPickups.values()).map((pickup) => `${pickup.tile.x},${pickup.tile.y}`))
+    const nearby = this.tilesWithinRadius(center, 1).filter((tile) => !occupied.has(`${tile.x},${tile.y}`))
 
     if (nearby.length > 0) {
       return nearby[Math.floor(Math.random() * nearby.length)]
     }
 
-    const wider = this.tilesWithinRadius(center, 2).filter((tile) => !this.activeDropLabelTiles.has(`${tile.x},${tile.y}`))
+    const wider = this.tilesWithinRadius(center, 2).filter((tile) => !occupied.has(`${tile.x},${tile.y}`))
 
     if (wider.length > 0) {
       return wider[Math.floor(Math.random() * wider.length)]
     }
 
-    // Every tile within 2 squares already has a label — extremely unlikely. Fall
+    // Every tile within 2 squares already has a pickup — extremely unlikely. Fall
     // back to the death tile itself rather than not showing anything.
     return center
   }
@@ -784,6 +793,113 @@ export default class IsometricScene extends Phaser.Scene {
     return tiles
   }
 
+  // Gold now always sits on the ground rather than being granted instantly (see
+  // CLAUDE.md) — EXP is unaffected and still grants at kill time.
+  private spawnGoldPickup(tile: TileCoord, amount: number) {
+    const icon = this.add.text(0, 0, '💰', { fontSize: '20px' }).setOrigin(0.5, 0.9)
+    const label = this.add
+      .text(0, -26, `${amount} Gold`, { fontSize: '12px', color: '#facc15', fontStyle: 'bold' })
+      .setOrigin(0.5, 1)
+    const container = this.add.container(0, 0, [icon, label])
+
+    const instance: GroundPickupInstance = {
+      id: `gold-${this.groundPickupIdCounter++}`,
+      tile,
+      kind: 'gold',
+      amount,
+      container,
+    }
+    this.registerGroundPickup(instance)
+  }
+
+  // The 10%-chance drop roll (see rollItemDrop) already happened at kill time with
+  // unchanged odds — this only decides where the resulting pickup sits and how it
+  // looks; the actual DB grant is deferred to checkGroundPickups/collectGroundPickup.
+  // A freshly-rolled item is always Normal quality/level 1/composition 0 (the DB's
+  // own insert defaults — see grantItemDrop), so that's safe to show here before the
+  // real row exists.
+  private spawnItemPickup(tile: TileCoord, template: ItemTemplate) {
+    const icon = this.add.text(0, 0, '🗡️', { fontSize: '20px' }).setOrigin(0.5, 0.9)
+    const children: Phaser.GameObjects.GameObject[] = [icon]
+
+    if (useDisplaySettingsStore.getState().showItemDropText) {
+      const label = this.add
+        .text(0, -26, formatItemDisplayName(template.name, 'normal', 0), {
+          fontSize: '12px',
+          color: getQualityColor('normal'),
+          fontStyle: 'bold',
+        })
+        .setOrigin(0.5, 1)
+      children.push(label)
+    }
+
+    const container = this.add.container(0, 0, children)
+    const instance: GroundPickupInstance = {
+      id: `item-${this.groundPickupIdCounter++}`,
+      tile,
+      kind: 'item',
+      template,
+      container,
+    }
+    this.registerGroundPickup(instance)
+  }
+
+  private registerGroundPickup(instance: GroundPickupInstance) {
+    if (!this.tileContainer) {
+      instance.container.destroy(true)
+      return
+    }
+
+    this.groundPickups.set(instance.id, instance)
+    this.positionGroundPickup(instance, this.renderCenterTile)
+    this.tileContainer.add(instance.container)
+
+    const isCurrentlyVisible = this.previousVisible.has(`${instance.tile.x},${instance.tile.y}`)
+    instance.container.setVisible(isCurrentlyVisible)
+  }
+
+  private positionGroundPickup(pickup: GroundPickupInstance, centerTile: TileCoord) {
+    const relative = { x: pickup.tile.x - centerTile.x, y: pickup.tile.y - centerTile.y }
+    const local = tileToWorld(relative, TILE_WIDTH, TILE_HEIGHT, 0, 0)
+    pickup.container.setPosition(local.x, local.y)
+  }
+
+  // Chebyshev distance <= GROUND_PICKUP_RANGE from the hero's current tile — called
+  // after every completed move (walking or jumping both count, per the confirmed
+  // design) so the hero doesn't need to land exactly on the pickup's tile.
+  private checkGroundPickups() {
+    const collected: string[] = []
+
+    this.groundPickups.forEach((pickup) => {
+      if (chebyshevDistance(this.heroTile, pickup.tile) <= GROUND_PICKUP_RANGE) {
+        collected.push(pickup.id)
+      }
+    })
+
+    collected.forEach((id) => this.collectGroundPickup(id))
+  }
+
+  private collectGroundPickup(id: string) {
+    const pickup = this.groundPickups.get(id)
+
+    if (!pickup) {
+      return
+    }
+
+    pickup.container.destroy(true)
+    this.groundPickups.delete(id)
+
+    if (pickup.kind === 'gold') {
+      useProgressionStore.getState().addRewards(pickup.amount, 0)
+      return
+    }
+
+    // Inventory-full handling (pendingFullDrop/InventoryFullModal) fires here, at
+    // pickup time, rather than back at kill time — occupancy can change in the
+    // interval between the kill and the player actually walking up to collect it.
+    void useInventoryStore.getState().grantItemDrop(pickup.template)
+  }
+
   private killEnemy(enemy: EnemyInstance) {
     enemy.alive = false
 
@@ -798,8 +914,18 @@ export default class IsometricScene extends Phaser.Scene {
     enemy.healthBarFill = undefined
 
     const type = ENEMY_TYPES[enemy.typeId]
-    useProgressionStore.getState().addRewards(type.goldReward, type.expReward)
-    void this.handleItemDrop(enemy.tile)
+    // EXP still grants instantly; gold is now a ground pickup (see CLAUDE.md).
+    useProgressionStore.getState().addRewards(0, type.expReward)
+    this.spawnGoldPickup(this.pickFreeGroundTile(enemy.tile), type.goldReward)
+
+    const itemDrop = useInventoryStore.getState().rollItemDrop()
+    if (itemDrop) {
+      this.spawnItemPickup(this.pickFreeGroundTile(enemy.tile), itemDrop.template)
+    }
+
+    // Covers the case where the hero is already standing adjacent to the corpse
+    // (melee range) when the pickups spawn, instead of waiting for the next move.
+    this.checkGroundPickups()
 
     if (container) {
       this.tweens.add({
@@ -869,6 +995,7 @@ export default class IsometricScene extends Phaser.Scene {
       ease: 'Cubic.Out',
       onComplete: () => {
         this.heroTile = nextTile
+        this.checkGroundPickups()
         this.walkPath(path)
       },
     })
@@ -905,6 +1032,7 @@ export default class IsometricScene extends Phaser.Scene {
       onComplete: () => {
         this.heroTile = targetTile
         this.isMoving = false
+        this.checkGroundPickups()
       },
     })
 

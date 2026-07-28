@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import ArrowCounterHud from './ArrowCounterHud'
 import BottomNav from './BottomNav'
 import EquipmentOverlay from './EquipmentOverlay'
+import ExpBar from './ExpBar'
 import ForgeOverlay from './ForgeOverlay'
 import GameCanvas from './GameCanvas'
 import InventoryFullModal from './InventoryFullModal'
@@ -104,6 +105,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
           <div className="relative">
             <GameCanvas />
             <ArrowCounterHud />
+            <ExpBar />
             {activeOverlay === 'shop' && <ShopOverlay />}
             {activeOverlay === 'zone' && <ZoneOverlay />}
             {activeOverlay === 'equipment' && <EquipmentOverlay />}

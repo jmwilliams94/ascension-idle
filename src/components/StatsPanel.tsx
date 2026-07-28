@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { CLASS_DEFINITIONS } from '../game/stats/classes'
 import { computeDerivedStats } from '../game/stats/derivedStats'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
@@ -13,7 +14,12 @@ const ATTRIBUTE_LABELS = {
   spirit: 'Spirit',
 } as const
 
+// Collapsed by default so the Inventory grid below has room without scrolling —
+// EquipmentBar now covers the at-a-glance gear summary; this panel is for players
+// who want the full Class/Attributes/Derived-stats breakdown.
 export default function StatsPanel() {
+  const [expanded, setExpanded] = useState(false)
+
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
   const attributes = useCharacterStore((state) => state.attributes)
 
@@ -26,54 +32,67 @@ export default function StatsPanel() {
   const derived = computeDerivedStats(attributes, equipmentBonus)
 
   return (
-    <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-      <div>
-        <p className="text-sm font-medium text-slate-200">Class</p>
-        <p className="mt-1 text-sm text-slate-300">
-          {selectedClass.displayName} — {selectedClass.realGameName}
-        </p>
-        {selectedClass.placeholder && (
-          <p className="mt-1 text-xs text-slate-500">Starting attributes are a placeholder, unresolved.</p>
-        )}
-      </div>
+    <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+      <button
+        type="button"
+        onClick={() => setExpanded((value) => !value)}
+        className="flex w-full items-center justify-between text-left"
+      >
+        <p className="text-sm font-medium text-slate-200">Character</p>
+        <span className="text-xs text-slate-400">{expanded ? 'Hide ▲' : 'Show ▼'}</span>
+      </button>
 
-      <div>
-        <p className="text-sm font-medium text-slate-200">Attributes</p>
-        <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-300">
-          {(Object.keys(ATTRIBUTE_LABELS) as Array<keyof typeof ATTRIBUTE_LABELS>).map((key) => (
-            <div key={key} className="flex justify-between">
-              <dt className="text-slate-400">{ATTRIBUTE_LABELS[key]}</dt>
-              <dd>{attributes[key]}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
+      {expanded && (
+        <div className="mt-4 space-y-4">
+          <div>
+            <p className="text-sm font-medium text-slate-200">Class</p>
+            <p className="mt-1 text-sm text-slate-300">
+              {selectedClass.displayName} — {selectedClass.realGameName}
+            </p>
+            {selectedClass.placeholder && (
+              <p className="mt-1 text-xs text-slate-500">Starting attributes are a placeholder, unresolved.</p>
+            )}
+          </div>
 
-      <div>
-        <p className="text-sm font-medium text-slate-200">Derived stats</p>
-        <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-300">
-          <div className="flex justify-between">
-            <dt className="text-slate-400">HP</dt>
-            <dd>{derived.hp}</dd>
+          <div>
+            <p className="text-sm font-medium text-slate-200">Attributes</p>
+            <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-300">
+              {(Object.keys(ATTRIBUTE_LABELS) as Array<keyof typeof ATTRIBUTE_LABELS>).map((key) => (
+                <div key={key} className="flex justify-between">
+                  <dt className="text-slate-400">{ATTRIBUTE_LABELS[key]}</dt>
+                  <dd>{attributes[key]}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
-          <div className="flex justify-between">
-            <dt className="text-slate-400">MP</dt>
-            <dd>{derived.mp}</dd>
+
+          <div>
+            <p className="text-sm font-medium text-slate-200">Derived stats</p>
+            <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-300">
+              <div className="flex justify-between">
+                <dt className="text-slate-400">HP</dt>
+                <dd>{derived.hp}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-slate-400">MP</dt>
+                <dd>{derived.mp}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-slate-400">Physical Attack</dt>
+                <dd>{derived.physicalAttack}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-slate-400">Magic Attack</dt>
+                <dd>{derived.magicAttack}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-slate-400">Attack Speed</dt>
+                <dd>{derived.attackSpeed.toFixed(1)}/s</dd>
+              </div>
+            </dl>
           </div>
-          <div className="flex justify-between">
-            <dt className="text-slate-400">Physical Attack</dt>
-            <dd>{derived.physicalAttack}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt className="text-slate-400">Magic Attack</dt>
-            <dd>{derived.magicAttack}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt className="text-slate-400">Attack Speed</dt>
-            <dd>{derived.attackSpeed.toFixed(1)}/s</dd>
-          </div>
-        </dl>
-      </div>
+        </div>
+      )}
     </div>
   )
 }

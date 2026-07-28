@@ -22,6 +22,10 @@ interface InventorySlotProps {
   badge?: string
   selected?: boolean
   onClick?: () => void
+  // Right-click shortcut (e.g. arrow stacks equip directly on right-click instead
+  // of requiring select-then-press-Equip) — when provided, the browser's native
+  // context menu is suppressed on this tile.
+  onContextMenu?: () => void
   // Native HTML5 drag-and-drop (see ForgePanel) — omit both to leave the tile
   // non-draggable, same as before this existed.
   draggable?: boolean
@@ -48,6 +52,7 @@ export default function InventorySlot({
   badge,
   selected,
   onClick,
+  onContextMenu,
   draggable,
   onDragStart,
   onDragEnd,
@@ -70,6 +75,14 @@ export default function InventorySlot({
       type="button"
       data-slot-id={slotId}
       onClick={onClick}
+      onContextMenu={
+        onContextMenu
+          ? (event) => {
+              event.preventDefault()
+              onContextMenu()
+            }
+          : undefined
+      }
       draggable={draggable}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}

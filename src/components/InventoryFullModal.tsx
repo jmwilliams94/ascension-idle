@@ -4,7 +4,7 @@ import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { useArrowStore } from '../game/items/useArrowStore'
 import { ARROW_TYPES } from '../game/items/arrowTypes'
 
-// Only ever set while actively playing (see useInventoryStore.rollDropForKill) — a
+// Only ever set while actively playing (see useInventoryStore.grantItemDrop) — a
 // full inventory during the not-yet-built AFK/offline simulation just wastes the
 // drop silently instead, per CLAUDE.md's Inventory design. Renders nothing when
 // there's no pending decision, so it's safe to mount unconditionally in GameShell.
