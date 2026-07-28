@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.11.0",
+    "date": "2026-07-28",
+    "changes": [
+      "Redesigned the Equipment panel into a paper-doll layout around a central character silhouette, with Weapon fully functional and Headgear/Boots/Necklace/Ring/Earring/Armor shown as locked placeholders for future gear types",
+      "Inventory is now always visible in the side panel instead of only while the Forge window is open"
+    ]
+  },
+  {
     "version": "1.10.2",
     "date": "2026-07-28",
     "changes": [
