@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '../../lib/supabaseClient'
 import { useActiveCharacterStore } from '../../lib/useActiveCharacterStore'
+import { useArrowStore } from './useArrowStore'
 import { useItemTemplatesStore, type ItemTemplate } from './useItemTemplatesStore'
 
 // Mirrors the item_instances table. composition_level/sockets/enchant are unused
@@ -28,6 +29,12 @@ const DROP_CHANCE = 0.1
 // max cap.
 export const INVENTORY_SLOT_CAP = 40
 
+// A stack of arrows takes up a slot just like a gear item does — both count against
+// the same 40-slot cap (depleted, 0-count stacks don't, since they're hidden/inert).
+function occupiedSlotCount(items: ItemInstance[]): number {
+  return items.length + useArrowStore.getState().stacks.filter((stack) => stack.count > 0).length
+}
+
 interface InventoryState {
   items: ItemInstance[]
   loaded: boolean
@@ -48,10 +55,10 @@ interface InventoryState {
   // cache — the functions already wrote the real values server-side, this just
   // keeps the client's copy in sync without a full refetch.
   patchItem: (itemId: string, patch: Partial<Pick<ItemInstance, 'quality_tier' | 'level'>>) => void
-  // Resolves a pendingFullDrop: pass an existing item's id to discard it and grant
-  // the new drop in its place, or null to discard the new drop instead and keep the
-  // inventory as-is.
-  resolvePendingDrop: (discardItemId: string | null) => Promise<void>
+  // Resolves a pendingFullDrop: pass an existing gear item or arrow stack to discard
+  // (freeing its slot) and grant the new drop in its place, or null to discard the
+  // new drop instead and keep the inventory as-is.
+  resolvePendingDrop: (discard: { kind: 'item' | 'arrow'; id: string } | null) => Promise<void>
 }
 
 export const useInventoryStore = create<InventoryState>((set, get) => ({
@@ -82,7 +89,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     // future steps will roll against a real weighted loot table here instead.
     const template = templates[0]
 
-    if (get().items.length >= INVENTORY_SLOT_CAP) {
+    if (occupiedSlotCount(get().items) >= INVENTORY_SLOT_CAP) {
       if (!interactive) {
         return null
       }
@@ -113,13 +120,13 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     }))
   },
 
-  resolvePendingDrop: async (discardItemId) => {
+  resolvePendingDrop: async (discard) => {
     const pending = get().pendingFullDrop
     if (!pending) {
       return
     }
 
-    if (discardItemId === null) {
+    if (discard === null) {
       set({ pendingFullDrop: null })
       return
     }
@@ -130,11 +137,15 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       return
     }
 
-    const { error: deleteError } = await supabase.from('item_instances').delete().eq('id', discardItemId)
-    if (deleteError) {
-      console.error('Failed to discard item', deleteError)
-      set({ pendingFullDrop: null })
-      return
+    if (discard.kind === 'arrow') {
+      await useArrowStore.getState().deleteStack(discard.id)
+    } else {
+      const { error: deleteError } = await supabase.from('item_instances').delete().eq('id', discard.id)
+      if (deleteError) {
+        console.error('Failed to discard item', deleteError)
+        set({ pendingFullDrop: null })
+        return
+      }
     }
 
     const { data, error: insertError } = await supabase
@@ -146,7 +157,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     if (insertError) {
       console.error('Failed to grant item drop', insertError)
       set((state) => ({
-        items: state.items.filter((item) => item.id !== discardItemId),
+        items: discard.kind === 'item' ? state.items.filter((item) => item.id !== discard.id) : state.items,
         pendingFullDrop: null,
       }))
       return
@@ -154,7 +165,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
 
     const newItem = data as ItemInstance
     set((state) => ({
-      items: [...state.items.filter((item) => item.id !== discardItemId), newItem],
+      items: [...(discard.kind === 'item' ? state.items.filter((item) => item.id !== discard.id) : state.items), newItem],
       pendingFullDrop: null,
     }))
   },

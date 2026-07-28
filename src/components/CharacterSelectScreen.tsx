@@ -108,7 +108,7 @@ export default function CharacterSelectScreen() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_#1e293b,_#020617_70%)] p-6 text-slate-100">
-      <div className="w-full max-w-2xl">
+      <div className="w-full max-w-md">
         <h1 className="text-center text-2xl font-semibold text-white">Choose your character</h1>
         <p className="mt-1 text-center text-sm text-slate-400">
           Up to {MAX_CHARACTER_SLOTS} character slots per account.
@@ -117,7 +117,7 @@ export default function CharacterSelectScreen() {
         {!rosterLoaded ? (
           <p className="mt-8 text-center text-sm text-slate-500">Loading…</p>
         ) : (
-          <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="mt-8 grid grid-cols-1 gap-3">
             {slots.map((slot, index) => {
               const slotIndex = index + 1
 

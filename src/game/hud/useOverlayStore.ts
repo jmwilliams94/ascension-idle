@@ -10,10 +10,14 @@ interface OverlayState {
   activeOverlay: OverlayId | null
   open: (overlay: OverlayId) => void
   close: () => void
+  // Opens the given overlay, or closes it if it's already the one showing — lets
+  // BottomNav's buttons act as an on/off toggle instead of only ever opening.
+  toggle: (overlay: OverlayId) => void
 }
 
-export const useOverlayStore = create<OverlayState>((set) => ({
+export const useOverlayStore = create<OverlayState>((set, get) => ({
   activeOverlay: null,
   open: (overlay) => set({ activeOverlay: overlay }),
   close: () => set({ activeOverlay: null }),
+  toggle: (overlay) => set({ activeOverlay: get().activeOverlay === overlay ? null : overlay }),
 }))

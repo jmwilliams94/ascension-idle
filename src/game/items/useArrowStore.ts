@@ -35,6 +35,10 @@ interface ArrowState {
   // be blocked (no equipped stack, or it's empty).
   consumeArrow: () => boolean
   saveStackCounts: (characterId: string) => Promise<void>
+  // Permanently removes a stack (used only when the player picks an arrow stack to
+  // discard to make room for a full-inventory gear drop — see useInventoryStore's
+  // resolvePendingDrop). Unlike normal depletion, this actually deletes the row.
+  deleteStack: (stackId: string) => Promise<void>
 }
 
 export const useArrowStore = create<ArrowState>((set, get) => ({
@@ -153,5 +157,19 @@ export const useArrowStore = create<ArrowState>((set, get) => ({
     if (error) {
       console.error('Failed to save arrow stack counts', error)
     }
+  },
+
+  deleteStack: async (stackId) => {
+    const { error } = await supabase.from('arrow_stacks').delete().eq('id', stackId)
+
+    if (error) {
+      console.error('Failed to delete arrow stack', error)
+      return
+    }
+
+    set((state) => ({
+      stacks: state.stacks.filter((stack) => stack.id !== stackId),
+      equippedStackId: state.equippedStackId === stackId ? null : state.equippedStackId,
+    }))
   },
 }))

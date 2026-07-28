@@ -13,7 +13,7 @@ const BOTTOM_NAV_ITEMS: { id: OverlayId; label: string }[] = [
 
 export default function BottomNav() {
   const activeOverlay = useOverlayStore((state) => state.activeOverlay)
-  const open = useOverlayStore((state) => state.open)
+  const toggle = useOverlayStore((state) => state.toggle)
 
   return (
     <div className="mt-4 grid grid-cols-5 gap-2">
@@ -21,7 +21,7 @@ export default function BottomNav() {
         <button
           key={item.id}
           type="button"
-          onClick={() => open(item.id)}
+          onClick={() => toggle(item.id)}
           className={`rounded-xl border px-3 py-3 text-sm font-medium ${
             item.id === activeOverlay
               ? 'border-sky-500 bg-sky-500/10 text-sky-300'

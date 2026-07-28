@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.10.1",
+    "date": "2026-07-28",
+    "changes": [
+      "Arrow stacks now show up right in the main 40-slot Inventory grid alongside gear, instead of a separate list",
+      "Clicking a bottom-nav button (Zone/Equipment/Forge/Market/Shop) a second time now closes it",
+      "Removed the old class-switcher from the Stats panel — class is chosen once at character creation now",
+      "Character select now lists your characters in a single column"
+    ]
+  },
+  {
     "version": "1.10.0",
     "date": "2026-07-28",
     "changes": [
