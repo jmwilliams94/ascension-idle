@@ -28,16 +28,19 @@ body {
   background: #020617;
 }
 
-/* Super-quality-only glow for the Equipment paper-doll (EquipmentPanel) — a slow,
+/* Super-quality-only glow for the Equipment paper-doll (PaperDollBody) — a slow,
    subtle pulse rather than a static shadow, so it reads as a genuinely special
-   indicator instead of decoration every band/accent has. */
+   indicator instead of decoration every face/accent has. Uses filter: drop-shadow
+   rather than box-shadow because it's applied to individual SVG <polygon>/<line>
+   elements — drop-shadow hugs the shape's own silhouette, where box-shadow would
+   only apply to a (nonexistent, for SVG shape elements) rectangular box. */
 @keyframes super-quality-glow {
   0%,
   100% {
-    box-shadow: 0 0 6px 1px rgba(239, 68, 68, 0.35);
+    filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.45));
   }
   50% {
-    box-shadow: 0 0 14px 4px rgba(239, 68, 68, 0.6);
+    filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.8));
   }
 }
 

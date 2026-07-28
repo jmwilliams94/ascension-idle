@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.11.4",
+    "date": "2026-07-28",
+    "changes": [
+      "The Equipment panel's character placeholder is now a small isometric box matching your actual in-game character's look, instead of a plain rounded rectangle"
+    ]
+  },
+  {
     "version": "1.11.3",
     "date": "2026-07-28",
     "changes": [

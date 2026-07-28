@@ -7,50 +7,140 @@ interface PaperDollBodyProps {
   weaponQualityTier?: string | null
 }
 
-// Abstract/geometric stand-in for character art, matching the game's "greybox"
-// visual identity — no silhouette, no sprite. Three stacked horizontal bands
-// (Headgear / Body-Armor / Boots), each tinted by whatever's equipped in that slot
-// (see getSlotVisual), plus a thin accent along the left edge for Weapon — not a
-// body-worn slot, so it doesn't get its own band. Pass undefined/null for any slot
-// without an item system yet (Headgear/Body/Boots today) and it renders neutral;
-// once that slot becomes functional, passing its real quality_tier lights it up
-// automatically — no rebuild needed.
+// Mirrors the exact isometric box geometry and shading the real hero sprite uses
+// (IsometricScene.buildHeroBox: top #e2e8f0, right #94a3b8, left #64748b), scaled
+// up for legibility, so the Equipment panel's central placeholder is a literal
+// small twin of the in-game character rather than an unrelated shape. The box's
+// half-width/half-depth ratio (2:1) matches the game's isometric tile ratio.
+const HALF_WIDTH = 48
+const HALF_DEPTH = 24
+const HEIGHT = 80
+
+// Where the body/boots cut falls, as a fraction down each side face from its top
+// edge (0) to its bottom edge (1) — boots get the bottom 30%.
+const BOOTS_SPLIT = 0.7
+
+const BASE_TOP = '#e2e8f0'
+const BASE_RIGHT = '#94a3b8'
+const BASE_LEFT = '#64748b'
+const EDGE_NEUTRAL = '#475569' // front seam color when no weapon is equipped
+
+function toPointsAttr(pts: [number, number][]): string {
+  return pts.map(([x, y]) => `${x},${y}`).join(' ')
+}
+
+// Nothing equipped -> the face keeps the real hero box's own color (so the
+// placeholder matches the sprite exactly by default). Something equipped -> tint
+// with its quality color instead. Super quality also gets a pulsing glow.
+function faceStyle(baseColor: string, qualityTier: string | null | undefined) {
+  const visual = getSlotVisual(qualityTier)
+  return {
+    fill: visual.color ? `${visual.color}cc` : baseColor,
+    glow: visual.glow,
+  }
+}
+
 export default function PaperDollBody({
   headQualityTier,
   bodyQualityTier,
   bootsQualityTier,
   weaponQualityTier,
 }: PaperDollBodyProps) {
-  const head = getSlotVisual(headQualityTier)
-  const body = getSlotVisual(bodyQualityTier)
-  const boots = getSlotVisual(bootsQualityTier)
-  const weapon = getSlotVisual(weaponQualityTier)
+  const hw = HALF_WIDTH
+  const hd = HALF_DEPTH
+  const h = HEIGHT
+
+  // y-coordinates where the body/boots cut crosses the front seam (x=0) and each
+  // side face's outer vertical edge (x=±hw).
+  const cutFrontY = hd - h + BOOTS_SPLIT * h
+  const cutSideY = -h + BOOTS_SPLIT * h
+
+  const head = faceStyle(BASE_TOP, headQualityTier)
+  const rightBody = faceStyle(BASE_RIGHT, bodyQualityTier)
+  const rightBoots = faceStyle(BASE_RIGHT, bootsQualityTier)
+  const leftBody = faceStyle(BASE_LEFT, bodyQualityTier)
+  const leftBoots = faceStyle(BASE_LEFT, bootsQualityTier)
+
+  const weaponVisual = getSlotVisual(weaponQualityTier)
+  const edgeColor = weaponVisual.color ?? EDGE_NEUTRAL
 
   return (
-    <div className="relative h-36 w-20">
-      <div
-        title="Weapon accent"
-        className={`absolute -left-2 top-1 h-[calc(100%-0.5rem)] w-1.5 rounded-full ${weapon.glow ? 'super-quality-glow' : ''}`}
-        style={{ background: weapon.background }}
+    <svg viewBox="-54 -110 108 140" className="h-36 w-28" role="img" aria-label="Character equipment preview">
+      <polygon
+        points={toPointsAttr([
+          [0, hd - h],
+          [-hw, -h],
+          [-hw, cutSideY],
+          [0, cutFrontY],
+        ])}
+        fill={leftBody.fill}
+        stroke={leftBody.fill}
+        strokeWidth={0.75}
+        className={leftBody.glow ? 'super-quality-glow' : undefined}
+      />
+      <polygon
+        points={toPointsAttr([
+          [0, cutFrontY],
+          [-hw, cutSideY],
+          [-hw, 0],
+          [0, hd],
+        ])}
+        fill={leftBoots.fill}
+        stroke={leftBoots.fill}
+        strokeWidth={0.75}
+        className={leftBoots.glow ? 'super-quality-glow' : undefined}
       />
 
-      <div className="flex h-full w-full flex-col gap-0.5 rounded-2xl border-2 border-slate-700 p-0.5">
-        <div
-          title="Headgear slot"
-          className={`flex-1 rounded-t-xl ${head.glow ? 'super-quality-glow' : ''}`}
-          style={{ background: head.background }}
-        />
-        <div
-          title="Body/Armor slot"
-          className={`flex-1 ${body.glow ? 'super-quality-glow' : ''}`}
-          style={{ background: body.background }}
-        />
-        <div
-          title="Boots slot"
-          className={`flex-1 rounded-b-xl ${boots.glow ? 'super-quality-glow' : ''}`}
-          style={{ background: boots.background }}
-        />
-      </div>
-    </div>
+      <polygon
+        points={toPointsAttr([
+          [0, hd - h],
+          [hw, -h],
+          [hw, cutSideY],
+          [0, cutFrontY],
+        ])}
+        fill={rightBody.fill}
+        stroke={rightBody.fill}
+        strokeWidth={0.75}
+        className={rightBody.glow ? 'super-quality-glow' : undefined}
+      />
+      <polygon
+        points={toPointsAttr([
+          [0, cutFrontY],
+          [hw, cutSideY],
+          [hw, 0],
+          [0, hd],
+        ])}
+        fill={rightBoots.fill}
+        stroke={rightBoots.fill}
+        strokeWidth={0.75}
+        className={rightBoots.glow ? 'super-quality-glow' : undefined}
+      />
+
+      <polygon
+        points={toPointsAttr([
+          [0, -hd - h],
+          [hw, -h],
+          [0, hd - h],
+          [-hw, -h],
+        ])}
+        fill={head.fill}
+        stroke={head.fill}
+        strokeWidth={0.75}
+        className={head.glow ? 'super-quality-glow' : undefined}
+      />
+
+      {/* Weapon isn't body-worn, so it's a thin accent along the box's front seam
+          instead of its own face. */}
+      <line
+        x1={0}
+        y1={hd - h}
+        x2={0}
+        y2={hd}
+        stroke={edgeColor}
+        strokeWidth={4}
+        strokeLinecap="round"
+        className={weaponVisual.glow ? 'super-quality-glow' : undefined}
+      />
+    </svg>
   )
 }
