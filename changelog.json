@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.13.2",
+    "date": "2026-07-28",
+    "changes": [
+      "Composition stones no longer stack — each one now takes up its own inventory slot, so 12 stones show as 12 separate tiles instead of one tile with a count",
+      "Feeding stones into the Forge is now one at a time per tile, matching how gear fuel already works"
+    ]
+  },
+  {
     "version": "1.13.1",
     "date": "2026-07-28",
     "changes": [

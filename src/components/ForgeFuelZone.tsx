@@ -4,10 +4,11 @@ import { getQualityColor } from '../game/items/equipmentBonus'
 import type { ItemInstance } from '../game/items/useInventoryStore'
 import type { ItemTemplate } from '../game/items/useItemTemplatesStore'
 
-// Fed as either a real gear item (destroyed on Feed) or a stone tier (its entire
-// current count fed at once, see stoneDragId) — both are just "fuel" once dropped
-// here, distinguished only by how they're rendered/valued.
-export type FuelEntry = { kind: 'item'; id: string; item: ItemInstance } | { kind: 'stone'; id: string; tier: number; count: number }
+// Fed as either a real gear item (destroyed on Feed) or a single stone (stones
+// don't stack — each dropped-in tile is exactly one stone; feeding more of the
+// same tier means dragging in more individual entries) — both are just "fuel" once
+// dropped here, distinguished only by how they're rendered/valued.
+export type FuelEntry = { kind: 'item'; id: string; item: ItemInstance } | { kind: 'stone'; id: string; tier: number }
 
 interface ForgeFuelZoneProps {
   fuelEntries: FuelEntry[]
@@ -51,14 +52,14 @@ export default function ForgeFuelZone({ fuelEntries, templates, onDropItemId, on
 
         {fuelEntries.map((entry) => {
           if (entry.kind === 'stone') {
-            const value = compositionPointValue(entry.tier) * entry.count
+            const value = compositionPointValue(entry.tier)
 
             return (
               <button
                 key={entry.id}
                 type="button"
                 onClick={() => onRemove(entry.id)}
-                title={`+${entry.tier} Stone ×${entry.count} — worth ${value} pts total (click to remove)`}
+                title={`+${entry.tier} Stone — worth ${value} pts (click to remove)`}
                 className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded border-2 border-slate-700 bg-slate-800 text-sm"
               >
                 🔷

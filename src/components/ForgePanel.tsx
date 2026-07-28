@@ -6,7 +6,6 @@ import InventoryPanel from './InventoryPanel'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { formatItemDisplayName, formatQualityAndLevel, getQualityColor, nextQualityTier } from '../game/items/equipmentBonus'
 import { parseStoneDragId, previewLevelUpgradeCost, previewQualityUpgradeCost } from '../game/items/forgeCosts'
-import { useCompositionStore } from '../game/items/useCompositionStore'
 import { useForgeStore } from '../game/items/useForgeStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
@@ -74,7 +73,6 @@ export default function ForgePanel() {
   const templates = useItemTemplatesStore((state) => state.templates)
   const meteors = useCurrencyStore((state) => state.meteors)
   const dragonballs = useCurrencyStore((state) => state.dragonballs)
-  const stones = useCompositionStore((state) => state.stones)
   const busy = useForgeStore((state) => state.busy)
   const qualityUpgrade = useForgeStore((state) => state.qualityUpgrade)
   const levelUpgrade = useForgeStore((state) => state.levelUpgrade)
@@ -92,10 +90,13 @@ export default function ForgePanel() {
   const selectedItem = items.find((item) => item.id === selectedItemId) ?? null
   const selectedTemplate = selectedItem ? (templates.find((t) => t.id === selectedItem.template_id) ?? null) : null
 
+  // Stones don't stack — each fuelId for a stone represents exactly one stone of
+  // that tier, so multiple dragged-in tiles of the same tier show up as separate
+  // entries here and get summed below for the actual feed amount.
   const fuelEntries: FuelEntry[] = fuelIds.flatMap((id): FuelEntry[] => {
     const tier = parseStoneDragId(id)
     if (tier !== null) {
-      return [{ kind: 'stone', id, tier, count: stones[String(tier)] ?? 0 }]
+      return [{ kind: 'stone', id, tier }]
     }
 
     const item = items.find((entry) => entry.id === id)
@@ -104,7 +105,7 @@ export default function ForgePanel() {
 
   const stoneAmounts = fuelEntries.reduce<Record<string, number>>((amounts, entry) => {
     if (entry.kind === 'stone') {
-      amounts[String(entry.tier)] = entry.count
+      amounts[String(entry.tier)] = (amounts[String(entry.tier)] ?? 0) + 1
     }
     return amounts
   }, {})

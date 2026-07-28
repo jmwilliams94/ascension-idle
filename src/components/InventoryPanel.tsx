@@ -17,7 +17,7 @@ import { ARROW_TYPES } from '../game/items/arrowTypes'
 // occupiedSlotCount in useInventoryStore). Always renders all 40 cells, empty
 // ones dimmed/unclickable, so Forge's drag-and-drop has a stable, always-present
 // set of slots to pick gear/stones up from.
-type SelectedSlot = { kind: 'item'; id: string } | { kind: 'arrow'; id: string } | { kind: 'stone'; tier: number } | null
+type SelectedSlot = { kind: 'item'; id: string } | { kind: 'arrow'; id: string } | { kind: 'stone'; dragId: string; tier: number } | null
 
 interface InventoryPanelProps {
   // Gear items/stone tiers currently sitting in Forge's Upgrade Slot and/or Fuel
@@ -30,9 +30,9 @@ interface InventoryPanelProps {
   // back with the item being dragged.
   onItemDragStart?: (item: ItemInstance) => void
   // Present only when rendered inside Forge — makes stone tiles draggable, calling
-  // back with the tier being dragged. Dragging a stone tile always represents its
-  // entire current count for that tier (there's no per-stack id to split, only a
-  // running total per tier), same all-or-nothing behavior as a real fuel item.
+  // back with the tier being dragged. Stones don't stack — each tile is exactly one
+  // stone, so dragging one tile feeds exactly one; feeding more means dragging in
+  // more individual tiles.
   onStoneDragStart?: (tier: number) => void
 }
 
@@ -54,11 +54,28 @@ export default function InventoryPanel({ reservedItemIds = [], onItemDragStart, 
   // Empty (fully depleted) stacks stay in the DB so the debounced autosave doesn't
   // need insert/delete diffing (see useArrowStore) — hide them from view here.
   const visibleArrowStacks = isHunter ? arrowStacks.filter((stack) => stack.count > 0) : []
-  // Only tiers the player actually owns get a tile — same "hide the empty ones"
-  // treatment as depleted arrow stacks.
-  const presentStoneTiers = COMPOSITION_STONE_TIERS.filter((tier) => (stones[String(tier)] ?? 0) > 0)
 
-  const occupiedCount = visibleArrowStacks.length + presentStoneTiers.length + items.length
+  // Stones don't stack — each one is its own tile, not combined into one tile with
+  // a count badge. Since there's no acquisition-time cap check for stones yet (no
+  // drop mechanic exists — see CLAUDE.md), a manually-set test value could in
+  // theory own more stones than fit in the remaining grid; this budget (recomputed
+  // from how many tiles have accumulated so far, rather than a mutated counter, to
+  // stay a pure reduce) clamps how many tiles actually render so the grid never
+  // exceeds its fixed 40 cells, rather than owning stones simply not showing up as
+  // a hard error.
+  const baseStoneBudget = Math.max(0, INVENTORY_SLOT_CAP - visibleArrowStacks.length - items.length)
+  const stoneTiles = COMPOSITION_STONE_TIERS.reduce<{ tier: number; index: number; dragId: string }[]>((acc, tier) => {
+    const owned = stones[String(tier)] ?? 0
+    const shown = Math.min(owned, Math.max(0, baseStoneBudget - acc.length))
+
+    for (let index = 0; index < shown; index += 1) {
+      acc.push({ tier, index, dragId: stoneDragId(tier, index) })
+    }
+
+    return acc
+  }, [])
+
+  const occupiedCount = visibleArrowStacks.length + stoneTiles.length + items.length
   const emptySlotCount = Math.max(0, INVENTORY_SLOT_CAP - occupiedCount)
 
   const selectedItem =
@@ -70,7 +87,7 @@ export default function InventoryPanel({ reservedItemIds = [], onItemDragStart, 
     selectedSlot?.kind === 'arrow' ? visibleArrowStacks.find((stack) => stack.id === selectedSlot.id) : undefined
   const selectedStoneTier = selectedSlot?.kind === 'stone' ? selectedSlot.tier : undefined
 
-  const slotKey = (slot: NonNullable<SelectedSlot>): string => (slot.kind === 'stone' ? `stone:${slot.tier}` : `${slot.kind}:${slot.id}`)
+  const slotKey = (slot: NonNullable<SelectedSlot>): string => (slot.kind === 'stone' ? slot.dragId : `${slot.kind}:${slot.id}`)
 
   const toggleSlot = (slot: NonNullable<SelectedSlot>) => {
     setSelectedSlot((current) => (current && slotKey(current) === slotKey(slot) ? null : slot))
@@ -82,9 +99,9 @@ export default function InventoryPanel({ reservedItemIds = [], onItemDragStart, 
     onItemDragStart?.(item)
   }
 
-  const handleStoneDragStart = (tier: number) => (event: DragEvent<HTMLButtonElement>) => {
+  const handleStoneDragStart = (dragId: string, tier: number) => (event: DragEvent<HTMLButtonElement>) => {
     event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('text/plain', stoneDragId(tier))
+    event.dataTransfer.setData('text/plain', dragId)
     onStoneDragStart?.(tier)
   }
 
@@ -113,13 +130,10 @@ export default function InventoryPanel({ reservedItemIds = [], onItemDragStart, 
             )
           })}
 
-          {presentStoneTiers.map((tier) => {
-            const dragId = stoneDragId(tier)
+          {stoneTiles.map(({ tier, dragId }) => {
             if (reservedItemIds.includes(dragId)) {
               return <InventorySlot key={dragId} slotId={dragId} filled={false} />
             }
-
-            const count = stones[String(tier)] ?? 0
 
             return (
               <InventorySlot
@@ -127,12 +141,11 @@ export default function InventoryPanel({ reservedItemIds = [], onItemDragStart, 
                 slotId={dragId}
                 filled
                 icon="🔷"
-                label={`+${tier} Stone (${count}) — ${compositionPointValue(tier)} pts each`}
-                badge={`${count}`}
-                selected={selectedStoneTier === tier}
-                onClick={() => toggleSlot({ kind: 'stone', tier })}
+                label={`+${tier} Stone — ${compositionPointValue(tier)} pts`}
+                selected={selectedSlot?.kind === 'stone' && selectedSlot.dragId === dragId}
+                onClick={() => toggleSlot({ kind: 'stone', dragId, tier })}
                 draggable={Boolean(onStoneDragStart)}
-                onDragStart={onStoneDragStart ? handleStoneDragStart(tier) : undefined}
+                onDragStart={onStoneDragStart ? handleStoneDragStart(dragId, tier) : undefined}
               />
             )
           })}
@@ -205,7 +218,7 @@ export default function InventoryPanel({ reservedItemIds = [], onItemDragStart, 
             <div>
               <p className="text-sm font-medium text-slate-200">+{selectedStoneTier} Stone</p>
               <p className="text-xs text-slate-500">
-                Owned: {stones[String(selectedStoneTier)] ?? 0} · {compositionPointValue(selectedStoneTier)} pts each
+                {compositionPointValue(selectedStoneTier)} pts · {stones[String(selectedStoneTier)] ?? 0} owned total
               </p>
             </div>
           </div>

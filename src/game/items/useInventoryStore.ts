@@ -32,16 +32,19 @@ const DROP_CHANCE = 0.1
 // max cap.
 export const INVENTORY_SLOT_CAP = 40
 
-// A stack of arrows, or a non-zero Composition stone tier, takes up a slot just
-// like a gear item does — all three count against the same 40-slot cap (depleted
-// arrow stacks and empty stone tiers don't, since both are hidden/inert). Stones
-// must be counted here, not just visually shown in InventoryPanel — otherwise the
-// grid's "always exactly 40 rendered cells" invariant breaks the moment a player
-// owns any stones (see InventoryPanel).
+// A stack of arrows takes up a slot just like a gear item does. Composition
+// stones don't stack at all — confirmed — so every individual stone takes up its
+// own slot (the full owned count across every tier, not just a count of which
+// tiers are non-empty). All three count against the same 40-slot cap (depleted
+// arrow stacks don't, since they're hidden/inert). Stones must be counted here,
+// not just visually shown in InventoryPanel — otherwise the grid's "always exactly
+// 40 rendered cells" invariant breaks the moment a player owns any stones (see
+// InventoryPanel, which also defensively clamps how many stone tiles it renders in
+// case a manually-set test value ever exceeds the remaining budget).
 function occupiedSlotCount(items: ItemInstance[]): number {
   const arrowStackCount = useArrowStore.getState().stacks.filter((stack) => stack.count > 0).length
-  const stoneTierCount = Object.values(useCompositionStore.getState().stones).filter((count) => count > 0).length
-  return items.length + arrowStackCount + stoneTierCount
+  const totalStoneCount = Object.values(useCompositionStore.getState().stones).reduce((sum, count) => sum + count, 0)
+  return items.length + arrowStackCount + totalStoneCount
 }
 
 interface InventoryState {

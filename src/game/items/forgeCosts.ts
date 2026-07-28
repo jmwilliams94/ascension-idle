@@ -74,21 +74,28 @@ export function simulateCompositionFeed(currentLevel: number, currentPoints: num
 }
 
 // Stones are drag-and-drop inventory items now (see InventoryPanel/ForgeFuelZone),
-// not a typed-in quantity — there's no per-item UUID for a stone stack (it's just a
-// running total per tier on the character), so drags use this synthetic id instead
-// of a real item id. Dragging a stone tile always feeds its *entire* current count
-// for that tier, same all-or-nothing behavior as dragging a real fuel item.
+// not a typed-in quantity — and confirmed to NOT stack: each stone is its own
+// inventory tile/slot, not combined into one tile with a count badge. There's no
+// per-stone UUID (the backend is still just a running total per tier on the
+// character, characters.composition_stones), so each individual tile gets a
+// synthetic id combining the tier with a render-time index (0..count-1) purely to
+// give React a stable key and to let exactly *one* tile be reserved/dragged at a
+// time — the index has no meaning beyond that, since same-tier stones are fully
+// fungible. Dragging one tile always feeds exactly one stone of that tier; feeding
+// more means dragging in more individual tiles.
 const STONE_DRAG_ID_PREFIX = 'stone:'
 
-export function stoneDragId(tier: number): string {
-  return `${STONE_DRAG_ID_PREFIX}${tier}`
+export function stoneDragId(tier: number, index: number): string {
+  return `${STONE_DRAG_ID_PREFIX}${tier}:${index}`
 }
 
+// Only the tier matters for feed/point-value purposes — the index is discarded.
 export function parseStoneDragId(id: string): number | null {
   if (!id.startsWith(STONE_DRAG_ID_PREFIX)) {
     return null
   }
 
-  const tier = Number(id.slice(STONE_DRAG_ID_PREFIX.length))
+  const [tierPart] = id.slice(STONE_DRAG_ID_PREFIX.length).split(':')
+  const tier = Number(tierPart)
   return (COMPOSITION_STONE_TIERS as readonly number[]).includes(tier) ? tier : null
 }

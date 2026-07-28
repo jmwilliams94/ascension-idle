@@ -51,7 +51,7 @@ export default function ForgeCompositionPanel({
 
   const addedPoints = fuelEntries.reduce((sum, entry) => {
     if (entry.kind === 'stone') {
-      return sum + compositionPointValue(entry.tier) * entry.count
+      return sum + compositionPointValue(entry.tier)
     }
     return sum + compositionPointValue(entry.item.composition_level)
   }, 0)
