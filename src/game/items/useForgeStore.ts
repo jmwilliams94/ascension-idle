@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '../../lib/supabaseClient'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
+import { useCompositionStore, type CompositionStones } from './useCompositionStore'
 import { useInventoryStore } from './useInventoryStore'
 
 // Shape returned by the quality_upgrade/level_upgrade Postgres functions (see
@@ -28,10 +29,37 @@ interface LevelUpgradeResult {
   meteors_remaining?: number
 }
 
+// Shape returned by composition_feed (see migration 20260728000000). No RNG and no
+// "upgraded" boolean — feeding always applies its full point value, the only
+// question is how far it advances the item (possibly across several tiers in one
+// call, hence points_required_for_next reflecting whatever tier it landed on).
+interface CompositionFeedResult {
+  ok: boolean
+  error?:
+    | 'item_not_found'
+    | 'not_owner'
+    | 'invalid_stone_tier'
+    | 'not_enough_stones'
+    | 'fuel_not_owned'
+    | 'fuel_is_target_item'
+    | 'no_points_contributed'
+  composition_level?: number
+  composition_points?: number
+  points_required_for_next?: number
+  stones?: CompositionStones
+}
+
 interface ForgeState {
   busy: boolean
   qualityUpgrade: (itemId: string) => Promise<QualityUpgradeResult>
   levelUpgrade: (itemId: string) => Promise<LevelUpgradeResult>
+  // stoneAmounts keys are tier "1".."4"; fuelItemIds are other gear items to
+  // sacrifice for their composition value (see CLAUDE.md's Composition section).
+  compositionFeed: (
+    itemId: string,
+    stoneAmounts: Record<string, number>,
+    fuelItemIds: string[],
+  ) => Promise<CompositionFeedResult>
 }
 
 export const useForgeStore = create<ForgeState>((set) => ({
@@ -80,6 +108,41 @@ export const useForgeStore = create<ForgeState>((set) => ({
     }
     if (result.ok && typeof result.meteors_remaining === 'number') {
       useCurrencyStore.getState().setMeteors(result.meteors_remaining)
+    }
+
+    return result
+  },
+
+  compositionFeed: async (itemId, stoneAmounts, fuelItemIds) => {
+    set({ busy: true })
+
+    const { data, error } = await supabase.rpc('composition_feed', {
+      item_id: itemId,
+      stone_amounts: stoneAmounts,
+      fuel_item_ids: fuelItemIds,
+    })
+
+    set({ busy: false })
+
+    if (error) {
+      console.error('Composition feed call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as CompositionFeedResult
+
+    if (result.ok) {
+      if (typeof result.composition_level === 'number' && typeof result.composition_points === 'number') {
+        useInventoryStore
+          .getState()
+          .patchItem(itemId, { composition_level: result.composition_level, composition_points: result.composition_points })
+      }
+      if (result.stones) {
+        useCompositionStore.getState().setStones(result.stones)
+      }
+      if (fuelItemIds.length > 0) {
+        useInventoryStore.getState().removeItems(fuelItemIds)
+      }
     }
 
     return result

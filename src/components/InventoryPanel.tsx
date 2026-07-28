@@ -17,16 +17,17 @@ import { ARROW_TYPES } from '../game/items/arrowTypes'
 type SelectedSlot = { kind: 'item'; id: string } | { kind: 'arrow'; id: string } | null
 
 interface InventoryPanelProps {
-  // The gear item currently sitting in Forge's Upgrade Slot (if any) — its cell
-  // renders empty here instead of filled, so the item isn't shown in two places at
-  // once. Only ForgePanel passes this; every other usage is unaffected.
-  reservedItemId?: string | null
+  // Gear items currently sitting in Forge's Upgrade Slot and/or Fuel zone (if any)
+  // — their cells render empty here instead of filled, so an item is never shown
+  // in two Forge drop targets (or the grid and a drop target) at once. Only
+  // ForgePanel passes this; every other usage is unaffected.
+  reservedItemIds?: string[]
   // Present only when rendered inside Forge — makes gear tiles (not arrow stacks,
   // Forge never touches those) draggable, calling back with the item being dragged.
   onItemDragStart?: (item: ItemInstance) => void
 }
 
-export default function InventoryPanel({ reservedItemId = null, onItemDragStart }: InventoryPanelProps) {
+export default function InventoryPanel({ reservedItemIds = [], onItemDragStart }: InventoryPanelProps) {
   const items = useInventoryStore((state) => state.items)
   const templates = useItemTemplatesStore((state) => state.templates)
   const equippedItemId = useEquipmentStore((state) => state.equippedItemId)
@@ -48,7 +49,7 @@ export default function InventoryPanel({ reservedItemId = null, onItemDragStart 
   const emptySlotCount = Math.max(0, INVENTORY_SLOT_CAP - occupiedCount)
 
   const selectedItem =
-    selectedSlot?.kind === 'item' && selectedSlot.id !== reservedItemId
+    selectedSlot?.kind === 'item' && !reservedItemIds.includes(selectedSlot.id)
       ? items.find((item) => item.id === selectedSlot.id)
       : undefined
   const selectedTemplate = selectedItem && templates.find((entry) => entry.id === selectedItem.template_id)
@@ -91,7 +92,7 @@ export default function InventoryPanel({ reservedItemId = null, onItemDragStart 
           })}
 
           {items.map((item) => {
-            if (item.id === reservedItemId) {
+            if (reservedItemIds.includes(item.id)) {
               return <InventorySlot key={item.id} slotId={item.id} filled={false} />
             }
 

@@ -4,11 +4,12 @@ import { useActiveCharacterStore } from '../../lib/useActiveCharacterStore'
 import { useArrowStore } from './useArrowStore'
 import { useItemTemplatesStore, type ItemTemplate } from './useItemTemplatesStore'
 
-// Mirrors the item_instances table. composition_level/sockets/enchant are unused
-// this step — they exist so a later step doesn't need a schema rework. quality_tier
-// and level are only ever changed server-side via the quality_upgrade/level_upgrade
-// Postgres functions (see useForgeStore) — never write them via a normal update().
-// owner_id references characters.id (a specific character), not the account.
+// Mirrors the item_instances table. sockets/enchant are unused this step — they
+// exist so a later step doesn't need a schema rework. quality_tier/level/
+// composition_level/composition_points are only ever changed server-side via the
+// quality_upgrade/level_upgrade/composition_feed Postgres functions (see
+// useForgeStore) — never write them via a normal update(). owner_id references
+// characters.id (a specific character), not the account.
 export interface ItemInstance {
   id: string
   template_id: string
@@ -16,6 +17,7 @@ export interface ItemInstance {
   quality_tier: string
   level: number
   composition_level: number
+  composition_points: number
   sockets: unknown[]
   enchant: unknown | null
   created_at: string
@@ -51,14 +53,21 @@ interface InventoryState {
   // CLAUDE.md's Persistence section) — a full inventory silently wastes the drop when
   // not interactive, or surfaces pendingFullDrop for the player to resolve when it is.
   rollDropForKill: (interactive?: boolean) => Promise<{ item: ItemInstance; template: ItemTemplate } | null>
-  // Reflects a successful quality_upgrade/level_upgrade RPC result in the local
-  // cache — the functions already wrote the real values server-side, this just
-  // keeps the client's copy in sync without a full refetch.
-  patchItem: (itemId: string, patch: Partial<Pick<ItemInstance, 'quality_tier' | 'level'>>) => void
+  // Reflects a successful quality_upgrade/level_upgrade/composition_feed RPC result
+  // in the local cache — the functions already wrote the real values server-side,
+  // this just keeps the client's copy in sync without a full refetch.
+  patchItem: (
+    itemId: string,
+    patch: Partial<Pick<ItemInstance, 'quality_tier' | 'level' | 'composition_level' | 'composition_points'>>,
+  ) => void
   // Resolves a pendingFullDrop: pass an existing gear item or arrow stack to discard
   // (freeing its slot) and grant the new drop in its place, or null to discard the
   // new drop instead and keep the inventory as-is.
   resolvePendingDrop: (discard: { kind: 'item' | 'arrow'; id: string } | null) => Promise<void>
+  // Drops the given items from the local cache without touching the DB — used
+  // after composition_feed destroys fuel items server-side, so the client doesn't
+  // need a full refetch just to stop showing them.
+  removeItems: (itemIds: string[]) => void
 }
 
 export const useInventoryStore = create<InventoryState>((set, get) => ({
@@ -168,5 +177,13 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       items: [...(discard.kind === 'item' ? state.items.filter((item) => item.id !== discard.id) : state.items), newItem],
       pendingFullDrop: null,
     }))
+  },
+
+  removeItems: (itemIds) => {
+    if (itemIds.length === 0) {
+      return
+    }
+
+    set((state) => ({ items: state.items.filter((item) => !itemIds.includes(item.id)) }))
   },
 }))

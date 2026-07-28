@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.13.0",
+    "date": "2026-07-28",
+    "changes": [
+      "Added Composition — a third Forge upgrade path with guaranteed progress and no chance of failure",
+      "Feed stackable stones and/or sacrifice other gear as fuel to push an item toward its next +N tier, with a live progress bar showing exactly how far a feed would take you (even across multiple tiers at once)",
+      "Composition stones aren't dropped by anything yet — this is ready for testing once some are granted manually"
+    ]
+  },
+  {
     "version": "1.12.1",
     "date": "2026-07-28",
     "changes": [
