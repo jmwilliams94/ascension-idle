@@ -61,6 +61,28 @@ export function formatQualityAndLevel(qualityTier: string, level: number): strin
   return `${QUALITY_LABELS[qualityTier] ?? qualityTier} · Lv ${level}`
 }
 
+export interface SlotVisual {
+  background: string
+  glow: boolean
+}
+
+const EMPTY_SLOT_BACKGROUND = 'rgba(30, 41, 59, 0.6)' // matches the old bg-slate-800/60 placeholder box
+
+// Used by the Equipment paper-doll (EquipmentPanel) to color a band/accent by
+// whatever's equipped in that slot — pass undefined/null for slots with no item
+// system yet (Headgear, Body/Armor, Boots today) and it renders neutral; pass a
+// real quality_tier once that slot becomes functional and it lights up
+// automatically, no separate wiring needed. Only Super quality glows (see
+// .super-quality-glow in index.css) so the glow reads as a special indicator
+// rather than decoration every tier gets.
+export function getSlotVisual(qualityTier: string | null | undefined): SlotVisual {
+  if (!qualityTier) {
+    return { background: EMPTY_SLOT_BACKGROUND, glow: false }
+  }
+
+  return { background: `${getQualityColor(qualityTier)}80`, glow: qualityTier === 'super' }
+}
+
 // Display-layer only — the stored item_templates.name is never renamed. Normal
 // quality shows the plain name; anything above gets the tier prefixed.
 export function formatItemDisplayName(templateName: string, qualityTier: string): string {

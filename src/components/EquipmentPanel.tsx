@@ -1,19 +1,21 @@
 import { useState } from 'react'
 import EquipmentSlot from './EquipmentSlot'
+import PaperDollBody from './PaperDollBody'
 import { formatBaseStats, formatItemDisplayName, formatQualityAndLevel, getQualityColor } from '../game/items/equipmentBonus'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 
-// Paper-doll layout, positioned around a central character placeholder (no art yet
-// — a plain silhouette box). Right column, top to bottom: Head, Necklace, Ring,
-// Main Hand — the only functional slot this step, matching equipped_item_id's
-// current single-slot shortcut. Bottom row lines up Boots (left), Off-hand/Shield
-// (center, below the character), and Armor (right, below Main Hand). Everything
-// except Main Hand is a non-clickable, greyed-out placeholder hinting at a future
-// gear type via a faint icon, since those slots don't exist in the schema yet (see
-// CLAUDE.md's Gear slots note — exact per-class slot assignment is still
-// unresolved, these are illustrative, not final).
+// Paper-doll layout, positioned around a central character placeholder — an
+// abstract/geometric segmented rectangle (PaperDollBody), not character art, per
+// the game's "greybox" visual identity. Right column, top to bottom: Head,
+// Necklace, Ring, Main Hand — the only functional slot this step, matching
+// equipped_item_id's current single-slot shortcut. Bottom row lines up Boots
+// (left), Off-hand/Shield (center, below the character), and Armor (right, below
+// Main Hand). Everything except Main Hand is a non-clickable, greyed-out
+// placeholder hinting at a future gear type via a faint icon, since those slots
+// don't exist in the schema yet (see CLAUDE.md's Gear slots note — exact per-class
+// slot assignment is still unresolved, these are illustrative, not final).
 export default function EquipmentPanel() {
   const equippedItemId = useEquipmentStore((state) => state.equippedItemId)
   const setEquippedItemId = useEquipmentStore((state) => state.setEquippedItemId)
@@ -46,9 +48,9 @@ export default function EquipmentPanel() {
         </div>
 
         <div style={{ gridArea: 'character' }} className="flex items-center justify-center">
-          <div className="flex h-28 w-20 items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-800/60 text-4xl text-slate-600">
-            🧍
-          </div>
+          {/* Headgear/Body-Armor/Boots have no item system yet, so those bands
+              always render neutral — only Weapon's accent is real right now. */}
+          <PaperDollBody weaponQualityTier={equippedItem?.quality_tier} />
         </div>
 
         <div style={{ gridArea: 'main' }} className="flex items-center justify-center">

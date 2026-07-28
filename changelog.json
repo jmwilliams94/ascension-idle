@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.11.3",
+    "date": "2026-07-28",
+    "changes": [
+      "The character placeholder in Equipment is now a segmented paper-doll showing Headgear/Body-Armor/Boots as color-coded bands and Weapon as a colored edge accent, tinted by item quality",
+      "Super-quality gear now gives its band/accent a slow, subtle glow"
+    ]
+  },
+  {
     "version": "1.11.2",
     "date": "2026-07-28",
     "changes": [

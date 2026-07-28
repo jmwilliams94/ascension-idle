@@ -27,3 +27,20 @@ body {
   min-width: 320px;
   background: #020617;
 }
+
+/* Super-quality-only glow for the Equipment paper-doll (EquipmentPanel) — a slow,
+   subtle pulse rather than a static shadow, so it reads as a genuinely special
+   indicator instead of decoration every band/accent has. */
+@keyframes super-quality-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 6px 1px rgba(239, 68, 68, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 14px 4px rgba(239, 68, 68, 0.6);
+  }
+}
+
+.super-quality-glow {
+  animation: super-quality-glow 2.6s ease-in-out infinite;
+}
