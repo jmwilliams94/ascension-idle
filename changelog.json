@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.11.1",
+    "date": "2026-07-28",
+    "changes": [
+      "Fixed the new Equipment panel rendering with huge oversized slots and unnecessary scrollbars"
+    ]
+  },
+  {
     "version": "1.11.0",
     "date": "2026-07-28",
     "changes": [

@@ -26,35 +26,35 @@ export default function EquipmentPanel() {
   return (
     <div className="space-y-4">
       <div
-        className="grid gap-2"
+        className="mx-auto grid max-w-xs gap-2"
         style={{
           gridTemplateColumns: '30% 40% 30%',
           gridTemplateAreas: '"head character acc1" "boots character acc2" ". character acc3" "weapon armor1 armor2"',
         }}
       >
-        <div style={{ gridArea: 'head' }}>
+        <div style={{ gridArea: 'head' }} className="flex items-center justify-center">
           <EquipmentSlot label="Headgear" icon="🪖" locked />
         </div>
-        <div style={{ gridArea: 'boots' }}>
+        <div style={{ gridArea: 'boots' }} className="flex items-center justify-center">
           <EquipmentSlot label="Boots" icon="👢" locked />
         </div>
-        <div style={{ gridArea: 'acc1' }}>
+        <div style={{ gridArea: 'acc1' }} className="flex items-center justify-center">
           <EquipmentSlot label="Necklace" icon="📿" locked />
         </div>
-        <div style={{ gridArea: 'acc2' }}>
+        <div style={{ gridArea: 'acc2' }} className="flex items-center justify-center">
           <EquipmentSlot label="Ring" icon="💍" locked />
         </div>
-        <div style={{ gridArea: 'acc3' }}>
+        <div style={{ gridArea: 'acc3' }} className="flex items-center justify-center">
           <EquipmentSlot label="Earring" icon="🧿" locked />
         </div>
 
         <div style={{ gridArea: 'character' }} className="flex items-center justify-center">
-          <div className="flex aspect-[3/4] w-full max-w-[8rem] items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-800/60 text-4xl text-slate-600">
+          <div className="flex h-28 w-20 items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-800/60 text-4xl text-slate-600">
             🧍
           </div>
         </div>
 
-        <div style={{ gridArea: 'weapon' }}>
+        <div style={{ gridArea: 'weapon' }} className="flex items-center justify-center">
           <EquipmentSlot
             label={template ? formatItemDisplayName(template.name, equippedItem.quality_tier) : 'Weapon — empty'}
             icon={template ? '🗡️' : undefined}
@@ -64,10 +64,10 @@ export default function EquipmentPanel() {
             onClick={template ? () => setWeaponSelected((current) => !current) : undefined}
           />
         </div>
-        <div style={{ gridArea: 'armor1' }}>
+        <div style={{ gridArea: 'armor1' }} className="flex items-center justify-center">
           <EquipmentSlot label="Body Armor" icon="🛡️" locked />
         </div>
-        <div style={{ gridArea: 'armor2' }}>
+        <div style={{ gridArea: 'armor2' }} className="flex items-center justify-center">
           <EquipmentSlot label="Armor" icon="🛡️" locked />
         </div>
       </div>
