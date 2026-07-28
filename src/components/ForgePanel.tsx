@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import ForgeUpgradeSlot from './ForgeUpgradeSlot'
+import InventoryPanel from './InventoryPanel'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
-import { formatItemDisplayName, formatQualityAndLevel, getQualityColor } from '../game/items/equipmentBonus'
+import { formatItemDisplayName, formatQualityAndLevel, getQualityColor, nextQualityTier } from '../game/items/equipmentBonus'
 import { previewLevelUpgradeCost, previewQualityUpgradeCost } from '../game/items/forgeCosts'
 import { useForgeStore } from '../game/items/useForgeStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
@@ -10,31 +12,41 @@ import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 // the button instead of a cost; the real cap enforcement lives server-side.
 const ITEM_LEVEL_CAP = 130
 
-function describeResult(
-  result: { ok: boolean; error?: string; upgraded?: boolean },
-  successNoun: string,
-): string {
-  if (!result.ok) {
-    switch (result.error) {
-      case 'not_enough_dragonballs':
-        return 'Not enough DragonBalls.'
-      case 'not_enough_meteors':
-        return 'Not enough Meteors.'
-      case 'already_max_quality':
-        return 'Already at Super quality.'
-      case 'already_max_level':
-        return 'Already at the level cap.'
-      case 'not_owner':
-      case 'item_not_found':
-        return "Couldn't find that item."
-      default:
-        return 'Something went wrong.'
-    }
-  }
+// How long a result banner (success/failure) stays up before the Upgrade Slot
+// resets itself for the next item, per the spec's "return to empty" behavior.
+const RESULT_DISPLAY_MS = 2600
 
-  return result.upgraded ? `${successNoun} succeeded!` : `${successNoun} failed — materials were still spent.`
+type UpgradeType = 'quality' | 'level'
+
+interface AttemptResult {
+  success: boolean
+  message: string
 }
 
+function describeFailure(error?: string): string {
+  switch (error) {
+    case 'not_enough_dragonballs':
+      return 'Not enough DragonBalls.'
+    case 'not_enough_meteors':
+      return 'Not enough Meteors.'
+    case 'already_max_quality':
+      return 'Already at Super quality.'
+    case 'already_max_level':
+      return 'Already at the level cap.'
+    case 'not_owner':
+    case 'item_not_found':
+      return "Couldn't find that item."
+    default:
+      return 'Something went wrong.'
+  }
+}
+
+// Forge overlay: Inventory (left, reused unmodified) feeds items into the Upgrade
+// Slot (center) via native HTML5 drag-and-drop; the Result Preview (right) computes
+// what the item would look like after a successful attempt using the exact same
+// tier-progression/cost logic the real quality_upgrade/level_upgrade Postgres
+// functions use (nextQualityTier, previewQualityUpgradeCost/previewLevelUpgradeCost)
+// — no success rate is ever shown, only the eventual outcome.
 export default function ForgePanel() {
   const items = useInventoryStore((state) => state.items)
   const templates = useItemTemplatesStore((state) => state.templates)
@@ -45,25 +57,111 @@ export default function ForgePanel() {
   const levelUpgrade = useForgeStore((state) => state.levelUpgrade)
 
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
-  const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const [selectedType, setSelectedType] = useState<UpgradeType | null>(null)
+  const [attemptResult, setAttemptResult] = useState<AttemptResult | null>(null)
 
-  const selectedItem = items.find((item) => item.id === selectedItemId)
-  const selectedTemplate = selectedItem && templates.find((t) => t.id === selectedItem.template_id)
+  const selectedItem = items.find((item) => item.id === selectedItemId) ?? null
+  const selectedTemplate = selectedItem ? (templates.find((t) => t.id === selectedItem.template_id) ?? null) : null
 
-  if (items.length === 0) {
-    return (
-      <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-6 text-center text-sm text-slate-500">
-        No items to forge yet — defeat enemies for a chance at a drop.
-      </div>
-    )
+  // Auto-return to the empty Upgrade Slot after showing the result, per spec.
+  useEffect(() => {
+    if (!attemptResult) {
+      return undefined
+    }
+
+    const timeout = setTimeout(() => {
+      setAttemptResult(null)
+      setSelectedItemId(null)
+      setSelectedType(null)
+    }, RESULT_DISPLAY_MS)
+
+    return () => clearTimeout(timeout)
+  }, [attemptResult])
+
+  const handleDropItemId = (itemId: string) => {
+    if (!items.some((item) => item.id === itemId)) {
+      return
+    }
+
+    setSelectedItemId(itemId)
+    setSelectedType(null)
+    setAttemptResult(null)
+  }
+
+  const handleRemove = () => {
+    setSelectedItemId(null)
+    setSelectedType(null)
+    setAttemptResult(null)
   }
 
   const isMaxQuality = selectedItem?.quality_tier === 'super'
   const isMaxLevel = (selectedItem?.level ?? 0) >= ITEM_LEVEL_CAP
+  const qualityCost = selectedItem ? previewQualityUpgradeCost(selectedItem.quality_tier) : 0
+  const levelCost = selectedItem ? previewLevelUpgradeCost(selectedItem.level) : 0
+
+  const qualityDisabledReason = !selectedItem
+    ? null
+    : isMaxQuality
+      ? 'Already at Super quality.'
+      : dragonballs < qualityCost
+        ? `Need ${qualityCost} DragonBall${qualityCost === 1 ? '' : 's'} (have ${dragonballs}).`
+        : null
+  const levelDisabledReason = !selectedItem
+    ? null
+    : isMaxLevel
+      ? 'Already at the level cap.'
+      : meteors < levelCost
+        ? `Need ${levelCost} Meteor${levelCost === 1 ? '' : 's'} (have ${meteors}).`
+        : null
+
+  const previewData = (() => {
+    if (!selectedItem || !selectedTemplate || !selectedType) {
+      return null
+    }
+
+    if (selectedType === 'quality') {
+      const next = nextQualityTier(selectedItem.quality_tier)
+      if (!next) {
+        return null
+      }
+      return {
+        name: formatItemDisplayName(selectedTemplate.name, next),
+        qualityAndLevel: formatQualityAndLevel(next, selectedItem.level),
+        color: getQualityColor(next),
+      }
+    }
+
+    // Level currently only advances the level number — there's no per-level stat
+    // formula yet (see CLAUDE.md's Gear system section), so the preview honestly
+    // shows the same stats with just the level incremented, not invented numbers.
+    return {
+      name: formatItemDisplayName(selectedTemplate.name, selectedItem.quality_tier),
+      qualityAndLevel: formatQualityAndLevel(selectedItem.quality_tier, selectedItem.level + 1),
+      color: getQualityColor(selectedItem.quality_tier),
+    }
+  })()
+
+  const handleConfirm = async () => {
+    if (!selectedItem || !selectedType) {
+      return
+    }
+
+    const result = selectedType === 'quality' ? await qualityUpgrade(selectedItem.id) : await levelUpgrade(selectedItem.id)
+
+    if (!result.ok) {
+      setAttemptResult({ success: false, message: describeFailure(result.error) })
+      return
+    }
+
+    setAttemptResult({
+      success: Boolean(result.upgraded),
+      message: result.upgraded ? 'Upgrade succeeded!' : 'Upgrade failed — materials were still spent.',
+    })
+  }
 
   return (
     <div className="space-y-3">
-      <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+      <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-3">
         <dl className="grid grid-cols-2 gap-2 text-sm text-slate-300">
           <div className="flex justify-between">
             <dt className="text-slate-400">Meteors</dt>
@@ -76,88 +174,112 @@ export default function ForgePanel() {
         </dl>
       </div>
 
-      <div className="space-y-2">
-        {items.map((item) => {
-          const template = templates.find((t) => t.id === item.template_id)
-          const isSelected = item.id === selectedItemId
+      <div className="flex gap-4">
+        <div className="min-w-0 flex-1">
+          {/* Draggable only here — opting into onItemDragStart is what enables it. */}
+          <InventoryPanel reservedItemId={selectedItemId} onItemDragStart={() => undefined} />
+        </div>
 
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => {
-                setSelectedItemId(item.id)
-                setStatusMessage(null)
-              }}
-              className={`w-full rounded-xl border p-3 text-left text-sm ${
-                isSelected
-                  ? 'border-sky-500 bg-sky-500/10 text-sky-300'
-                  : 'border-slate-800 bg-slate-950/80 text-slate-300 hover:border-slate-600'
+        <ForgeUpgradeSlot
+          item={selectedItem}
+          template={selectedTemplate}
+          onDropItemId={handleDropItemId}
+          onRemove={handleRemove}
+        />
+
+        <div className="w-56 shrink-0 space-y-3">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Result Preview</p>
+
+          {attemptResult ? (
+            <div
+              className={`rounded-xl border p-3 text-center text-sm ${
+                attemptResult.success
+                  ? 'forge-success-flash border-emerald-600 bg-emerald-500/10 text-emerald-300'
+                  : 'border-red-800 bg-red-500/10 text-red-300'
               }`}
             >
-              <p className="flex items-center gap-2 font-medium">
-                <span
-                  className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: getQualityColor(item.quality_tier) }}
-                />
-                {template ? formatItemDisplayName(template.name, item.quality_tier) : 'Unknown item'}
-              </p>
-              <p className="text-xs text-slate-500">{formatQualityAndLevel(item.quality_tier, item.level)}</p>
-            </button>
-          )
-        })}
-      </div>
-
-      {selectedItem && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-          <div className="flex items-center gap-3">
-            <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-lg"
-              style={{ borderColor: getQualityColor(selectedItem.quality_tier) }}
-            >
-              🗡️
+              {attemptResult.message}
             </div>
-            <div>
-              <p className="text-sm font-medium text-slate-200">
-                {selectedTemplate ? formatItemDisplayName(selectedTemplate.name, selectedItem.quality_tier) : 'Unknown item'}
-              </p>
-              <p className="text-xs text-slate-500">
-                {formatQualityAndLevel(selectedItem.quality_tier, selectedItem.level)}
-              </p>
-            </div>
-          </div>
+          ) : !selectedItem ? (
+            <p className="rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-4 text-center text-[11px] text-slate-600">
+              Drag an item into the Upgrade Slot to preview an upgrade.
+            </p>
+          ) : (
+            <>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={busy || Boolean(qualityDisabledReason)}
+                  onClick={() => setSelectedType('quality')}
+                  title={qualityDisabledReason ?? undefined}
+                  className={`flex-1 rounded-lg border px-2 py-2 text-[11px] font-medium leading-tight disabled:cursor-not-allowed disabled:opacity-50 ${
+                    selectedType === 'quality'
+                      ? 'border-sky-500 bg-sky-500/10 text-sky-300'
+                      : 'border-slate-700 text-slate-300 hover:border-slate-500'
+                  }`}
+                >
+                  Quality Upgrade
+                  <br />
+                  {isMaxQuality ? '(Max)' : `(${qualityCost} DragonBall${qualityCost === 1 ? '' : 's'})`}
+                </button>
 
-          <div className="mt-3 flex gap-2">
-            <button
-              type="button"
-              disabled={busy || isMaxQuality}
-              onClick={async () => {
-                const result = await qualityUpgrade(selectedItem.id)
-                setStatusMessage(describeResult(result, 'Quality upgrade'))
-              }}
-              className="flex-1 rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-2 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isMaxQuality
-                ? 'Upgrade Quality (Max)'
-                : `Upgrade Quality (${previewQualityUpgradeCost(selectedItem.quality_tier)} DragonBall)`}
-            </button>
+                <button
+                  type="button"
+                  disabled={busy || Boolean(levelDisabledReason)}
+                  onClick={() => setSelectedType('level')}
+                  title={levelDisabledReason ?? undefined}
+                  className={`flex-1 rounded-lg border px-2 py-2 text-[11px] font-medium leading-tight disabled:cursor-not-allowed disabled:opacity-50 ${
+                    selectedType === 'level'
+                      ? 'border-amber-500 bg-amber-500/10 text-amber-300'
+                      : 'border-slate-700 text-slate-300 hover:border-slate-500'
+                  }`}
+                >
+                  Level Upgrade
+                  <br />
+                  {isMaxLevel ? '(Max)' : `(${levelCost} Meteor${levelCost === 1 ? '' : 's'})`}
+                </button>
+              </div>
 
-            <button
-              type="button"
-              disabled={busy || isMaxLevel}
-              onClick={async () => {
-                const result = await levelUpgrade(selectedItem.id)
-                setStatusMessage(describeResult(result, 'Level upgrade'))
-              }}
-              className="flex-1 rounded-lg border border-amber-500 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isMaxLevel ? 'Upgrade Level (Max)' : `Upgrade Level (${previewLevelUpgradeCost(selectedItem.level)} Meteor)`}
-            </button>
-          </div>
+              {selectedType && (qualityDisabledReason || levelDisabledReason) && (
+                <p className="text-center text-[10px] text-slate-500">
+                  {selectedType === 'quality' ? qualityDisabledReason : levelDisabledReason}
+                </p>
+              )}
 
-          {statusMessage && <p className="mt-3 text-center text-xs text-slate-400">{statusMessage}</p>}
+              {previewData ? (
+                <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
+                  <p className="text-[10px] uppercase tracking-wide text-slate-600">After upgrade</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <div
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-base"
+                      style={{ borderColor: previewData.color }}
+                    >
+                      🗡️
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-slate-200">{previewData.name}</p>
+                      <p className="text-[10px] text-slate-500">{previewData.qualityAndLevel}</p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void handleConfirm()}
+                    className="mt-3 w-full rounded-lg border border-emerald-600 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {busy ? 'Working…' : 'Confirm Upgrade'}
+                  </button>
+                </div>
+              ) : (
+                <p className="rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-4 text-center text-[11px] text-slate-600">
+                  Choose an upgrade type to preview the result.
+                </p>
+              )}
+            </>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }

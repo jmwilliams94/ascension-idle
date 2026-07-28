@@ -57,6 +57,20 @@ export function getQualityColor(qualityTier: string): string {
   return QUALITY_COLORS[qualityTier] ?? QUALITY_COLORS.normal
 }
 
+const QUALITY_ORDER = ['normal', 'refined', 'unique', 'elite', 'super']
+
+// Mirrors the quality_upgrade Postgres function's tier progression exactly (see
+// supabase/migrations/20260727050000_add_quality_level_upgrade.sql's v_next_tier
+// case statement) — used for the Forge preview, which needs to know the *next*
+// tier before committing. Returns null when already at Super (the real max).
+export function nextQualityTier(qualityTier: string): string | null {
+  const index = QUALITY_ORDER.indexOf(qualityTier)
+  if (index === -1 || index === QUALITY_ORDER.length - 1) {
+    return null
+  }
+  return QUALITY_ORDER[index + 1]
+}
+
 export function formatQualityAndLevel(qualityTier: string, level: number): string {
   return `${QUALITY_LABELS[qualityTier] ?? qualityTier} · Lv ${level}`
 }

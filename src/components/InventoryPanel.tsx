@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import type { DragEvent } from 'react'
 import InventorySlot from './InventorySlot'
 import { formatBaseStats, formatItemDisplayName, formatQualityAndLevel, getQualityColor } from '../game/items/equipmentBonus'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
-import { INVENTORY_SLOT_CAP, useInventoryStore } from '../game/items/useInventoryStore'
+import { INVENTORY_SLOT_CAP, useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { useArrowStore } from '../game/items/useArrowStore'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
@@ -11,11 +12,21 @@ import { ARROW_TYPES } from '../game/items/arrowTypes'
 // A single fixed 40-cell grid shared by gear (item_instances) and Hunter arrow
 // stacks — a stack takes up a slot exactly like a gear item does, both counting
 // against the same cap (see occupiedSlotCount in useInventoryStore). Always renders
-// all 40 cells, empty ones dimmed/unclickable, since Forge's upcoming drag-and-drop
-// step needs a stable, always-present set of slots to pick gear up from.
+// all 40 cells, empty ones dimmed/unclickable, so Forge's drag-and-drop has a
+// stable, always-present set of slots to pick gear up from.
 type SelectedSlot = { kind: 'item'; id: string } | { kind: 'arrow'; id: string } | null
 
-export default function InventoryPanel() {
+interface InventoryPanelProps {
+  // The gear item currently sitting in Forge's Upgrade Slot (if any) — its cell
+  // renders empty here instead of filled, so the item isn't shown in two places at
+  // once. Only ForgePanel passes this; every other usage is unaffected.
+  reservedItemId?: string | null
+  // Present only when rendered inside Forge — makes gear tiles (not arrow stacks,
+  // Forge never touches those) draggable, calling back with the item being dragged.
+  onItemDragStart?: (item: ItemInstance) => void
+}
+
+export default function InventoryPanel({ reservedItemId = null, onItemDragStart }: InventoryPanelProps) {
   const items = useInventoryStore((state) => state.items)
   const templates = useItemTemplatesStore((state) => state.templates)
   const equippedItemId = useEquipmentStore((state) => state.equippedItemId)
@@ -36,13 +47,22 @@ export default function InventoryPanel() {
   const occupiedCount = visibleArrowStacks.length + items.length
   const emptySlotCount = Math.max(0, INVENTORY_SLOT_CAP - occupiedCount)
 
-  const selectedItem = selectedSlot?.kind === 'item' ? items.find((item) => item.id === selectedSlot.id) : undefined
+  const selectedItem =
+    selectedSlot?.kind === 'item' && selectedSlot.id !== reservedItemId
+      ? items.find((item) => item.id === selectedSlot.id)
+      : undefined
   const selectedTemplate = selectedItem && templates.find((entry) => entry.id === selectedItem.template_id)
   const selectedStack =
     selectedSlot?.kind === 'arrow' ? visibleArrowStacks.find((stack) => stack.id === selectedSlot.id) : undefined
 
   const toggleSlot = (slot: NonNullable<SelectedSlot>) => {
     setSelectedSlot((current) => (current && current.kind === slot.kind && current.id === slot.id ? null : slot))
+  }
+
+  const handleDragStart = (item: ItemInstance) => (event: DragEvent<HTMLButtonElement>) => {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', item.id)
+    onItemDragStart?.(item)
   }
 
   return (
@@ -71,6 +91,10 @@ export default function InventoryPanel() {
           })}
 
           {items.map((item) => {
+            if (item.id === reservedItemId) {
+              return <InventorySlot key={item.id} slotId={item.id} filled={false} />
+            }
+
             const template = templates.find((entry) => entry.id === item.template_id)
             const label = template ? formatItemDisplayName(template.name, item.quality_tier) : 'Unknown item'
 
@@ -84,6 +108,8 @@ export default function InventoryPanel() {
                 label={label}
                 selected={selectedSlot?.kind === 'item' && selectedSlot.id === item.id}
                 onClick={() => toggleSlot({ kind: 'item', id: item.id })}
+                draggable={Boolean(onItemDragStart)}
+                onDragStart={onItemDragStart ? handleDragStart(item) : undefined}
               />
             )
           })}

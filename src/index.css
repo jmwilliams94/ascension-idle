@@ -47,3 +47,18 @@ body {
 .super-quality-glow {
   animation: super-quality-glow 2.6s ease-in-out infinite;
 }
+
+/* One-shot flash on a successful Forge upgrade (ForgePanel) — plays once, not
+   infinitely, so it reads as "this just changed" rather than ongoing decoration. */
+@keyframes forge-success-flash {
+  0% {
+    background-color: rgba(16, 185, 129, 0.35);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.forge-success-flash {
+  animation: forge-success-flash 900ms ease-out;
+}
