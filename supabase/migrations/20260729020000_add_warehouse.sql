@@ -22,8 +22,20 @@ alter table public.players
   add column if not exists bank_meteors integer not null default 0,
   add column if not exists bank_dragonballs integer not null default 0;
 
-alter table public.players add constraint players_bank_meteors_check check (bank_meteors >= 0);
-alter table public.players add constraint players_bank_dragonballs_check check (bank_dragonballs >= 0);
+-- Postgres has no ADD CONSTRAINT IF NOT EXISTS, so these are wrapped to stay
+-- safely re-runnable against a database that already has them from an earlier
+-- partial run of this migration.
+do $$ begin
+  alter table public.players add constraint players_bank_meteors_check check (bank_meteors >= 0);
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$ begin
+  alter table public.players add constraint players_bank_dragonballs_check check (bank_dragonballs >= 0);
+exception
+  when duplicate_object then null;
+end $$;
 
 -- Defensive re-grant per the established migration gotcha (raw SQL table/column
 -- changes don't auto-grant anon/authenticated) — players already has working
@@ -37,7 +49,12 @@ grant select, insert, update on public.players to authenticated;
 -- column (per-tier bucket storage) with this single fungible balance.
 alter table public.characters drop column if exists warehouse_stones;
 alter table public.characters add column if not exists warehouse_points integer not null default 0;
-alter table public.characters add constraint characters_warehouse_points_check check (warehouse_points >= 0);
+
+do $$ begin
+  alter table public.characters add constraint characters_warehouse_points_check check (warehouse_points >= 0);
+exception
+  when duplicate_object then null;
+end $$;
 
 -- Per-character warehouse gear tokens — a plain count per template_id. A
 -- deposited item's quality/level/composition are all discarded (per CLAUDE.md's
