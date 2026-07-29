@@ -3,34 +3,24 @@ import { buildGearTooltip, getQualityColor } from '../game/items/equipmentBonus'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
-import { useOverlayStore } from '../game/hud/useOverlayStore'
 
 const SLOT_SIZE = 'h-10 w-10'
 
-// Always-visible, compact summary of equipped gear — sits at the top of SideHud
-// where the Class card used to be. Clicking anywhere on the bar opens the full
-// Equipment overlay (paper-doll + stats); this is a shortcut, not a replacement.
+// Compact at-a-glance summary of equipped gear, shown above the full paper-doll
+// on the Equipment tab (see EquipmentTabPage). No longer opens anything on click —
+// that only made sense back when this sat in a persistent sidebar next to a
+// canvas and the full paper-doll lived in a separate overlay; now they're both on
+// the same page, so this is just a glance, not a shortcut.
 export default function EquipmentBar() {
   const equippedItemId = useEquipmentStore((state) => state.equippedItemId)
   const items = useInventoryStore((state) => state.items)
   const templates = useItemTemplatesStore((state) => state.templates)
-  const openOverlay = useOverlayStore((state) => state.open)
 
   const equippedItem = items.find((item) => item.id === equippedItemId)
   const template = equippedItem && templates.find((entry) => entry.id === equippedItem.template_id)
 
-  const handleOpen = () => openOverlay('equipment')
-
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={handleOpen}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') handleOpen()
-      }}
-      className="w-full cursor-pointer rounded-2xl border border-slate-800 bg-slate-950/80 p-4 text-left transition-colors hover:border-slate-600"
-    >
+    <div className="w-full rounded-2xl border border-slate-800 bg-slate-950/80 p-4 text-left">
       <p className="text-sm font-medium text-slate-200">Equipment</p>
       <div className="mt-2 flex flex-wrap gap-1.5">
         <EquipmentSlot label="Head" icon="🪖" locked sizeClassName={SLOT_SIZE} />
@@ -42,7 +32,6 @@ export default function EquipmentBar() {
           filled={Boolean(equippedItem)}
           qualityColor={equippedItem ? getQualityColor(equippedItem.quality_tier) : undefined}
           tooltip={equippedItem ? buildGearTooltip(equippedItem, template ?? undefined) : undefined}
-          onClick={handleOpen}
           sizeClassName={SLOT_SIZE}
         />
         <EquipmentSlot label="Boots" icon="👢" locked sizeClassName={SLOT_SIZE} />

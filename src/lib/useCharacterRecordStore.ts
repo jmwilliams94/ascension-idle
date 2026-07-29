@@ -29,6 +29,8 @@ interface CharacterRow {
   dragonballs: number
   equipped_arrow_stack_id: string | null
   composition_stones: CompositionStones
+  selected_monster_id: string | null
+  last_active_at: string
 }
 
 interface CharacterRecordState {
@@ -36,12 +38,18 @@ interface CharacterRecordState {
   // not start before this, or it could overwrite a saved row with whatever defaults
   // the local stores happened to start with.
   loaded: boolean
+  // The row's last_active_at value as it was *before* this load (captured prior to
+  // the post-load saveNow that refreshes it) — read once by the offline-progress
+  // calculator to compute elapsed real-world time since the character was last
+  // active. Null only for a character that predates this column's default.
+  previousLastActiveAt: string | null
   loadCharacterRecord: (characterId: string) => Promise<void>
   saveNow: (characterId: string) => Promise<void>
 }
 
 export const useCharacterRecordStore = create<CharacterRecordState>((set, get) => ({
   loaded: false,
+  previousLastActiveAt: null,
 
   loadCharacterRecord: async (characterId) => {
     set({ loaded: false })
@@ -49,7 +57,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     const { data, error } = await supabase
       .from('characters')
       .select(
-        'class, level, gold, exp, current_zone, equipped_item_id, meteors, dragonballs, equipped_arrow_stack_id, composition_stones',
+        'class, level, gold, exp, current_zone, equipped_item_id, meteors, dragonballs, equipped_arrow_stack_id, composition_stones, selected_monster_id, last_active_at',
       )
       .eq('id', characterId)
       .maybeSingle<CharacterRow>()
@@ -67,13 +75,13 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
       useCharacterStore.getState().selectClass(data.class as ClassId)
     }
     useProgressionStore.getState().hydrate({ level: data.level, gold: data.gold, exp: data.exp })
-    useZoneStore.getState().setCurrentZoneName(data.current_zone)
+    useZoneStore.getState().hydrate({ zoneId: data.current_zone, monsterId: data.selected_monster_id })
     useEquipmentStore.getState().hydrate(data.equipped_item_id)
     useCurrencyStore.getState().hydrate({ meteors: data.meteors, dragonballs: data.dragonballs })
     useArrowStore.getState().setEquippedStackId(data.equipped_arrow_stack_id)
     useCompositionStore.getState().hydrate(data.composition_stones)
 
-    set({ loaded: true })
+    set({ loaded: true, previousLastActiveAt: data.last_active_at })
   },
 
   saveNow: async (characterId) => {
@@ -94,9 +102,11 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
         level: progression.level,
         gold: progression.gold,
         exp: progression.exp,
-        current_zone: zone.currentZoneName,
+        current_zone: zone.currentZoneId,
         equipped_item_id: equipment.equippedItemId,
         equipped_arrow_stack_id: arrows.equippedStackId,
+        selected_monster_id: zone.selectedMonsterId,
+        last_active_at: new Date().toISOString(),
       })
       .eq('id', characterId)
 

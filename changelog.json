@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.16.0",
+    "date": "2026-07-29",
+    "changes": [
+      "Combat is now fully automatic — pick a monster from the zone roster and hit Fight, then watch it resolve itself with a live combat log, floating damage numbers, and gold/EXP ticking up",
+      "Gold and item drops grant instantly again on every kill, right in the combat log",
+      "Rare monsters now exist — 5% chance per kill, 2x HP, 5x gold/EXP, with a distinct glowing flourish",
+      "Replaced the isometric map and manual movement/combat with a tabbed layout: Combat, Equipment, Forge, Market, and Shop are now full pages instead of overlays on a game canvas",
+      "Added smooth animations throughout (HP bars, combat log entries, number count-ups) via Framer Motion"
+    ]
+  },
+  {
     "version": "1.15.0",
     "date": "2026-07-28",
     "changes": [

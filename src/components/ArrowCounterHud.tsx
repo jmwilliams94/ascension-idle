@@ -6,9 +6,9 @@ import { ARROW_TYPES } from '../game/items/arrowTypes'
 
 const FLASH_DURATION_MS = 900
 
-// Hunter-only readout, bottom-left of the combat scene, showing the equipped arrow
-// stack's type and remaining count — flashes red on a blocked (out-of-ammo) attack
-// attempt.
+// Hunter-only readout, shown in GameShell's top HUD strip, showing the equipped
+// arrow stack's type and remaining count — flashes red on a blocked (out-of-ammo)
+// attack attempt.
 export default function ArrowCounterHud() {
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
   const stacks = useArrowStore((state) => state.stacks)
@@ -45,9 +45,7 @@ export default function ArrowCounterHud() {
     : `${ARROW_TYPES[equippedStack.arrowType].displayName}s: ${equippedStack.count}`
 
   return (
-    <div
-      className={`pointer-events-none absolute bottom-12 left-3 rounded-lg border px-3 py-1.5 text-xs font-medium backdrop-blur transition-colors ${toneClass}`}
-    >
+    <div className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium backdrop-blur transition-colors ${toneClass}`}>
       {label}
     </div>
   )

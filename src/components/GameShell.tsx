@@ -1,29 +1,33 @@
 import { useEffect, useState } from 'react'
+import CombatEngine from '../game/combat/CombatEngine'
 import ArrowCounterHud from './ArrowCounterHud'
-import BottomNav from './BottomNav'
-import EquipmentOverlay from './EquipmentOverlay'
+import CombatPage from './CombatPage'
+import EquipmentTabPage from './EquipmentTabPage'
 import ExpBar from './ExpBar'
-import ForgeOverlay from './ForgeOverlay'
-import GameCanvas from './GameCanvas'
+import ForgePanel from './ForgePanel'
 import InventoryFullModal from './InventoryFullModal'
-import MarketplaceOverlay from './MarketplaceOverlay'
+import MarketplacePanel from './MarketplacePanel'
 import ProgressionPanel from './ProgressionPanel'
 import SettingsModal from './SettingsModal'
-import ShopOverlay from './ShopOverlay'
-import SideHud from './SideHud'
-import ZoneOverlay from './ZoneOverlay'
+import ShopPanel from './ShopPanel'
+import TabNav from './TabNav'
 import { useAuthStore } from '../lib/useAuthStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { usePersistGameState } from '../lib/usePersistGameState'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useArrowStore } from '../game/items/useArrowStore'
-import { useOverlayStore } from '../game/hud/useOverlayStore'
+import { useTabStore } from '../game/hud/useTabStore'
+import { useZoneStore } from '../game/zones/useZoneStore'
+import { useCombatStore } from '../game/combat/useCombatStore'
 
 // Rendered once a character is active (see App.tsx) — everything that was the whole
 // app before the character-slots restructure. Account-level concerns (What's New,
 // loading the player record/item templates) stay in App.tsx since they don't depend
 // on which character is playing.
+//
+// Full tabbed-page layout (Combat/Equipment/Forge/Market/Shop), replacing the old
+// isometric-canvas + overlay-on-canvas pattern — see the Melvor-idle pivot plan.
 export default function GameShell({ characterId }: { characterId: string }) {
   const session = useAuthStore((state) => state.session)
   const signOut = useAuthStore((state) => state.signOut)
@@ -34,12 +38,32 @@ export default function GameShell({ characterId }: { characterId: string }) {
   const loadCharacterRecord = useCharacterRecordStore((state) => state.loadCharacterRecord)
   const loadInventory = useInventoryStore((state) => state.loadInventory)
   const loadArrowStacks = useArrowStore((state) => state.loadStacks)
-  const activeOverlay = useOverlayStore((state) => state.activeOverlay)
+  const activeTab = useTabStore((state) => state.activeTab)
 
   useEffect(() => {
-    loadCharacterRecord(characterId)
-    loadInventory(characterId)
-    loadArrowStacks(characterId)
+    let cancelled = false
+
+    async function load() {
+      await Promise.all([loadCharacterRecord(characterId), loadInventory(characterId), loadArrowStacks(characterId)])
+
+      if (cancelled) {
+        return
+      }
+
+      // Resume the live fight against whatever monster was last selected — a fresh
+      // instance, not mid-HP (consistent with how the offline-progress simulator
+      // treats a resumed session too).
+      const { selectedMonsterId } = useZoneStore.getState()
+      if (selectedMonsterId && !useCombatStore.getState().isFighting) {
+        useCombatStore.getState().start(selectedMonsterId)
+      }
+    }
+
+    void load()
+
+    return () => {
+      cancelled = true
+    }
   }, [characterId, loadCharacterRecord, loadInventory, loadArrowStacks])
 
   usePersistGameState(characterId, loaded)
@@ -49,8 +73,8 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Greybox Idle v3</p>
-            <h1 className="text-xl font-semibold text-white">Isometric movement demo</h1>
+            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Greybox Idle</p>
+            <h1 className="text-xl font-semibold text-white">Idle Combat</h1>
           </div>
 
           <div className="flex items-center gap-3">
@@ -96,35 +120,27 @@ export default function GameShell({ characterId }: { characterId: string }) {
 
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       <InventoryFullModal />
+      <CombatEngine />
 
-      <main className="mx-auto grid max-w-7xl gap-6 px-6 py-6 lg:grid-cols-[1.6fr_0.7fr]">
-        {/* min-w-0 overrides the grid item's default content-based minimum width — without
-            it, any sub-pixel growth in the Phaser canvas forces this 1.6fr track to grow
-            and steal space from the 0.7fr sidebar track next to it. */}
-        <section className="min-w-0 rounded-3xl border border-slate-800/80 bg-slate-900/70 p-4 shadow-xl shadow-slate-950/30">
-          <div className="relative">
-            <GameCanvas />
-            <ArrowCounterHud />
+      <main className="mx-auto max-w-7xl space-y-4 px-6 py-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="min-w-[240px] flex-1">
             <ExpBar />
-            {activeOverlay === 'shop' && <ShopOverlay />}
-            {activeOverlay === 'zone' && <ZoneOverlay />}
-            {activeOverlay === 'equipment' && <EquipmentOverlay />}
-            {activeOverlay === 'forge' && <ForgeOverlay />}
-            {activeOverlay === 'marketplace' && <MarketplaceOverlay />}
           </div>
+          <ArrowCounterHud />
+        </div>
 
-          <BottomNav />
+        <ProgressionPanel />
+
+        <TabNav />
+
+        <section className="rounded-3xl border border-slate-800/80 bg-slate-900/70 p-4 shadow-xl shadow-slate-950/30">
+          {activeTab === 'combat' && <CombatPage />}
+          {activeTab === 'equipment' && <EquipmentTabPage />}
+          {activeTab === 'forge' && <ForgePanel />}
+          {activeTab === 'marketplace' && <MarketplacePanel />}
+          {activeTab === 'shop' && <ShopPanel />}
         </section>
-
-        <aside className="space-y-4 rounded-3xl border border-slate-800/80 bg-slate-900/70 p-5 shadow-xl shadow-slate-950/20">
-          <div>
-            <h2 className="text-lg font-semibold text-white">World HUD</h2>
-          </div>
-
-          <ProgressionPanel />
-
-          <SideHud />
-        </aside>
       </main>
     </div>
   )
