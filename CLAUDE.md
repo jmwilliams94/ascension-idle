@@ -1,4 +1,4 @@
-# Greybox Idle
+# Ascension Idle
 
 ## Git workflow
 
@@ -17,7 +17,7 @@ After completing each feature step, as part of the same commit (before pushing):
 
 ## Game design (source of truth)
 
-This section is the confirmed design source of truth for Greybox Idle. Anything marked "placeholder" is a stand-in value that must be replaced with real reference data (primarily from Conquer Online) before it's treated as final; anything not marked placeholder is confirmed and should not be changed without discussion.
+This section is the confirmed design source of truth for Ascension Idle. Anything marked "placeholder" is a stand-in value that must be replaced with real reference data (primarily from Conquer Online) before it's treated as final; anything not marked placeholder is confirmed and should not be changed without discussion.
 
 ### Core loop
 
@@ -37,7 +37,7 @@ Confirmed and implemented: one Supabase account (`auth.users`/`players`) can hav
 - **Character naming (confirmed, implemented)**: every character is named at creation time. Format is exactly one leading capital letter followed by lowercase letters only (`^[A-Z][a-z]*$` — e.g. "Aragorn"), enforced both client-side (`CHARACTER_NAME_PATTERN` in `useCharacterRosterStore.ts`, immediate UX feedback) and server-side via a DB CHECK constraint (`characters_name_format_check`) — the DB is the real source of truth. Names must be unique **across every account**, not just within one, enforced via a DB UNIQUE constraint (`characters_name_unique`). `createCharacter` maps Postgres error codes 23505 (unique_violation → "That name is already taken") and 23514 (check_violation → bad format) to user-facing messages.
 - **Character deletion (confirmed, implemented)**: from `CharacterSelectScreen`, each filled slot has a "Delete" action that requires typing the character's exact name to confirm before the delete fires (`characters` row deleted outright — cascades to that character's `item_instances`/`arrow_stacks` via `on delete cascade`). Requires a DELETE RLS policy + `grant delete` on `characters` (`account_id = auth.uid()`), which didn't exist before this feature.
 - **Login flow**: after auth, a character-select screen (`CharacterSelectScreen`) shows all 5 slots before any gameplay is reachable — `GameShell` (the actual game UI) only renders once a character is chosen. Switching characters mid-session (a "Switch Character" button) just clears the active character, returning to select, without signing out.
-- Active-character selection persists across a page refresh via `localStorage`, keyed per account id (`greybox-last-character:<accountId>` — see `useActiveCharacterStore.ts`) so it can't leak between accounts on a shared browser. Resumed once per fresh page load only — signing out and back in within the same tab (no refresh) or clicking "Switch Character" both intentionally return to character select rather than re-resuming. A stored id that no longer resolves to a real, owned character (deleted, wrong account, etc.) self-heals back to character select instead of soft-locking.
+- Active-character selection persists across a page refresh via `localStorage`, keyed per account id (`ascension-last-character:<accountId>` — see `useActiveCharacterStore.ts`) so it can't leak between accounts on a shared browser. Resumed once per fresh page load only — signing out and back in within the same tab (no refresh) or clicking "Switch Character" both intentionally return to character select rather than re-resuming. A stored id that no longer resolves to a real, owned character (deleted, wrong account, etc.) self-heals back to character select instead of soft-locking.
 
 ### Classes
 

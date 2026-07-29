@@ -7,8 +7,8 @@ import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 
 // Paper-doll layout, positioned around a central character placeholder — an
-// abstract/geometric segmented rectangle (PaperDollBody), not character art, per
-// the game's "greybox" visual identity. Right column, top to bottom: Head,
+// abstract/geometric segmented rectangle (PaperDollBody), deliberately unstyled
+// placeholder geometry rather than character art. Right column, top to bottom: Head,
 // Necklace, Ring, Main Hand — the only functional slot this step, matching
 // equipped_item_id's current single-slot shortcut. Bottom row lines up Boots
 // (left), Off-hand/Shield (center, below the character), and Armor (right, below

@@ -1,4 +1,4 @@
-# Greybox Idle
+# Ascension Idle
 
 A Vite + React + TypeScript foundation for a future idle game prototype.
 

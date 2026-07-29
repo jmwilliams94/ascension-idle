@@ -20,6 +20,6 @@ export const useDisplaySettingsStore = create<DisplaySettingsState>()(
       setShowMonsterHealth: (value) => set({ showMonsterHealth: value }),
       setShowItemDropText: (value) => set({ showItemDropText: value }),
     }),
-    { name: 'greybox-display-settings' },
+    { name: 'ascension-display-settings' },
   ),
 )

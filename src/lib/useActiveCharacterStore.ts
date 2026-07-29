@@ -17,7 +17,7 @@ export const useActiveCharacterStore = create<ActiveCharacterState>((set) => ({
 // account's selection into another's. Plain localStorage rather than zustand's
 // persist middleware since the storage key itself needs to vary per account at
 // runtime. See App.tsx for how this is read on mount and kept in sync.
-const STORAGE_KEY_PREFIX = 'greybox-last-character:'
+const STORAGE_KEY_PREFIX = 'ascension-last-character:'
 
 export function getStoredCharacterId(accountId: string): string | null {
   try {

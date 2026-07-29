@@ -44,7 +44,7 @@ export default function LoginForm() {
     <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_#1e293b,_#020617_70%)] px-4 text-slate-100">
       <div className="w-full max-w-sm space-y-6 rounded-3xl border border-slate-800/80 bg-slate-900/70 p-8 shadow-xl shadow-slate-950/30">
         <div>
-          <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Greybox Idle</p>
+          <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Ascension Idle</p>
           <h1 className="text-xl font-semibold text-white">
             {mode === 'sign-in' ? 'Sign in' : 'Create an account'}
           </h1>

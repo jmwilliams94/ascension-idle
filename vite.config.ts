@@ -9,7 +9,7 @@ const packageJson = JSON.parse(
 ) as { version: string }
 
 export default defineConfig({
-  base: '/greybox-idle/',
+  base: '/ascension-idle/',
   plugins: [react(), tailwindcss()],
   define: {
     // Single source of truth is package.json's "version" — see src/version.ts.
