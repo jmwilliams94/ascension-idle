@@ -1,5 +1,5 @@
 import type { DragEvent } from 'react'
-import InventorySlot from './InventorySlot'
+import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import { buildGearTooltip, formatItemDisplayName, formatQualityAndLevel, getQualityColor } from '../game/items/equipmentBonus'
 import type { ItemInstance } from '../game/items/useInventoryStore'
 import type { ItemTemplate } from '../game/items/useItemTemplatesStore'
@@ -36,11 +36,11 @@ export default function ForgeUpgradeSlot({ item, template, onDropItemId, onRemov
     <div className="flex flex-col items-center gap-2">
       <p className="text-xs uppercase tracking-wide text-slate-500">Upgrade Slot</p>
 
-      <div onDragOver={handleDragOver} onDrop={handleDrop} className="h-20 w-20 shrink-0">
+      <div onDragOver={handleDragOver} onDrop={handleDrop} className={`${SLOT_SIZE_CLASS} shrink-0`}>
         <InventorySlot
           slotId="forge-upgrade-slot"
           filled={Boolean(item)}
-          sizeClassName="h-20 w-20"
+          sizeClassName={SLOT_SIZE_CLASS}
           emptyHint="Drop item here"
           qualityColor={item ? getQualityColor(item.quality_tier) : undefined}
           icon={item ? '🗡️' : undefined}

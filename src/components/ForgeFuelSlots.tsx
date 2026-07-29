@@ -1,5 +1,5 @@
 import type { DragEvent } from 'react'
-import InventorySlot from './InventorySlot'
+import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import { buildGearTooltip, formatItemDisplayName, getQualityColor } from '../game/items/equipmentBonus'
 import { buildStoneTooltip, compositionPointValue } from '../game/items/forgeCosts'
 import type { ItemInstance } from '../game/items/useInventoryStore'
@@ -47,8 +47,8 @@ export default function ForgeFuelSlots({ slots, templates, onDropSlot, onRemoveS
 
           if (!entry) {
             return (
-              <div key={index} onDragOver={handleDragOver} onDrop={handleDrop} className="h-14 w-14">
-                <InventorySlot slotId={`fuel-slot-${index}`} filled={false} sizeClassName="h-14 w-14" emptyHint="Drop stone or item" />
+              <div key={index} onDragOver={handleDragOver} onDrop={handleDrop} className={SLOT_SIZE_CLASS}>
+                <InventorySlot slotId={`fuel-slot-${index}`} filled={false} sizeClassName={SLOT_SIZE_CLASS} emptyHint="Drop stone or item" />
               </div>
             )
           }
@@ -57,11 +57,11 @@ export default function ForgeFuelSlots({ slots, templates, onDropSlot, onRemoveS
             const value = compositionPointValue(entry.tier)
 
             return (
-              <div key={index} onDragOver={handleDragOver} onDrop={handleDrop} className="h-14 w-14">
+              <div key={index} onDragOver={handleDragOver} onDrop={handleDrop} className={SLOT_SIZE_CLASS}>
                 <InventorySlot
                   slotId={`fuel-slot-${index}`}
                   filled
-                  sizeClassName="h-14 w-14"
+                  sizeClassName={SLOT_SIZE_CLASS}
                   icon="🔷"
                   badge={`${value}`}
                   label={`+${entry.tier} Stone`}
@@ -75,11 +75,11 @@ export default function ForgeFuelSlots({ slots, templates, onDropSlot, onRemoveS
           const template = templates.find((t) => t.id === entry.item.template_id)
 
           return (
-            <div key={index} onDragOver={handleDragOver} onDrop={handleDrop} className="h-14 w-14">
+            <div key={index} onDragOver={handleDragOver} onDrop={handleDrop} className={SLOT_SIZE_CLASS}>
               <InventorySlot
                 slotId={`fuel-slot-${index}`}
                 filled
-                sizeClassName="h-14 w-14"
+                sizeClassName={SLOT_SIZE_CLASS}
                 icon="🗡️"
                 badge={`${compositionPointValue(entry.item.composition_level)}`}
                 qualityColor={getQualityColor(entry.item.quality_tier)}

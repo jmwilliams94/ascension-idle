@@ -216,9 +216,6 @@ export default function CombatPage() {
                 >
                   <div>
                     <span className="text-slate-200">{type.displayName}</span>
-                    <span className="ml-2 text-xs text-slate-500">
-                      {type.maxHp} HP · {type.goldReward}g · {type.expReward}xp
-                    </span>
                   </div>
                   <button
                     type="button"

@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.17.2",
+    "date": "2026-07-29",
+    "changes": [
+      "Lucky Arrow stacks are now 10 gold instead of 150",
+      "Enemy roster no longer shows HP/gold/EXP up front — just the monster name",
+      "Inventory tiles, and the Forge's Upgrade Slot and Fuel slots, are now a consistent, smaller size"
+    ]
+  },
+  {
     "version": "1.17.1",
     "date": "2026-07-29",
     "changes": [

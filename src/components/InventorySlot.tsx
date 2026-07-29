@@ -3,6 +3,11 @@ import HoverTooltip from './HoverTooltip'
 import ItemTooltip from './ItemTooltip'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
 
+// Shared standard tile size — the main Inventory grid, Forge's Upgrade Slot, and
+// Forge's Fuel slots all use this so every tile in the game reads as the same
+// "unit," rather than three different sizes depending on which panel it's in.
+export const SLOT_SIZE_CLASS = 'h-16 w-16'
+
 interface InventorySlotProps {
   // Stable id for this cell (an item's/arrow stack's id for filled slots, a
   // synthetic key for empty ones) — kept as an explicit prop/data attribute, not
@@ -59,11 +64,18 @@ export default function InventorySlot({
   sizeClassName = '',
   emptyHint,
 }: InventorySlotProps) {
+  // Mutually exclusive, not additive — sizeClassName sets its own width/height
+  // (e.g. SLOT_SIZE_CLASS), so it must fully replace aspect-square/w-full rather
+  // than sit alongside them. Both classes set `width`, and which one wins would
+  // otherwise depend on Tailwind's generated stylesheet order, not on where each
+  // class appears in this string — not something to rely on.
+  const sizingClassName = sizeClassName || 'aspect-square w-full'
+
   if (!filled) {
     return (
       <div
         data-slot-id={slotId}
-        className={`flex aspect-square items-center justify-center rounded-lg border border-dashed border-slate-800 bg-slate-950/40 ${sizeClassName}`}
+        className={`flex items-center justify-center rounded-lg border border-dashed border-slate-800 bg-slate-950/40 ${sizingClassName}`}
       >
         {emptyHint && <span className="px-1 text-center text-[10px] leading-tight text-slate-600">{emptyHint}</span>}
       </div>
@@ -88,7 +100,7 @@ export default function InventorySlot({
       onDragEnd={onDragEnd}
       title={tooltip ? undefined : label}
       aria-label={label}
-      className={`relative flex aspect-square w-full items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg ${sizeClassName} ${
+      className={`relative flex items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg ${sizingClassName} ${
         selected ? 'ring-2 ring-sky-400' : ''
       } ${draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
       style={{ borderColor: qualityColor, backgroundColor: qualityColor ? `${qualityColor}22` : undefined }}

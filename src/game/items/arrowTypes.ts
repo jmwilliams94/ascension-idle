@@ -35,7 +35,11 @@ export const ARROW_TYPES: Record<ArrowTypeId, ArrowTypeDef> = {
   lucky: {
     id: 'lucky',
     displayName: 'Lucky Arrow',
-    price: 3,
+    // 0.2 * 50 (stackSize) = 10g/stack exactly, confirmed by the user as the real
+    // target stack price — chosen specifically because it's exact in floating
+    // point (verified: 0.2 * 50 === 10 in JS), not just a coincidentally clean
+    // per-arrow number.
+    price: 0.2,
     description: `+${Math.round(LUCKY_ARROW_DROP_BONUS_PLACEHOLDER * 100)}% gear drop chance while equipped (placeholder).`,
     stackSize: 50,
     requiredLevel: 1,

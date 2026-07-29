@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { DragEvent } from 'react'
-import InventorySlot from './InventorySlot'
+import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import { buildGearTooltip, formatBaseStats, formatItemDisplayName, formatQualityAndLevel, getQualityColor } from '../game/items/equipmentBonus'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
 import { COMPOSITION_STONE_TIERS, buildStoneTooltip, compositionPointValue, stoneDragId } from '../game/items/forgeCosts'
@@ -98,9 +98,12 @@ export default function InventoryPanel({
 
   const slotKey = (slot: NonNullable<SelectedSlot>): string => (slot.kind === 'stone' ? slot.dragId : `${slot.kind}:${slot.id}`)
 
-  // Tailwind needs each column-count class spelled out literally somewhere so its
-  // scanner picks it up — a template-literal class name wouldn't be found at build time.
-  const gridColsClass = columns === 5 ? 'grid-cols-5' : 'grid-cols-8'
+  // Fixed-size tracks (not grid-cols-N's equal-fraction columns) so tiles stay a
+  // consistent size regardless of how wide the surrounding column/page is — matches
+  // SLOT_SIZE below, and the same fixed size Forge's Upgrade/Fuel slots use.
+  // Tailwind needs each literal spelled out somewhere so its scanner picks it up —
+  // a template-literal class name wouldn't be found at build time.
+  const gridColsClass = columns === 5 ? 'grid-cols-[repeat(5,4rem)]' : 'grid-cols-[repeat(8,4rem)]'
 
   const toggleSlot = (slot: NonNullable<SelectedSlot>) => {
     setSelectedSlot((current) => (current && slotKey(current) === slotKey(slot) ? null : slot))
@@ -139,6 +142,7 @@ export default function InventoryPanel({
                 key={stack.id}
                 slotId={stack.id}
                 filled
+                sizeClassName={SLOT_SIZE_CLASS}
                 icon="🏹"
                 label={`${type.displayName} (${stack.count}/${type.stackSize})`}
                 tooltip={arrowTooltip}
@@ -152,7 +156,7 @@ export default function InventoryPanel({
 
           {stoneTiles.map(({ tier, dragId }) => {
             if (reservedItemIds.includes(dragId)) {
-              return <InventorySlot key={dragId} slotId={dragId} filled={false} />
+              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
             }
 
             return (
@@ -160,6 +164,7 @@ export default function InventoryPanel({
                 key={dragId}
                 slotId={dragId}
                 filled
+                sizeClassName={SLOT_SIZE_CLASS}
                 icon="🔷"
                 label={`+${tier} Stone — ${compositionPointValue(tier)} pts`}
                 tooltip={buildStoneTooltip(tier)}
@@ -173,7 +178,7 @@ export default function InventoryPanel({
 
           {items.map((item) => {
             if (reservedItemIds.includes(item.id)) {
-              return <InventorySlot key={item.id} slotId={item.id} filled={false} />
+              return <InventorySlot key={item.id} slotId={item.id} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
             }
 
             const template = templates.find((entry) => entry.id === item.template_id)
@@ -184,6 +189,7 @@ export default function InventoryPanel({
                 key={item.id}
                 slotId={item.id}
                 filled
+                sizeClassName={SLOT_SIZE_CLASS}
                 qualityColor={getQualityColor(item.quality_tier)}
                 icon="🗡️"
                 label={label}
@@ -197,7 +203,7 @@ export default function InventoryPanel({
           })}
 
           {Array.from({ length: emptySlotCount }, (_, index) => (
-            <InventorySlot key={`empty-${index}`} slotId={`empty-${index}`} filled={false} />
+            <InventorySlot key={`empty-${index}`} slotId={`empty-${index}`} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
           ))}
         </div>
       </div>
