@@ -1,8 +1,69 @@
+import { useState } from 'react'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useArrowStore } from '../game/items/useArrowStore'
+import { useInventoryStore } from '../game/items/useInventoryStore'
+import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemTemplatesStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { ARROW_TYPES, ARROW_TYPE_ORDER, type ArrowTypeId } from '../game/items/arrowTypes'
+
+type ShopTab = 'arrows' | 'weapons' | 'armor'
+
+const ARMOR_SLOTS = ['ring', 'necklace', 'boots', 'hat', 'coat']
+
+// A template is available to the current class if it has no class restriction
+// at all (required_class null — bows/rings/necklaces/boots today) or matches
+// the character's own class exactly (required_class 'hunter' — Archer Hats/
+// Coats today). This is what makes the Weapons/Armor tabs "dynamic": the same
+// component just renders a different filtered slice per class, with no
+// per-class branching needed here.
+function availableToClass(template: ItemTemplate, classId: string): boolean {
+  return template.required_class === null || template.required_class === classId
+}
+
+function GearRow({ template }: { template: ItemTemplate }) {
+  const characterId = useActiveCharacterStore((state) => state.characterId)
+  const level = useProgressionStore((state) => state.level)
+  const gold = useProgressionStore((state) => state.gold)
+  const spendGold = useProgressionStore((state) => state.spendGold)
+  const grantItemDrop = useInventoryStore((state) => state.grantItemDrop)
+
+  const meetsLevel = level >= template.required_level
+  const canAfford = gold >= template.price
+  const canBuy = meetsLevel && canAfford
+
+  const handleBuy = async () => {
+    if (!characterId || !canBuy) {
+      return
+    }
+    if (!spendGold(template.price)) {
+      return
+    }
+    await grantItemDrop(template, true)
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs">
+      <div>
+        <p className="font-medium text-slate-200">{template.name}</p>
+        <p className="text-slate-500">{template.price}g</p>
+        {template.required_level > 1 && (
+          <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {template.required_level}</p>
+        )}
+      </div>
+
+      <button
+        type="button"
+        disabled={!canBuy}
+        title={!meetsLevel ? `Requires level ${template.required_level}` : !canAfford ? 'Not enough gold' : undefined}
+        onClick={() => void handleBuy()}
+        className="shrink-0 rounded border border-slate-700 px-2 py-1 text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        Buy
+      </button>
+    </div>
+  )
+}
 
 // Only Hunter has anything to buy this step. Buying always purchases one full stack
 // at a time (stackSize arrows for stackSize × price gold) — a stack is the actual
@@ -18,6 +79,10 @@ export default function ShopPanel() {
 
   const stacks = useArrowStore((state) => state.stacks)
   const buyArrows = useArrowStore((state) => state.buyArrows)
+
+  const templates = useItemTemplatesStore((state) => state.templates)
+
+  const [tab, setTab] = useState<ShopTab>('arrows')
 
   const isHunter = selectedClassId === 'hunter'
 
@@ -35,50 +100,111 @@ export default function ShopPanel() {
     void buyArrows(characterId, typeId, type.stackSize)
   }
 
-  if (!isHunter) {
-    return <p className="flex h-full items-center justify-center text-center text-sm text-slate-500">Nothing available yet</p>
-  }
+  const weaponTemplates = templates
+    .filter((t) => t.slot_type === 'weapon' && availableToClass(t, selectedClassId))
+    .sort((a, b) => a.required_level - b.required_level)
+
+  const armorTemplates = templates
+    .filter((t) => ARMOR_SLOTS.includes(t.slot_type) && availableToClass(t, selectedClassId))
+    .sort((a, b) => a.required_level - b.required_level)
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-2">
+        <button
+          type="button"
+          onClick={() => setTab('arrows')}
+          className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+            tab === 'arrows' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
+          }`}
+        >
+          Arrows
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('weapons')}
+          className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+            tab === 'weapons' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
+          }`}
+        >
+          Weapons
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('armor')}
+          className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+            tab === 'armor' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
+          }`}
+        >
+          Armor
+        </button>
+      </div>
+
       <p className="text-xs text-slate-500">Gold: {gold}</p>
 
-      {ARROW_TYPE_ORDER.map((typeId) => {
-        const type = ARROW_TYPES[typeId]
-        const owned = stacks.filter((stack) => stack.arrowType === typeId).reduce((sum, stack) => sum + stack.count, 0)
-        const stackCost = type.price * type.stackSize
-        const meetsLevel = level >= type.requiredLevel
-        const canAfford = gold >= stackCost
-        const canBuy = meetsLevel && canAfford
+      {tab === 'arrows' &&
+        (isHunter ? (
+          <div className="space-y-2">
+            {ARROW_TYPE_ORDER.map((typeId) => {
+              const type = ARROW_TYPES[typeId]
+              const owned = stacks.filter((stack) => stack.arrowType === typeId).reduce((sum, stack) => sum + stack.count, 0)
+              const stackCost = type.price * type.stackSize
+              const meetsLevel = level >= type.requiredLevel
+              const canAfford = gold >= stackCost
+              const canBuy = meetsLevel && canAfford
 
-        return (
-          <div
-            key={typeId}
-            className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs"
-          >
-            <div>
-              <p className="font-medium text-slate-200">{type.displayName}</p>
-              <p className="text-slate-500">{type.description}</p>
-              <p className="text-slate-500">
-                Owned: {owned} · stack of {type.stackSize} for {stackCost}g
-              </p>
-              {type.requiredLevel > 1 && (
-                <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {type.requiredLevel}</p>
-              )}
-            </div>
+              return (
+                <div
+                  key={typeId}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs"
+                >
+                  <div>
+                    <p className="font-medium text-slate-200">{type.displayName}</p>
+                    <p className="text-slate-500">{type.description}</p>
+                    <p className="text-slate-500">
+                      Owned: {owned} · stack of {type.stackSize} for {stackCost}g
+                    </p>
+                    {type.requiredLevel > 1 && (
+                      <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {type.requiredLevel}</p>
+                    )}
+                  </div>
 
-            <button
-              type="button"
-              disabled={!canBuy}
-              title={!meetsLevel ? `Requires level ${type.requiredLevel}` : undefined}
-              onClick={() => buyStack(typeId)}
-              className="shrink-0 rounded border border-slate-700 px-2 py-1 text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Buy
-            </button>
+                  <button
+                    type="button"
+                    disabled={!canBuy}
+                    title={!meetsLevel ? `Requires level ${type.requiredLevel}` : undefined}
+                    onClick={() => buyStack(typeId)}
+                    className="shrink-0 rounded border border-slate-700 px-2 py-1 text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Buy
+                  </button>
+                </div>
+              )
+            })}
           </div>
-        )
-      })}
+        ) : (
+          <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">Nothing available yet</p>
+        ))}
+
+      {tab === 'weapons' && (
+        <div className="max-h-96 space-y-2 overflow-y-auto">
+          {weaponTemplates.length === 0 ? (
+            <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">Nothing available yet</p>
+          ) : (
+            weaponTemplates.map((template) => <GearRow key={template.id} template={template} />)
+          )}
+        </div>
+      )}
+
+      {tab === 'armor' && (
+        <div className="max-h-96 space-y-2 overflow-y-auto">
+          {armorTemplates.length === 0 ? (
+            <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">Nothing available yet</p>
+          ) : (
+            armorTemplates.map((template) => <GearRow key={template.id} template={template} />)
+          )}
+        </div>
+      )}
     </div>
   )
 }

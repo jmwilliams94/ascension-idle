@@ -16,6 +16,10 @@ export interface ItemTemplate {
   // buildGearTooltip's "Class: ___" line and CLAUDE.md's Gear slots note).
   required_level: number
   required_class: string | null
+  // Gold cost in the Shop's Weapons/Armor tabs — a placeholder formula (roughly
+  // 5x the item's main stat value), unresolved/not tuned like every other
+  // economy number in this game.
+  price: number
 }
 
 interface ItemTemplatesState {
@@ -37,7 +41,7 @@ export const useItemTemplatesStore = create<ItemTemplatesState>((set, get) => ({
 
     const { data, error } = await supabase
       .from('item_templates')
-      .select('id, name, slot_type, base_stats, required_level, required_class')
+      .select('id, name, slot_type, base_stats, required_level, required_class, price')
 
     if (error) {
       console.error('Failed to load item templates', error)

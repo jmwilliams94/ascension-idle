@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.21.0",
+    "date": "2026-07-30",
+    "changes": [
+      "Shop now has Weapons and Armor tabs alongside Arrows, showing gear you can buy with gold",
+      "The Weapons/Armor lists are dynamic — they only show gear your class can actually use"
+    ]
+  },
+  {
     "version": "1.20.0",
     "date": "2026-07-30",
     "changes": [
