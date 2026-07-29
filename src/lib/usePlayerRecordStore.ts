@@ -11,6 +11,8 @@ import { APP_VERSION } from '../version'
 interface PlayerRow {
   last_seen_version: string | null
   bank_gold: number
+  bank_meteors: number
+  bank_dragonballs: number
   unlocked_classes: string[]
 }
 
@@ -20,25 +22,34 @@ interface PlayerRecordState {
   // Entries to show in the "What's New" modal. Null means nothing to show (either
   // not loaded yet, already up to date, or already dismissed this session).
   whatsNewEntries: ChangelogEntry[] | null
-  // Shared account-wide bank — schema/read only this step, no deposit/withdraw UI yet.
+  // Shared account-wide bank (Warehouse's currency section) — deposited/withdrawn
+  // via transfer_currency (see useWarehouseStore), never written directly by the
+  // client, same trust model as meteors/dragonballs on the character row.
   bankGold: number
+  bankMeteors: number
+  bankDragonballs: number
   // Account-wide class-unlock milestones (e.g. a Hunter reaching max level), not
   // per-character. Only 'hunter' by default until a real unlock mechanic exists.
   unlockedClasses: string[]
   loadPlayerRecord: (userId: string) => Promise<void>
   dismissWhatsNew: (userId: string) => Promise<void>
+  // Reflects a successful transfer_currency RPC result in the local cache —
+  // mirrors useCurrencyStore's setMeteors/setDragonballs pattern.
+  setBankBalances: (patch: Partial<{ bankGold: number; bankMeteors: number; bankDragonballs: number }>) => void
 }
 
 export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
   loaded: false,
   whatsNewEntries: null,
   bankGold: 0,
+  bankMeteors: 0,
+  bankDragonballs: 0,
   unlockedClasses: ['hunter'],
 
   loadPlayerRecord: async (userId) => {
     const { data, error } = await supabase
       .from('players')
-      .select('last_seen_version, bank_gold, unlocked_classes')
+      .select('last_seen_version, bank_gold, bank_meteors, bank_dragonballs, unlocked_classes')
       .eq('id', userId)
       .maybeSingle<PlayerRow>()
 
@@ -58,11 +69,23 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
         console.error('Failed to create new player record', insertError)
       }
 
-      set({ loaded: true, whatsNewEntries: null, bankGold: 0, unlockedClasses: ['hunter'] })
+      set({
+        loaded: true,
+        whatsNewEntries: null,
+        bankGold: 0,
+        bankMeteors: 0,
+        bankDragonballs: 0,
+        unlockedClasses: ['hunter'],
+      })
       return
     }
 
-    set({ bankGold: data.bank_gold, unlockedClasses: data.unlocked_classes })
+    set({
+      bankGold: data.bank_gold,
+      bankMeteors: data.bank_meteors,
+      bankDragonballs: data.bank_dragonballs,
+      unlockedClasses: data.unlocked_classes,
+    })
 
     if (!data.last_seen_version) {
       // Row predates version tracking (or somehow has none) — record it silently.
@@ -86,4 +109,6 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
       console.error('Failed to record last seen version', error)
     }
   },
+
+  setBankBalances: (patch) => set(patch),
 }))

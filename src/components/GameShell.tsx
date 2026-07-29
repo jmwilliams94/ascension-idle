@@ -12,12 +12,14 @@ import ProgressionPanel from './ProgressionPanel'
 import SettingsModal from './SettingsModal'
 import ShopPanel from './ShopPanel'
 import TabNav from './TabNav'
+import WarehousePanel from './WarehousePanel'
 import { useAuthStore } from '../lib/useAuthStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { usePersistGameState } from '../lib/usePersistGameState'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useArrowStore } from '../game/items/useArrowStore'
+import { useWarehouseStore } from '../game/items/useWarehouseStore'
 import { useTabStore } from '../game/hud/useTabStore'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
@@ -41,13 +43,19 @@ export default function GameShell({ characterId }: { characterId: string }) {
   const loadCharacterRecord = useCharacterRecordStore((state) => state.loadCharacterRecord)
   const loadInventory = useInventoryStore((state) => state.loadInventory)
   const loadArrowStacks = useArrowStore((state) => state.loadStacks)
+  const loadWarehouseItems = useWarehouseStore((state) => state.loadWarehouseItems)
   const activeTab = useTabStore((state) => state.activeTab)
 
   useEffect(() => {
     let cancelled = false
 
     async function load() {
-      await Promise.all([loadCharacterRecord(characterId), loadInventory(characterId), loadArrowStacks(characterId)])
+      await Promise.all([
+        loadCharacterRecord(characterId),
+        loadInventory(characterId),
+        loadArrowStacks(characterId),
+        loadWarehouseItems(characterId),
+      ])
 
       if (cancelled) {
         return
@@ -81,7 +89,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
     return () => {
       cancelled = true
     }
-  }, [characterId, loadCharacterRecord, loadInventory, loadArrowStacks])
+  }, [characterId, loadCharacterRecord, loadInventory, loadArrowStacks, loadWarehouseItems])
 
   usePersistGameState(characterId, loaded)
 
@@ -158,6 +166,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
           {activeTab === 'forge' && <ForgePanel />}
           {activeTab === 'marketplace' && <MarketplacePanel />}
           {activeTab === 'shop' && <ShopPanel />}
+          {activeTab === 'warehouse' && <WarehousePanel characterId={characterId} />}
         </section>
       </main>
     </div>

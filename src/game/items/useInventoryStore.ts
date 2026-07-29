@@ -41,7 +41,10 @@ export const INVENTORY_SLOT_CAP = 40
 // 40 rendered cells" invariant breaks the moment a player owns any stones (see
 // InventoryPanel, which also defensively clamps how many stone tiles it renders in
 // case a manually-set test value ever exceeds the remaining budget).
-function occupiedSlotCount(items: ItemInstance[]): number {
+// Exported so useWarehouseStore can run the identical "would this overflow the
+// cap" check before a withdraw (which adds to Inventory), reusing this rather
+// than reimplementing it.
+export function occupiedSlotCount(items: ItemInstance[]): number {
   const arrowStackCount = useArrowStore.getState().stacks.filter((stack) => stack.count > 0).length
   const totalStoneCount = Object.values(useCompositionStore.getState().stones).reduce((sum, count) => sum + count, 0)
   return items.length + arrowStackCount + totalStoneCount
@@ -85,6 +88,9 @@ interface InventoryState {
   // after composition_feed destroys fuel items server-side, so the client doesn't
   // need a full refetch just to stop showing them.
   removeItems: (itemIds: string[]) => void
+  // Appends an item the server already created (e.g. withdraw_item's fresh
+  // Normal/level-1 instance — see useWarehouseStore) without a DB write of its own.
+  addItem: (item: ItemInstance) => void
 }
 
 export const useInventoryStore = create<InventoryState>((set, get) => ({
@@ -209,5 +215,9 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     }
 
     set((state) => ({ items: state.items.filter((item) => !itemIds.includes(item.id)) }))
+  },
+
+  addItem: (item) => {
+    set((state) => ({ items: [...state.items, item] }))
   },
 }))

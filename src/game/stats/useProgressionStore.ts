@@ -22,6 +22,10 @@ interface ProgressionState {
   // Deducts gold for a purchase (e.g. the arrow shop). Returns false and leaves gold
   // untouched if the player can't afford it.
   spendGold: (amount: number) => boolean
+  // Direct set, distinct from addRewards/spendGold — reflects transfer_currency's
+  // authoritative character_balance (see useWarehouseStore) without touching EXP
+  // or the level-up loop.
+  setGold: (value: number) => void
 }
 
 export const useProgressionStore = create<ProgressionState>((set, get) => ({
@@ -63,4 +67,6 @@ export const useProgressionStore = create<ProgressionState>((set, get) => ({
     set({ gold: gold - amount })
     return true
   },
+
+  setGold: (value) => set({ gold: value }),
 }))

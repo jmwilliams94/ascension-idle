@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.18.0",
+    "date": "2026-07-29",
+    "changes": [
+      "Added the Warehouse — a new tab for storing extra gear, Composition stones, and currency",
+      "Gear and stones are stored per character (each character has its own Warehouse, with its own 40-slot capacity, separate from your Inventory)",
+      "Gold, Meteors, and DragonBalls are stored in a shared account-wide bank — deposit from any character, withdraw into any other"
+    ]
+  },
+  {
     "version": "1.17.2",
     "date": "2026-07-29",
     "changes": [

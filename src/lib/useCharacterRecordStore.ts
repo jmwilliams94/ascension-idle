@@ -9,6 +9,7 @@ import { useEquipmentStore } from '../game/items/useEquipmentStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useArrowStore } from '../game/items/useArrowStore'
 import { useCompositionStore, type CompositionStones } from '../game/items/useCompositionStore'
+import { useWarehouseStore } from '../game/items/useWarehouseStore'
 
 // Loads/saves the active character's row (characters table) — class, level, gold,
 // exp, zone, equipped item, equipped arrow stack. Replaces what usePlayerRecordStore
@@ -29,6 +30,7 @@ interface CharacterRow {
   dragonballs: number
   equipped_arrow_stack_id: string | null
   composition_stones: CompositionStones
+  warehouse_stones: CompositionStones
   selected_monster_id: string | null
   last_active_at: string
 }
@@ -57,7 +59,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     const { data, error } = await supabase
       .from('characters')
       .select(
-        'class, level, gold, exp, current_zone, equipped_item_id, meteors, dragonballs, equipped_arrow_stack_id, composition_stones, selected_monster_id, last_active_at',
+        'class, level, gold, exp, current_zone, equipped_item_id, meteors, dragonballs, equipped_arrow_stack_id, composition_stones, warehouse_stones, selected_monster_id, last_active_at',
       )
       .eq('id', characterId)
       .maybeSingle<CharacterRow>()
@@ -80,6 +82,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     useCurrencyStore.getState().hydrate({ meteors: data.meteors, dragonballs: data.dragonballs })
     useArrowStore.getState().setEquippedStackId(data.equipped_arrow_stack_id)
     useCompositionStore.getState().hydrate(data.composition_stones)
+    useWarehouseStore.getState().hydrateStones(data.warehouse_stones)
 
     set({ loaded: true, previousLastActiveAt: data.last_active_at })
   },

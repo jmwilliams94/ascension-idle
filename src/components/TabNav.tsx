@@ -6,6 +6,7 @@ const TAB_ITEMS: { id: TabId; label: string }[] = [
   { id: 'forge', label: 'Forge' },
   { id: 'marketplace', label: 'Market' },
   { id: 'shop', label: 'Shop' },
+  { id: 'warehouse', label: 'Warehouse' },
 ]
 
 export default function TabNav() {
@@ -13,7 +14,7 @@ export default function TabNav() {
   const setActiveTab = useTabStore((state) => state.setActiveTab)
 
   return (
-    <div className="grid grid-cols-5 gap-2">
+    <div className="grid grid-cols-6 gap-2">
       {TAB_ITEMS.map((item) => (
         <button
           key={item.id}
