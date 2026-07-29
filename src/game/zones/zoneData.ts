@@ -35,6 +35,11 @@ export type EnemyTypeId =
 export interface EnemyTypeDef {
   id: EnemyTypeId
   displayName: string
+  // The monster's own level — compared against the character's level to
+  // determine its name color (white/green/red/black) and EXP multiplier, see
+  // combatResolver.ts's getLevelDiffColor/expMultiplierForLevelDiff. Placeholder,
+  // like every other number here.
+  level: number
   // PLACEHOLDER flat stats — real zone economy (HP/gold/EXP/attack scaling) is
   // unresolved per CLAUDE.md. Roughly scaled to increase zone-over-zone, not
   // tuned balance.
@@ -52,34 +57,55 @@ export interface EnemyTypeDef {
 
 export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDef> = {
   // --- Dual Town ---
-  peacock: { id: 'peacock', displayName: 'Peacock', maxHp: 25, goldReward: 3, expReward: 8, attackDamage: 4, color: 0x38bdf8 },
+  peacock: { id: 'peacock', displayName: 'Peacock', level: 1, maxHp: 25, goldReward: 3, expReward: 8, attackDamage: 4, color: 0x38bdf8 },
   'fancy-pigeon': {
     id: 'fancy-pigeon',
     displayName: 'Fancy Pigeon',
+    level: 3,
     maxHp: 30,
     goldReward: 4,
     expReward: 10,
     attackDamage: 5,
     color: 0xd6d3d1,
   },
-  eagle: { id: 'eagle', displayName: 'Eagle', maxHp: 40, goldReward: 5, expReward: 13, attackDamage: 6, color: 0xb45309 },
-  spook: { id: 'spook', displayName: 'Spook', maxHp: 35, goldReward: 4, expReward: 12, attackDamage: 5, color: 0xe2e8f0 },
-  'boo-hoo': { id: 'boo-hoo', displayName: 'Boo-Hoo', maxHp: 45, goldReward: 6, expReward: 15, attackDamage: 7, color: 0x94a3b8 },
+  eagle: { id: 'eagle', displayName: 'Eagle', level: 6, maxHp: 40, goldReward: 5, expReward: 13, attackDamage: 6, color: 0xb45309 },
+  spook: { id: 'spook', displayName: 'Spook', level: 4, maxHp: 35, goldReward: 4, expReward: 12, attackDamage: 5, color: 0xe2e8f0 },
+  'boo-hoo': {
+    id: 'boo-hoo',
+    displayName: 'Boo-Hoo',
+    level: 8,
+    maxHp: 45,
+    goldReward: 6,
+    expReward: 15,
+    attackDamage: 7,
+    color: 0x94a3b8,
+  },
 
   // --- Waterbird Fortress ---
   'feathered-noodle': {
     id: 'feathered-noodle',
     displayName: 'Feathered Noodle',
+    level: 10,
     maxHp: 50,
     goldReward: 6,
     expReward: 16,
     attackDamage: 7,
     color: 0xa3e635,
   },
-  thief: { id: 'thief', displayName: 'Thief', maxHp: 55, goldReward: 7, expReward: 18, attackDamage: 8, color: 0x4c1d95 },
+  thief: {
+    id: 'thief',
+    displayName: 'Thief',
+    level: 13,
+    maxHp: 55,
+    goldReward: 7,
+    expReward: 18,
+    attackDamage: 8,
+    color: 0x4c1d95,
+  },
   'mouse-kin': {
     id: 'mouse-kin',
     displayName: 'Mouse-kin',
+    level: 9,
     maxHp: 45,
     goldReward: 6,
     expReward: 15,
@@ -89,6 +115,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDef> = {
   'water-spirit': {
     id: 'water-spirit',
     displayName: 'Water Spirit',
+    level: 16,
     maxHp: 65,
     goldReward: 8,
     expReward: 20,
@@ -100,6 +127,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDef> = {
   'angry-chimp': {
     id: 'angry-chimp',
     displayName: 'Angry Chimp',
+    level: 18,
     maxHp: 70,
     goldReward: 9,
     expReward: 22,
@@ -109,6 +137,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDef> = {
   'king-kong-jr': {
     id: 'king-kong-jr',
     displayName: 'King Kong Jr.',
+    level: 25,
     maxHp: 90,
     goldReward: 12,
     expReward: 28,
@@ -118,6 +147,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDef> = {
   'static-monkey': {
     id: 'static-monkey',
     displayName: 'Static Monkey',
+    level: 20,
     maxHp: 75,
     goldReward: 10,
     expReward: 24,
@@ -127,6 +157,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDef> = {
   'python-pal': {
     id: 'python-pal',
     displayName: 'Python Pal',
+    level: 22,
     maxHp: 80,
     goldReward: 10,
     expReward: 25,

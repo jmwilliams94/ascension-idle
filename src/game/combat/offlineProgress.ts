@@ -34,6 +34,11 @@ interface SimulateParams {
   isHunter: boolean
   // Infinity for non-Hunter classes (no ammo gating at all).
   availableArrows: number
+  // Feeds the same level-difference EXP multiplier live combat uses (see
+  // combatResolver.ts's expMultiplierForLevelDiff) — fixed for the whole
+  // simulated window even though a real session might level up partway
+  // through, same simplification the rest of this simulator already makes.
+  characterLevel: number
   now?: number
 }
 
@@ -92,7 +97,7 @@ export function simulateOfflineProgress(params: SimulateParams): OfflineProgress
         rareKills += 1
       }
 
-      const rewards = killRewards(type, isRare)
+      const rewards = killRewards(type, isRare, params.characterLevel)
       gold += rewards.gold
       exp += rewards.exp
 
@@ -171,6 +176,7 @@ export async function runOfflineProgressCheck(characterId: string): Promise<Offl
     equipmentBonus,
     isHunter,
     availableArrows,
+    characterLevel: useProgressionStore.getState().level,
   })
 
   if (!result) {

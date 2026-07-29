@@ -210,7 +210,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     }))
 
     if (nextHp <= 0) {
-      const { gold, exp } = killRewards(type, state.isRareInstance)
+      const { gold, exp } = killRewards(type, state.isRareInstance, useProgressionStore.getState().level)
       useProgressionStore.getState().addRewards(gold, exp)
 
       set((s) => ({

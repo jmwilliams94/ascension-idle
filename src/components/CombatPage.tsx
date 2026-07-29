@@ -5,8 +5,21 @@ import InventoryPanel from './InventoryPanel'
 import { ENEMY_TYPES, ZONES, ZONE_ORDER, type EnemyTypeId, type ZoneId } from '../game/zones/zoneData'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useCombatStore, type CombatLogEntry } from '../game/combat/useCombatStore'
+import { getLevelDiffColor } from '../game/combat/combatResolver'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
+
+// Matches getLevelDiffColor's tiers — White is an even match, Green means the
+// character comfortably outlevels the monster (reduced EXP), Red/Black mean
+// the monster outlevels the character (bonus EXP). "Black" can't literally be
+// black text against this UI's dark background, so it uses the darkest shade
+// that's still legible instead.
+const LEVEL_DIFF_TEXT_CLASS: Record<string, string> = {
+  white: 'text-slate-200',
+  green: 'text-emerald-400',
+  red: 'text-red-400',
+  black: 'text-slate-500',
+}
 
 // Enemy colors are stored as 0xRRGGBB numbers (a Phaser-era convention, kept as-is
 // since nothing else about EnemyTypeDef needed to change) — this is the one spot
@@ -71,6 +84,7 @@ export default function CombatPage() {
 
   const gold = useProgressionStore((state) => state.gold)
   const exp = useProgressionStore((state) => state.exp)
+  const characterLevel = useProgressionStore((state) => state.level)
   const characterName = useCharacterRecordStore((state) => state.characterName)
 
   const [logExpanded, setLogExpanded] = useState(false)
@@ -247,7 +261,7 @@ export default function CombatPage() {
               </div>
 
               <div className="flex-1">
-                <p className="text-sm font-medium text-slate-200">
+                <p className={`text-sm font-medium ${LEVEL_DIFF_TEXT_CLASS[getLevelDiffColor(characterLevel, activeType.level)]}`}>
                   {activeType.displayName}
                   {isRareInstance && <span className="ml-2 text-xs font-bold text-amber-300">RARE</span>}
                 </p>

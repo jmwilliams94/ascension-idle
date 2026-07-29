@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.22.0",
+    "date": "2026-07-30",
+    "changes": [
+      "Monster names now show in white, green, red, or black depending on the level gap between you and them",
+      "Killing a much higher-level monster now grants bonus EXP; killing one you've heavily outleveled grants much less"
+    ]
+  },
+  {
     "version": "1.21.0",
     "date": "2026-07-30",
     "changes": [

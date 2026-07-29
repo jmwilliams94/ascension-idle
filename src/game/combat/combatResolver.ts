@@ -17,9 +17,43 @@ export function spawnMonsterHp(type: EnemyTypeDef, isRare: boolean): number {
   return isRare ? type.maxHp * RARE_HP_MULTIPLIER : type.maxHp
 }
 
-export function killRewards(type: EnemyTypeDef, isRare: boolean): { gold: number; exp: number } {
-  const multiplier = isRare ? RARE_REWARD_MULTIPLIER : 1
-  return { gold: type.goldReward * multiplier, exp: type.expReward * multiplier }
+// Level-difference name color + EXP scaling — signals a strength gap between
+// character and monster (diff = characterLevel - monsterLevel), same coloring
+// convention as the real game: White is an even match, Green means the
+// character is comfortably stronger (reduced EXP for killing something too
+// weak to matter), Red/Black mean the monster is stronger (bonus EXP for
+// punching above your level). Only EXP is scaled — gold rewards are untouched.
+export type LevelDiffColor = 'white' | 'green' | 'red' | 'black'
+
+export function getLevelDiffColor(characterLevel: number, monsterLevel: number): LevelDiffColor {
+  const diff = characterLevel - monsterLevel
+  if (diff <= -5) return 'black'
+  if (diff <= -3) return 'red'
+  if (diff >= 3) return 'green'
+  return 'white'
+}
+
+// PLACEHOLDER multipliers, unresolved per CLAUDE.md like every other economy
+// number — a reasonable "bonus for punching up, penalty for punching down"
+// curve, not a sourced/tuned formula.
+const EXP_MULTIPLIER_BY_COLOR: Record<LevelDiffColor, number> = {
+  black: 2,
+  red: 1.5,
+  white: 1,
+  green: 0.5,
+}
+
+export function expMultiplierForLevelDiff(characterLevel: number, monsterLevel: number): number {
+  return EXP_MULTIPLIER_BY_COLOR[getLevelDiffColor(characterLevel, monsterLevel)]
+}
+
+export function killRewards(type: EnemyTypeDef, isRare: boolean, characterLevel: number): { gold: number; exp: number } {
+  const rareMultiplier = isRare ? RARE_REWARD_MULTIPLIER : 1
+  const expMultiplier = expMultiplierForLevelDiff(characterLevel, type.level)
+  return {
+    gold: type.goldReward * rareMultiplier,
+    exp: Math.round(type.expReward * rareMultiplier * expMultiplier),
+  }
 }
 
 // PLACEHOLDER monster attack cadence — fixed at once per second, not derived
