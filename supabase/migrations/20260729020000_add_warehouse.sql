@@ -1,7 +1,20 @@
 -- Warehouse: per-character storage for gear/composition stones (its own 40-slot
--- cap, exactly mirroring Inventory's INVENTORY_SLOT_CAP — enforced client-side,
--- same trust model as Inventory's own cap), plus an account-wide currency bank
+-- cap, mirroring Inventory's INVENTORY_SLOT_CAP — enforced client-side, same
+-- trust model as Inventory's own cap), plus an account-wide currency bank
 -- (gold/meteors/dragonballs shared across all of an account's characters).
+--
+-- Stones AND composed gear both liquidate into a single per-character "points"
+-- balance on deposit (the same point-value formula Composition feeding already
+-- uses — see forgeCosts.ts's compositionPointValue, mirrored here) rather than
+-- being stored as exact tier-tagged tokens. Withdrawing a stone (or a gear item
+-- at a chosen composition tier) spends points at that tier's value. This makes
+-- deposited stones/gear fully fungible with each other by point value, not just
+-- within their own tier — e.g. depositing 3 tier-1 stones (30 pts) lets you
+-- withdraw one tier-2 stone (also 30 pts) instead.
+--
+-- This file replaces an earlier, not-yet-released version of this migration
+-- (drops/recreates below are safe either way — no real player data exists yet).
+--
 -- players.bank_gold already exists (20260727070000) — this adds its two missing
 -- siblings and the actual read/write plumbing.
 
@@ -17,25 +30,27 @@ alter table public.players add constraint players_bank_dragonballs_check check (
 -- select/insert/update from its original migration, this is just belt-and-braces.
 grant select, insert, update on public.players to authenticated;
 
--- Per-character warehouse stones — identical shape/semantics to
--- characters.composition_stones, just a second bucket. Same trust model: never
--- written by the generic autosave, mutated only by transfer_stone below.
-alter table public.characters
-  add column if not exists warehouse_stones jsonb not null default '{"1": 0, "2": 0, "3": 0, "4": 0}'::jsonb;
+-- Per-character Warehouse points balance — the shared currency stones/composed
+-- gear liquidate into on deposit, and spend to withdraw a chosen tier. Not
+-- slot-based (doesn't count toward WAREHOUSE_SLOT_CAP), same as gold/meteors/
+-- dragonballs aren't slot-based. Replaces an earlier warehouse_stones jsonb
+-- column (per-tier bucket storage) with this single fungible balance.
+alter table public.characters drop column if exists warehouse_stones;
+alter table public.characters add column if not exists warehouse_points integer not null default 0;
+alter table public.characters add constraint characters_warehouse_points_check check (warehouse_points >= 0);
 
--- Per-character warehouse gear tokens. A deposited item's original instance is
--- destroyed (per CLAUDE.md's identity-destroying bank rule) and collapses into a
--- count per (template_id, composition_level) pair — fully fungible once
--- deposited, occupying exactly one Warehouse slot regardless of count (same as
--- how one arrow stack occupies one Inventory slot regardless of its count).
-create table if not exists public.warehouse_items (
+-- Per-character warehouse gear tokens — a plain count per template_id. A
+-- deposited item's quality/level/composition are all discarded (per CLAUDE.md's
+-- identity-destroying bank rule); any composition value it had cashes into
+-- warehouse_points (see deposit_item) instead of being preserved on the token.
+drop table if exists public.warehouse_items;
+create table public.warehouse_items (
   id uuid primary key default gen_random_uuid(),
   character_id uuid not null references public.characters (id) on delete cascade,
   template_id uuid not null references public.item_templates (id),
-  composition_level integer not null default 0,
   count integer not null default 0 check (count > 0),
   created_at timestamptz not null default now(),
-  unique (character_id, template_id, composition_level)
+  unique (character_id, template_id)
 );
 
 alter table public.warehouse_items enable row level security;
@@ -52,7 +67,8 @@ grant select on public.warehouse_items to authenticated;
 
 -- ============================================================================
 -- deposit_item: move a gear item from Inventory into the Warehouse, destroying
--- its instance identity (only template_id + composition_level survive).
+-- its instance identity. Its composition_level (if any) is cashed into
+-- warehouse_points at the same point value a stone of that tier would be worth.
 -- ============================================================================
 create or replace function public.deposit_item(item_id uuid)
 returns jsonb
@@ -65,7 +81,9 @@ declare
   v_account_id uuid;
   v_template_id uuid;
   v_composition_level integer;
+  v_points_gained integer;
   v_new_count integer;
+  v_new_points integer;
 begin
   select owner_id, template_id, composition_level into v_character_id, v_template_id, v_composition_level
   from public.item_instances
@@ -85,19 +103,32 @@ begin
     return jsonb_build_object('ok', false, 'error', 'not_owner');
   end if;
 
-  insert into public.warehouse_items (character_id, template_id, composition_level, count)
-  values (v_character_id, v_template_id, v_composition_level, 1)
-  on conflict (character_id, template_id, composition_level)
+  -- Same point-value formula as a stone of that tier (see forgeCosts.ts's
+  -- compositionPointValue) — 0 for Normal/uncomposed (level <= 0).
+  v_points_gained := case
+    when v_composition_level <= 0 then 0
+    else (10 * (3::numeric ^ (v_composition_level - 1)))::integer
+  end;
+
+  insert into public.warehouse_items (character_id, template_id, count)
+  values (v_character_id, v_template_id, 1)
+  on conflict (character_id, template_id)
   do update set count = warehouse_items.count + 1
   returning count into v_new_count;
+
+  update public.characters
+  set warehouse_points = warehouse_points + v_points_gained
+  where id = v_character_id
+  returning warehouse_points into v_new_points;
 
   delete from public.item_instances where id = item_id;
 
   return jsonb_build_object(
     'ok', true,
     'template_id', v_template_id,
-    'composition_level', v_composition_level,
-    'count', v_new_count
+    'count', v_new_count,
+    'points_gained', v_points_gained,
+    'warehouse_points', v_new_points
   );
 end;
 $$;
@@ -107,7 +138,9 @@ grant execute on function public.deposit_item(uuid) to authenticated;
 
 -- ============================================================================
 -- withdraw_item: mint a fresh Normal-quality, level-1 instance of the given
--- template+tier from the Warehouse — never the original instance back.
+-- template — the caller chooses the composition_level to withdraw it at
+-- (spending warehouse_points at that tier's value), independent of whichever
+-- tier the deposited copies originally came in at.
 -- ============================================================================
 create or replace function public.withdraw_item(character_id uuid, template_id uuid, composition_level integer)
 returns jsonb
@@ -117,10 +150,18 @@ set search_path = public
 as $$
 declare
   v_account_id uuid;
+  v_warehouse_points integer;
   v_count integer;
+  v_cost integer;
+  v_new_count integer;
+  v_new_points integer;
   v_new_item public.item_instances;
 begin
-  select account_id into v_account_id
+  if composition_level < 0 then
+    return jsonb_build_object('ok', false, 'error', 'invalid_request');
+  end if;
+
+  select account_id, warehouse_points into v_account_id, v_warehouse_points
   from public.characters
   where id = character_id
   for update;
@@ -133,27 +174,38 @@ begin
   from public.warehouse_items
   where warehouse_items.character_id = withdraw_item.character_id
     and warehouse_items.template_id = withdraw_item.template_id
-    and warehouse_items.composition_level = withdraw_item.composition_level
   for update;
 
   if not found or v_count <= 0 then
     return jsonb_build_object('ok', false, 'error', 'not_found');
   end if;
 
+  v_cost := case
+    when composition_level <= 0 then 0
+    else (10 * (3::numeric ^ (composition_level - 1)))::integer
+  end;
+
+  if v_warehouse_points < v_cost then
+    return jsonb_build_object('ok', false, 'error', 'not_enough_points', 'required', v_cost, 'owned', v_warehouse_points);
+  end if;
+
   if v_count = 1 then
     delete from public.warehouse_items
     where warehouse_items.character_id = withdraw_item.character_id
-      and warehouse_items.template_id = withdraw_item.template_id
-      and warehouse_items.composition_level = withdraw_item.composition_level;
-    v_count := 0;
+      and warehouse_items.template_id = withdraw_item.template_id;
+    v_new_count := 0;
   else
     update public.warehouse_items
     set count = count - 1
     where warehouse_items.character_id = withdraw_item.character_id
-      and warehouse_items.template_id = withdraw_item.template_id
-      and warehouse_items.composition_level = withdraw_item.composition_level;
-    v_count := v_count - 1;
+      and warehouse_items.template_id = withdraw_item.template_id;
+    v_new_count := v_count - 1;
   end if;
+
+  update public.characters
+  set warehouse_points = warehouse_points - v_cost
+  where id = character_id
+  returning warehouse_points into v_new_points;
 
   insert into public.item_instances (owner_id, template_id, composition_level)
   values (character_id, template_id, composition_level)
@@ -162,7 +214,8 @@ begin
   return jsonb_build_object(
     'ok', true,
     'item', to_jsonb(v_new_item),
-    'warehouse_count', v_count
+    'warehouse_count', v_new_count,
+    'warehouse_points', v_new_points
   );
 end;
 $$;
@@ -172,7 +225,8 @@ grant execute on function public.withdraw_item(uuid, uuid, integer) to authentic
 
 -- ============================================================================
 -- transfer_stone: move composition stones between Inventory (composition_stones)
--- and Warehouse (warehouse_stones) for a single tier.
+-- and the Warehouse's points balance — depositing a tier-N stone adds its point
+-- value, withdrawing one spends the same amount.
 -- ============================================================================
 create or replace function public.transfer_stone(character_id uuid, tier integer, amount integer, direction text)
 returns jsonb
@@ -183,9 +237,11 @@ as $$
 declare
   v_account_id uuid;
   v_stones jsonb;
-  v_warehouse_stones jsonb;
+  v_warehouse_points integer;
   v_tier_key text;
-  v_source_owned integer;
+  v_owned integer;
+  v_point_value integer;
+  v_cost integer;
 begin
   if direction not in ('deposit', 'withdraw') then
     return jsonb_build_object('ok', false, 'error', 'invalid_direction');
@@ -195,8 +251,8 @@ begin
     return jsonb_build_object('ok', false, 'error', 'invalid_request');
   end if;
 
-  select account_id, composition_stones, warehouse_stones
-  into v_account_id, v_stones, v_warehouse_stones
+  select account_id, composition_stones, warehouse_points
+  into v_account_id, v_stones, v_warehouse_points
   from public.characters
   where id = character_id
   for update;
@@ -206,34 +262,29 @@ begin
   end if;
 
   v_tier_key := tier::text;
+  v_point_value := (10 * (3::numeric ^ (tier - 1)))::integer;
 
   if direction = 'deposit' then
-    v_source_owned := coalesce((v_stones ->> v_tier_key)::integer, 0);
-    if v_source_owned < amount then
-      return jsonb_build_object('ok', false, 'error', 'not_enough_stones', 'owned', v_source_owned, 'requested', amount);
+    v_owned := coalesce((v_stones ->> v_tier_key)::integer, 0);
+    if v_owned < amount then
+      return jsonb_build_object('ok', false, 'error', 'not_enough_stones', 'owned', v_owned, 'requested', amount);
     end if;
-    v_stones := jsonb_set(v_stones, array[v_tier_key], to_jsonb(v_source_owned - amount));
-    v_warehouse_stones := jsonb_set(
-      v_warehouse_stones, array[v_tier_key],
-      to_jsonb(coalesce((v_warehouse_stones ->> v_tier_key)::integer, 0) + amount)
-    );
+    v_stones := jsonb_set(v_stones, array[v_tier_key], to_jsonb(v_owned - amount));
+    v_warehouse_points := v_warehouse_points + amount * v_point_value;
   else
-    v_source_owned := coalesce((v_warehouse_stones ->> v_tier_key)::integer, 0);
-    if v_source_owned < amount then
-      return jsonb_build_object('ok', false, 'error', 'not_enough_stones', 'owned', v_source_owned, 'requested', amount);
+    v_cost := amount * v_point_value;
+    if v_warehouse_points < v_cost then
+      return jsonb_build_object('ok', false, 'error', 'not_enough_points', 'required', v_cost, 'owned', v_warehouse_points);
     end if;
-    v_warehouse_stones := jsonb_set(v_warehouse_stones, array[v_tier_key], to_jsonb(v_source_owned - amount));
-    v_stones := jsonb_set(
-      v_stones, array[v_tier_key],
-      to_jsonb(coalesce((v_stones ->> v_tier_key)::integer, 0) + amount)
-    );
+    v_warehouse_points := v_warehouse_points - v_cost;
+    v_stones := jsonb_set(v_stones, array[v_tier_key], to_jsonb(coalesce((v_stones ->> v_tier_key)::integer, 0) + amount));
   end if;
 
   update public.characters
-  set composition_stones = v_stones, warehouse_stones = v_warehouse_stones
+  set composition_stones = v_stones, warehouse_points = v_warehouse_points
   where id = character_id;
 
-  return jsonb_build_object('ok', true, 'stones', v_stones, 'warehouse_stones', v_warehouse_stones);
+  return jsonb_build_object('ok', true, 'stones', v_stones, 'warehouse_points', v_warehouse_points);
 end;
 $$;
 

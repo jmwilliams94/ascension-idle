@@ -10,16 +10,22 @@ import { useInventoryStore, occupiedSlotCount, INVENTORY_SLOT_CAP, type ItemInst
 // own 40-slot cap, exactly mirroring Inventory's INVENTORY_SLOT_CAP), plus
 // account-wide currency (gold/meteors/dragonballs) shared across every character
 // on the account — see CLAUDE.md's Accounts & Characters section.
+//
+// Stones and composed gear both liquidate into a single "warehouse points"
+// balance on deposit (same point-value formula Composition feeding already
+// uses), rather than being stored as exact tier-tagged tokens. Withdrawing a
+// stone (or a gear item at a chosen composition tier) spends points at that
+// tier's value — deposited stuff is fungible by point value, not just within
+// its own tier. Points aren't slot-based (same as currency isn't).
 export const WAREHOUSE_SLOT_CAP = 40
 
-// One row per distinct (template_id, composition_level) combo — fully fungible
-// once deposited (identity-destroying bank rule), so it occupies exactly one
-// Warehouse slot regardless of count, same as one arrow stack occupying one
-// Inventory slot regardless of its count.
+// One row per template_id — fully fungible once deposited (identity-destroying
+// bank rule; any composition value was cashed into points at deposit time), so
+// it occupies exactly one Warehouse slot regardless of count, same as one arrow
+// stack occupying one Inventory slot regardless of its count.
 export interface WarehouseItemEntry {
   id: string
   template_id: string
-  composition_level: number
   count: number
 }
 
@@ -27,9 +33,9 @@ type Currency = 'gold' | 'meteors' | 'dragonballs'
 
 interface TransferStoneResult {
   ok: boolean
-  error?: 'invalid_direction' | 'invalid_request' | 'not_owner' | 'not_enough_stones'
+  error?: 'invalid_direction' | 'invalid_request' | 'not_owner' | 'not_enough_stones' | 'not_enough_points'
   stones?: CompositionStones
-  warehouse_stones?: CompositionStones
+  warehouse_points?: number
 }
 
 interface TransferCurrencyResult {
@@ -43,8 +49,9 @@ interface DepositItemResult {
   ok: boolean
   error?: 'item_not_found' | 'not_owner'
   template_id?: string
-  composition_level?: number
   count?: number
+  points_gained?: number
+  warehouse_points?: number
 }
 
 interface WithdrawItemResult {
@@ -52,20 +59,15 @@ interface WithdrawItemResult {
   // 'inventory_full' is a client-only synthetic error — never returned by the RPC
   // itself, added before the call even fires (mirrors grantItemDrop's own
   // client-side cap check for the same 40-slot Inventory limit).
-  error?: 'not_owner' | 'not_found' | 'inventory_full'
+  error?: 'not_owner' | 'not_found' | 'invalid_request' | 'not_enough_points' | 'inventory_full'
   item?: ItemInstance
   warehouse_count?: number
-}
-
-const DEFAULT_STONES: CompositionStones = { '1': 0, '2': 0, '3': 0, '4': 0 }
-
-function totalStoneCount(stones: CompositionStones): number {
-  return Object.values(stones).reduce((sum, count) => sum + count, 0)
+  warehouse_points?: number
 }
 
 interface WarehouseState {
   items: WarehouseItemEntry[]
-  stones: CompositionStones
+  points: number
   loaded: boolean
   busy: boolean
   // Surfaces a client-side "Warehouse is full" block — deposits are always a
@@ -73,7 +75,7 @@ interface WarehouseState {
   // blocked message is enough for this first pass, no pending-decision modal.
   fullMessage: string | null
   loadWarehouseItems: (characterId: string) => Promise<void>
-  hydrateStones: (stones: CompositionStones) => void
+  hydratePoints: (points: number) => void
   occupiedSlotCount: () => number
   depositItem: (characterId: string, itemId: string) => Promise<DepositItemResult>
   withdrawItem: (characterId: string, templateId: string, compositionLevel: number) => Promise<WithdrawItemResult>
@@ -86,7 +88,7 @@ interface WarehouseState {
 
 export const useWarehouseStore = create<WarehouseState>((set, get) => ({
   items: [],
-  stones: DEFAULT_STONES,
+  points: 0,
   loaded: false,
   busy: false,
   fullMessage: null,
@@ -102,20 +104,15 @@ export const useWarehouseStore = create<WarehouseState>((set, get) => ({
     set({ items: (data ?? []) as WarehouseItemEntry[], loaded: true })
   },
 
-  hydrateStones: (stones) => set({ stones }),
+  hydratePoints: (points) => set({ points }),
 
-  occupiedSlotCount: () => {
-    const { items, stones } = get()
-    return items.length + totalStoneCount(stones)
-  },
+  // Only gear tokens count toward the Warehouse's 40-slot cap — points are a
+  // fungible balance, same as currency, not a physical stack of tiles.
+  occupiedSlotCount: () => get().items.length,
 
   depositItem: async (characterId, itemId) => {
     const sourceItem = useInventoryStore.getState().items.find((item) => item.id === itemId)
-    const existingEntry = sourceItem
-      ? get().items.find(
-          (entry) => entry.template_id === sourceItem.template_id && entry.composition_level === sourceItem.composition_level,
-        )
-      : undefined
+    const existingEntry = sourceItem ? get().items.find((entry) => entry.template_id === sourceItem.template_id) : undefined
     const wouldNeedNewSlot = !existingEntry
 
     if (wouldNeedNewSlot && get().occupiedSlotCount() >= WAREHOUSE_SLOT_CAP) {
@@ -134,28 +131,21 @@ export const useWarehouseStore = create<WarehouseState>((set, get) => ({
 
     const result = data as DepositItemResult
 
-    if (result.ok && typeof result.template_id === 'string' && typeof result.composition_level === 'number') {
+    if (result.ok && typeof result.template_id === 'string') {
       useInventoryStore.getState().removeItems([itemId])
       set((state) => {
-        const idx = state.items.findIndex(
-          (entry) => entry.template_id === result.template_id && entry.composition_level === result.composition_level,
-        )
-        if (idx === -1) {
-          return {
-            items: [
-              ...state.items,
-              {
-                id: `${characterId}:${result.template_id}:${result.composition_level}`,
-                template_id: result.template_id!,
-                composition_level: result.composition_level!,
-                count: result.count!,
-              },
-            ],
-          }
+        const idx = state.items.findIndex((entry) => entry.template_id === result.template_id)
+        const nextItems =
+          idx === -1
+            ? [
+                ...state.items,
+                { id: `${characterId}:${result.template_id}`, template_id: result.template_id!, count: result.count! },
+              ]
+            : state.items.map((entry, i) => (i === idx ? { ...entry, count: result.count! } : entry))
+        return {
+          items: nextItems,
+          points: typeof result.warehouse_points === 'number' ? result.warehouse_points : state.points,
         }
-        const next = [...state.items]
-        next[idx] = { ...next[idx], count: result.count! }
-        return { items: next }
       })
     }
 
@@ -184,33 +174,19 @@ export const useWarehouseStore = create<WarehouseState>((set, get) => ({
 
     if (result.ok && result.item) {
       useInventoryStore.getState().addItem(result.item)
-      set((state) => {
-        if (!result.warehouse_count || result.warehouse_count <= 0) {
-          return {
-            items: state.items.filter(
-              (entry) => !(entry.template_id === templateId && entry.composition_level === compositionLevel),
-            ),
-          }
-        }
-        return {
-          items: state.items.map((entry) =>
-            entry.template_id === templateId && entry.composition_level === compositionLevel
-              ? { ...entry, count: result.warehouse_count! }
-              : entry,
-          ),
-        }
-      })
+      set((state) => ({
+        items:
+          !result.warehouse_count || result.warehouse_count <= 0
+            ? state.items.filter((entry) => entry.template_id !== templateId)
+            : state.items.map((entry) => (entry.template_id === templateId ? { ...entry, count: result.warehouse_count! } : entry)),
+        points: typeof result.warehouse_points === 'number' ? result.warehouse_points : state.points,
+      }))
     }
 
     return result
   },
 
   depositStone: async (characterId, tier, amount) => {
-    if (get().occupiedSlotCount() + amount > WAREHOUSE_SLOT_CAP) {
-      set({ fullMessage: 'Warehouse is full.' })
-      return { ok: false }
-    }
-
     set({ busy: true, fullMessage: null })
     const { data, error } = await supabase.rpc('transfer_stone', {
       character_id: characterId,
@@ -226,9 +202,9 @@ export const useWarehouseStore = create<WarehouseState>((set, get) => ({
     }
 
     const result = data as TransferStoneResult
-    if (result.ok && result.stones && result.warehouse_stones) {
+    if (result.ok && result.stones && typeof result.warehouse_points === 'number') {
       useCompositionStore.getState().setStones(result.stones)
-      set({ stones: result.warehouse_stones })
+      set({ points: result.warehouse_points })
     }
     return result
   },
@@ -249,9 +225,9 @@ export const useWarehouseStore = create<WarehouseState>((set, get) => ({
     }
 
     const result = data as TransferStoneResult
-    if (result.ok && result.stones && result.warehouse_stones) {
+    if (result.ok && result.stones && typeof result.warehouse_points === 'number') {
       useCompositionStore.getState().setStones(result.stones)
-      set({ stones: result.warehouse_stones })
+      set({ points: result.warehouse_points })
     }
     return result
   },

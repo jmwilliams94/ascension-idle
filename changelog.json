@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.19.0",
+    "date": "2026-07-29",
+    "changes": [
+      "Warehouse: deposited stones and composed gear now convert into Warehouse Points, a shared balance you spend to withdraw any tier back — no longer locked to the exact tier you deposited",
+      "Monsters now fight back! You have your own HP shown on the Combat page, above the enemy — getting knocked out stops the fight and fully heals you",
+      "Combat page: Zone and Monster are now simple dropdowns with one Fight button, instead of a separate zone-button row and enemy list",
+      "Equipment page: removed the placeholder character silhouette and the equipment icon row up top, and made the remaining gear slots bigger"
+    ]
+  },
+  {
     "version": "1.18.0",
     "date": "2026-07-29",
     "changes": [

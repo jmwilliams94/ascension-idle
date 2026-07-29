@@ -3,7 +3,7 @@ import InventoryPanel from './InventoryPanel'
 import WarehouseGrid from './WarehouseGrid'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 import { useCompositionStore } from '../game/items/useCompositionStore'
-import { COMPOSITION_STONE_TIERS } from '../game/items/forgeCosts'
+import { COMPOSITION_STONE_TIERS, compositionPointValue } from '../game/items/forgeCosts'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useWarehouseStore } from '../game/items/useWarehouseStore'
@@ -100,9 +100,14 @@ function CurrencyRow({ characterId, currency, label }: { characterId: string; cu
   )
 }
 
+// Depositing a stone liquidates it into the shared Warehouse points balance
+// (compositionPointValue(tier) points each); withdrawing spends that many
+// points back for a fresh stone of the chosen tier. Points are fungible across
+// tiers — e.g. 3 deposited tier-1 stones (30 pts) can withdraw one tier-2 stone
+// (also 30 pts) — see useWarehouseStore/transfer_stone.
 function StoneRow({ characterId, tier }: { characterId: string; tier: number }) {
   const inventoryCount = useCompositionStore((state) => state.stones[String(tier)] ?? 0)
-  const warehouseCount = useWarehouseStore((state) => state.stones[String(tier)] ?? 0)
+  const points = useWarehouseStore((state) => state.points)
   const busy = useWarehouseStore((state) => state.busy)
   const depositStone = useWarehouseStore((state) => state.depositStone)
   const withdrawStone = useWarehouseStore((state) => state.withdrawStone)
@@ -112,6 +117,8 @@ function StoneRow({ characterId, tier }: { characterId: string; tier: number }) 
 
   const parsedAmount = Math.floor(Number(amount))
   const validAmount = amount.trim() !== '' && Number.isFinite(parsedAmount) && parsedAmount > 0
+  const pointValue = compositionPointValue(tier)
+  const withdrawCost = parsedAmount * pointValue
 
   const handleDeposit = async () => {
     setError(null)
@@ -129,7 +136,7 @@ function StoneRow({ characterId, tier }: { characterId: string; tier: number }) 
     if (!validAmount) return
     const result = await withdrawStone(characterId, tier, parsedAmount)
     if (!result.ok) {
-      setError(result.error === 'not_enough_stones' ? "The Warehouse doesn't have that many." : 'Something went wrong.')
+      setError(result.error === 'not_enough_points' ? "You don't have enough Warehouse points." : 'Something went wrong.')
     } else {
       setAmount('')
     }
@@ -139,7 +146,7 @@ function StoneRow({ characterId, tier }: { characterId: string; tier: number }) 
     <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2">
       <span className="w-24 text-sm font-medium text-slate-200">+{tier} Stone</span>
       <span className="text-xs text-slate-400">Inventory: {inventoryCount}</span>
-      <span className="text-xs text-slate-400">Warehouse: {warehouseCount}</span>
+      <span className="text-xs text-slate-400">{pointValue} pts each</span>
 
       <input
         type="number"
@@ -159,11 +166,11 @@ function StoneRow({ characterId, tier }: { characterId: string; tier: number }) 
       </button>
       <button
         type="button"
-        disabled={busy || !validAmount || warehouseCount < parsedAmount}
+        disabled={busy || !validAmount || points < withdrawCost}
         onClick={handleWithdraw}
         className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-300 hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-40"
       >
-        Withdraw
+        Withdraw{validAmount ? ` (${withdrawCost} pts)` : ''}
       </button>
 
       {error && <p className="w-full text-xs text-amber-400">{error}</p>}
@@ -172,6 +179,8 @@ function StoneRow({ characterId, tier }: { characterId: string; tier: number }) 
 }
 
 export default function WarehousePanel({ characterId }: { characterId: string }) {
+  const points = useWarehouseStore((state) => state.points)
+
   return (
     <div className="space-y-6">
       <div>
@@ -184,7 +193,15 @@ export default function WarehousePanel({ characterId }: { characterId: string })
       </div>
 
       <div>
-        <p className="text-xs uppercase tracking-wide text-slate-500">Composition Stones (per character)</p>
+        <div className="flex items-baseline justify-between">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Composition Stones (per character)</p>
+          <p className="text-xs text-slate-400">
+            Warehouse Points: <span className="font-semibold text-sky-300">{points}</span>
+          </p>
+        </div>
+        <p className="mt-1 text-[11px] text-slate-500">
+          Depositing a stone (or composed gear) converts it into points — spend points to withdraw any tier back.
+        </p>
         <div className="mt-2 space-y-2">
           {COMPOSITION_STONE_TIERS.map((tier) => (
             <StoneRow key={tier} characterId={characterId} tier={tier} />

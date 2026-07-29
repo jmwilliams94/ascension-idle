@@ -15,8 +15,9 @@ const ATTRIBUTE_LABELS = {
 } as const
 
 // Collapsed by default so the Inventory grid below has room without scrolling —
-// EquipmentBar now covers the at-a-glance gear summary; this panel is for players
-// who want the full Class/Attributes/Derived-stats breakdown.
+// the full paper-doll (EquipmentPanel) covers the at-a-glance gear summary now
+// that EquipmentBar has been removed; this panel is for players who want the
+// full Class/Attributes/Derived-stats breakdown.
 export default function StatsPanel() {
   const [expanded, setExpanded] = useState(false)
 

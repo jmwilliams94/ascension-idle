@@ -35,11 +35,16 @@ export type EnemyTypeId =
 export interface EnemyTypeDef {
   id: EnemyTypeId
   displayName: string
-  // PLACEHOLDER flat stats — real zone economy (HP/gold/EXP scaling) is unresolved
-  // per CLAUDE.md. Roughly scaled to increase zone-over-zone, not tuned balance.
+  // PLACEHOLDER flat stats — real zone economy (HP/gold/EXP/attack scaling) is
+  // unresolved per CLAUDE.md. Roughly scaled to increase zone-over-zone, not
+  // tuned balance.
   maxHp: number
   goldReward: number
   expReward: number
+  // Flat damage the monster deals back to the player once per second (fixed
+  // cadence, not derived from any monster "attack speed" concept — none exists
+  // yet). Player HP/knockout handling lives in useCombatStore.runTick.
+  attackDamage: number
   // 0xRRGGBB — a Phaser-era convention kept for the placeholder portrait swatch
   // (see CombatPage's hexColor helper).
   color: number
@@ -47,11 +52,19 @@ export interface EnemyTypeDef {
 
 export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDef> = {
   // --- Dual Town ---
-  peacock: { id: 'peacock', displayName: 'Peacock', maxHp: 25, goldReward: 3, expReward: 8, color: 0x38bdf8 },
-  'fancy-pigeon': { id: 'fancy-pigeon', displayName: 'Fancy Pigeon', maxHp: 30, goldReward: 4, expReward: 10, color: 0xd6d3d1 },
-  eagle: { id: 'eagle', displayName: 'Eagle', maxHp: 40, goldReward: 5, expReward: 13, color: 0xb45309 },
-  spook: { id: 'spook', displayName: 'Spook', maxHp: 35, goldReward: 4, expReward: 12, color: 0xe2e8f0 },
-  'boo-hoo': { id: 'boo-hoo', displayName: 'Boo-Hoo', maxHp: 45, goldReward: 6, expReward: 15, color: 0x94a3b8 },
+  peacock: { id: 'peacock', displayName: 'Peacock', maxHp: 25, goldReward: 3, expReward: 8, attackDamage: 4, color: 0x38bdf8 },
+  'fancy-pigeon': {
+    id: 'fancy-pigeon',
+    displayName: 'Fancy Pigeon',
+    maxHp: 30,
+    goldReward: 4,
+    expReward: 10,
+    attackDamage: 5,
+    color: 0xd6d3d1,
+  },
+  eagle: { id: 'eagle', displayName: 'Eagle', maxHp: 40, goldReward: 5, expReward: 13, attackDamage: 6, color: 0xb45309 },
+  spook: { id: 'spook', displayName: 'Spook', maxHp: 35, goldReward: 4, expReward: 12, attackDamage: 5, color: 0xe2e8f0 },
+  'boo-hoo': { id: 'boo-hoo', displayName: 'Boo-Hoo', maxHp: 45, goldReward: 6, expReward: 15, attackDamage: 7, color: 0x94a3b8 },
 
   // --- Waterbird Fortress ---
   'feathered-noodle': {
@@ -60,20 +73,46 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDef> = {
     maxHp: 50,
     goldReward: 6,
     expReward: 16,
+    attackDamage: 7,
     color: 0xa3e635,
   },
-  thief: { id: 'thief', displayName: 'Thief', maxHp: 55, goldReward: 7, expReward: 18, color: 0x4c1d95 },
-  'mouse-kin': { id: 'mouse-kin', displayName: 'Mouse-kin', maxHp: 45, goldReward: 6, expReward: 15, color: 0x78716c },
-  'water-spirit': { id: 'water-spirit', displayName: 'Water Spirit', maxHp: 65, goldReward: 8, expReward: 20, color: 0x22d3ee },
+  thief: { id: 'thief', displayName: 'Thief', maxHp: 55, goldReward: 7, expReward: 18, attackDamage: 8, color: 0x4c1d95 },
+  'mouse-kin': {
+    id: 'mouse-kin',
+    displayName: 'Mouse-kin',
+    maxHp: 45,
+    goldReward: 6,
+    expReward: 15,
+    attackDamage: 7,
+    color: 0x78716c,
+  },
+  'water-spirit': {
+    id: 'water-spirit',
+    displayName: 'Water Spirit',
+    maxHp: 65,
+    goldReward: 8,
+    expReward: 20,
+    attackDamage: 9,
+    color: 0x22d3ee,
+  },
 
   // --- Monkey Town ---
-  'angry-chimp': { id: 'angry-chimp', displayName: 'Angry Chimp', maxHp: 70, goldReward: 9, expReward: 22, color: 0x92400e },
+  'angry-chimp': {
+    id: 'angry-chimp',
+    displayName: 'Angry Chimp',
+    maxHp: 70,
+    goldReward: 9,
+    expReward: 22,
+    attackDamage: 10,
+    color: 0x92400e,
+  },
   'king-kong-jr': {
     id: 'king-kong-jr',
     displayName: 'King Kong Jr.',
     maxHp: 90,
     goldReward: 12,
     expReward: 28,
+    attackDamage: 13,
     color: 0x451a03,
   },
   'static-monkey': {
@@ -82,9 +121,18 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDef> = {
     maxHp: 75,
     goldReward: 10,
     expReward: 24,
+    attackDamage: 11,
     color: 0xfacc15,
   },
-  'python-pal': { id: 'python-pal', displayName: 'Python Pal', maxHp: 80, goldReward: 10, expReward: 25, color: 0x16a34a },
+  'python-pal': {
+    id: 'python-pal',
+    displayName: 'Python Pal',
+    maxHp: 80,
+    goldReward: 10,
+    expReward: 25,
+    attackDamage: 11,
+    color: 0x16a34a,
+  },
 }
 
 export interface ZoneDef {

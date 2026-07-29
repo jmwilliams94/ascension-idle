@@ -9,9 +9,9 @@ import { useInventoryStore } from '../items/useInventoryStore'
 import { useItemTemplatesStore } from '../items/useItemTemplatesStore'
 import { useOutOfArrowsWarningStore } from '../items/useOutOfArrowsWarningStore'
 import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
-import { killRewards, rollIsRare, spawnMonsterHp } from './combatResolver'
+import { MONSTER_ATTACK_INTERVAL_MS, killRewards, monsterAttackDamage, rollIsRare, spawnMonsterHp } from './combatResolver'
 
-export type CombatLogKind = 'engage' | 'damage' | 'kill' | 'rare-kill' | 'item' | 'out-of-arrows'
+export type CombatLogKind = 'engage' | 'damage' | 'player-damage' | 'kill' | 'rare-kill' | 'item' | 'out-of-arrows' | 'knockout'
 
 export interface CombatLogEntry {
   id: string
@@ -46,8 +46,15 @@ interface CombatState {
   currentHp: number
   maxHp: number
   isRareInstance: boolean
+  // The player's own HP — continuous across monster respawns/zone switches (only
+  // reset by a knockout, not by start()/stop()/clear()), unlike the monster's own
+  // currentHp/maxHp above. 0/0 is a sentinel meaning "never initialized yet";
+  // runTick lazily fills both in from derived.hp the first time it ticks.
+  currentPlayerHp: number
+  maxPlayerHp: number
   log: CombatLogEntry[]
   lastAttackAt: number
+  lastMonsterAttackAt: number
   // Selects a monster and begins fighting it. Safe to call again with the same or a
   // different monster — always starts a fresh instance (no "resume mid-HP").
   start: (monsterTypeId: EnemyTypeId) => void
@@ -69,8 +76,11 @@ export const useCombatStore = create<CombatState>((set, get) => ({
   currentHp: 0,
   maxHp: 0,
   isRareInstance: false,
+  currentPlayerHp: 0,
+  maxPlayerHp: 0,
   log: [],
   lastAttackAt: 0,
+  lastMonsterAttackAt: 0,
 
   start: (monsterTypeId) => {
     const type = ENEMY_TYPES[monsterTypeId]
@@ -85,6 +95,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       maxHp: hp,
       isRareInstance: isRare,
       lastAttackAt: 0,
+      lastMonsterAttackAt: 0,
       log: appendLog(state.log, {
         kind: 'engage',
         message: isRare ? `A rare ${type.displayName} appears!` : `You engage a ${type.displayName}.`,
@@ -101,6 +112,9 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       currentHp: 0,
       maxHp: 0,
       isRareInstance: false,
+      // currentPlayerHp/maxPlayerHp deliberately NOT reset here — the player's own
+      // HP is continuous across zone/monster switches, not tied to a specific
+      // fight the way the monster's own HP is.
     }),
 
   runTick: (nowMs) => {
@@ -119,6 +133,51 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     )
     const derived = computeDerivedStats(attributes, equipmentBonus)
     const attackIntervalMs = 1000 / derived.attackSpeed
+
+    // Lazy-init the player's HP the first time combat ever ticks (0/0 sentinel —
+    // see the CombatState field comments) rather than resetting it on every
+    // start(), so it stays continuous across monster respawns/zone switches.
+    const maxPlayerHp = derived.hp
+    const currentPlayerHp = state.maxPlayerHp <= 0 ? maxPlayerHp : Math.min(state.currentPlayerHp, maxPlayerHp)
+
+    // Monster attack-back — independent cooldown/cadence from the player's own
+    // attack below (PLACEHOLDER: fixed once-per-second, no monster "attack speed"
+    // concept exists yet). Checked every tick regardless of whether the player's
+    // own attack is on cooldown this tick, so it doesn't end up implicitly synced
+    // to the player's attack speed.
+    if (nowMs - state.lastMonsterAttackAt >= MONSTER_ATTACK_INTERVAL_MS) {
+      const damage = monsterAttackDamage(type)
+      const nextPlayerHp = Math.max(0, currentPlayerHp - damage)
+
+      set((s) => ({
+        lastMonsterAttackAt: nowMs,
+        currentPlayerHp: nextPlayerHp,
+        maxPlayerHp,
+        log: appendLog(s.log, {
+          kind: 'player-damage',
+          message: `${type.displayName} hits you for ${damage}.`,
+          amount: damage,
+        }),
+      }))
+
+      if (nextPlayerHp <= 0) {
+        // Knocked out — placeholder no-penalty recovery (stop fighting, full
+        // heal on return) rather than a designed death/respawn mechanic, which
+        // doesn't exist anywhere in this game yet. Revisit if/when that's designed.
+        set((s) => ({
+          isFighting: false,
+          currentPlayerHp: maxPlayerHp,
+          log: appendLog(s.log, { kind: 'knockout', message: 'You were knocked out! Fully healed — fight stopped.' }),
+        }))
+        return
+      }
+    } else if (state.maxPlayerHp !== maxPlayerHp || state.currentPlayerHp !== currentPlayerHp) {
+      // Only write when something actually changed (lazy-init, or maxPlayerHp
+      // shifting from a level-up/gear change) — avoids re-rendering every 100ms
+      // tick for no reason, preserving the "on-cooldown ticks are simply dropped"
+      // behavior the player's own attack-cooldown check below relies on.
+      set({ currentPlayerHp, maxPlayerHp })
+    }
 
     // On-cooldown ticks are simply dropped, not queued — same behavior as the old
     // isometric scene's attack-speed gating.

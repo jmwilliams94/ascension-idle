@@ -43,6 +43,14 @@ interface SimulateParams {
 // higher attack speed) — a plain loop, no perf concern. Returns null when
 // nothing would have happened (no time elapsed, or a Hunter with 0 arrows),
 // so the caller knows not to show an empty "you gained nothing" summary.
+//
+// Known gap: this does not simulate monster attack-back / player HP (see
+// useCombatStore's currentPlayerHp/monsterAttackDamage) — an offline character
+// is effectively invulnerable for the simulated window. Live combat and this
+// simulator are meant to share identical odds (that's the whole point of both
+// calling into combatResolver.ts), so this is a disclosed inconsistency, not a
+// deliberate design choice — revisit if/when player-damage-taken gets a real
+// death/recovery design instead of the current knockout-and-full-heal placeholder.
 export function simulateOfflineProgress(params: SimulateParams): OfflineProgressResult | null {
   const now = params.now ?? Date.now()
   const lastActiveMs = new Date(params.lastActiveAt).getTime()

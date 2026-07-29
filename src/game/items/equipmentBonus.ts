@@ -76,30 +76,6 @@ export function formatQualityAndLevel(qualityTier: string, level: number): strin
   return `${QUALITY_LABELS[qualityTier] ?? qualityTier} · Lv ${level}`
 }
 
-export interface SlotVisual {
-  // Raw quality hex color (no alpha) — null means nothing's equipped, so the
-  // caller should fall back to its own neutral/base appearance rather than a
-  // generic placeholder color (see PaperDollBody, which falls back to the real
-  // hero sprite's own face colors).
-  color: string | null
-  glow: boolean
-}
-
-// Used by the Equipment paper-doll (PaperDollBody) to color a face/accent by
-// whatever's equipped in that slot — pass undefined/null for slots with no item
-// system yet (Headgear, Body/Armor, Boots today) and it renders neutral; pass a
-// real quality_tier once that slot becomes functional and it lights up
-// automatically, no separate wiring needed. Only Super quality glows (see
-// .super-quality-glow in index.css) so the glow reads as a special indicator
-// rather than decoration every tier gets.
-export function getSlotVisual(qualityTier: string | null | undefined): SlotVisual {
-  if (!qualityTier) {
-    return { color: null, glow: false }
-  }
-
-  return { color: getQualityColor(qualityTier), glow: qualityTier === 'super' }
-}
-
 // Display-layer only — the stored item_templates.name is never renamed. Normal
 // quality shows the plain name; anything above gets the tier prefixed. Composition
 // (see CLAUDE.md's Gear system section), when present, appends a "(+N)" suffix —

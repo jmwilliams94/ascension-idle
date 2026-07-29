@@ -15,8 +15,8 @@ interface EquipmentSlotProps {
   // Universal Diablo/PoE-style hover tooltip (see ItemTooltip.tsx) — only Weapon
   // ever passes this today, since it's the only functional slot.
   tooltip?: ItemTooltipData
-  // Overrides the default h-16 w-16 (e.g. "h-10 w-10" for EquipmentBar's more
-  // compact summary row) — omit to keep the paper-doll's normal size.
+  // Overrides the default h-16 w-16 — EquipmentPanel passes a larger size for
+  // its full paper-doll (see SLOT_SIZE there); omit to keep the default.
   sizeClassName?: string
 }
 

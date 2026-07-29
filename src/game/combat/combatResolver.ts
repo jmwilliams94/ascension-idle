@@ -21,3 +21,15 @@ export function killRewards(type: EnemyTypeDef, isRare: boolean): { gold: number
   const multiplier = isRare ? RARE_REWARD_MULTIPLIER : 1
   return { gold: type.goldReward * multiplier, exp: type.expReward * multiplier }
 }
+
+// PLACEHOLDER monster attack cadence — fixed at once per second, not derived
+// from any per-monster "attack speed" concept (none exists yet, unlike the
+// player's own derived.attackSpeed).
+export const MONSTER_ATTACK_INTERVAL_MS = 1000
+
+// Rare status only affects HP/rewards per CLAUDE.md's confirmed design (2x HP,
+// 5x gold/EXP) — deliberately not a harder-hitting monster, so this ignores
+// isRare unlike spawnMonsterHp/killRewards above.
+export function monsterAttackDamage(type: EnemyTypeDef): number {
+  return type.attackDamage
+}

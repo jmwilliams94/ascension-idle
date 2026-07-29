@@ -1,21 +1,28 @@
 import { useState } from 'react'
 import EquipmentSlot from './EquipmentSlot'
-import PaperDollBody from './PaperDollBody'
 import { buildGearTooltip, formatBaseStats, formatItemDisplayName, formatQualityAndLevel, getQualityColor } from '../game/items/equipmentBonus'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 
-// Paper-doll layout, positioned around a central character placeholder — an
-// abstract/geometric segmented rectangle (PaperDollBody), deliberately unstyled
-// placeholder geometry rather than character art. Right column, top to bottom: Head,
-// Necklace, Ring, Main Hand — the only functional slot this step, matching
-// equipped_item_id's current single-slot shortcut. Bottom row lines up Boots
-// (left), Off-hand/Shield (center, below the character), and Armor (right, below
-// Main Hand). Everything except Main Hand is a non-clickable, greyed-out
-// placeholder hinting at a future gear type via a faint icon, since those slots
-// don't exist in the schema yet (see CLAUDE.md's Gear slots note — exact per-class
-// slot assignment is still unresolved, these are illustrative, not final).
+// Slot size for this paper-doll — scaled up from the default h-16 w-16 now that
+// there's no central character placeholder competing for room (see below).
+const SLOT_SIZE = 'h-24 w-24'
+
+// Paper-doll layout. Right column, top to bottom: Head, Necklace, Ring, Main
+// Hand — the only functional slot this step, matching equipped_item_id's
+// current single-slot shortcut. Bottom row lines up Boots (left), Off-hand/
+// Shield (center), and Armor (right, below Main Hand). Everything except Main
+// Hand is a non-clickable, greyed-out placeholder hinting at a future gear type
+// via a faint icon, since those slots don't exist in the schema yet (see
+// CLAUDE.md's Gear slots note — exact per-class slot assignment is still
+// unresolved, these are illustrative, not final).
+//
+// The central character placeholder (PaperDollBody, an abstract/geometric
+// segmented rectangle) has been removed — CLAUDE.md flagged its fate as an
+// open decision ("keep the abstract box... or design a real static per-class
+// portrait... Not decided yet"); the decision is now to drop it rather than
+// replace it, freeing room to grow the remaining slot tiles instead.
 export default function EquipmentPanel() {
   const equippedItemId = useEquipmentStore((state) => state.equippedItemId)
   const setEquippedItemId = useEquipmentStore((state) => state.setEquippedItemId)
@@ -30,27 +37,20 @@ export default function EquipmentPanel() {
   return (
     <div className="space-y-4">
       <div
-        className="mx-auto grid max-w-xs gap-2"
+        className="mx-auto grid max-w-sm gap-3"
         style={{
           gridTemplateColumns: '30% 40% 30%',
-          gridTemplateAreas:
-            '". character head" ". character neck" ". character ring" ". character main" "boots offhand armor"',
+          gridTemplateAreas: '". . head" ". . neck" ". . ring" ". . main" "boots offhand armor"',
         }}
       >
         <div style={{ gridArea: 'head' }} className="flex items-center justify-center">
-          <EquipmentSlot label="Head" icon="🪖" locked />
+          <EquipmentSlot label="Head" icon="🪖" locked sizeClassName={SLOT_SIZE} />
         </div>
         <div style={{ gridArea: 'neck' }} className="flex items-center justify-center">
-          <EquipmentSlot label="Necklace" icon="📿" locked />
+          <EquipmentSlot label="Necklace" icon="📿" locked sizeClassName={SLOT_SIZE} />
         </div>
         <div style={{ gridArea: 'ring' }} className="flex items-center justify-center">
-          <EquipmentSlot label="Ring" icon="💍" locked />
-        </div>
-
-        <div style={{ gridArea: 'character' }} className="flex items-center justify-center">
-          {/* Headgear/Body-Armor/Boots have no item system yet, so those bands
-              always render neutral — only Weapon's accent is real right now. */}
-          <PaperDollBody weaponQualityTier={equippedItem?.quality_tier} />
+          <EquipmentSlot label="Ring" icon="💍" locked sizeClassName={SLOT_SIZE} />
         </div>
 
         <div style={{ gridArea: 'main' }} className="flex items-center justify-center">
@@ -62,17 +62,18 @@ export default function EquipmentPanel() {
             selected={weaponSelected}
             onClick={template ? () => setWeaponSelected((current) => !current) : undefined}
             tooltip={equippedItem ? buildGearTooltip(equippedItem, template || undefined) : undefined}
+            sizeClassName={SLOT_SIZE}
           />
         </div>
 
         <div style={{ gridArea: 'boots' }} className="flex items-center justify-center">
-          <EquipmentSlot label="Boots" icon="👢" locked />
+          <EquipmentSlot label="Boots" icon="👢" locked sizeClassName={SLOT_SIZE} />
         </div>
         <div style={{ gridArea: 'offhand' }} className="flex items-center justify-center">
-          <EquipmentSlot label="Off-hand / Shield" icon="🛡️" locked />
+          <EquipmentSlot label="Off-hand / Shield" icon="🛡️" locked sizeClassName={SLOT_SIZE} />
         </div>
         <div style={{ gridArea: 'armor' }} className="flex items-center justify-center">
-          <EquipmentSlot label="Armor" icon="🥋" locked />
+          <EquipmentSlot label="Armor" icon="🥋" locked sizeClassName={SLOT_SIZE} />
         </div>
       </div>
 

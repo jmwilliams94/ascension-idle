@@ -26,19 +26,22 @@ function logLineClass(kind: CombatLogEntry['kind']): string {
     case 'item':
       return 'text-sky-300'
     case 'out-of-arrows':
+    case 'knockout':
       return 'text-red-400'
+    case 'player-damage':
+      return 'text-rose-400'
     default:
       return 'text-slate-400'
   }
 }
 
-function HpBar({ current, max }: { current: number; max: number }) {
+function HpBar({ current, max, barColorClass = 'bg-emerald-500' }: { current: number; max: number; barColorClass?: string }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0
 
   return (
     <div className="h-3 w-full overflow-hidden rounded-full bg-slate-800">
       <motion.div
-        className="h-full rounded-full bg-emerald-500"
+        className={`h-full rounded-full ${barColorClass}`}
         animate={{ width: `${pct}%` }}
         transition={{ type: 'spring', stiffness: 140, damping: 22 }}
       />
@@ -49,6 +52,7 @@ function HpBar({ current, max }: { current: number; max: number }) {
 export default function CombatPage() {
   const currentZoneId = useZoneStore((state) => state.currentZoneId)
   const setCurrentZoneId = useZoneStore((state) => state.setCurrentZoneId)
+  const selectedMonsterId = useZoneStore((state) => state.selectedMonsterId)
   const setSelectedMonsterId = useZoneStore((state) => state.setSelectedMonsterId)
 
   const isFighting = useCombatStore((state) => state.isFighting)
@@ -56,6 +60,8 @@ export default function CombatPage() {
   const monsterInstanceKey = useCombatStore((state) => state.monsterInstanceKey)
   const currentHp = useCombatStore((state) => state.currentHp)
   const maxHp = useCombatStore((state) => state.maxHp)
+  const currentPlayerHp = useCombatStore((state) => state.currentPlayerHp)
+  const maxPlayerHp = useCombatStore((state) => state.maxPlayerHp)
   const isRareInstance = useCombatStore((state) => state.isRareInstance)
   const log = useCombatStore((state) => state.log)
   const start = useCombatStore((state) => state.start)
@@ -93,8 +99,19 @@ export default function CombatPage() {
             entry.kind === 'damage' && typeof entry.amount === 'number' && now - entry.timestamp < FLOATING_NUMBER_LIFETIME_MS,
         )
 
+  const playerFloatingNumbers =
+    now === 0
+      ? []
+      : log.filter(
+          (entry): entry is CombatLogEntry & { amount: number } =>
+            entry.kind === 'player-damage' &&
+            typeof entry.amount === 'number' &&
+            now - entry.timestamp < FLOATING_NUMBER_LIFETIME_MS,
+        )
+
   const activeType = monsterTypeId ? ENEMY_TYPES[monsterTypeId] : null
   const currentZone = ZONES[currentZoneId]
+  const dropdownMonsterId = selectedMonsterId ?? currentZone.monsterOrder[0] ?? null
 
   const handleFight = (typeId: EnemyTypeId) => {
     setSelectedMonsterId(typeId)
@@ -121,34 +138,86 @@ export default function CombatPage() {
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="space-y-4">
         <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-          <p className="text-sm font-medium text-slate-200">Zone</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {ZONE_ORDER.map((zoneId) => {
-              const zone = ZONES[zoneId]
-              const isActive = zoneId === currentZoneId
+          <p className="text-sm font-medium text-slate-200">Zone &amp; Monster</p>
 
-              return (
-                <button
-                  key={zoneId}
-                  type="button"
-                  disabled={zone.locked}
-                  onClick={() => handleSelectZone(zoneId)}
-                  title={zone.locked ? 'Coming soon' : undefined}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
-                    isActive
-                      ? 'border-sky-500 bg-sky-500/10 text-sky-300'
-                      : zone.locked
-                        ? 'cursor-not-allowed border-slate-800 text-slate-600'
-                        : 'border-slate-700 text-slate-300 hover:border-slate-500'
-                  }`}
-                >
-                  {zone.displayName}
-                  {zone.locked && ' 🔒'}
-                </button>
-              )
-            })}
+          <div className="mt-2 flex flex-wrap gap-3">
+            <label className="flex-1 min-w-[160px] text-xs text-slate-400">
+              Zone
+              <select
+                value={currentZoneId}
+                onChange={(event) => handleSelectZone(event.target.value as ZoneId)}
+                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-200"
+              >
+                {ZONE_ORDER.map((zoneId) => {
+                  const zone = ZONES[zoneId]
+                  return (
+                    <option key={zoneId} value={zoneId} disabled={zone.locked}>
+                      {zone.displayName}
+                      {zone.locked ? ' (coming soon)' : ''}
+                    </option>
+                  )
+                })}
+              </select>
+            </label>
+
+            <label className="flex-1 min-w-[160px] text-xs text-slate-400">
+              Monster
+              <select
+                value={dropdownMonsterId ?? ''}
+                disabled={currentZone.monsterOrder.length === 0}
+                onChange={(event) => setSelectedMonsterId(event.target.value as EnemyTypeId)}
+                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {currentZone.monsterOrder.length === 0 ? (
+                  <option value="">Coming soon</option>
+                ) : (
+                  currentZone.monsterOrder.map((typeId) => (
+                    <option key={typeId} value={typeId}>
+                      {ENEMY_TYPES[typeId].displayName}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
           </div>
+
+          <button
+            type="button"
+            disabled={!dropdownMonsterId || (isFighting && monsterTypeId === dropdownMonsterId)}
+            onClick={() => dropdownMonsterId && handleFight(dropdownMonsterId)}
+            className="mt-3 w-full rounded-lg border border-emerald-700 px-3 py-1.5 text-sm font-medium text-emerald-300 hover:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {isFighting && monsterTypeId === dropdownMonsterId ? 'Fighting' : 'Fight'}
+          </button>
         </div>
+
+        {activeType && (
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+            <p className="text-xs font-medium text-slate-400">Your HP</p>
+            <div className="relative mt-1">
+              <p className="text-xs text-slate-500">
+                {currentPlayerHp} / {maxPlayerHp} HP
+              </p>
+              <div className="mt-1">
+                <HpBar current={currentPlayerHp} max={maxPlayerHp} barColorClass="bg-rose-500" />
+              </div>
+              <AnimatePresence>
+                {playerFloatingNumbers.map((entry) => (
+                  <motion.div
+                    key={entry.id}
+                    initial={{ opacity: 1, y: 0 }}
+                    animate={{ opacity: 0, y: -20 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.8, ease: 'easeOut' }}
+                    className="pointer-events-none absolute right-0 top-0 text-sm font-bold text-rose-300"
+                  >
+                    -{entry.amount}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          </div>
+        )}
 
         {activeType && (
           <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
@@ -198,38 +267,6 @@ export default function CombatPage() {
             </button>
           </div>
         )}
-
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-          <p className="text-sm font-medium text-slate-200">{currentZone.displayName} — Enemy roster</p>
-          {currentZone.monsterOrder.length === 0 && (
-            <p className="mt-2 text-xs text-slate-500">This zone's roster hasn't been added yet — coming soon.</p>
-          )}
-          <ul className="mt-2 space-y-2 text-sm text-slate-400">
-            {currentZone.monsterOrder.map((typeId) => {
-              const type = ENEMY_TYPES[typeId]
-              const isActive = monsterTypeId === typeId && isFighting
-
-              return (
-                <li
-                  key={typeId}
-                  className="flex items-center justify-between rounded-lg border border-slate-800/60 px-3 py-2"
-                >
-                  <div>
-                    <span className="text-slate-200">{type.displayName}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleFight(typeId)}
-                    disabled={isActive}
-                    className="rounded-lg border border-emerald-700 px-3 py-1 text-xs font-medium text-emerald-300 hover:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    {isActive ? 'Fighting' : 'Fight'}
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        </div>
 
         {/* Collapsed by default — the roster/fight panel above is the primary
             view; the log is a detail view for players who want to see individual

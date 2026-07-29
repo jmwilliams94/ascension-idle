@@ -2,25 +2,24 @@ import { useState } from 'react'
 import type { DragEvent } from 'react'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
-import { formatCompositionTier } from '../game/items/forgeCosts'
-import { formatItemDisplayName } from '../game/items/equipmentBonus'
+import { COMPOSITION_STONE_TIERS, compositionPointValue } from '../game/items/forgeCosts'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { WAREHOUSE_SLOT_CAP, useWarehouseStore } from '../game/items/useWarehouseStore'
 
 // The Warehouse's own 40-slot grid — a thin sibling of InventoryPanel, not the
-// same component, since a warehoused gear "token" (one row per template+tier,
+// same component, since a warehoused gear "token" (one row per template,
 // fungible, shown with a count badge) has different fill/stack rules than a raw
-// Inventory gear item (non-stacking, one instance per slot). Stone tiles here are
-// purely a slot-accounting display (each occupies one Warehouse slot, mirroring
-// how Inventory itself counts composition_stones) — depositing/withdrawing
-// stones happens via the amount-input rows in WarehousePanel, not this grid.
+// Inventory gear item (non-stacking, one instance per slot). Stones don't occupy
+// grid slots here at all — depositing/withdrawing a stone liquidates it into (or
+// spends from) the shared Warehouse points balance, so it's a currency-like
+// number shown in WarehousePanel, not a physical tile (see useWarehouseStore).
 interface WarehouseGridProps {
   characterId: string
 }
 
 export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
   const items = useWarehouseStore((state) => state.items)
-  const stones = useWarehouseStore((state) => state.stones)
+  const points = useWarehouseStore((state) => state.points)
   const busy = useWarehouseStore((state) => state.busy)
   const fullMessage = useWarehouseStore((state) => state.fullMessage)
   const depositItem = useWarehouseStore((state) => state.depositItem)
@@ -29,19 +28,14 @@ export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
   const templates = useItemTemplatesStore((state) => state.templates)
 
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null)
+  const [withdrawTier, setWithdrawTier] = useState(0)
   const [withdrawError, setWithdrawError] = useState<string | null>(null)
 
-  const stoneTiles: { key: string; tier: number }[] = []
-  for (const [tierKey, count] of Object.entries(stones)) {
-    for (let i = 0; i < count; i += 1) {
-      stoneTiles.push({ key: `${tierKey}-${i}`, tier: Number(tierKey) })
-    }
-  }
-
-  const occupiedCount = items.length + stoneTiles.length
+  const occupiedCount = items.length
   const emptySlotCount = Math.max(0, WAREHOUSE_SLOT_CAP - occupiedCount)
   const selectedEntry = items.find((entry) => entry.id === selectedEntryId)
   const selectedTemplate = selectedEntry && templates.find((template) => template.id === selectedEntry.template_id)
+  const withdrawCost = compositionPointValue(withdrawTier)
 
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault()
@@ -56,6 +50,12 @@ export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
     }
   }
 
+  const selectEntry = (entryId: string) => {
+    setWithdrawError(null)
+    setWithdrawTier(0)
+    setSelectedEntryId((current) => (current === entryId ? null : entryId))
+  }
+
   return (
     <div className="space-y-4">
       <div>
@@ -66,12 +66,10 @@ export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
         <div onDragOver={handleDragOver} onDrop={handleDrop} className="mt-2 grid grid-cols-[repeat(8,4rem)] gap-1.5">
           {items.map((entry) => {
             const template = templates.find((t) => t.id === entry.template_id)
-            const label = template
-              ? formatItemDisplayName(template.name, 'normal', entry.composition_level)
-              : 'Unknown item'
+            const label = template ? template.name : 'Unknown item'
             const tooltip: ItemTooltipData = {
               title: label,
-              lines: [formatCompositionTier(entry.composition_level), `x${entry.count} in Warehouse`],
+              lines: [`x${entry.count} in Warehouse`, 'Choose a tier to withdraw at'],
             }
 
             return (
@@ -85,21 +83,10 @@ export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
                 tooltip={tooltip}
                 badge={`x${entry.count}`}
                 selected={selectedEntryId === entry.id}
-                onClick={() => setSelectedEntryId((current) => (current === entry.id ? null : entry.id))}
+                onClick={() => selectEntry(entry.id)}
               />
             )
           })}
-
-          {stoneTiles.map(({ key, tier }) => (
-            <InventorySlot
-              key={key}
-              slotId={key}
-              filled
-              sizeClassName={SLOT_SIZE_CLASS}
-              icon="🔷"
-              label={`+${tier} Stone (Warehouse)`}
-            />
-          ))}
 
           {Array.from({ length: emptySlotCount }, (_, index) => (
             <InventorySlot key={`empty-${index}`} slotId={`wh-empty-${index}`} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
@@ -123,30 +110,59 @@ export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
               🗡️
             </div>
             <div>
-              <p className="text-sm font-medium text-slate-200">
-                {selectedTemplate
-                  ? formatItemDisplayName(selectedTemplate.name, 'normal', selectedEntry.composition_level)
-                  : 'Unknown item'}
-              </p>
-              <p className="text-xs text-slate-500">
-                {formatCompositionTier(selectedEntry.composition_level)} · x{selectedEntry.count} in Warehouse
-              </p>
+              <p className="text-sm font-medium text-slate-200">{selectedTemplate ? selectedTemplate.name : 'Unknown item'}</p>
+              <p className="text-xs text-slate-500">x{selectedEntry.count} in Warehouse</p>
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <p className="text-xs text-slate-400">Withdraw at tier:</p>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setWithdrawTier(0)}
+                className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${
+                  withdrawTier === 0 ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
+                }`}
+              >
+                Normal (free)
+              </button>
+              {COMPOSITION_STONE_TIERS.map((tier) => (
+                <button
+                  key={tier}
+                  type="button"
+                  onClick={() => setWithdrawTier(tier)}
+                  className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${
+                    withdrawTier === tier
+                      ? 'border-sky-500 bg-sky-500/10 text-sky-300'
+                      : 'border-slate-700 text-slate-300 hover:border-slate-500'
+                  }`}
+                >
+                  +{tier} ({compositionPointValue(tier)} pts)
+                </button>
+              ))}
             </div>
           </div>
 
           <button
             type="button"
-            disabled={busy}
+            disabled={busy || points < withdrawCost}
             onClick={async () => {
               setWithdrawError(null)
-              const result = await withdrawItem(characterId, selectedEntry.template_id, selectedEntry.composition_level)
+              const result = await withdrawItem(characterId, selectedEntry.template_id, withdrawTier)
               if (!result.ok) {
-                setWithdrawError(result.error === 'inventory_full' ? 'Inventory is full.' : "Couldn't withdraw that item.")
+                setWithdrawError(
+                  result.error === 'inventory_full'
+                    ? 'Inventory is full.'
+                    : result.error === 'not_enough_points'
+                      ? "You don't have enough Warehouse points."
+                      : "Couldn't withdraw that item.",
+                )
               }
             }}
             className="mt-3 w-full rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Withdraw
+            Withdraw{withdrawCost > 0 ? ` (${withdrawCost} pts)` : ''}
           </button>
 
           {withdrawError && <p className="mt-2 text-xs text-amber-400">{withdrawError}</p>}
