@@ -20,6 +20,9 @@ dist-ssr
 # Personal Claude Code overrides
 .claude/settings.local.json
 
+# Local-only design reference notes (not shipped, not for the public repo)
+reference/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

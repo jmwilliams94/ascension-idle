@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.20.0",
+    "date": "2026-07-30",
+    "changes": [
+      "Added a real gear catalog: 117 new items across Bows, Rings, Necklaces, Boots, Archer Hats, and Archer Coats (levels 1-130)",
+      "Archer Hats and Coats now require the Hunter class",
+      "Quality upgrades (Tempered/Infused/Radiant/Ascended) now actually make gear stronger, not just change its name/color"
+    ]
+  },
+  {
     "version": "1.19.3",
     "date": "2026-07-29",
     "changes": [

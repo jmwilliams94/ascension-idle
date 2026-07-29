@@ -37,7 +37,7 @@ function describeFailure(error?: string): string {
     case 'not_enough_meteors':
       return 'Not enough Meteors.'
     case 'already_max_quality':
-      return 'Already at Super quality.'
+      return 'Already at Ascended quality.'
     case 'already_max_level':
       return 'Already at the level cap.'
     case 'not_owner':
@@ -191,7 +191,7 @@ export default function ForgePanel() {
   const qualityDisabledReason = !selectedItem
     ? null
     : isMaxQuality
-      ? 'Already at Super quality.'
+      ? 'Already at Ascended quality.'
       : dragonballs < qualityCost
         ? `Need ${qualityCost} DragonBall${qualityCost === 1 ? '' : 's'} (have ${dragonballs}).`
         : null
