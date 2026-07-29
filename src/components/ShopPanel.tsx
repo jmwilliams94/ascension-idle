@@ -12,6 +12,7 @@ export default function ShopPanel() {
   const characterId = useActiveCharacterStore((state) => state.characterId)
 
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
+  const level = useProgressionStore((state) => state.level)
   const gold = useProgressionStore((state) => state.gold)
   const spendGold = useProgressionStore((state) => state.spendGold)
 
@@ -46,7 +47,9 @@ export default function ShopPanel() {
         const type = ARROW_TYPES[typeId]
         const owned = stacks.filter((stack) => stack.arrowType === typeId).reduce((sum, stack) => sum + stack.count, 0)
         const stackCost = type.price * type.stackSize
+        const meetsLevel = level >= type.requiredLevel
         const canAfford = gold >= stackCost
+        const canBuy = meetsLevel && canAfford
 
         return (
           <div
@@ -59,11 +62,15 @@ export default function ShopPanel() {
               <p className="text-slate-500">
                 Owned: {owned} · stack of {type.stackSize} for {stackCost}g
               </p>
+              {type.requiredLevel > 1 && (
+                <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {type.requiredLevel}</p>
+              )}
             </div>
 
             <button
               type="button"
-              disabled={!canAfford}
+              disabled={!canBuy}
+              title={!meetsLevel ? `Requires level ${type.requiredLevel}` : undefined}
               onClick={() => buyStack(typeId)}
               className="shrink-0 rounded border border-slate-700 px-2 py-1 text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
             >

@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import CountUp from './CountUpNumber'
-import { ENEMY_TYPES, ZONE_MONSTER_ORDER, ZONE_NAME, type EnemyTypeId } from '../game/zones/twincrossOutskirts'
+import InventoryPanel from './InventoryPanel'
+import { ENEMY_TYPES, ZONES, ZONE_ORDER, type EnemyTypeId, type ZoneId } from '../game/zones/zoneData'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useCombatStore, type CombatLogEntry } from '../game/combat/useCombatStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 
-// Enemy body colors are stored as 0xRRGGBB numbers (a Phaser convention, kept as-is
-// in the data since nothing else about EnemyTypeDef needed to change) — this is the
-// one spot that converts to a CSS hex string for the placeholder portrait swatch.
+// Enemy colors are stored as 0xRRGGBB numbers (a Phaser-era convention, kept as-is
+// since nothing else about EnemyTypeDef needed to change) — this is the one spot
+// that converts to a CSS hex string for the placeholder portrait swatch.
 function hexColor(value: number): string {
   return `#${value.toString(16).padStart(6, '0')}`
 }
@@ -46,6 +47,8 @@ function HpBar({ current, max }: { current: number; max: number }) {
 }
 
 export default function CombatPage() {
+  const currentZoneId = useZoneStore((state) => state.currentZoneId)
+  const setCurrentZoneId = useZoneStore((state) => state.setCurrentZoneId)
   const setSelectedMonsterId = useZoneStore((state) => state.setSelectedMonsterId)
 
   const isFighting = useCombatStore((state) => state.isFighting)
@@ -57,9 +60,12 @@ export default function CombatPage() {
   const log = useCombatStore((state) => state.log)
   const start = useCombatStore((state) => state.start)
   const stop = useCombatStore((state) => state.stop)
+  const clearCombat = useCombatStore((state) => state.clear)
 
   const gold = useProgressionStore((state) => state.gold)
   const exp = useProgressionStore((state) => state.exp)
+
+  const [logExpanded, setLogExpanded] = useState(false)
 
   // Floating damage numbers are derived from the log itself (recent 'damage'
   // entries, by timestamp) rather than tracked as their own state — avoids
@@ -88,6 +94,7 @@ export default function CombatPage() {
         )
 
   const activeType = monsterTypeId ? ENEMY_TYPES[monsterTypeId] : null
+  const currentZone = ZONES[currentZoneId]
 
   const handleFight = (typeId: EnemyTypeId) => {
     setSelectedMonsterId(typeId)
@@ -102,14 +109,45 @@ export default function CombatPage() {
     }
   }
 
+  const handleSelectZone = (zoneId: ZoneId) => {
+    if (ZONES[zoneId].locked || zoneId === currentZoneId) {
+      return
+    }
+    clearCombat()
+    setCurrentZoneId(zoneId)
+  }
+
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="space-y-4">
         <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-          <p className="text-sm font-medium text-slate-200">{ZONE_NAME}</p>
-          <p className="mt-1 text-xs text-slate-500">
-            Placeholder zone name — final zone naming is still unresolved per CLAUDE.md.
-          </p>
+          <p className="text-sm font-medium text-slate-200">Zone</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {ZONE_ORDER.map((zoneId) => {
+              const zone = ZONES[zoneId]
+              const isActive = zoneId === currentZoneId
+
+              return (
+                <button
+                  key={zoneId}
+                  type="button"
+                  disabled={zone.locked}
+                  onClick={() => handleSelectZone(zoneId)}
+                  title={zone.locked ? 'Coming soon' : undefined}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+                    isActive
+                      ? 'border-sky-500 bg-sky-500/10 text-sky-300'
+                      : zone.locked
+                        ? 'cursor-not-allowed border-slate-800 text-slate-600'
+                        : 'border-slate-700 text-slate-300 hover:border-slate-500'
+                  }`}
+                >
+                  {zone.displayName}
+                  {zone.locked && ' 🔒'}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         {activeType && (
@@ -119,7 +157,7 @@ export default function CombatPage() {
                 <div
                   key={monsterInstanceKey}
                   className={`h-20 w-20 rounded-2xl border-2 border-slate-700 ${isRareInstance ? 'super-quality-glow' : ''}`}
-                  style={{ backgroundColor: hexColor(activeType.bodyColor.top) }}
+                  style={{ backgroundColor: hexColor(activeType.color) }}
                 />
                 <AnimatePresence>
                   {floatingNumbers.map((entry) => (
@@ -162,9 +200,12 @@ export default function CombatPage() {
         )}
 
         <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-          <p className="text-sm font-medium text-slate-200">Enemy roster</p>
+          <p className="text-sm font-medium text-slate-200">{currentZone.displayName} — Enemy roster</p>
+          {currentZone.monsterOrder.length === 0 && (
+            <p className="mt-2 text-xs text-slate-500">This zone's roster hasn't been added yet — coming soon.</p>
+          )}
           <ul className="mt-2 space-y-2 text-sm text-slate-400">
-            {ZONE_MONSTER_ORDER.map((typeId) => {
+            {currentZone.monsterOrder.map((typeId) => {
               const type = ENEMY_TYPES[typeId]
               const isActive = monsterTypeId === typeId && isFighting
 
@@ -192,10 +233,47 @@ export default function CombatPage() {
             })}
           </ul>
         </div>
+
+        {/* Collapsed by default — the roster/fight panel above is the primary
+            view; the log is a detail view for players who want to see individual
+            hits, matching StatsPanel's collapse convention elsewhere. */}
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+          <button
+            type="button"
+            onClick={() => setLogExpanded((value) => !value)}
+            className="flex w-full items-center justify-between text-left"
+          >
+            <p className="text-sm font-medium text-slate-200">Combat Log</p>
+            <span className="text-xs text-slate-400">{logExpanded ? 'Hide ▲' : 'Show ▼'}</span>
+          </button>
+
+          {logExpanded && (
+            <div className="mt-3 max-h-64 space-y-1 overflow-y-auto text-xs">
+              <AnimatePresence initial={false}>
+                {log.length === 0 && (
+                  <p key="empty" className="text-slate-600">
+                    Pick a monster from the roster to start fighting.
+                  </p>
+                )}
+                {log.map((entry) => (
+                  <motion.p
+                    key={entry.id}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0 }}
+                    className={logLineClass(entry.kind)}
+                  >
+                    {entry.message}
+                  </motion.p>
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="flex min-h-0 flex-col rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-        <div className="mb-3 flex items-center justify-between text-xs text-slate-400">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-xs text-slate-400">
           <span>
             Gold:{' '}
             <CountUp end={gold} duration={0.6} preserveValue className="font-semibold text-amber-300" />
@@ -205,26 +283,8 @@ export default function CombatPage() {
           </span>
         </div>
 
-        <p className="mb-2 text-sm font-medium text-slate-200">Combat Log</p>
-        <div className="flex-1 space-y-1 overflow-y-auto text-xs">
-          <AnimatePresence initial={false}>
-            {log.length === 0 && (
-              <p key="empty" className="text-slate-600">
-                Pick a monster from the roster to start fighting.
-              </p>
-            )}
-            {log.map((entry) => (
-              <motion.p
-                key={entry.id}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0 }}
-                className={logLineClass(entry.kind)}
-              >
-                {entry.message}
-              </motion.p>
-            ))}
-          </AnimatePresence>
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+          <InventoryPanel columns={5} />
         </div>
       </div>
     </div>

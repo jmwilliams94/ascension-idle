@@ -8,7 +8,7 @@ import { useArrowStore } from '../items/useArrowStore'
 import { useInventoryStore } from '../items/useInventoryStore'
 import { useItemTemplatesStore } from '../items/useItemTemplatesStore'
 import { useOutOfArrowsWarningStore } from '../items/useOutOfArrowsWarningStore'
-import { ENEMY_TYPES, type EnemyTypeId } from '../zones/twincrossOutskirts'
+import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
 import { killRewards, rollIsRare, spawnMonsterHp } from './combatResolver'
 
 export type CombatLogKind = 'engage' | 'damage' | 'kill' | 'rare-kill' | 'item' | 'out-of-arrows'
@@ -52,6 +52,11 @@ interface CombatState {
   // different monster — always starts a fresh instance (no "resume mid-HP").
   start: (monsterTypeId: EnemyTypeId) => void
   stop: () => void
+  // Fully resets the active-fight state (unlike stop(), which only pauses) —
+  // called when switching zones, since a monster from one zone shouldn't still
+  // show as the "paused" fight (with a Resume button) once you're looking at a
+  // different zone's roster. Keeps the log for continuity.
+  clear: () => void
   // Driven by CombatEngine's interval — a no-op if not currently fighting or if the
   // attack-speed cooldown hasn't elapsed yet.
   runTick: (nowMs: number) => void
@@ -88,6 +93,15 @@ export const useCombatStore = create<CombatState>((set, get) => ({
   },
 
   stop: () => set({ isFighting: false }),
+
+  clear: () =>
+    set({
+      isFighting: false,
+      monsterTypeId: null,
+      currentHp: 0,
+      maxHp: 0,
+      isRareInstance: false,
+    }),
 
   runTick: (nowMs) => {
     const state = get()

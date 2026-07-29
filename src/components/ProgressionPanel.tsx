@@ -20,18 +20,18 @@ export default function ProgressionPanel() {
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
       <p className="text-sm font-medium text-slate-200">Progression</p>
-      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-300">
-        <div className="flex justify-between">
+      <dl className="mt-2 flex flex-wrap items-baseline gap-x-8 gap-y-1 text-sm text-slate-300">
+        <div className="flex items-baseline gap-2">
           <dt className="text-slate-400">Level</dt>
-          <dd>{level}</dd>
+          <dd className="font-semibold text-white">{level}</dd>
         </div>
-        <div className="flex justify-between">
+        <div className="flex items-baseline gap-2">
           <dt className="text-slate-400">Gold</dt>
-          <dd>{gold}</dd>
+          <dd className="font-semibold text-amber-300">{gold}</dd>
         </div>
-        <div className="col-span-2 flex justify-between">
+        <div className="flex items-baseline gap-2">
           <dt className="text-slate-400">EXP</dt>
-          <dd>
+          <dd className="font-semibold text-sky-300">
             {exp} / {requiredExpForLevel(level)}
           </dd>
         </div>

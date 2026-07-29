@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.17.0",
+    "date": "2026-07-29",
+    "changes": [
+      "Added real zones and monsters: Dual Town, Waterbird Fortress, and Monkey Town are now selectable, each with their own enemy roster — 5 more zones are visible but locked, coming soon",
+      "Your Inventory now lives on the Combat page instead of the Equipment page, so you can manage gear without leaving a fight",
+      "Combat Log is now tucked behind a Show/Hide toggle instead of always taking up space",
+      "Arrows now have level requirements (Lucky: none, Iron: 32, Speed: 70) and are listed in that order in the Shop",
+      "Tightened up the Progression display"
+    ]
+  },
+  {
     "version": "1.16.2",
     "date": "2026-07-29",
     "changes": [

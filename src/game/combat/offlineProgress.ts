@@ -9,7 +9,7 @@ import { useItemTemplatesStore, type ItemTemplate } from '../items/useItemTempla
 import { useProgressionStore } from '../stats/useProgressionStore'
 import { useCharacterRecordStore } from '../../lib/useCharacterRecordStore'
 import { useZoneStore } from '../zones/useZoneStore'
-import { ENEMY_TYPES, type EnemyTypeId } from '../zones/twincrossOutskirts'
+import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
 import { killRewards, rollIsRare, spawnMonsterHp } from './combatResolver'
 
 // Idle progress while away is capped at 2 hours — a simple, deliberately generous

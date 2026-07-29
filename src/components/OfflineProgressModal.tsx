@@ -1,7 +1,7 @@
 import CountUp from './CountUpNumber'
 import { useOfflineProgressStore } from '../game/combat/useOfflineProgressStore'
 import { useZoneStore } from '../game/zones/useZoneStore'
-import { ENEMY_TYPES } from '../game/zones/twincrossOutskirts'
+import { ENEMY_TYPES } from '../game/zones/zoneData'
 
 function formatDuration(ms: number): string {
   const totalMinutes = Math.round(ms / 60000)

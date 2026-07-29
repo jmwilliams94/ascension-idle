@@ -1,4 +1,4 @@
-import type { EnemyTypeDef } from '../zones/twincrossOutskirts'
+import type { EnemyTypeDef } from '../zones/zoneData'
 
 // PLACEHOLDER rare-monster odds/multipliers — matches CLAUDE.md's confirmed design
 // (5% chance per monster, 2x HP, 5x gold/EXP) but the underlying zone economy these

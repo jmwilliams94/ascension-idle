@@ -35,9 +35,17 @@ interface InventoryPanelProps {
   // stone, so dragging one tile feeds exactly one; feeding more means dragging in
   // more individual tiles.
   onStoneDragStart?: (tier: number) => void
+  // Grid width in columns — defaults to 8 (5 rows) for a wide layout; the Combat
+  // page's narrower column passes 5 (8 rows) instead. Always 40 cells total either way.
+  columns?: number
 }
 
-export default function InventoryPanel({ reservedItemIds = [], onItemDragStart, onStoneDragStart }: InventoryPanelProps) {
+export default function InventoryPanel({
+  reservedItemIds = [],
+  onItemDragStart,
+  onStoneDragStart,
+  columns = 8,
+}: InventoryPanelProps) {
   const items = useInventoryStore((state) => state.items)
   const templates = useItemTemplatesStore((state) => state.templates)
   const equippedItemId = useEquipmentStore((state) => state.equippedItemId)
@@ -90,6 +98,10 @@ export default function InventoryPanel({ reservedItemIds = [], onItemDragStart, 
 
   const slotKey = (slot: NonNullable<SelectedSlot>): string => (slot.kind === 'stone' ? slot.dragId : `${slot.kind}:${slot.id}`)
 
+  // Tailwind needs each column-count class spelled out literally somewhere so its
+  // scanner picks it up — a template-literal class name wouldn't be found at build time.
+  const gridColsClass = columns === 5 ? 'grid-cols-5' : 'grid-cols-8'
+
   const toggleSlot = (slot: NonNullable<SelectedSlot>) => {
     setSelectedSlot((current) => (current && slotKey(current) === slotKey(slot) ? null : slot))
   }
@@ -113,7 +125,7 @@ export default function InventoryPanel({ reservedItemIds = [], onItemDragStart, 
           Items ({occupiedCount}/{INVENTORY_SLOT_CAP})
         </p>
 
-        <div className="mt-2 grid grid-cols-8 gap-1.5">
+        <div className={`mt-2 grid ${gridColsClass} gap-1.5`}>
           {visibleArrowStacks.map((stack) => {
             const type = ARROW_TYPES[stack.arrowType]
             const arrowTooltip: ItemTooltipData = {
