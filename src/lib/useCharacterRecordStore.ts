@@ -20,6 +20,7 @@ import { useWarehouseStore } from '../game/items/useWarehouseStore'
 // live in arrow_stacks (see useArrowStore), not on this row — only the equipped
 // pointer does.
 interface CharacterRow {
+  name: string
   class: string | null
   level: number
   gold: number
@@ -45,6 +46,10 @@ interface CharacterRecordState {
   // calculator to compute elapsed real-world time since the character was last
   // active. Null only for a character that predates this column's default.
   previousLastActiveAt: string | null
+  // The active character's name — display-only here (naming itself is fixed at
+  // creation, see CLAUDE.md's Character naming note), used wherever the UI shows
+  // the player by name instead of a generic "Your ___" label.
+  characterName: string
   loadCharacterRecord: (characterId: string) => Promise<void>
   saveNow: (characterId: string) => Promise<void>
 }
@@ -52,6 +57,7 @@ interface CharacterRecordState {
 export const useCharacterRecordStore = create<CharacterRecordState>((set, get) => ({
   loaded: false,
   previousLastActiveAt: null,
+  characterName: '',
 
   loadCharacterRecord: async (characterId) => {
     set({ loaded: false })
@@ -59,7 +65,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     const { data, error } = await supabase
       .from('characters')
       .select(
-        'class, level, gold, exp, current_zone, equipped_item_id, meteors, dragonballs, equipped_arrow_stack_id, composition_stones, warehouse_points, selected_monster_id, last_active_at',
+        'name, class, level, gold, exp, current_zone, equipped_item_id, meteors, dragonballs, equipped_arrow_stack_id, composition_stones, warehouse_points, selected_monster_id, last_active_at',
       )
       .eq('id', characterId)
       .maybeSingle<CharacterRow>()
@@ -84,7 +90,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     useCompositionStore.getState().hydrate(data.composition_stones)
     useWarehouseStore.getState().hydratePoints(data.warehouse_points)
 
-    set({ loaded: true, previousLastActiveAt: data.last_active_at })
+    set({ loaded: true, previousLastActiveAt: data.last_active_at, characterName: data.name })
   },
 
   saveNow: async (characterId) => {

@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.19.1",
+    "date": "2026-07-29",
+    "changes": [
+      "Equipment page and Combat page now show your character's name instead of a level counter / \"Your HP\" label",
+      "Forge: removed the Meteors/DragonBalls summary card, and the Forge controls now sit side-by-side with your Inventory instead of stacked",
+      "Warehouse: Meteors and DragonBalls now show as \"Inventory\" instead of \"Wallet\", matching how Composition stones are already described"
+    ]
+  },
+  {
     "version": "1.19.0",
     "date": "2026-07-29",
     "changes": [

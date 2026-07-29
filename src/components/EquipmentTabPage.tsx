@@ -1,6 +1,6 @@
 import EquipmentPanel from './EquipmentPanel'
 import StatsPanel from './StatsPanel'
-import { useProgressionStore } from '../game/stats/useProgressionStore'
+import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 
 // Combines what used to be split across the Equipment overlay (the paper-doll)
 // and the always-visible SideHud sidebar (EquipmentBar/Stats) into one page,
@@ -13,11 +13,11 @@ import { useProgressionStore } from '../game/stats/useProgressionStore'
 // redundant with the full paper-doll directly below it, and freeing that space
 // let EquipmentPanel's own slot tiles grow larger (see EquipmentPanel).
 export default function EquipmentTabPage() {
-  const level = useProgressionStore((state) => state.level)
+  const characterName = useCharacterRecordStore((state) => state.characterName)
 
   return (
     <div className="mx-auto max-w-md space-y-4">
-      <p className="text-lg font-semibold text-white">Lv. {level} — Equipment</p>
+      <p className="text-lg font-semibold text-white">{characterName}</p>
       <EquipmentPanel />
       <StatsPanel />
     </div>

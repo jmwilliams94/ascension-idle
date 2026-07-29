@@ -267,20 +267,7 @@ export default function ForgePanel() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-3">
-        <dl className="grid grid-cols-2 gap-2 text-sm text-slate-300">
-          <div className="flex justify-between">
-            <dt className="text-slate-400">Meteors</dt>
-            <dd>{meteors}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt className="text-slate-400">DragonBalls</dt>
-            <dd>{dragonballs}</dd>
-          </div>
-        </dl>
-      </div>
-
+    <div className="grid gap-4 lg:grid-cols-2">
       <div className="flex justify-center gap-6">
         <ForgeUpgradeSlot
           item={selectedItem}
@@ -413,6 +400,7 @@ export default function ForgePanel() {
 
       {/* Draggable only here — opting into onItemDragStart/onStoneDragStart is what enables it. */}
       <InventoryPanel
+        columns={5}
         reservedItemIds={[...(selectedItemId ? [selectedItemId] : []), ...fuelIds]}
         onItemDragStart={() => undefined}
         onStoneDragStart={() => undefined}

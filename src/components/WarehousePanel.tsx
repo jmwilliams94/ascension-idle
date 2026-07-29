@@ -10,16 +10,30 @@ import { useWarehouseStore } from '../game/items/useWarehouseStore'
 
 type CurrencyId = 'gold' | 'meteors' | 'dragonballs'
 
-const CURRENCIES: { id: CurrencyId; label: string }[] = [
-  { id: 'gold', label: 'Gold' },
-  { id: 'meteors', label: 'Meteors' },
-  { id: 'dragonballs', label: 'DragonBalls' },
+const CURRENCIES: { id: CurrencyId; label: string; walletLabel: string }[] = [
+  // Gold is genuinely a spendable "wallet" (used directly at the Shop) — Meteors/
+  // DragonBalls are only ever spent as Forge materials, closer in spirit to how
+  // Composition stones are described as sitting "in inventory" than a wallet, so
+  // they're labeled that way here instead.
+  { id: 'gold', label: 'Gold', walletLabel: 'Wallet' },
+  { id: 'meteors', label: 'Meteors', walletLabel: 'Inventory' },
+  { id: 'dragonballs', label: 'DragonBalls', walletLabel: 'Inventory' },
 ]
 
-// Currency row: wallet (per-character) vs. bank (account-wide, shared across
-// every character on the account) — the one thing in the Warehouse that isn't
+// Currency row: per-character amount vs. bank (account-wide, shared across every
+// character on the account) — the one thing in the Warehouse that isn't
 // slot-based and isn't per-character. See useWarehouseStore's transfer_currency.
-function CurrencyRow({ characterId, currency, label }: { characterId: string; currency: CurrencyId; label: string }) {
+function CurrencyRow({
+  characterId,
+  currency,
+  label,
+  walletLabel,
+}: {
+  characterId: string
+  currency: CurrencyId
+  label: string
+  walletLabel: string
+}) {
   // Hooks must run unconditionally every render — read every store's value up
   // front, then pick the one that matches this row's currency afterward.
   const gold = useProgressionStore((state) => state.gold)
@@ -67,7 +81,9 @@ function CurrencyRow({ characterId, currency, label }: { characterId: string; cu
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2">
       <span className="w-24 text-sm font-medium text-slate-200">{label}</span>
-      <span className="text-xs text-slate-400">Wallet: {walletBalance.toLocaleString()}</span>
+      <span className="text-xs text-slate-400">
+        {walletLabel}: {walletBalance.toLocaleString()}
+      </span>
       <span className="text-xs text-slate-400">Bank: {bankBalance.toLocaleString()}</span>
 
       <input
@@ -187,7 +203,13 @@ export default function WarehousePanel({ characterId }: { characterId: string })
         <p className="text-xs uppercase tracking-wide text-slate-500">Currency (shared account-wide)</p>
         <div className="mt-2 space-y-2">
           {CURRENCIES.map((currency) => (
-            <CurrencyRow key={currency.id} characterId={characterId} currency={currency.id} label={currency.label} />
+            <CurrencyRow
+              key={currency.id}
+              characterId={characterId}
+              currency={currency.id}
+              label={currency.label}
+              walletLabel={currency.walletLabel}
+            />
           ))}
         </div>
       </div>

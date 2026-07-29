@@ -6,6 +6,7 @@ import { ENEMY_TYPES, ZONES, ZONE_ORDER, type EnemyTypeId, type ZoneId } from '.
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useCombatStore, type CombatLogEntry } from '../game/combat/useCombatStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
+import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 
 // Enemy colors are stored as 0xRRGGBB numbers (a Phaser-era convention, kept as-is
 // since nothing else about EnemyTypeDef needed to change) — this is the one spot
@@ -70,6 +71,7 @@ export default function CombatPage() {
 
   const gold = useProgressionStore((state) => state.gold)
   const exp = useProgressionStore((state) => state.exp)
+  const characterName = useCharacterRecordStore((state) => state.characterName)
 
   const [logExpanded, setLogExpanded] = useState(false)
 
@@ -193,7 +195,7 @@ export default function CombatPage() {
 
         {activeType && (
           <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-            <p className="text-xs font-medium text-slate-400">Your HP</p>
+            <p className="text-xs font-medium text-slate-400">{characterName}</p>
             <div className="relative mt-1">
               <p className="text-xs text-slate-500">
                 {currentPlayerHp} / {maxPlayerHp} HP
