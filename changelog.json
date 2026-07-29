@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.19.2",
+    "date": "2026-07-29",
+    "changes": [
+      "Warehouse redesign: renamed \"Currency\" to \"Account-Wide Warehouse\", removed the per-row balance counters, and added a single \"Deposited Totals\" summary showing Warehouse Points and your Gold/Meteors/DragonBalls bank amounts",
+      "Warehouse Storage now sits above your Inventory in one column, with the new summary alongside them"
+    ]
+  },
+  {
     "version": "1.19.1",
     "date": "2026-07-29",
     "changes": [

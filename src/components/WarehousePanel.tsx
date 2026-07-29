@@ -10,30 +10,18 @@ import { useWarehouseStore } from '../game/items/useWarehouseStore'
 
 type CurrencyId = 'gold' | 'meteors' | 'dragonballs'
 
-const CURRENCIES: { id: CurrencyId; label: string; walletLabel: string }[] = [
-  // Gold is genuinely a spendable "wallet" (used directly at the Shop) — Meteors/
-  // DragonBalls are only ever spent as Forge materials, closer in spirit to how
-  // Composition stones are described as sitting "in inventory" than a wallet, so
-  // they're labeled that way here instead.
-  { id: 'gold', label: 'Gold', walletLabel: 'Wallet' },
-  { id: 'meteors', label: 'Meteors', walletLabel: 'Inventory' },
-  { id: 'dragonballs', label: 'DragonBalls', walletLabel: 'Inventory' },
+const CURRENCIES: { id: CurrencyId; label: string }[] = [
+  { id: 'gold', label: 'Gold' },
+  { id: 'meteors', label: 'Meteors' },
+  { id: 'dragonballs', label: 'DragonBalls' },
 ]
 
 // Currency row: per-character amount vs. bank (account-wide, shared across every
 // character on the account) — the one thing in the Warehouse that isn't
 // slot-based and isn't per-character. See useWarehouseStore's transfer_currency.
-function CurrencyRow({
-  characterId,
-  currency,
-  label,
-  walletLabel,
-}: {
-  characterId: string
-  currency: CurrencyId
-  label: string
-  walletLabel: string
-}) {
+// No inline balance counters here (deliberately decluttered) — current totals
+// are shown once, together, in the summary card beside Warehouse Storage below.
+function CurrencyRow({ characterId, currency, label }: { characterId: string; currency: CurrencyId; label: string }) {
   // Hooks must run unconditionally every render — read every store's value up
   // front, then pick the one that matches this row's currency afterward.
   const gold = useProgressionStore((state) => state.gold)
@@ -81,10 +69,6 @@ function CurrencyRow({
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2">
       <span className="w-24 text-sm font-medium text-slate-200">{label}</span>
-      <span className="text-xs text-slate-400">
-        {walletLabel}: {walletBalance.toLocaleString()}
-      </span>
-      <span className="text-xs text-slate-400">Bank: {bankBalance.toLocaleString()}</span>
 
       <input
         type="number"
@@ -161,7 +145,6 @@ function StoneRow({ characterId, tier }: { characterId: string; tier: number }) 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2">
       <span className="w-24 text-sm font-medium text-slate-200">+{tier} Stone</span>
-      <span className="text-xs text-slate-400">Inventory: {inventoryCount}</span>
       <span className="text-xs text-slate-400">{pointValue} pts each</span>
 
       <input
@@ -194,33 +177,54 @@ function StoneRow({ characterId, tier }: { characterId: string; tier: number }) 
   )
 }
 
-export default function WarehousePanel({ characterId }: { characterId: string }) {
+// Right-of-Warehouse-Storage summary — the one place all the account-wide/
+// stone totals are shown, now that the currency and stone rows above are
+// deliberately counter-free (see CurrencyRow/StoneRow).
+function WarehouseSummary() {
   const points = useWarehouseStore((state) => state.points)
+  const bankGold = usePlayerRecordStore((state) => state.bankGold)
+  const bankMeteors = usePlayerRecordStore((state) => state.bankMeteors)
+  const bankDragonballs = usePlayerRecordStore((state) => state.bankDragonballs)
 
+  return (
+    <div className="h-fit rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+      <p className="text-xs uppercase tracking-wide text-slate-500">Deposited Totals</p>
+      <dl className="mt-3 space-y-2 text-sm">
+        <div className="flex justify-between gap-3">
+          <dt className="text-slate-400">Warehouse Points</dt>
+          <dd className="font-semibold text-sky-300">{points.toLocaleString()}</dd>
+        </div>
+        <div className="flex justify-between gap-3">
+          <dt className="text-slate-400">Gold</dt>
+          <dd className="font-semibold text-amber-300">{bankGold.toLocaleString()}</dd>
+        </div>
+        <div className="flex justify-between gap-3">
+          <dt className="text-slate-400">Meteors</dt>
+          <dd className="font-semibold text-slate-200">{bankMeteors.toLocaleString()}</dd>
+        </div>
+        <div className="flex justify-between gap-3">
+          <dt className="text-slate-400">DragonBalls</dt>
+          <dd className="font-semibold text-slate-200">{bankDragonballs.toLocaleString()}</dd>
+        </div>
+      </dl>
+    </div>
+  )
+}
+
+export default function WarehousePanel({ characterId }: { characterId: string }) {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs uppercase tracking-wide text-slate-500">Currency (shared account-wide)</p>
+        <p className="text-xs uppercase tracking-wide text-slate-500">Account-Wide Warehouse</p>
         <div className="mt-2 space-y-2">
           {CURRENCIES.map((currency) => (
-            <CurrencyRow
-              key={currency.id}
-              characterId={characterId}
-              currency={currency.id}
-              label={currency.label}
-              walletLabel={currency.walletLabel}
-            />
+            <CurrencyRow key={currency.id} characterId={characterId} currency={currency.id} label={currency.label} />
           ))}
         </div>
       </div>
 
       <div>
-        <div className="flex items-baseline justify-between">
-          <p className="text-xs uppercase tracking-wide text-slate-500">Composition Stones (per character)</p>
-          <p className="text-xs text-slate-400">
-            Warehouse Points: <span className="font-semibold text-sky-300">{points}</span>
-          </p>
-        </div>
+        <p className="text-xs uppercase tracking-wide text-slate-500">Composition Stones (per character)</p>
         <p className="mt-1 text-[11px] text-slate-500">
           Depositing a stone (or composed gear) converts it into points — spend points to withdraw any tier back.
         </p>
@@ -233,13 +237,14 @@ export default function WarehousePanel({ characterId }: { characterId: string })
 
       <div>
         <p className="text-xs uppercase tracking-wide text-slate-500">Gear (per character — drag from Inventory to deposit)</p>
-        <div className="mt-2">
-          <WarehouseGrid characterId={characterId} />
-        </div>
-      </div>
+        <div className="mt-2 grid gap-4 lg:grid-cols-[1fr_220px]">
+          <div className="space-y-4">
+            <WarehouseGrid characterId={characterId} />
+            <InventoryPanel onItemDragStart={() => {}} />
+          </div>
 
-      <div>
-        <InventoryPanel onItemDragStart={() => {}} />
+          <WarehouseSummary />
+        </div>
       </div>
     </div>
   )
