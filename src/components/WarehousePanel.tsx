@@ -177,55 +177,47 @@ function StoneRow({ characterId, tier }: { characterId: string; tier: number }) 
   )
 }
 
-// Right-of-Warehouse-Storage summary — the one place all the account-wide/
-// stone totals are shown, now that the currency and stone rows above are
-// deliberately counter-free (see CurrencyRow/StoneRow).
-function WarehouseSummary() {
+// One consolidated card for everything account-wide/points-based — totals plus
+// the actual deposit/withdraw controls for all 3 currencies and all 4 stone
+// tiers, rather than each having its own separate section/card as before.
+function AccountWideDepositsCard({ characterId }: { characterId: string }) {
   const points = useWarehouseStore((state) => state.points)
   const bankGold = usePlayerRecordStore((state) => state.bankGold)
   const bankMeteors = usePlayerRecordStore((state) => state.bankMeteors)
   const bankDragonballs = usePlayerRecordStore((state) => state.bankDragonballs)
 
   return (
-    <div className="h-fit rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-      <p className="text-xs uppercase tracking-wide text-slate-500">Deposited Totals</p>
-      <dl className="mt-3 space-y-2 text-sm">
-        <div className="flex justify-between gap-3">
-          <dt className="text-slate-400">Warehouse Points</dt>
-          <dd className="font-semibold text-sky-300">{points.toLocaleString()}</dd>
-        </div>
-        <div className="flex justify-between gap-3">
-          <dt className="text-slate-400">Gold</dt>
-          <dd className="font-semibold text-amber-300">{bankGold.toLocaleString()}</dd>
-        </div>
-        <div className="flex justify-between gap-3">
-          <dt className="text-slate-400">Meteors</dt>
-          <dd className="font-semibold text-slate-200">{bankMeteors.toLocaleString()}</dd>
-        </div>
-        <div className="flex justify-between gap-3">
-          <dt className="text-slate-400">DragonBalls</dt>
-          <dd className="font-semibold text-slate-200">{bankDragonballs.toLocaleString()}</dd>
-        </div>
-      </dl>
-    </div>
-  )
-}
-
-export default function WarehousePanel({ characterId }: { characterId: string }) {
-  return (
-    <div className="space-y-6">
+    <div className="h-fit space-y-4 rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
       <div>
-        <p className="text-xs uppercase tracking-wide text-slate-500">Account-Wide Warehouse</p>
-        <div className="mt-2 space-y-2">
-          {CURRENCIES.map((currency) => (
-            <CurrencyRow key={currency.id} characterId={characterId} currency={currency.id} label={currency.label} />
-          ))}
-        </div>
+        <p className="text-xs uppercase tracking-wide text-slate-500">Account Wide Deposits</p>
+        <dl className="mt-3 space-y-2 text-sm">
+          <div className="flex justify-between gap-3">
+            <dt className="text-slate-400">Warehouse Points</dt>
+            <dd className="font-semibold text-sky-300">{points.toLocaleString()}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-slate-400">Gold</dt>
+            <dd className="font-semibold text-amber-300">{bankGold.toLocaleString()}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-slate-400">Meteors</dt>
+            <dd className="font-semibold text-slate-200">{bankMeteors.toLocaleString()}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-slate-400">DragonBalls</dt>
+            <dd className="font-semibold text-slate-200">{bankDragonballs.toLocaleString()}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div className="space-y-2">
+        {CURRENCIES.map((currency) => (
+          <CurrencyRow key={currency.id} characterId={characterId} currency={currency.id} label={currency.label} />
+        ))}
       </div>
 
       <div>
-        <p className="text-xs uppercase tracking-wide text-slate-500">Composition Stones (per character)</p>
-        <p className="mt-1 text-[11px] text-slate-500">
+        <p className="text-[11px] text-slate-500">
           Depositing a stone (or composed gear) converts it into points — spend points to withdraw any tier back.
         </p>
         <div className="mt-2 space-y-2">
@@ -234,17 +226,21 @@ export default function WarehousePanel({ characterId }: { characterId: string })
           ))}
         </div>
       </div>
+    </div>
+  )
+}
 
-      <div>
-        <p className="text-xs uppercase tracking-wide text-slate-500">Gear (per character — drag from Inventory to deposit)</p>
-        <div className="mt-2 grid gap-4 lg:grid-cols-[1fr_220px]">
-          <div className="space-y-4">
-            <WarehouseGrid characterId={characterId} />
-            <InventoryPanel onItemDragStart={() => {}} />
-          </div>
-
-          <WarehouseSummary />
+export default function WarehousePanel({ characterId }: { characterId: string }) {
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-wide text-slate-500">Gear (per character — drag from Inventory to deposit)</p>
+      <div className="mt-2 grid gap-4 lg:grid-cols-[1fr_360px]">
+        <div className="space-y-4">
+          <WarehouseGrid characterId={characterId} />
+          <InventoryPanel onItemDragStart={() => {}} />
         </div>
+
+        <AccountWideDepositsCard characterId={characterId} />
       </div>
     </div>
   )

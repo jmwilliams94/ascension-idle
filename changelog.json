@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.19.3",
+    "date": "2026-07-29",
+    "changes": [
+      "Warehouse: merged the Gold/Meteors/DragonBalls and Composition Stone deposit rows into the single \"Account Wide Deposits\" card instead of three separate sections"
+    ]
+  },
+  {
     "version": "1.19.2",
     "date": "2026-07-29",
     "changes": [
