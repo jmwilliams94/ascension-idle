@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.16.1",
+    "date": "2026-07-29",
+    "changes": [
+      "Added offline progress — your character keeps fighting whatever monster you last selected while you're away, capped at 2 hours, with a summary shown when you come back"
+    ]
+  },
+  {
     "version": "1.16.0",
     "date": "2026-07-29",
     "changes": [

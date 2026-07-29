@@ -7,6 +7,7 @@ import ExpBar from './ExpBar'
 import ForgePanel from './ForgePanel'
 import InventoryFullModal from './InventoryFullModal'
 import MarketplacePanel from './MarketplacePanel'
+import OfflineProgressModal from './OfflineProgressModal'
 import ProgressionPanel from './ProgressionPanel'
 import SettingsModal from './SettingsModal'
 import ShopPanel from './ShopPanel'
@@ -20,6 +21,8 @@ import { useArrowStore } from '../game/items/useArrowStore'
 import { useTabStore } from '../game/hud/useTabStore'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
+import { runOfflineProgressCheck } from '../game/combat/offlineProgress'
+import { useOfflineProgressStore } from '../game/combat/useOfflineProgressStore'
 
 // Rendered once a character is active (see App.tsx) — everything that was the whole
 // app before the character-slots restructure. Account-level concerns (What's New,
@@ -48,6 +51,20 @@ export default function GameShell({ characterId }: { characterId: string }) {
 
       if (cancelled) {
         return
+      }
+
+      // Offline-progress catch-up runs once, before the live fight resumes —
+      // reads the *previous* last_active_at (captured by loadCharacterRecord
+      // above, before its own saveNow inside here refreshes it) so a quick
+      // reload can't double-count the same window.
+      const offlineResult = await runOfflineProgressCheck(characterId)
+
+      if (cancelled) {
+        return
+      }
+
+      if (offlineResult) {
+        useOfflineProgressStore.getState().show(offlineResult)
       }
 
       // Resume the live fight against whatever monster was last selected — a fresh
@@ -120,6 +137,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
 
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       <InventoryFullModal />
+      <OfflineProgressModal />
       <CombatEngine />
 
       <main className="mx-auto max-w-7xl space-y-4 px-6 py-6">
