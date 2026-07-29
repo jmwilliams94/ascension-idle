@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import CountUp from 'react-countup'
+import CountUp from './CountUpNumber'
 import { ENEMY_TYPES, ZONE_MONSTER_ORDER, ZONE_NAME, type EnemyTypeId } from '../game/zones/twincrossOutskirts'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useCombatStore, type CombatLogEntry } from '../game/combat/useCombatStore'

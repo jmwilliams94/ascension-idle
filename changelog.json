@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.16.2",
+    "date": "2026-07-29",
+    "changes": [
+      "Fixed a crash that broke the entire game after logging in (Combat page's gold/EXP counters)"
+    ]
+  },
+  {
     "version": "1.16.1",
     "date": "2026-07-29",
     "changes": [

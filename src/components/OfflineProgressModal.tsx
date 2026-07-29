@@ -1,4 +1,4 @@
-import CountUp from 'react-countup'
+import CountUp from './CountUpNumber'
 import { useOfflineProgressStore } from '../game/combat/useOfflineProgressStore'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { ENEMY_TYPES } from '../game/zones/twincrossOutskirts'
