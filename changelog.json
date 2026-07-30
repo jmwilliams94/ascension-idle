@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.23.0",
+    "date": "2026-07-30",
+    "changes": [
+      "Completely renamed all 8 zones and their monsters (Windhollow, Cinderleaf, Stormvale, Sunscar Wastes, Talon Isle, Duskspire Keep, Twistpath Ruins, Rimehollow) with fresh names and rebalanced stats",
+      "All 8 zones are now unlocked and playable, not just 3"
+    ]
+  },
+  {
     "version": "1.22.0",
     "date": "2026-07-30",
     "changes": [
