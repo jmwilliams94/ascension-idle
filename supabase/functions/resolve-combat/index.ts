@@ -256,7 +256,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const { data: character, error: characterError } = await db
     .from('characters')
     .select(
-      'id, account_id, class, level, gold, exp, meteors, dragonballs, equipped_item_id, equipped_arrow_stack_id, selected_monster_id, combat_last_resolved_at',
+      'id, account_id, class, level, gold, exp, meteors, dragonballs, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_arrow_stack_id, selected_monster_id, combat_last_resolved_at',
     )
     .eq('id', characterId)
     .maybeSingle()
@@ -300,25 +300,41 @@ async function handleResolveCombat(req: Request): Promise<Response> {
 
   // Character combat stats — derived server-side, never trusted from the
   // request. Attributes are a pure function of class (see classes.ts); gear
-  // bonus comes from the equipped item's own template + quality tier.
+  // bonus sums physical_attack/magic_attack across every equipped slot (Ring/
+  // Necklace/Boots/Hat/Coat are now functional too, not just Main Hand — see
+  // useEquipmentStore.ts/computeEquipmentBonus's client-side mirror). Only
+  // physicalAttack/magicAttack matter here — physicalDefense/dodge feed
+  // incoming-damage mitigation, which isn't simulated server-side (player
+  // HP/knockout only ever lived in useCombatStore.runTick).
   const attributes = BASE_ATTRIBUTES_BY_CLASS[character.class ?? 'hunter'] ?? BASE_ATTRIBUTES_BY_CLASS.hunter
-  let equipmentBonus: { physicalAttack?: number; magicAttack?: number } = {}
+  const equipmentBonus: { physicalAttack: number; magicAttack: number } = { physicalAttack: 0, magicAttack: 0 }
 
-  if (character.equipped_item_id) {
-    const { data: item } = await db
-      .from('item_instances')
-      .select('quality_tier, template_id')
-      .eq('id', character.equipped_item_id)
-      .maybeSingle()
+  const equippedItemIds = [
+    character.equipped_weapon_id,
+    character.equipped_ring_id,
+    character.equipped_necklace_id,
+    character.equipped_boots_id,
+    character.equipped_hat_id,
+    character.equipped_coat_id,
+  ].filter((id): id is string => Boolean(id))
 
-    if (item) {
-      const { data: template } = await db.from('item_templates').select('base_stats').eq('id', item.template_id).maybeSingle()
+  if (equippedItemIds.length > 0) {
+    const { data: equippedItems } = await db.from('item_instances').select('id, quality_tier, template_id').in('id', equippedItemIds)
 
-      if (template) {
-        equipmentBonus = {
-          physicalAttack: scaledStat(template.base_stats, 'physical_attack', item.quality_tier),
-          magicAttack: scaledStat(template.base_stats, 'magic_attack', item.quality_tier),
-        }
+    if (equippedItems && equippedItems.length > 0) {
+      const { data: equippedTemplates } = await db
+        .from('item_templates')
+        .select('id, base_stats')
+        .in(
+          'id',
+          equippedItems.map((item) => item.template_id),
+        )
+
+      for (const item of equippedItems) {
+        const template = equippedTemplates?.find((t) => t.id === item.template_id)
+        if (!template) continue
+        equipmentBonus.physicalAttack += scaledStat(template.base_stats, 'physical_attack', item.quality_tier) ?? 0
+        equipmentBonus.magicAttack += scaledStat(template.base_stats, 'magic_attack', item.quality_tier) ?? 0
       }
     }
   }

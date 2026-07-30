@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.30.0",
+    "date": "2026-07-31",
+    "changes": [
+      "Ring, Necklace, Boots, Hat, and Coat are now real equip slots, not just Main Hand — equip armor from your Inventory to fill them",
+      "Armor now actually affects combat: Physical Defense reduces incoming damage, and dodge (from Boots and Agility) gives a chance to fully avoid an attack"
+    ]
+  },
+  {
     "version": "1.29.1",
     "date": "2026-07-31",
     "changes": [

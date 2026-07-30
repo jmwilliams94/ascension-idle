@@ -5,7 +5,7 @@ import { CLASS_DEFINITIONS, type ClassId } from '../game/stats/classes'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useZoneStore } from '../game/zones/useZoneStore'
-import { useEquipmentStore } from '../game/items/useEquipmentStore'
+import { useEquipmentStore, type EquipSlot } from '../game/items/useEquipmentStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useArrowStore } from '../game/items/useArrowStore'
 import { useCompositionStore, type CompositionStones } from '../game/items/useCompositionStore'
@@ -26,7 +26,12 @@ interface CharacterRow {
   gold: number
   exp: number
   current_zone: string
-  equipped_item_id: string | null
+  equipped_weapon_id: string | null
+  equipped_ring_id: string | null
+  equipped_necklace_id: string | null
+  equipped_boots_id: string | null
+  equipped_hat_id: string | null
+  equipped_coat_id: string | null
   meteors: number
   dragonballs: number
   equipped_arrow_stack_id: string | null
@@ -65,7 +70,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     const { data, error } = await supabase
       .from('characters')
       .select(
-        'name, class, level, gold, exp, current_zone, equipped_item_id, meteors, dragonballs, equipped_arrow_stack_id, composition_stones, warehouse_points, selected_monster_id, last_active_at',
+        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, meteors, dragonballs, equipped_arrow_stack_id, composition_stones, warehouse_points, selected_monster_id, last_active_at',
       )
       .eq('id', characterId)
       .maybeSingle<CharacterRow>()
@@ -84,7 +89,14 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     }
     useProgressionStore.getState().hydrate({ level: data.level, gold: data.gold, exp: data.exp })
     useZoneStore.getState().hydrate({ zoneId: data.current_zone, monsterId: data.selected_monster_id })
-    useEquipmentStore.getState().hydrate(data.equipped_item_id)
+    useEquipmentStore.getState().hydrate({
+      weapon: data.equipped_weapon_id,
+      ring: data.equipped_ring_id,
+      necklace: data.equipped_necklace_id,
+      boots: data.equipped_boots_id,
+      hat: data.equipped_hat_id,
+      coat: data.equipped_coat_id,
+    } satisfies Record<EquipSlot, string | null>)
     useCurrencyStore.getState().hydrate({ meteors: data.meteors, dragonballs: data.dragonballs })
     useArrowStore.getState().setEquippedStackId(data.equipped_arrow_stack_id)
     useCompositionStore.getState().hydrate(data.composition_stones)
@@ -112,7 +124,12 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
         gold: progression.gold,
         exp: progression.exp,
         current_zone: zone.currentZoneId,
-        equipped_item_id: equipment.equippedItemId,
+        equipped_weapon_id: equipment.equippedIds.weapon,
+        equipped_ring_id: equipment.equippedIds.ring,
+        equipped_necklace_id: equipment.equippedIds.necklace,
+        equipped_boots_id: equipment.equippedIds.boots,
+        equipped_hat_id: equipment.equippedIds.hat,
+        equipped_coat_id: equipment.equippedIds.coat,
         equipped_arrow_stack_id: arrows.equippedStackId,
         selected_monster_id: zone.selectedMonsterId,
         last_active_at: new Date().toISOString(),

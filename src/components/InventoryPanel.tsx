@@ -11,7 +11,7 @@ import {
   getQualityColor,
   previewSellPrice,
 } from '../game/items/equipmentBonus'
-import { useEquipmentStore } from '../game/items/useEquipmentStore'
+import { EQUIP_SLOTS, useEquipmentStore, type EquipSlot } from '../game/items/useEquipmentStore'
 import { COMPOSITION_STONE_TIERS, buildStoneTooltip, compositionPointValue, stoneDragId } from '../game/items/forgeCosts'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
 import { useCompositionStore } from '../game/items/useCompositionStore'
@@ -73,8 +73,8 @@ export default function InventoryPanel({
   const items = useInventoryStore((state) => state.items)
   const sellItem = useInventoryStore((state) => state.sellItem)
   const templates = useItemTemplatesStore((state) => state.templates)
-  const equippedItemId = useEquipmentStore((state) => state.equippedItemId)
-  const setEquippedItemId = useEquipmentStore((state) => state.setEquippedItemId)
+  const setEquippedItem = useEquipmentStore((state) => state.setEquippedItem)
+  const isEquipped = useEquipmentStore((state) => state.isEquipped)
 
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
   const arrowStacks = useArrowStore((state) => state.stacks)
@@ -95,7 +95,7 @@ export default function InventoryPanel({
   // shown only in the Equipment tab's paper doll (confirmed, 2026-07-30), and
   // frees its Inventory slot (see occupiedSlotCount in useInventoryStore).
   // Un-equipping brings it straight back since this filter just stops matching.
-  const visibleItems = items.filter((item) => item.id !== equippedItemId)
+  const visibleItems = items.filter((item) => !isEquipped(item.id))
 
   // Stones don't stack — each one is its own tile, not combined into one tile with
   // a count badge. Since there's no acquisition-time cap check for stones yet (no
@@ -125,11 +125,12 @@ export default function InventoryPanel({
       ? items.find((item) => item.id === selectedSlot.id)
       : undefined
   const selectedTemplate = selectedItem && templates.find((entry) => entry.id === selectedItem.template_id)
-  // Only Main Hand is a functional equip slot today (see CLAUDE.md's
-  // Equipment/Hero page section) — equipped_item_id is a single weapon-only
-  // pointer, so anything else (rings, necklaces, boots, hats, coats) has
-  // nowhere real to go yet and must not be allowed to overwrite it.
-  const isWeaponSlot = selectedTemplate?.slot_type === 'weapon'
+  // All 6 catalog slot_types (weapon/ring/necklace/boots/hat/coat) are
+  // functional equip slots now (confirmed, 2026-07-31 — supersedes the
+  // earlier "only Main Hand" restriction). This guard stays for safety/
+  // forward-compat only — it'd only ever be false for a future slot_type
+  // (e.g. a shield) that doesn't have a real paper-doll slot yet.
+  const isEquippableSlot = Boolean(selectedTemplate && EQUIP_SLOTS.includes(selectedTemplate.slot_type as EquipSlot))
   const selectedStack =
     selectedSlot?.kind === 'arrow' ? visibleArrowStacks.find((stack) => stack.id === selectedSlot.id) : undefined
   const selectedStoneTier = selectedSlot?.kind === 'stone' ? selectedSlot.tier : undefined
@@ -365,22 +366,22 @@ export default function InventoryPanel({
 
           <button
             type="button"
-            disabled={selectedItem.id === equippedItemId || !isWeaponSlot}
-            title={!isWeaponSlot ? "This slot isn't wearable yet" : undefined}
-            onClick={() => setEquippedItemId(selectedItem.id)}
+            disabled={isEquipped(selectedItem.id) || !isEquippableSlot}
+            title={!isEquippableSlot ? "This slot isn't wearable yet" : undefined}
+            onClick={() => selectedTemplate && setEquippedItem(selectedTemplate.slot_type as EquipSlot, selectedItem.id)}
             className={`mt-3 w-full rounded-lg border px-3 py-1.5 text-xs font-medium ${
-              selectedItem.id === equippedItemId || !isWeaponSlot
+              isEquipped(selectedItem.id) || !isEquippableSlot
                 ? 'cursor-not-allowed border-slate-800 text-slate-600'
                 : 'border-sky-500 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'
             }`}
           >
-            {selectedItem.id === equippedItemId ? 'Equipped' : !isWeaponSlot ? 'Not wearable yet' : 'Equip'}
+            {isEquipped(selectedItem.id) ? 'Equipped' : !isEquippableSlot ? 'Not wearable yet' : 'Equip'}
           </button>
 
           {enableSelling && (
             <button
               type="button"
-              disabled={selectedItem.id === equippedItemId || sellBusy}
+              disabled={isEquipped(selectedItem.id) || sellBusy}
               onClick={() => void handleSell(selectedItem)}
               className="mt-2 w-full rounded-lg border border-amber-600 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-40"
             >

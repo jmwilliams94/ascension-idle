@@ -24,12 +24,12 @@ export default function StatsPanel() {
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
   const attributes = useCharacterStore((state) => state.attributes)
 
-  const equippedItemId = useEquipmentStore((state) => state.equippedItemId)
+  const equippedIds = useEquipmentStore((state) => state.equippedIds)
   const items = useInventoryStore((state) => state.items)
   const templates = useItemTemplatesStore((state) => state.templates)
 
   const selectedClass = CLASS_DEFINITIONS[selectedClassId]
-  const equipmentBonus = computeEquipmentBonus(equippedItemId, items, templates)
+  const equipmentBonus = computeEquipmentBonus(equippedIds, items, templates)
   const derived = computeDerivedStats(attributes, equipmentBonus)
 
   return (
@@ -89,6 +89,14 @@ export default function StatsPanel() {
               <div className="flex justify-between">
                 <dt className="text-slate-400">Attack Speed</dt>
                 <dd>{derived.attackSpeed.toFixed(1)}/s</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-slate-400">Physical Defense</dt>
+                <dd>{derived.physicalDefense}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-slate-400">Dodge</dt>
+                <dd>{derived.dodge}</dd>
               </div>
             </dl>
           </div>

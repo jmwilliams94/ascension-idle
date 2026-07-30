@@ -1,16 +1,29 @@
 import { create } from 'zustand'
 
-// Single-slot shortcut: only the weapon slot exists this step, so one nullable id is
-// enough. Will need to become a multi-slot shape (map of slot_type -> item id) once
-// other gear slots exist — see the equipped_item_id column note in the migration.
+// Multi-slot equipping (confirmed with the user, 2026-07-31) — supersedes the
+// earlier single equippedItemId shortcut now that Ring/Necklace/Boots/Hat/Coat
+// are real, functional slots alongside Main Hand. EquipSlot matches
+// item_templates.slot_type exactly, so routing "which slot does this item go
+// in" is just setEquippedItem(template.slot_type, item.id) — no slot-picker UI
+// needed. Off-hand/Shield has no catalog data at all yet, so it isn't one of
+// these — it stays a locked placeholder in EquipmentPanel.
+export type EquipSlot = 'weapon' | 'ring' | 'necklace' | 'boots' | 'hat' | 'coat'
+
+export const EQUIP_SLOTS: EquipSlot[] = ['weapon', 'ring', 'necklace', 'boots', 'hat', 'coat']
+
 interface EquipmentState {
-  equippedItemId: string | null
-  hydrate: (equippedItemId: string | null) => void
-  setEquippedItemId: (id: string | null) => void
+  equippedIds: Record<EquipSlot, string | null>
+  hydrate: (equipped: Record<EquipSlot, string | null>) => void
+  setEquippedItem: (slot: EquipSlot, itemId: string | null) => void
+  // True if itemId occupies any of the 6 slots — used to hide an equipped item
+  // from Inventory (see useInventoryStore.occupiedSlotCount/InventoryPanel)
+  // regardless of which slot it's actually in.
+  isEquipped: (itemId: string) => boolean
 }
 
-export const useEquipmentStore = create<EquipmentState>((set) => ({
-  equippedItemId: null,
-  hydrate: (equippedItemId) => set({ equippedItemId }),
-  setEquippedItemId: (id) => set({ equippedItemId: id }),
+export const useEquipmentStore = create<EquipmentState>((set, get) => ({
+  equippedIds: { weapon: null, ring: null, necklace: null, boots: null, hat: null, coat: null },
+  hydrate: (equipped) => set({ equippedIds: equipped }),
+  setEquippedItem: (slot, itemId) => set((state) => ({ equippedIds: { ...state.equippedIds, [slot]: itemId } })),
+  isEquipped: (itemId) => Object.values(get().equippedIds).includes(itemId),
 }))

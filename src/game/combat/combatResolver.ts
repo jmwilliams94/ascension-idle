@@ -110,13 +110,30 @@ export function monsterDefense(type: EnemyTypeDef): number {
   return Math.round(type.level * 1.5)
 }
 
-// No monster-side equivalent exists for the player's own incoming damage yet:
-// only Main Hand is a functional equip slot today (see CLAUDE.md's Equipment/
-// Hero page section), so a player's Defense is always 0 in practice — there's
-// nothing yet for monsterAttackDamage to mitigate against. Revisit once armor
-// slots actually equip something with physical_defense.
+// Now that armor slots are functional (2026-07-31), a player's Defense is no
+// longer always 0 — monsterAttackDamage's mitigation happens in
+// useCombatStore.runTick, the same place player HP already lives (incoming
+// damage/knockout was never simulated server-side, an already-accepted gap —
+// see resolve-combat's own docs — so this fits that same boundary).
 export function resolvePhysicalDamage(attack: number, defense: number): number {
   const mitigated = attack - defense
   const floor = Math.round(attack * MIN_DAMAGE_PERCENT_OF_ATTACK)
   return Math.max(mitigated, floor, 1)
+}
+
+// New dodge/miss-chance mechanic (confirmed with the user, 2026-07-31) — a
+// player can now fully avoid an incoming monster attack, using boots' own
+// dodge stat plus Agility (see derivedStats.ts). PLACEHOLDER capped-linear
+// curve — 0.5% dodge chance per point, capped at 50% — unresolved/unsourced
+// like the rest of this combat math, tune later. One-directional: monsters
+// have no dodge stat of their own, so the player's own outgoing attacks
+// always land, unaffected by this. Client-only (see useCombatStore.runTick's
+// monster-attack-back block) — not mirrored in resolve-combat, since incoming
+// damage/player HP was never simulated server-side to begin with.
+const DODGE_CHANCE_PER_POINT = 0.005
+const MAX_DODGE_CHANCE = 0.5
+
+export function rollIsHit(dodge: number): boolean {
+  const dodgeChance = Math.min(dodge * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
+  return Math.random() >= dodgeChance
 }

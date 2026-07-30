@@ -16,6 +16,7 @@ import {
   monsterDefense,
   resolvePhysicalDamage,
   rollBonusCurrencyDrops,
+  rollIsHit,
   rollIsRare,
   spawnMonsterHp,
 } from './combatResolver'
@@ -24,6 +25,7 @@ export type CombatLogKind =
   | 'engage'
   | 'damage'
   | 'player-damage'
+  | 'dodge'
   | 'kill'
   | 'rare-kill'
   | 'item'
@@ -145,7 +147,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     const type = ENEMY_TYPES[state.monsterTypeId]
     const { selectedClassId, attributes } = useCharacterStore.getState()
     const equipmentBonus = computeEquipmentBonus(
-      useEquipmentStore.getState().equippedItemId,
+      useEquipmentStore.getState().equippedIds,
       useInventoryStore.getState().items,
       useItemTemplatesStore.getState().templates,
     )
@@ -164,30 +166,43 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     // own attack is on cooldown this tick, so it doesn't end up implicitly synced
     // to the player's attack speed.
     if (nowMs - state.lastMonsterAttackAt >= MONSTER_ATTACK_INTERVAL_MS) {
-      const damage = monsterAttackDamage(type)
-      const nextPlayerHp = Math.max(0, currentPlayerHp - damage)
-
-      set((s) => ({
-        lastMonsterAttackAt: nowMs,
-        currentPlayerHp: nextPlayerHp,
-        maxPlayerHp,
-        log: appendLog(s.log, {
-          kind: 'player-damage',
-          message: `${type.displayName} hits you for ${damage}.`,
-          amount: damage,
-        }),
-      }))
-
-      if (nextPlayerHp <= 0) {
-        // Knocked out — placeholder no-penalty recovery (stop fighting, full
-        // heal on return) rather than a designed death/respawn mechanic, which
-        // doesn't exist anywhere in this game yet. Revisit if/when that's designed.
+      // Dodge (see combatResolver.ts's rollIsHit) — a fully-avoided attack, using
+      // boots' dodge stat + Agility. If it lands, physicalDefense (necklace/hat/
+      // coat) mitigates it the same way monster Defense mitigates the player's
+      // own outgoing damage.
+      if (!rollIsHit(derived.dodge)) {
         set((s) => ({
-          isFighting: false,
-          currentPlayerHp: maxPlayerHp,
-          log: appendLog(s.log, { kind: 'knockout', message: 'You were knocked out! Fully healed — fight stopped.' }),
+          lastMonsterAttackAt: nowMs,
+          currentPlayerHp,
+          maxPlayerHp,
+          log: appendLog(s.log, { kind: 'dodge', message: `You dodge ${type.displayName}'s attack!` }),
         }))
-        return
+      } else {
+        const damage = resolvePhysicalDamage(monsterAttackDamage(type), derived.physicalDefense)
+        const nextPlayerHp = Math.max(0, currentPlayerHp - damage)
+
+        set((s) => ({
+          lastMonsterAttackAt: nowMs,
+          currentPlayerHp: nextPlayerHp,
+          maxPlayerHp,
+          log: appendLog(s.log, {
+            kind: 'player-damage',
+            message: `${type.displayName} hits you for ${damage}.`,
+            amount: damage,
+          }),
+        }))
+
+        if (nextPlayerHp <= 0) {
+          // Knocked out — placeholder no-penalty recovery (stop fighting, full
+          // heal on return) rather than a designed death/respawn mechanic, which
+          // doesn't exist anywhere in this game yet. Revisit if/when that's designed.
+          set((s) => ({
+            isFighting: false,
+            currentPlayerHp: maxPlayerHp,
+            log: appendLog(s.log, { kind: 'knockout', message: 'You were knocked out! Fully healed — fight stopped.' }),
+          }))
+          return
+        }
       }
     } else if (state.maxPlayerHp !== maxPlayerHp || state.currentPlayerHp !== currentPlayerHp) {
       // Only write when something actually changed (lazy-init, or maxPlayerHp

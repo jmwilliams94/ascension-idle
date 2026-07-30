@@ -45,6 +45,8 @@ function logLineClass(kind: CombatLogEntry['kind']): string {
       return 'text-red-400'
     case 'player-damage':
       return 'text-rose-400'
+    case 'dodge':
+      return 'text-cyan-300'
     default:
       return 'text-slate-400'
   }

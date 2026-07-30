@@ -3,6 +3,7 @@ import type { EquipmentBonus } from '../stats/derivedStats'
 import type { ItemTooltipData } from './itemTooltip'
 import type { ItemInstance } from './useInventoryStore'
 import type { ItemTemplate } from './useItemTemplatesStore'
+import { EQUIP_SLOTS, type EquipSlot } from './useEquipmentStore'
 
 // How much stronger each quality tier is than the template's stored (Normal-tier)
 // base_stats — an approximate, rounded pattern (not any single sourced item's
@@ -30,27 +31,35 @@ function scaledStat(baseStats: Record<string, number>, key: string, qualityTier:
 // Pure function taking explicit snapshots rather than reading the stores itself, so
 // it works both reactively (React components, fed by hooks) and imperatively (Phaser
 // scene code, fed by .getState()) without duplicating the lookup logic.
+//
+// Multi-slot (confirmed, 2026-07-31) — supersedes the earlier single-item
+// version now that Ring/Necklace/Boots/Hat/Coat are functional alongside Main
+// Hand: sums physical_attack/magic_attack/physical_defense/dodge across every
+// equipped slot rather than reading one item, since a full loadout can now
+// mix a weapon+ring (attack) with necklace/hat/coat (defense) and boots
+// (dodge) simultaneously.
 export function computeEquipmentBonus(
-  equippedItemId: string | null,
+  equippedIds: Record<EquipSlot, string | null>,
   items: ItemInstance[],
   templates: ItemTemplate[],
 ): EquipmentBonus {
-  if (!equippedItemId) {
-    return {}
+  const bonus: Required<EquipmentBonus> = { physicalAttack: 0, magicAttack: 0, physicalDefense: 0, dodge: 0 }
+
+  for (const slot of EQUIP_SLOTS) {
+    const itemId = equippedIds[slot]
+    if (!itemId) continue
+
+    const item = items.find((entry) => entry.id === itemId)
+    const template = item && templates.find((entry) => entry.id === item.template_id)
+    if (!item || !template) continue
+
+    bonus.physicalAttack += scaledStat(template.base_stats, 'physical_attack', item.quality_tier) ?? 0
+    bonus.magicAttack += scaledStat(template.base_stats, 'magic_attack', item.quality_tier) ?? 0
+    bonus.physicalDefense += scaledStat(template.base_stats, 'physical_defense', item.quality_tier) ?? 0
+    bonus.dodge += scaledStat(template.base_stats, 'dodge', item.quality_tier) ?? 0
   }
 
-  const item = items.find((entry) => entry.id === equippedItemId)
-  const template = item && templates.find((entry) => entry.id === item.template_id)
-
-  if (!item || !template) {
-    return {}
-  }
-
-  const baseStats = template.base_stats
-  return {
-    physicalAttack: scaledStat(baseStats, 'physical_attack', item.quality_tier),
-    magicAttack: scaledStat(baseStats, 'magic_attack', item.quality_tier),
-  }
+  return bonus
 }
 
 // Client-side mirror of sell_item's SQL formula (see

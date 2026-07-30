@@ -79,8 +79,8 @@ export const INVENTORY_SLOT_CAP = 40
 // cap" check before a withdraw (which adds to Inventory), reusing this rather
 // than reimplementing it.
 export function occupiedSlotCount(items: ItemInstance[]): number {
-  const equippedItemId = useEquipmentStore.getState().equippedItemId
-  const gearCount = items.filter((item) => item.id !== equippedItemId).length
+  const isEquipped = useEquipmentStore.getState().isEquipped
+  const gearCount = items.filter((item) => !isEquipped(item.id)).length
   const arrowStackCount = useArrowStore.getState().stacks.filter((stack) => stack.count > 0).length
   const totalStoneCount = Object.values(useCompositionStore.getState().stones).reduce((sum, count) => sum + count, 0)
   return gearCount + arrowStackCount + totalStoneCount
