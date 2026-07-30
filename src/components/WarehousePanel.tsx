@@ -182,6 +182,9 @@ function StoneRow({ characterId, tier }: { characterId: string; tier: number }) 
 // tiers, rather than each having its own separate section/card as before.
 function AccountWideDepositsCard({ characterId }: { characterId: string }) {
   const points = useWarehouseStore((state) => state.points)
+  const gold = useProgressionStore((state) => state.gold)
+  const meteors = useCurrencyStore((state) => state.meteors)
+  const dragonballs = useCurrencyStore((state) => state.dragonballs)
   const bankGold = usePlayerRecordStore((state) => state.bankGold)
   const bankMeteors = usePlayerRecordStore((state) => state.bankMeteors)
   const bankDragonballs = usePlayerRecordStore((state) => state.bankDragonballs)
@@ -196,16 +199,22 @@ function AccountWideDepositsCard({ characterId }: { characterId: string }) {
             <dd className="font-semibold text-sky-300">{points.toLocaleString()}</dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt className="text-slate-400">Gold</dt>
-            <dd className="font-semibold text-amber-300">{bankGold.toLocaleString()}</dd>
+            <dt className="text-slate-400">Gold (Wallet / Bank)</dt>
+            <dd className="font-semibold text-amber-300">
+              {gold.toLocaleString()} / {bankGold.toLocaleString()}
+            </dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt className="text-slate-400">Meteors</dt>
-            <dd className="font-semibold text-slate-200">{bankMeteors.toLocaleString()}</dd>
+            <dt className="text-slate-400">Meteors (Wallet / Bank)</dt>
+            <dd className="font-semibold text-slate-200">
+              {meteors.toLocaleString()} / {bankMeteors.toLocaleString()}
+            </dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt className="text-slate-400">DragonBalls</dt>
-            <dd className="font-semibold text-slate-200">{bankDragonballs.toLocaleString()}</dd>
+            <dt className="text-slate-400">DragonBalls (Wallet / Bank)</dt>
+            <dd className="font-semibold text-slate-200">
+              {dragonballs.toLocaleString()} / {bankDragonballs.toLocaleString()}
+            </dd>
           </div>
         </dl>
       </div>

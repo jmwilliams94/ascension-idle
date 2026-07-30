@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.23.1",
+    "date": "2026-07-30",
+    "changes": [
+      "Fixed Warehouse currency withdrawals appearing to vanish — Meteors and DragonBalls wallet balances now show alongside the bank amount"
+    ]
+  },
+  {
     "version": "1.23.0",
     "date": "2026-07-30",
     "changes": [
