@@ -21,9 +21,14 @@ create table if not exists public.enemy_types (
 
 alter table public.enemy_types enable row level security;
 
-create policy "Anyone can view enemy types"
-  on public.enemy_types for select
-  using (true);
+-- Wrapped for idempotency (Postgres has no CREATE POLICY IF NOT EXISTS) — safe
+-- to re-run this migration.
+do $$ begin
+  create policy "Anyone can view enemy types"
+    on public.enemy_types for select
+    using (true);
+exception when duplicate_object then null;
+end $$;
 
 grant select on public.enemy_types to anon, authenticated;
 
@@ -126,9 +131,12 @@ create table if not exists public.loot_holding (
 
 alter table public.loot_holding enable row level security;
 
-create policy "Characters can view their own loot holding"
-  on public.loot_holding for select
-  using (exists (select 1 from public.characters c where c.id = loot_holding.character_id and c.account_id = auth.uid()));
+do $$ begin
+  create policy "Characters can view their own loot holding"
+    on public.loot_holding for select
+    using (exists (select 1 from public.characters c where c.id = loot_holding.character_id and c.account_id = auth.uid()));
+exception when duplicate_object then null;
+end $$;
 
 -- No client insert/update grant at all — only the Edge Function's service-role
 -- client populates this table. Deleting (claiming into Inventory) still needs

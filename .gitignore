@@ -23,6 +23,9 @@ dist-ssr
 # Local-only design reference notes (not shipped, not for the public repo)
 reference/
 
+# Supabase CLI local state (project link cache, not shared/committed)
+supabase/.temp/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

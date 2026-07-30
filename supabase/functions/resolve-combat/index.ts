@@ -193,6 +193,18 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: CORS_HEADERS })
   }
 
+  // Wrapped so any unexpected error (a bad query, a null somewhere it
+  // shouldn't be) comes back as a diagnosable JSON body instead of an opaque
+  // failure with no detail — useful while getting this deployed and tested
+  // for the first time.
+  try {
+    return await handleResolveCombat(req)
+  } catch (err) {
+    return json({ ok: false, error: 'unhandled_exception', detail: err instanceof Error ? err.message : String(err) }, 500)
+  }
+})
+
+async function handleResolveCombat(req: Request): Promise<Response> {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) {
     return json({ ok: false, error: 'not_authenticated' }, 401)
@@ -238,7 +250,14 @@ Deno.serve(async (req) => {
     .eq('id', characterId)
     .maybeSingle()
 
-  if (characterError || !character || character.account_id !== user.id) {
+  // Distinct from the ownership check below — a query error (e.g. a column
+  // that doesn't exist yet because the migration hasn't run) should surface
+  // as its own diagnosable error, not get silently folded into "not_owner".
+  if (characterError) {
+    return json({ ok: false, error: 'query_failed', detail: characterError.message }, 500)
+  }
+
+  if (!character || character.account_id !== user.id) {
     return json({ ok: false, error: 'not_owner' }, 403)
   }
 
@@ -379,7 +398,7 @@ Deno.serve(async (req) => {
   ])
 
   const arrowSlotCount = (arrowStacks ?? []).filter((s: { count: number }) => s.count > 0).length
-  const stoneSlotCount = Object.values((composition?.data as unknown as Record<string, number>) ?? {}).reduce(
+  const stoneSlotCount = Object.values((composition?.composition_stones as Record<string, number>) ?? {}).reduce(
     (sum, v) => sum + (typeof v === 'number' ? v : 0),
     0,
   )
@@ -459,4 +478,4 @@ Deno.serve(async (req) => {
     itemsGranted,
     itemsHeld,
   })
-})
+}
