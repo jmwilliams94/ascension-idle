@@ -114,6 +114,11 @@ export default function InventoryPanel({
       ? items.find((item) => item.id === selectedSlot.id)
       : undefined
   const selectedTemplate = selectedItem && templates.find((entry) => entry.id === selectedItem.template_id)
+  // Only Main Hand is a functional equip slot today (see CLAUDE.md's
+  // Equipment/Hero page section) — equipped_item_id is a single weapon-only
+  // pointer, so anything else (rings, necklaces, boots, hats, coats) has
+  // nowhere real to go yet and must not be allowed to overwrite it.
+  const isWeaponSlot = selectedTemplate?.slot_type === 'weapon'
   const selectedStack =
     selectedSlot?.kind === 'arrow' ? visibleArrowStacks.find((stack) => stack.id === selectedSlot.id) : undefined
   const selectedStoneTier = selectedSlot?.kind === 'stone' ? selectedSlot.tier : undefined
@@ -311,15 +316,16 @@ export default function InventoryPanel({
 
           <button
             type="button"
-            disabled={selectedItem.id === equippedItemId}
+            disabled={selectedItem.id === equippedItemId || !isWeaponSlot}
+            title={!isWeaponSlot ? "This slot isn't wearable yet" : undefined}
             onClick={() => setEquippedItemId(selectedItem.id)}
             className={`mt-3 w-full rounded-lg border px-3 py-1.5 text-xs font-medium ${
-              selectedItem.id === equippedItemId
+              selectedItem.id === equippedItemId || !isWeaponSlot
                 ? 'cursor-not-allowed border-slate-800 text-slate-600'
                 : 'border-sky-500 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'
             }`}
           >
-            {selectedItem.id === equippedItemId ? 'Equipped' : 'Equip'}
+            {selectedItem.id === equippedItemId ? 'Equipped' : !isWeaponSlot ? 'Not wearable yet' : 'Equip'}
           </button>
 
           {enableSelling && (

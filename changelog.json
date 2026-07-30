@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.28.1",
+    "date": "2026-07-30",
+    "changes": [
+      "Fixed a bug where armor (rings, necklaces, boots, hats, coats) could be equipped into the weapon slot instead of showing as not wearable yet"
+    ]
+  },
+  {
     "version": "1.28.0",
     "date": "2026-07-30",
     "changes": [
