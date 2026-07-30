@@ -247,7 +247,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         }),
       }))
 
-      const drop = useInventoryStore.getState().rollItemDrop()
+      const drop = useInventoryStore.getState().rollItemDrop(type.level)
       if (drop) {
         set((s) => ({
           log: appendLog(s.log, { kind: 'item', message: `You found: ${drop.template.name}` }),

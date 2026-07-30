@@ -6,6 +6,7 @@ import { useCompositionStore } from './useCompositionStore'
 import { useEquipmentStore } from './useEquipmentStore'
 import { useItemTemplatesStore, type ItemTemplate } from './useItemTemplatesStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
+import { useCharacterStore } from '../stats/useCharacterStore'
 
 // Mirrors the item_instances table. sockets/enchant are unused this step — they
 // exist so a later step doesn't need a schema rework. quality_tier/level/
@@ -28,6 +29,33 @@ export interface ItemInstance {
 
 // PLACEHOLDER drop chance — real drop rates are unresolved per CLAUDE.md.
 const DROP_CHANCE = 0.1
+
+// Level-appropriate drop selection (confirmed with the user, 2026-07-30) —
+// supersedes the earlier "always the first template" placeholder. Picks a
+// random gear family available to the character's class (excluding the
+// standalone 'sword' family — the legacy Wooden Sword freebie isn't meant to
+// drop from monsters), then the template in that family whose required_level
+// is closest to the monster's own level. Mirrored server-side in
+// supabase/functions/resolve-combat (the actual grant), since Deno can't
+// import this file directly — must stay in sync, same pattern as
+// combatResolver.ts's other server/client mirrors.
+export function pickLevelAppropriateTemplate(templates: ItemTemplate[], monsterLevel: number, classId: string): ItemTemplate | null {
+  const candidates = templates.filter(
+    (template) => template.item_family !== 'sword' && (template.required_class === null || template.required_class === classId),
+  )
+
+  if (candidates.length === 0) {
+    return null
+  }
+
+  const families = [...new Set(candidates.map((template) => template.item_family))]
+  const family = families[Math.floor(Math.random() * families.length)]
+  const inFamily = candidates.filter((template) => template.item_family === family)
+
+  return inFamily.reduce((closest, template) =>
+    Math.abs(template.required_level - monsterLevel) < Math.abs(closest.required_level - monsterLevel) ? template : closest,
+  )
+}
 
 // Fixed for now — the real scaling-by-level model (30 up to 40 slots, see CLAUDE.md's
 // Inventory section) isn't built yet, so every character is treated as already at the
@@ -67,11 +95,13 @@ interface InventoryState {
   pendingFullDrop: { template: ItemTemplate } | null
   loadInventory: (characterId: string) => Promise<void>
   // Decides only whether an item drops and which template — no DB write, no
-  // inventory-full check. Called at kill time so the roll/odds are locked in the
-  // instant the enemy dies, matching the timing gold/EXP always used; the actual
-  // grant is deferred until the player walks up to the ground pickup (see
-  // grantItemDrop) since occupancy can change between the kill and the pickup.
-  rollItemDrop: () => { template: ItemTemplate } | null
+  // inventory-full check. This is now purely a PREDICTIVE/cosmetic roll for the
+  // combat log's flavor text (see useCombatStore.runTick) — the real, granted
+  // drop is resolved server-side (see supabase/functions/resolve-combat), which
+  // mirrors this same level-appropriate selection so the prediction is a
+  // reasonable (if independently rolled) preview of what the next resolve will
+  // actually confirm.
+  rollItemDrop: (monsterLevel: number) => { template: ItemTemplate } | null
   // Performs the actual DB insert once a ground item pickup is collected. Returns
   // the granted item + its template on success, or null (no active character, an
   // error, or the inventory is full) — lets the caller (the combat scene) know
@@ -121,16 +151,15 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     set({ items: (data ?? []) as ItemInstance[], loaded: true })
   },
 
-  rollItemDrop: () => {
+  rollItemDrop: (monsterLevel) => {
     const templates = useItemTemplatesStore.getState().templates
 
     if (templates.length === 0 || Math.random() >= DROP_CHANCE) {
       return null
     }
 
-    // Only one item type exists this step, so there's nothing to pick between yet —
-    // future steps will roll against a real weighted loot table here instead.
-    return { template: templates[0] }
+    const template = pickLevelAppropriateTemplate(templates, monsterLevel, useCharacterStore.getState().selectedClassId)
+    return template ? { template } : null
   },
 
   grantItemDrop: async (template, interactive = true) => {

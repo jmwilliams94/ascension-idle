@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.28.3",
+    "date": "2026-07-30",
+    "changes": [
+      "Item drops now favor gear near the level of the monster you killed, instead of always dropping the same item regardless of zone"
+    ]
+  },
+  {
     "version": "1.28.2",
     "date": "2026-07-30",
     "changes": [
