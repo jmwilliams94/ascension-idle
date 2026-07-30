@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.29.1",
+    "date": "2026-07-31",
+    "changes": [
+      "The Forge can now be used by dragging and dropping items with touch, not just a mouse",
+      "Armor (rings, necklaces, boots, hats, coats) now shows its own icon instead of a sword everywhere it appears"
+    ]
+  },
+  {
     "version": "1.29.0",
     "date": "2026-07-31",
     "changes": [

@@ -7,7 +7,6 @@ interface ForgeCompositionPanelProps {
   item: ItemInstance
   fuelSlots: (FuelEntry | null)[]
   templates: ItemTemplate[]
-  onDropFuelSlot: (slotIndex: number, id: string) => void
   onRemoveFuelSlot: (slotIndex: number) => void
   busy: boolean
   onFeed: () => void
@@ -42,7 +41,6 @@ export default function ForgeCompositionPanel({
   item,
   fuelSlots,
   templates,
-  onDropFuelSlot,
   onRemoveFuelSlot,
   busy,
   onFeed,
@@ -79,7 +77,7 @@ export default function ForgeCompositionPanel({
         </div>
       )}
 
-      <ForgeFuelSlots slots={fuelSlots} templates={templates} onDropSlot={onDropFuelSlot} onRemoveSlot={onRemoveFuelSlot} />
+      <ForgeFuelSlots slots={fuelSlots} templates={templates} onRemoveSlot={onRemoveFuelSlot} />
 
       {feedError && <p className="text-center text-[10px] text-red-400">{feedError}</p>}
 

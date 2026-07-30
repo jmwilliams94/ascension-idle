@@ -1,6 +1,5 @@
-import type { DragEvent } from 'react'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
-import { buildGearTooltip, formatItemDisplayName, getQualityColor } from '../game/items/equipmentBonus'
+import { buildGearTooltip, formatItemDisplayName, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
 import { buildStoneTooltip, compositionPointValue } from '../game/items/forgeCosts'
 import type { ItemInstance } from '../game/items/useInventoryStore'
 import type { ItemTemplate } from '../game/items/useItemTemplatesStore'
@@ -17,37 +16,26 @@ interface ForgeFuelSlotsProps {
   // Fixed-length (FUEL_SLOT_COUNT) — a null entry means that slot is empty.
   slots: (FuelEntry | null)[]
   templates: ItemTemplate[]
-  onDropSlot: (slotIndex: number, id: string) => void
   onRemoveSlot: (slotIndex: number) => void
 }
 
 // Exactly two fixed drop targets (not an unbounded list) — confirmed: Composition
-// feeds are capped at two fuel inputs at a time, each independently accepting a
-// drag from the Inventory grid (a stone tile or a gear tile).
-export default function ForgeFuelSlots({ slots, templates, onDropSlot, onRemoveSlot }: ForgeFuelSlotsProps) {
+// feeds are capped at two fuel inputs at a time. Each wrapper carries
+// data-forge-drop="fuel-<index>" (see dragDrop.tsx) so a tile dragged from the
+// Inventory grid can land here — the actual drop is handled by ForgePanel via
+// that grid tile's own drag hook, not from anything in this component.
+export default function ForgeFuelSlots({ slots, templates, onRemoveSlot }: ForgeFuelSlotsProps) {
   return (
     <div>
       <p className="text-xs uppercase tracking-wide text-slate-500">Fuel ({FUEL_SLOT_COUNT} slots)</p>
       <div className="mt-1 flex gap-2">
         {Array.from({ length: FUEL_SLOT_COUNT }, (_, index) => {
           const entry = slots[index] ?? null
-
-          const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
-            event.preventDefault()
-            event.dataTransfer.dropEffect = 'move'
-          }
-
-          const handleDrop = (event: DragEvent<HTMLDivElement>) => {
-            event.preventDefault()
-            const id = event.dataTransfer.getData('text/plain')
-            if (id) {
-              onDropSlot(index, id)
-            }
-          }
+          const dropKey = `fuel-${index}`
 
           if (!entry) {
             return (
-              <div key={index} onDragOver={handleDragOver} onDrop={handleDrop} className={SLOT_SIZE_CLASS}>
+              <div key={index} data-forge-drop={dropKey} className={SLOT_SIZE_CLASS}>
                 <InventorySlot slotId={`fuel-slot-${index}`} filled={false} sizeClassName={SLOT_SIZE_CLASS} emptyHint="Drop stone or item" />
               </div>
             )
@@ -57,7 +45,7 @@ export default function ForgeFuelSlots({ slots, templates, onDropSlot, onRemoveS
             const value = compositionPointValue(entry.tier)
 
             return (
-              <div key={index} onDragOver={handleDragOver} onDrop={handleDrop} className={SLOT_SIZE_CLASS}>
+              <div key={index} data-forge-drop={dropKey} className={SLOT_SIZE_CLASS}>
                 <InventorySlot
                   slotId={`fuel-slot-${index}`}
                   filled
@@ -75,12 +63,12 @@ export default function ForgeFuelSlots({ slots, templates, onDropSlot, onRemoveS
           const template = templates.find((t) => t.id === entry.item.template_id)
 
           return (
-            <div key={index} onDragOver={handleDragOver} onDrop={handleDrop} className={SLOT_SIZE_CLASS}>
+            <div key={index} data-forge-drop={dropKey} className={SLOT_SIZE_CLASS}>
               <InventorySlot
                 slotId={`fuel-slot-${index}`}
                 filled
                 sizeClassName={SLOT_SIZE_CLASS}
-                icon="🗡️"
+                icon={getItemIcon(template?.slot_type)}
                 badge={`${compositionPointValue(entry.item.composition_level)}`}
                 qualityColor={getQualityColor(entry.item.quality_tier)}
                 label={template ? formatItemDisplayName(template.name, entry.item.quality_tier, entry.item.composition_level) : 'Unknown item'}

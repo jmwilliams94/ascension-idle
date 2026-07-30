@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import type { DragEvent } from 'react'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
+import { DraggableInventorySlot } from './dragDrop'
 import {
   buildGearTooltip,
   formatBaseStats,
   formatItemDisplayName,
   formatQualityAndLevel,
+  getItemIcon,
   getQualityColor,
   previewSellPrice,
 } from '../game/items/equipmentBonus'
@@ -34,14 +36,23 @@ interface InventoryPanelProps {
   // Stone tiers use the synthetic id from stoneDragId, real items use their own id.
   // Only ForgePanel passes this; every other usage is unaffected.
   reservedItemIds?: string[]
-  // Present only when rendered inside Forge — makes gear tiles draggable, calling
-  // back with the item being dragged.
-  onItemDragStart?: (item: ItemInstance) => void
-  // Present only when rendered inside Forge — makes stone tiles draggable, calling
-  // back with the tier being dragged. Stones don't stack — each tile is exactly one
-  // stone, so dragging one tile feeds exactly one; feeding more means dragging in
-  // more individual tiles.
-  onStoneDragStart?: (tier: number) => void
+  // Present only when rendered inside Forge — makes gear and stone tiles
+  // draggable (see dragDrop.tsx), calling back with whichever data-forge-drop
+  // target (see ForgeUpgradeSlot/ForgeFuelSlots) the tile was released over, and
+  // the dragged id (a real item id, or a synthetic stoneDragId for a stone).
+  // Not called if the tile was dropped somewhere with no valid target. Stones
+  // don't stack — each tile is exactly one stone, so dragging one tile feeds
+  // exactly one; feeding more means dragging in more individual tiles.
+  onTileDrop?: (overTarget: string, id: string) => void
+  // Present only when rendered inside Warehouse (see WarehousePanel) — makes gear
+  // and stone tiles draggable via the older native HTML5 DnD system instead
+  // (text/plain dataTransfer, read by WarehouseGrid's own drop zone). Kept as
+  // native DnD rather than migrated to Forge's newer Pointer Events system this
+  // step — Warehouse's own touch-drag gap is a separate, not-yet-scoped
+  // follow-up, not something to fix as a side effect of Forge's fix. Mutually
+  // exclusive with onTileDrop — a given InventoryPanel instance uses one system
+  // or the other, never both.
+  nativeDraggable?: boolean
   // Present only when rendered inside the Shop — adds a "Sell" button to the gear
   // detail card. Every other usage omits this, so gear elsewhere has no sell action.
   // The actual sell logic lives entirely in useInventoryStore.sellItem (removes
@@ -54,8 +65,8 @@ interface InventoryPanelProps {
 
 export default function InventoryPanel({
   reservedItemIds = [],
-  onItemDragStart,
-  onStoneDragStart,
+  onTileDrop,
+  nativeDraggable = false,
   enableSelling = false,
   columns = 8,
 }: InventoryPanelProps) {
@@ -136,16 +147,18 @@ export default function InventoryPanel({
     setSelectedSlot((current) => (current && slotKey(current) === slotKey(slot) ? null : slot))
   }
 
-  const handleDragStart = (item: ItemInstance) => (event: DragEvent<HTMLButtonElement>) => {
-    event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('text/plain', item.id)
-    onItemDragStart?.(item)
+  const handleTileDrop = (overTarget: string | null, id: string) => {
+    if (overTarget) {
+      onTileDrop?.(overTarget, id)
+    }
   }
 
-  const handleStoneDragStart = (dragId: string, tier: number) => (event: DragEvent<HTMLButtonElement>) => {
+  // Native HTML5 DnD source for Warehouse (see nativeDraggable above) — sets the
+  // same 'text/plain' payload the old Forge system used to, which WarehouseGrid's
+  // drop zone already reads.
+  const handleNativeDragStart = (id: string) => (event: DragEvent<HTMLButtonElement>) => {
     event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('text/plain', dragId)
-    onStoneDragStart?.(tier)
+    event.dataTransfer.setData('text/plain', id)
   }
 
   const handleSell = async (item: ItemInstance) => {
@@ -200,19 +213,36 @@ export default function InventoryPanel({
               return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
             }
 
+            const commonProps = {
+              slotId: dragId,
+              filled: true as const,
+              sizeClassName: SLOT_SIZE_CLASS,
+              icon: '🔷',
+              label: `+${tier} Stone — ${compositionPointValue(tier)} pts`,
+              tooltip: buildStoneTooltip(tier),
+              selected: selectedSlot?.kind === 'stone' && selectedSlot.dragId === dragId,
+            }
+
+            if (onTileDrop) {
+              return (
+                <DraggableInventorySlot
+                  key={dragId}
+                  {...commonProps}
+                  dragEnabled
+                  dragPayload={{ id: dragId, icon: '🔷' }}
+                  onDrop={handleTileDrop}
+                  onClick={() => toggleSlot({ kind: 'stone', dragId, tier })}
+                />
+              )
+            }
+
             return (
               <InventorySlot
                 key={dragId}
-                slotId={dragId}
-                filled
-                sizeClassName={SLOT_SIZE_CLASS}
-                icon="🔷"
-                label={`+${tier} Stone — ${compositionPointValue(tier)} pts`}
-                tooltip={buildStoneTooltip(tier)}
-                selected={selectedSlot?.kind === 'stone' && selectedSlot.dragId === dragId}
+                {...commonProps}
                 onClick={() => toggleSlot({ kind: 'stone', dragId, tier })}
-                draggable={Boolean(onStoneDragStart)}
-                onDragStart={onStoneDragStart ? handleStoneDragStart(dragId, tier) : undefined}
+                draggable={nativeDraggable}
+                onDragStart={nativeDraggable ? handleNativeDragStart(dragId) : undefined}
               />
             )
           })}
@@ -224,21 +254,40 @@ export default function InventoryPanel({
 
             const template = templates.find((entry) => entry.id === item.template_id)
             const label = template ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level) : 'Unknown item'
+            const qualityColor = getQualityColor(item.quality_tier)
+            const icon = getItemIcon(template?.slot_type)
+
+            const commonProps = {
+              slotId: item.id,
+              filled: true as const,
+              sizeClassName: SLOT_SIZE_CLASS,
+              qualityColor,
+              icon,
+              label,
+              tooltip: buildGearTooltip(item, template),
+              selected: selectedSlot?.kind === 'item' && selectedSlot.id === item.id,
+            }
+
+            if (onTileDrop) {
+              return (
+                <DraggableInventorySlot
+                  key={item.id}
+                  {...commonProps}
+                  dragEnabled
+                  dragPayload={{ id: item.id, icon, qualityColor }}
+                  onDrop={handleTileDrop}
+                  onClick={() => toggleSlot({ kind: 'item', id: item.id })}
+                />
+              )
+            }
 
             return (
               <InventorySlot
                 key={item.id}
-                slotId={item.id}
-                filled
-                sizeClassName={SLOT_SIZE_CLASS}
-                qualityColor={getQualityColor(item.quality_tier)}
-                icon="🗡️"
-                label={label}
-                tooltip={buildGearTooltip(item, template)}
-                selected={selectedSlot?.kind === 'item' && selectedSlot.id === item.id}
+                {...commonProps}
                 onClick={() => toggleSlot({ kind: 'item', id: item.id })}
-                draggable={Boolean(onItemDragStart)}
-                onDragStart={onItemDragStart ? handleDragStart(item) : undefined}
+                draggable={nativeDraggable}
+                onDragStart={nativeDraggable ? handleNativeDragStart(item.id) : undefined}
               />
             )
           })}
@@ -301,7 +350,7 @@ export default function InventoryPanel({
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-lg"
               style={{ borderColor: getQualityColor(selectedItem.quality_tier) }}
             >
-              🗡️
+              {getItemIcon(selectedTemplate?.slot_type)}
             </div>
             <div>
               <p className="text-sm font-medium text-slate-200">

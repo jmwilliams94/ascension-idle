@@ -10,7 +10,7 @@ import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useWarehouseStore } from '../game/items/useWarehouseStore'
 import { LOOT_HOLDING_CAP, useLootHoldingStore } from '../game/items/useLootHoldingStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
-import { formatItemDisplayName, getQualityColor } from '../game/items/equipmentBonus'
+import { formatItemDisplayName, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
 
 type CurrencyId = 'gold' | 'meteors' | 'dragonballs'
 
@@ -282,7 +282,7 @@ function LootHoldingCard() {
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-sm"
                 style={{ borderColor: getQualityColor(entry.quality_tier) }}
               >
-                🗡️
+                {getItemIcon(template?.slot_type)}
               </div>
               <span className="flex-1 truncate text-sm text-slate-200">{label}</span>
               <button
@@ -333,7 +333,7 @@ export default function WarehousePanel({ characterId }: { characterId: string })
         <div className="space-y-4">
           <WarehouseGrid characterId={characterId} />
           <div onDragOver={handleInventoryDragOver} onDrop={handleInventoryDrop}>
-            <InventoryPanel onItemDragStart={() => {}} onStoneDragStart={() => {}} />
+            <InventoryPanel nativeDraggable />
           </div>
         </div>
 

@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import ForgeCompositionPanel from './ForgeCompositionPanel'
 import type { FuelEntry } from './ForgeFuelSlots'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
+import { DragDropProvider } from './dragDrop'
 import InventoryPanel from './InventoryPanel'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
-import { formatItemDisplayName, formatQualityAndLevel, getQualityColor, nextQualityTier } from '../game/items/equipmentBonus'
+import { formatItemDisplayName, formatQualityAndLevel, getItemIcon, getQualityColor, nextQualityTier } from '../game/items/equipmentBonus'
 import { findNextTemplateInChain, parseStoneDragId, previewLevelUpgradeCost, previewQualityUpgradeCost } from '../game/items/forgeCosts'
 import { useForgeStore } from '../game/items/useForgeStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
@@ -181,6 +182,21 @@ export default function ForgePanel() {
     setFeedError(null)
   }
 
+  // Routes a grid tile's drop (see dragDrop.tsx) to whichever Forge target it
+  // landed on, identified by that target's data-forge-drop key — "upgrade" (see
+  // ForgeUpgradeSlot) or "fuel-0"/"fuel-1" (see ForgeFuelSlots).
+  const handleTileDrop = (overTarget: string, id: string) => {
+    if (overTarget === 'upgrade') {
+      handleDropItemId(id)
+      return
+    }
+
+    if (overTarget.startsWith('fuel-')) {
+      const slotIndex = Number(overTarget.slice('fuel-'.length))
+      handleDropFuelSlot(slotIndex, id)
+    }
+  }
+
   const isMaxQuality = selectedItem?.quality_tier === 'super'
   const nextLevelTemplate = selectedTemplate ? findNextTemplateInChain(templates, selectedTemplate) : null
   const isMaxLevel = Boolean(selectedTemplate) && !nextLevelTemplate
@@ -272,144 +288,143 @@ export default function ForgePanel() {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <div className="flex justify-center gap-6">
-        <ForgeUpgradeSlot
-          item={selectedItem}
-          template={selectedTemplate}
-          onDropItemId={handleDropItemId}
-          onRemove={handleRemove}
-        />
+    <DragDropProvider>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="flex justify-center gap-6">
+          <ForgeUpgradeSlot
+            item={selectedItem}
+            template={selectedTemplate}
+            onRemove={handleRemove}
+          />
 
-        <div className="w-60 shrink-0 space-y-3">
-          <p className="text-xs uppercase tracking-wide text-slate-500">Result Preview</p>
+          <div className="w-60 shrink-0 space-y-3">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Result Preview</p>
 
-          {attemptResult ? (
-            <div
-              className={`rounded-xl border p-3 text-center text-sm ${
-                attemptResult.success
-                  ? 'forge-success-flash border-emerald-600 bg-emerald-500/10 text-emerald-300'
-                  : 'border-red-800 bg-red-500/10 text-red-300'
-              }`}
-            >
-              {attemptResult.message}
-            </div>
-          ) : !selectedItem ? (
-            <p className="rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-4 text-center text-[11px] text-slate-600">
-              Drag an item into the Upgrade Slot to preview an upgrade.
-            </p>
-          ) : (
-            <>
-              <div className="flex gap-1.5">
-                <button
-                  type="button"
-                  disabled={busy || Boolean(qualityDisabledReason)}
-                  onClick={() => handleSelectType('quality')}
-                  title={qualityDisabledReason ?? undefined}
-                  className={`flex-1 rounded-lg border px-1.5 py-2 text-[10px] font-medium leading-tight disabled:cursor-not-allowed disabled:opacity-50 ${
-                    selectedType === 'quality'
-                      ? 'border-sky-500 bg-sky-500/10 text-sky-300'
-                      : 'border-slate-700 text-slate-300 hover:border-slate-500'
-                  }`}
-                >
-                  Quality
-                  <br />
-                  {isMaxQuality ? '(Max)' : `(${qualityCost} DB)`}
-                </button>
-
-                <button
-                  type="button"
-                  disabled={busy || Boolean(levelDisabledReason)}
-                  onClick={() => handleSelectType('level')}
-                  title={levelDisabledReason ?? undefined}
-                  className={`flex-1 rounded-lg border px-1.5 py-2 text-[10px] font-medium leading-tight disabled:cursor-not-allowed disabled:opacity-50 ${
-                    selectedType === 'level'
-                      ? 'border-amber-500 bg-amber-500/10 text-amber-300'
-                      : 'border-slate-700 text-slate-300 hover:border-slate-500'
-                  }`}
-                >
-                  Level
-                  <br />
-                  {isMaxLevel ? '(Max)' : `(${levelCost} Met)`}
-                </button>
-
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => handleSelectType('composition')}
-                  className={`flex-1 rounded-lg border px-1.5 py-2 text-[10px] font-medium leading-tight disabled:cursor-not-allowed disabled:opacity-50 ${
-                    selectedType === 'composition'
-                      ? 'border-purple-500 bg-purple-500/10 text-purple-300'
-                      : 'border-slate-700 text-slate-300 hover:border-slate-500'
-                  }`}
-                >
-                  Composition
-                </button>
+            {attemptResult ? (
+              <div
+                className={`rounded-xl border p-3 text-center text-sm ${
+                  attemptResult.success
+                    ? 'forge-success-flash border-emerald-600 bg-emerald-500/10 text-emerald-300'
+                    : 'border-red-800 bg-red-500/10 text-red-300'
+                }`}
+              >
+                {attemptResult.message}
               </div>
+            ) : !selectedItem ? (
+              <p className="rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-4 text-center text-[11px] text-slate-600">
+                Drag an item into the Upgrade Slot to preview an upgrade.
+              </p>
+            ) : (
+              <>
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    disabled={busy || Boolean(qualityDisabledReason)}
+                    onClick={() => handleSelectType('quality')}
+                    title={qualityDisabledReason ?? undefined}
+                    className={`flex-1 rounded-lg border px-1.5 py-2 text-[10px] font-medium leading-tight disabled:cursor-not-allowed disabled:opacity-50 ${
+                      selectedType === 'quality'
+                        ? 'border-sky-500 bg-sky-500/10 text-sky-300'
+                        : 'border-slate-700 text-slate-300 hover:border-slate-500'
+                    }`}
+                  >
+                    Quality
+                    <br />
+                    {isMaxQuality ? '(Max)' : `(${qualityCost} DB)`}
+                  </button>
 
-              {selectedType === 'composition' ? (
-                <ForgeCompositionPanel
-                  item={selectedItem}
-                  fuelSlots={fuelSlots}
-                  templates={templates}
-                  onDropFuelSlot={handleDropFuelSlot}
-                  onRemoveFuelSlot={handleRemoveFuelSlot}
-                  busy={busy}
-                  onFeed={() => void handleFeed()}
-                  feedError={feedError}
-                />
-              ) : (
-                <>
-                  {selectedType && (qualityDisabledReason || levelDisabledReason) && (
-                    <p className="text-center text-[10px] text-slate-500">
-                      {selectedType === 'quality' ? qualityDisabledReason : levelDisabledReason}
-                    </p>
-                  )}
+                  <button
+                    type="button"
+                    disabled={busy || Boolean(levelDisabledReason)}
+                    onClick={() => handleSelectType('level')}
+                    title={levelDisabledReason ?? undefined}
+                    className={`flex-1 rounded-lg border px-1.5 py-2 text-[10px] font-medium leading-tight disabled:cursor-not-allowed disabled:opacity-50 ${
+                      selectedType === 'level'
+                        ? 'border-amber-500 bg-amber-500/10 text-amber-300'
+                        : 'border-slate-700 text-slate-300 hover:border-slate-500'
+                    }`}
+                  >
+                    Level
+                    <br />
+                    {isMaxLevel ? '(Max)' : `(${levelCost} Met)`}
+                  </button>
 
-                  {previewData ? (
-                    <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
-                      <p className="text-[10px] uppercase tracking-wide text-slate-600">After upgrade</p>
-                      <div className="mt-1 flex items-center gap-2">
-                        <div
-                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-base"
-                          style={{ borderColor: previewData.color }}
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => handleSelectType('composition')}
+                    className={`flex-1 rounded-lg border px-1.5 py-2 text-[10px] font-medium leading-tight disabled:cursor-not-allowed disabled:opacity-50 ${
+                      selectedType === 'composition'
+                        ? 'border-purple-500 bg-purple-500/10 text-purple-300'
+                        : 'border-slate-700 text-slate-300 hover:border-slate-500'
+                    }`}
+                  >
+                    Composition
+                  </button>
+                </div>
+
+                {selectedType === 'composition' ? (
+                  <ForgeCompositionPanel
+                    item={selectedItem}
+                    fuelSlots={fuelSlots}
+                    templates={templates}
+                    onRemoveFuelSlot={handleRemoveFuelSlot}
+                    busy={busy}
+                    onFeed={() => void handleFeed()}
+                    feedError={feedError}
+                  />
+                ) : (
+                  <>
+                    {selectedType && (qualityDisabledReason || levelDisabledReason) && (
+                      <p className="text-center text-[10px] text-slate-500">
+                        {selectedType === 'quality' ? qualityDisabledReason : levelDisabledReason}
+                      </p>
+                    )}
+
+                    {previewData ? (
+                      <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
+                        <p className="text-[10px] uppercase tracking-wide text-slate-600">After upgrade</p>
+                        <div className="mt-1 flex items-center gap-2">
+                          <div
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-base"
+                            style={{ borderColor: previewData.color }}
+                          >
+                            {getItemIcon(selectedTemplate?.slot_type)}
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-slate-200">{previewData.name}</p>
+                            <p className="text-[10px] text-slate-500">{previewData.qualityAndLevel}</p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void handleConfirm()}
+                          className="mt-3 w-full rounded-lg border border-emerald-600 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          🗡️
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-slate-200">{previewData.name}</p>
-                          <p className="text-[10px] text-slate-500">{previewData.qualityAndLevel}</p>
-                        </div>
+                          {busy ? 'Working…' : 'Confirm Upgrade'}
+                        </button>
                       </div>
-
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => void handleConfirm()}
-                        className="mt-3 w-full rounded-lg border border-emerald-600 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {busy ? 'Working…' : 'Confirm Upgrade'}
-                      </button>
-                    </div>
-                  ) : (
-                    <p className="rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-4 text-center text-[11px] text-slate-600">
-                      Choose an upgrade type to preview the result.
-                    </p>
-                  )}
-                </>
-              )}
-            </>
-          )}
+                    ) : (
+                      <p className="rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-4 text-center text-[11px] text-slate-600">
+                        Choose an upgrade type to preview the result.
+                      </p>
+                    )}
+                  </>
+                )}
+              </>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Draggable only here — opting into onItemDragStart/onStoneDragStart is what enables it. */}
-      <InventoryPanel
-        columns={5}
-        reservedItemIds={[...(selectedItemId ? [selectedItemId] : []), ...fuelIds]}
-        onItemDragStart={() => undefined}
-        onStoneDragStart={() => undefined}
-      />
-    </div>
+        {/* Draggable only here — opting into onTileDrop is what enables it. */}
+        <InventoryPanel
+          columns={5}
+          reservedItemIds={[...(selectedItemId ? [selectedItemId] : []), ...fuelIds]}
+          onTileDrop={handleTileDrop}
+        />
+      </div>
+    </DragDropProvider>
   )
 }

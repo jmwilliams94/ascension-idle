@@ -94,6 +94,24 @@ export function getQualityColor(qualityTier: string): string {
   return QUALITY_COLORS[qualityTier] ?? QUALITY_COLORS.normal
 }
 
+// Matches the locked placeholder slot icons already used in EquipmentPanel's
+// paper doll, so a real item and its slot's empty-state icon read as the same
+// thing. Previously every gear tile everywhere hardcoded the sword emoji
+// regardless of slot_type — a coat or hat displayed with a sword icon, a
+// separate (cosmetic) bug from the equip-into-weapon-slot bug fixed in 1.28.1.
+const SLOT_ICONS: Record<string, string> = {
+  weapon: '🗡️',
+  hat: '🪖',
+  coat: '🥋',
+  necklace: '📿',
+  ring: '💍',
+  boots: '👢',
+}
+
+export function getItemIcon(slotType: string | undefined): string {
+  return (slotType && SLOT_ICONS[slotType]) || '🗡️'
+}
+
 const QUALITY_ORDER = ['normal', 'refined', 'unique', 'elite', 'super']
 
 // Mirrors the quality_upgrade Postgres function's tier progression exactly (see

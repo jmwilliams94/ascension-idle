@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { DragEvent } from 'react'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
+import { getItemIcon } from '../game/items/equipmentBonus'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
 import { COMPOSITION_STONE_TIERS, compositionPointValue, parseStoneDragId } from '../game/items/forgeCosts'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
@@ -97,7 +98,7 @@ export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
                 slotId={entry.id}
                 filled
                 sizeClassName={SLOT_SIZE_CLASS}
-                icon="🗡️"
+                icon={getItemIcon(template?.slot_type)}
                 label={label}
                 tooltip={tooltip}
                 badge={`x${entry.count}`}
@@ -128,7 +129,7 @@ export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
         <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg">
-              🗡️
+              {getItemIcon(selectedTemplate?.slot_type)}
             </div>
             <div>
               <p className="text-sm font-medium text-slate-200">{selectedTemplate ? selectedTemplate.name : 'Unknown item'}</p>

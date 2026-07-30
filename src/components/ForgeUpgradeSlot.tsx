@@ -1,53 +1,52 @@
-import type { DragEvent } from 'react'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
-import { buildGearTooltip, formatItemDisplayName, formatQualityAndLevel, getQualityColor } from '../game/items/equipmentBonus'
+import { useDraggableTile } from './dragDropContext'
+import { buildGearTooltip, formatItemDisplayName, formatQualityAndLevel, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
 import type { ItemInstance } from '../game/items/useInventoryStore'
 import type { ItemTemplate } from '../game/items/useItemTemplatesStore'
 
 interface ForgeUpgradeSlotProps {
   item: ItemInstance | null
   template: ItemTemplate | null
-  onDropItemId: (itemId: string) => void
   onRemove: () => void
 }
 
-// The drop target for Forge's drag-and-drop flow. Empty, it accepts a drag from
-// the Inventory grid (native HTML5 DnD — see InventoryPanel's onItemDragStart).
-// Occupied, the item itself becomes draggable so dragging it back out clears the
-// selection (there's nowhere else valid to drop it, so onDragEnd always clears,
-// regardless of where the drag ends) — a "Remove" button does the same thing for
-// anyone who'd rather click than drag. Reuses InventorySlot (rather than its own
-// bespoke tile markup) so the universal hover tooltip works here too.
-export default function ForgeUpgradeSlot({ item, template, onDropItemId, onRemove }: ForgeUpgradeSlotProps) {
-  const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    event.dataTransfer.dropEffect = 'move'
-  }
-
-  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    const itemId = event.dataTransfer.getData('text/plain')
-    if (itemId) {
-      onDropItemId(itemId)
-    }
-  }
+// The drop target for Forge's drag-and-drop flow (see dragDrop.tsx) — its
+// wrapper carries data-forge-drop="upgrade" so a tile dragged from the
+// Inventory grid can land here; onDropItemId is invoked by ForgePanel via that
+// grid tile's own drag hook, not from anything in this component. Occupied,
+// the item itself becomes draggable so dragging it back out clears the
+// selection — there's nowhere else valid to drop it, so it's removed
+// regardless of where the drag ends, same as a "Remove" click. Reuses
+// InventorySlot (rather than its own bespoke tile markup) so the universal
+// hover tooltip works here too.
+export default function ForgeUpgradeSlot({ item, template, onRemove }: ForgeUpgradeSlotProps) {
+  const icon = getItemIcon(template?.slot_type)
+  const drag = useDraggableTile({
+    enabled: Boolean(item),
+    payload: item ? { id: item.id, icon, qualityColor: getQualityColor(item.quality_tier) } : null,
+    onDrop: () => onRemove(),
+  })
 
   return (
     <div className="flex flex-col items-center gap-2">
       <p className="text-xs uppercase tracking-wide text-slate-500">Upgrade Slot</p>
 
-      <div onDragOver={handleDragOver} onDrop={handleDrop} className={`${SLOT_SIZE_CLASS} shrink-0`}>
+      <div data-forge-drop="upgrade" className={`${SLOT_SIZE_CLASS} shrink-0`}>
         <InventorySlot
           slotId="forge-upgrade-slot"
           filled={Boolean(item)}
           sizeClassName={SLOT_SIZE_CLASS}
           emptyHint="Drop item here"
           qualityColor={item ? getQualityColor(item.quality_tier) : undefined}
-          icon={item ? '🗡️' : undefined}
+          icon={item ? icon : undefined}
           label={item ? (template ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level) : 'Unknown item') : undefined}
           tooltip={item ? buildGearTooltip(item, template ?? undefined) : undefined}
-          draggable={Boolean(item)}
-          onDragEnd={item ? onRemove : undefined}
+          draggable={drag.draggable}
+          dragging={drag.dragging}
+          onPointerDown={drag.onPointerDown}
+          onPointerMove={drag.onPointerMove}
+          onPointerUp={drag.onPointerUp}
+          onPointerCancel={drag.onPointerCancel}
         />
       </div>
 

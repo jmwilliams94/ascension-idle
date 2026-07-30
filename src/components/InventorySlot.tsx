@@ -1,4 +1,4 @@
-import type { DragEvent } from 'react'
+import type { DragEvent, PointerEvent } from 'react'
 import HoverTooltip from './HoverTooltip'
 import ItemTooltip from './ItemTooltip'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
@@ -31,11 +31,25 @@ interface InventorySlotProps {
   // of requiring select-then-press-Equip) — when provided, the browser's native
   // context menu is suppressed on this tile.
   onContextMenu?: () => void
-  // Native HTML5 drag-and-drop (see ForgePanel) — omit both to leave the tile
-  // non-draggable, same as before this existed.
+  // Two coexisting drag systems, picked per call site (never both at once):
+  // native HTML5 DnD (still used by Warehouse — see WarehouseGrid/
+  // WarehousePanel, unaffected by this step) and Pointer Events (used by Forge
+  // — see dragDrop.tsx — which works on touch too, unlike native HTML5 DnD).
+  // `draggable` is shared styling (cursor/touch-action) for either system; the
+  // native HTML `draggable` attribute itself is only set when onDragStart is
+  // provided, so a pointer-only tile never also triggers the browser's own
+  // native drag gesture.
   draggable?: boolean
   onDragStart?: (event: DragEvent<HTMLButtonElement>) => void
   onDragEnd?: (event: DragEvent<HTMLButtonElement>) => void
+  // True while this specific tile is the one currently being dragged (pointer
+  // system only) — dims it so the floating ghost (see dragDrop.tsx) reads as
+  // "the thing that moved."
+  dragging?: boolean
+  onPointerDown?: (event: PointerEvent<HTMLButtonElement>) => void
+  onPointerMove?: (event: PointerEvent<HTMLButtonElement>) => void
+  onPointerUp?: (event: PointerEvent<HTMLButtonElement>) => void
+  onPointerCancel?: (event: PointerEvent<HTMLButtonElement>) => void
   // Overrides the grid's implicit `aspect-square` sizing for standalone (non-grid)
   // contexts like ForgeUpgradeSlot/ForgeFuelSlots, e.g. "h-20 w-20". Omit when the
   // tile lives inside a grid cell that already constrains its width.
@@ -61,6 +75,11 @@ export default function InventorySlot({
   draggable,
   onDragStart,
   onDragEnd,
+  dragging,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onPointerCancel,
   sizeClassName = '',
   emptyHint,
 }: InventorySlotProps) {
@@ -95,14 +114,18 @@ export default function InventorySlot({
             }
           : undefined
       }
-      draggable={draggable}
+      draggable={draggable && Boolean(onDragStart)}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
       title={tooltip ? undefined : label}
       aria-label={label}
       className={`relative flex items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg ${sizingClassName} ${
         selected ? 'ring-2 ring-sky-400' : ''
-      } ${draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
+      } ${draggable ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${dragging ? 'opacity-40' : ''}`}
       style={{ borderColor: qualityColor, backgroundColor: qualityColor ? `${qualityColor}22` : undefined }}
     >
       {icon}
