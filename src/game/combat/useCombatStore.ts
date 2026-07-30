@@ -2,16 +2,34 @@ import { create } from 'zustand'
 import { computeDerivedStats } from '../stats/derivedStats'
 import { useCharacterStore } from '../stats/useCharacterStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
+import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { computeEquipmentBonus } from '../items/equipmentBonus'
 import { useEquipmentStore } from '../items/useEquipmentStore'
 import { useArrowStore } from '../items/useArrowStore'
 import { useInventoryStore } from '../items/useInventoryStore'
 import { useItemTemplatesStore } from '../items/useItemTemplatesStore'
 import { useOutOfArrowsWarningStore } from '../items/useOutOfArrowsWarningStore'
+import { useActiveCharacterStore } from '../../lib/useActiveCharacterStore'
 import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
-import { MONSTER_ATTACK_INTERVAL_MS, killRewards, monsterAttackDamage, rollIsRare, spawnMonsterHp } from './combatResolver'
+import {
+  MONSTER_ATTACK_INTERVAL_MS,
+  killRewards,
+  monsterAttackDamage,
+  rollBonusCurrencyDrops,
+  rollIsRare,
+  spawnMonsterHp,
+} from './combatResolver'
 
-export type CombatLogKind = 'engage' | 'damage' | 'player-damage' | 'kill' | 'rare-kill' | 'item' | 'out-of-arrows' | 'knockout'
+export type CombatLogKind =
+  | 'engage'
+  | 'damage'
+  | 'player-damage'
+  | 'kill'
+  | 'rare-kill'
+  | 'item'
+  | 'currency'
+  | 'out-of-arrows'
+  | 'knockout'
 
 export interface CombatLogEntry {
   id: string
@@ -233,6 +251,25 @@ export const useCombatStore = create<CombatState>((set, get) => ({
             }))
           }
         })
+      }
+
+      // Meteor (1/500) / Dragonball (1/20,000) kill-drop rolls — confirmed rates,
+      // see combatResolver.ts. Granted via an atomic server-side RPC (not a local
+      // increment) since these two currencies are otherwise only ever mutated by
+      // the Forge upgrade functions — see useCurrencyStore's grantCurrencyReward.
+      const bonusCurrency = rollBonusCurrencyDrops()
+      if (bonusCurrency.meteors > 0 || bonusCurrency.dragonballs > 0) {
+        const characterId = useActiveCharacterStore.getState().characterId
+        if (characterId) {
+          void useCurrencyStore.getState().grantCurrencyReward(characterId, bonusCurrency.meteors, bonusCurrency.dragonballs)
+        }
+        const parts = [
+          bonusCurrency.meteors > 0 ? `+${bonusCurrency.meteors} Meteor` : null,
+          bonusCurrency.dragonballs > 0 ? `+${bonusCurrency.dragonballs} DragonBall` : null,
+        ].filter((part): part is string => part !== null)
+        useCombatStore.setState((s) => ({
+          log: appendLog(s.log, { kind: 'currency', message: `You found: ${parts.join(', ')}` }),
+        }))
       }
 
       // Respawn immediately — no fixed respawn timer like the old isometric scene's

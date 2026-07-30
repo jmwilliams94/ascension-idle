@@ -8,9 +8,10 @@ import { useInventoryStore } from '../items/useInventoryStore'
 import { useItemTemplatesStore, type ItemTemplate } from '../items/useItemTemplatesStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
 import { useCharacterRecordStore } from '../../lib/useCharacterRecordStore'
+import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { useZoneStore } from '../zones/useZoneStore'
 import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
-import { killRewards, rollIsRare, spawnMonsterHp } from './combatResolver'
+import { killRewards, rollBonusCurrencyDrops, rollIsRare, spawnMonsterHp } from './combatResolver'
 
 // Idle progress while away is capped at 2 hours — a simple, deliberately generous
 // cap rather than a tuned economy decision (see CLAUDE.md).
@@ -24,6 +25,8 @@ export interface OfflineProgressResult {
   gold: number
   exp: number
   itemDrops: ItemTemplate[]
+  meteors: number
+  dragonballs: number
 }
 
 interface SimulateParams {
@@ -86,6 +89,8 @@ export function simulateOfflineProgress(params: SimulateParams): OfflineProgress
   let rareKills = 0
   let gold = 0
   let exp = 0
+  let meteors = 0
+  let dragonballs = 0
   const itemDrops: ItemTemplate[] = []
 
   for (let i = 0; i < totalAttacks; i += 1) {
@@ -106,12 +111,16 @@ export function simulateOfflineProgress(params: SimulateParams): OfflineProgress
         itemDrops.push(drop.template)
       }
 
+      const bonusCurrency = rollBonusCurrencyDrops()
+      meteors += bonusCurrency.meteors
+      dragonballs += bonusCurrency.dragonballs
+
       isRare = rollIsRare()
       hp = spawnMonsterHp(type, isRare)
     }
   }
 
-  return { elapsedMs, attacks: totalAttacks, kills, rareKills, gold, exp, itemDrops }
+  return { elapsedMs, attacks: totalAttacks, kills, rareKills, gold, exp, itemDrops, meteors, dragonballs }
 }
 
 // Applies a simulated result through the exact same code paths a live kill
@@ -127,6 +136,11 @@ async function applyOfflineProgress(characterId: string, result: OfflineProgress
   for (const template of result.itemDrops) {
     await useInventoryStore.getState().grantItemDrop(template, false)
   }
+
+  // One atomic grant for the whole simulated window's total, rather than one RPC
+  // call per simulated kill — matches how gold/EXP are already accumulated and
+  // applied in a single addRewards call above, not per-kill.
+  await useCurrencyStore.getState().grantCurrencyReward(characterId, result.meteors, result.dragonballs)
 
   if (isHunter) {
     for (let i = 0; i < result.attacks; i += 1) {

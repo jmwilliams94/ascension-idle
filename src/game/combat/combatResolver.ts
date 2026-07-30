@@ -56,6 +56,22 @@ export function killRewards(type: EnemyTypeDef, isRare: boolean, characterLevel:
   }
 }
 
+// Meteor/Dragonball kill-drop odds — confirmed by the user (2026-07-30), not a
+// placeholder like the rest of this file's numbers. Independent per-kill rolls,
+// not affected by rare status (rare only multiplies HP/gold/EXP per the
+// existing confirmed design above). Shared by live combat and the offline
+// simulator so odds can never drift between the two, same convention as every
+// other roll in this module.
+export const METEOR_DROP_CHANCE = 1 / 500
+export const DRAGONBALL_DROP_CHANCE = 1 / 20000
+
+export function rollBonusCurrencyDrops(): { meteors: number; dragonballs: number } {
+  return {
+    meteors: Math.random() < METEOR_DROP_CHANCE ? 1 : 0,
+    dragonballs: Math.random() < DRAGONBALL_DROP_CHANCE ? 1 : 0,
+  }
+}
+
 // PLACEHOLDER monster attack cadence — fixed at once per second, not derived
 // from any per-monster "attack speed" concept (none exists yet, unlike the
 // player's own derived.attackSpeed).

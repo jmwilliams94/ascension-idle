@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.25.0",
+    "date": "2026-07-30",
+    "changes": [
+      "Meteors and DragonBalls can now drop from kills (Meteors are rare, DragonBalls are very rare), instead of only being obtainable through manual testing",
+      "Offline progress now includes any Meteors/DragonBalls earned while you were away"
+    ]
+  },
+  {
     "version": "1.24.0",
     "date": "2026-07-30",
     "changes": [

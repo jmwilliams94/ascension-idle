@@ -61,6 +61,18 @@ export default function OfflineProgressModal() {
               <dd>{result.itemDrops.length}</dd>
             </div>
           )}
+          {result.meteors > 0 && (
+            <div className="flex justify-between">
+              <dt className="text-slate-400">Meteors</dt>
+              <dd className="font-semibold text-slate-200">+{result.meteors}</dd>
+            </div>
+          )}
+          {result.dragonballs > 0 && (
+            <div className="flex justify-between">
+              <dt className="text-slate-400">DragonBalls</dt>
+              <dd className="font-semibold text-slate-200">+{result.dragonballs}</dd>
+            </div>
+          )}
         </dl>
 
         <button
