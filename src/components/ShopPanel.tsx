@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import InventoryPanel from './InventoryPanel'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useArrowStore } from '../game/items/useArrowStore'
@@ -109,102 +110,106 @@ export default function ShopPanel() {
     .sort((a, b) => a.required_level - b.required_level)
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-2">
-        <button
-          type="button"
-          onClick={() => setTab('arrows')}
-          className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
-            tab === 'arrows' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-          }`}
-        >
-          Arrows
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('weapons')}
-          className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
-            tab === 'weapons' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-          }`}
-        >
-          Weapons
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('armor')}
-          className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
-            tab === 'armor' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-          }`}
-        >
-          Armor
-        </button>
+    <div className="grid gap-4 lg:grid-cols-2">
+      <div className="space-y-3">
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={() => setTab('arrows')}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+              tab === 'arrows' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
+            }`}
+          >
+            Arrows
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab('weapons')}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+              tab === 'weapons' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
+            }`}
+          >
+            Weapons
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab('armor')}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+              tab === 'armor' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
+            }`}
+          >
+            Armor
+          </button>
+        </div>
+
+        <p className="text-xs text-slate-500">Gold: {gold}</p>
+
+        {tab === 'arrows' &&
+          (isHunter ? (
+            <div className="space-y-2">
+              {ARROW_TYPE_ORDER.map((typeId) => {
+                const type = ARROW_TYPES[typeId]
+                const owned = stacks.filter((stack) => stack.arrowType === typeId).reduce((sum, stack) => sum + stack.count, 0)
+                const stackCost = type.price * type.stackSize
+                const meetsLevel = level >= type.requiredLevel
+                const canAfford = gold >= stackCost
+                const canBuy = meetsLevel && canAfford
+
+                return (
+                  <div
+                    key={typeId}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs"
+                  >
+                    <div>
+                      <p className="font-medium text-slate-200">{type.displayName}</p>
+                      <p className="text-slate-500">{type.description}</p>
+                      <p className="text-slate-500">
+                        Owned: {owned} · stack of {type.stackSize} for {stackCost}g
+                      </p>
+                      {type.requiredLevel > 1 && (
+                        <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {type.requiredLevel}</p>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={!canBuy}
+                      title={!meetsLevel ? `Requires level ${type.requiredLevel}` : undefined}
+                      onClick={() => buyStack(typeId)}
+                      className="shrink-0 rounded border border-slate-700 px-2 py-1 text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Buy
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">Nothing available yet</p>
+          ))}
+
+        {tab === 'weapons' && (
+          <div className="max-h-96 space-y-2 overflow-y-auto">
+            {weaponTemplates.length === 0 ? (
+              <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">Nothing available yet</p>
+            ) : (
+              weaponTemplates.map((template) => <GearRow key={template.id} template={template} />)
+            )}
+          </div>
+        )}
+
+        {tab === 'armor' && (
+          <div className="max-h-96 space-y-2 overflow-y-auto">
+            {armorTemplates.length === 0 ? (
+              <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">Nothing available yet</p>
+            ) : (
+              armorTemplates.map((template) => <GearRow key={template.id} template={template} />)
+            )}
+          </div>
+        )}
       </div>
 
-      <p className="text-xs text-slate-500">Gold: {gold}</p>
-
-      {tab === 'arrows' &&
-        (isHunter ? (
-          <div className="space-y-2">
-            {ARROW_TYPE_ORDER.map((typeId) => {
-              const type = ARROW_TYPES[typeId]
-              const owned = stacks.filter((stack) => stack.arrowType === typeId).reduce((sum, stack) => sum + stack.count, 0)
-              const stackCost = type.price * type.stackSize
-              const meetsLevel = level >= type.requiredLevel
-              const canAfford = gold >= stackCost
-              const canBuy = meetsLevel && canAfford
-
-              return (
-                <div
-                  key={typeId}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs"
-                >
-                  <div>
-                    <p className="font-medium text-slate-200">{type.displayName}</p>
-                    <p className="text-slate-500">{type.description}</p>
-                    <p className="text-slate-500">
-                      Owned: {owned} · stack of {type.stackSize} for {stackCost}g
-                    </p>
-                    {type.requiredLevel > 1 && (
-                      <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {type.requiredLevel}</p>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    disabled={!canBuy}
-                    title={!meetsLevel ? `Requires level ${type.requiredLevel}` : undefined}
-                    onClick={() => buyStack(typeId)}
-                    className="shrink-0 rounded border border-slate-700 px-2 py-1 text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Buy
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-        ) : (
-          <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">Nothing available yet</p>
-        ))}
-
-      {tab === 'weapons' && (
-        <div className="max-h-96 space-y-2 overflow-y-auto">
-          {weaponTemplates.length === 0 ? (
-            <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">Nothing available yet</p>
-          ) : (
-            weaponTemplates.map((template) => <GearRow key={template.id} template={template} />)
-          )}
-        </div>
-      )}
-
-      {tab === 'armor' && (
-        <div className="max-h-96 space-y-2 overflow-y-auto">
-          {armorTemplates.length === 0 ? (
-            <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">Nothing available yet</p>
-          ) : (
-            armorTemplates.map((template) => <GearRow key={template.id} template={template} />)
-          )}
-        </div>
-      )}
+      <InventoryPanel columns={5} enableSelling />
     </div>
   )
 }

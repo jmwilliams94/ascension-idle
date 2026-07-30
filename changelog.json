@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.28.0",
+    "date": "2026-07-30",
+    "changes": [
+      "Equipped gear now leaves your Inventory and shows only in the Equipment tab, freeing up the slot it used to take",
+      "The Shop now shows your Inventory alongside its buy screens, and gear can be sold there for gold"
+    ]
+  },
+  {
     "version": "1.27.0",
     "date": "2026-07-30",
     "changes": [

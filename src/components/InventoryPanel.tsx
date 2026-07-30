@@ -1,7 +1,14 @@
 import { useState } from 'react'
 import type { DragEvent } from 'react'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
-import { buildGearTooltip, formatBaseStats, formatItemDisplayName, formatQualityAndLevel, getQualityColor } from '../game/items/equipmentBonus'
+import {
+  buildGearTooltip,
+  formatBaseStats,
+  formatItemDisplayName,
+  formatQualityAndLevel,
+  getQualityColor,
+  previewSellPrice,
+} from '../game/items/equipmentBonus'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
 import { COMPOSITION_STONE_TIERS, buildStoneTooltip, compositionPointValue, stoneDragId } from '../game/items/forgeCosts'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
@@ -35,6 +42,11 @@ interface InventoryPanelProps {
   // stone, so dragging one tile feeds exactly one; feeding more means dragging in
   // more individual tiles.
   onStoneDragStart?: (tier: number) => void
+  // Present only when rendered inside the Shop — adds a "Sell" button to the gear
+  // detail card. Every other usage omits this, so gear elsewhere has no sell action.
+  // The actual sell logic lives entirely in useInventoryStore.sellItem (removes
+  // the item, adds gold) — this is just an opt-in display flag, not a callback.
+  enableSelling?: boolean
   // Grid width in columns — defaults to 8 (5 rows) for a wide layout; the Combat
   // page's narrower column passes 5 (8 rows) instead. Always 40 cells total either way.
   columns?: number
@@ -44,9 +56,11 @@ export default function InventoryPanel({
   reservedItemIds = [],
   onItemDragStart,
   onStoneDragStart,
+  enableSelling = false,
   columns = 8,
 }: InventoryPanelProps) {
   const items = useInventoryStore((state) => state.items)
+  const sellItem = useInventoryStore((state) => state.sellItem)
   const templates = useItemTemplatesStore((state) => state.templates)
   const equippedItemId = useEquipmentStore((state) => state.equippedItemId)
   const setEquippedItemId = useEquipmentStore((state) => state.setEquippedItemId)
@@ -58,11 +72,19 @@ export default function InventoryPanel({
   const stones = useCompositionStore((state) => state.stones)
 
   const [selectedSlot, setSelectedSlot] = useState<SelectedSlot>(null)
+  const [sellBusy, setSellBusy] = useState(false)
+  const [sellError, setSellError] = useState<string | null>(null)
 
   const isHunter = selectedClassId === 'hunter'
   // Empty (fully depleted) stacks stay in the DB so the debounced autosave doesn't
   // need insert/delete diffing (see useArrowStore) — hide them from view here.
   const visibleArrowStacks = isHunter ? arrowStacks.filter((stack) => stack.count > 0) : []
+
+  // The equipped item (if any) no longer shows here at all — once worn, it's
+  // shown only in the Equipment tab's paper doll (confirmed, 2026-07-30), and
+  // frees its Inventory slot (see occupiedSlotCount in useInventoryStore).
+  // Un-equipping brings it straight back since this filter just stops matching.
+  const visibleItems = items.filter((item) => item.id !== equippedItemId)
 
   // Stones don't stack — each one is its own tile, not combined into one tile with
   // a count badge. Since there's no acquisition-time cap check for stones yet (no
@@ -72,7 +94,7 @@ export default function InventoryPanel({
   // stay a pure reduce) clamps how many tiles actually render so the grid never
   // exceeds its fixed 40 cells, rather than owning stones simply not showing up as
   // a hard error.
-  const baseStoneBudget = Math.max(0, INVENTORY_SLOT_CAP - visibleArrowStacks.length - items.length)
+  const baseStoneBudget = Math.max(0, INVENTORY_SLOT_CAP - visibleArrowStacks.length - visibleItems.length)
   const stoneTiles = COMPOSITION_STONE_TIERS.reduce<{ tier: number; index: number; dragId: string }[]>((acc, tier) => {
     const owned = stones[String(tier)] ?? 0
     const shown = Math.min(owned, Math.max(0, baseStoneBudget - acc.length))
@@ -84,7 +106,7 @@ export default function InventoryPanel({
     return acc
   }, [])
 
-  const occupiedCount = visibleArrowStacks.length + stoneTiles.length + items.length
+  const occupiedCount = visibleArrowStacks.length + stoneTiles.length + visibleItems.length
   const emptySlotCount = Math.max(0, INVENTORY_SLOT_CAP - occupiedCount)
 
   const selectedItem =
@@ -119,6 +141,20 @@ export default function InventoryPanel({
     event.dataTransfer.effectAllowed = 'move'
     event.dataTransfer.setData('text/plain', dragId)
     onStoneDragStart?.(tier)
+  }
+
+  const handleSell = async (item: ItemInstance) => {
+    setSellError(null)
+    setSellBusy(true)
+    const result = await sellItem(item.id)
+    setSellBusy(false)
+
+    if (!result.ok) {
+      setSellError("Couldn't sell that item.")
+      return
+    }
+
+    setSelectedSlot(null)
   }
 
   return (
@@ -176,7 +212,7 @@ export default function InventoryPanel({
             )
           })}
 
-          {items.map((item) => {
+          {visibleItems.map((item) => {
             if (reservedItemIds.includes(item.id)) {
               return <InventorySlot key={item.id} slotId={item.id} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
             }
@@ -285,6 +321,20 @@ export default function InventoryPanel({
           >
             {selectedItem.id === equippedItemId ? 'Equipped' : 'Equip'}
           </button>
+
+          {enableSelling && (
+            <button
+              type="button"
+              disabled={selectedItem.id === equippedItemId || sellBusy}
+              onClick={() => void handleSell(selectedItem)}
+              className="mt-2 w-full rounded-lg border border-amber-600 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {sellBusy
+                ? 'Selling…'
+                : `Sell (${previewSellPrice(selectedTemplate?.price ?? 0, selectedItem.quality_tier)} gold)`}
+            </button>
+          )}
+          {sellError && <p className="mt-2 text-xs text-amber-400">{sellError}</p>}
         </div>
       )}
     </div>

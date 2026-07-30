@@ -3,7 +3,9 @@ import { supabase } from '../../lib/supabaseClient'
 import { useActiveCharacterStore } from '../../lib/useActiveCharacterStore'
 import { useArrowStore } from './useArrowStore'
 import { useCompositionStore } from './useCompositionStore'
+import { useEquipmentStore } from './useEquipmentStore'
 import { useItemTemplatesStore, type ItemTemplate } from './useItemTemplatesStore'
+import { useProgressionStore } from '../stats/useProgressionStore'
 
 // Mirrors the item_instances table. sockets/enchant are unused this step — they
 // exist so a later step doesn't need a schema rework. quality_tier/level/
@@ -41,13 +43,19 @@ export const INVENTORY_SLOT_CAP = 40
 // 40 rendered cells" invariant breaks the moment a player owns any stones (see
 // InventoryPanel, which also defensively clamps how many stone tiles it renders in
 // case a manually-set test value ever exceeds the remaining budget).
+// The equipped item (if any) doesn't count either — equipping now frees its
+// Inventory slot, since it's shown only in the Equipment tab's paper doll once
+// worn (confirmed, 2026-07-30 — supersedes the earlier behavior where an
+// equipped item's tile stayed visible/counted in Inventory too).
 // Exported so useWarehouseStore can run the identical "would this overflow the
 // cap" check before a withdraw (which adds to Inventory), reusing this rather
 // than reimplementing it.
 export function occupiedSlotCount(items: ItemInstance[]): number {
+  const equippedItemId = useEquipmentStore.getState().equippedItemId
+  const gearCount = items.filter((item) => item.id !== equippedItemId).length
   const arrowStackCount = useArrowStore.getState().stacks.filter((stack) => stack.count > 0).length
   const totalStoneCount = Object.values(useCompositionStore.getState().stones).reduce((sum, count) => sum + count, 0)
-  return items.length + arrowStackCount + totalStoneCount
+  return gearCount + arrowStackCount + totalStoneCount
 }
 
 interface InventoryState {
@@ -91,6 +99,10 @@ interface InventoryState {
   // Appends an item the server already created (e.g. withdraw_item's fresh
   // Normal/level-1 instance — see useWarehouseStore) without a DB write of its own.
   addItem: (item: ItemInstance) => void
+  // Sells a gear item for gold from the Shop tab (see sell_item — item_instances
+  // has no client-side delete grant, so this has to go through a SECURITY
+  // DEFINER function even though gold itself is otherwise client-authoritative).
+  sellItem: (itemId: string) => Promise<{ ok: boolean; error?: string; goldGained?: number }>
 }
 
 export const useInventoryStore = create<InventoryState>((set, get) => ({
@@ -219,5 +231,24 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
 
   addItem: (item) => {
     set((state) => ({ items: [...state.items, item] }))
+  },
+
+  sellItem: async (itemId) => {
+    const { data, error } = await supabase.rpc('sell_item', { item_id: itemId })
+
+    if (error) {
+      console.error('Sell item call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as { ok: boolean; error?: string; gold_gained?: number; gold?: number }
+
+    if (result.ok && typeof result.gold_gained === 'number') {
+      get().removeItems([itemId])
+      // gold-only — addRewards(gold, 0) adds gold without touching EXP/level.
+      useProgressionStore.getState().addRewards(result.gold_gained, 0)
+    }
+
+    return { ok: result.ok, error: result.error, goldGained: result.gold_gained }
   },
 }))
