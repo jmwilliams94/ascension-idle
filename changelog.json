@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.29.0",
+    "date": "2026-07-31",
+    "changes": [
+      "The game can now be installed to your phone or computer's home screen as an app, and loads faster on repeat visits"
+    ]
+  },
+  {
     "version": "1.28.3",
     "date": "2026-07-30",
     "changes": [
