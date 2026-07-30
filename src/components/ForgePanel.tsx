@@ -5,14 +5,10 @@ import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import InventoryPanel from './InventoryPanel'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { formatItemDisplayName, formatQualityAndLevel, getQualityColor, nextQualityTier } from '../game/items/equipmentBonus'
-import { parseStoneDragId, previewLevelUpgradeCost, previewQualityUpgradeCost } from '../game/items/forgeCosts'
+import { findNextTemplateInChain, parseStoneDragId, previewLevelUpgradeCost, previewQualityUpgradeCost } from '../game/items/forgeCosts'
 import { useForgeStore } from '../game/items/useForgeStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
-
-// Mirrors the migration's v_level_cap placeholder — only used here to show "Max" on
-// the button instead of a cost; the real cap enforcement lives server-side.
-const ITEM_LEVEL_CAP = 130
 
 // How long a result banner (success/failure) stays up before the Upgrade Slot
 // resets itself for the next item, per the spec's "return to empty" behavior.
@@ -39,7 +35,9 @@ function describeFailure(error?: string): string {
     case 'already_max_quality':
       return 'Already at Ascended quality.'
     case 'already_max_level':
-      return 'Already at the level cap.'
+      return 'Already at the top tier for this item.'
+    case 'no_upgrade_path':
+      return 'This item has no further upgrades.'
     case 'not_owner':
     case 'item_not_found':
       return "Couldn't find that item."
@@ -184,7 +182,8 @@ export default function ForgePanel() {
   }
 
   const isMaxQuality = selectedItem?.quality_tier === 'super'
-  const isMaxLevel = (selectedItem?.level ?? 0) >= ITEM_LEVEL_CAP
+  const nextLevelTemplate = selectedTemplate ? findNextTemplateInChain(templates, selectedTemplate) : null
+  const isMaxLevel = Boolean(selectedTemplate) && !nextLevelTemplate
   const qualityCost = selectedItem ? previewQualityUpgradeCost(selectedItem.quality_tier) : 0
   const levelCost = selectedItem ? previewLevelUpgradeCost(selectedItem.level) : 0
 
@@ -198,7 +197,9 @@ export default function ForgePanel() {
   const levelDisabledReason = !selectedItem
     ? null
     : isMaxLevel
-      ? 'Already at the level cap.'
+      ? selectedTemplate?.item_family
+        ? 'Already at the top tier for this item.'
+        : 'This item has no further upgrades.'
       : meteors < levelCost
         ? `Need ${levelCost} Meteor${levelCost === 1 ? '' : 's'} (have ${meteors}).`
         : null
@@ -220,12 +221,16 @@ export default function ForgePanel() {
       }
     }
 
-    // Level currently only advances the level number — there's no per-level stat
-    // formula yet (see CLAUDE.md's Gear system section), so the preview honestly
-    // shows the same stats with just the level incremented, not invented numbers.
+    // Level Upgrade now advances the item to the next template in its family's
+    // chain (see forgeCosts.findNextTemplateInChain / the level_upgrade SQL
+    // function) — the preview shows that real next item's name/level, not just
+    // an incremented number, since a concrete next template now exists.
+    if (!nextLevelTemplate) {
+      return null
+    }
     return {
-      name: formatItemDisplayName(selectedTemplate.name, selectedItem.quality_tier, selectedItem.composition_level),
-      qualityAndLevel: formatQualityAndLevel(selectedItem.quality_tier, selectedItem.level + 1),
+      name: formatItemDisplayName(nextLevelTemplate.name, selectedItem.quality_tier, selectedItem.composition_level),
+      qualityAndLevel: formatQualityAndLevel(selectedItem.quality_tier, nextLevelTemplate.required_level),
       color: getQualityColor(selectedItem.quality_tier),
     }
   })()

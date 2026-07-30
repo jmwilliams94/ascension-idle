@@ -2,9 +2,17 @@ import { useState } from 'react'
 import type { DragEvent } from 'react'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
-import { COMPOSITION_STONE_TIERS, compositionPointValue } from '../game/items/forgeCosts'
+import { COMPOSITION_STONE_TIERS, compositionPointValue, parseStoneDragId } from '../game/items/forgeCosts'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { WAREHOUSE_SLOT_CAP, useWarehouseStore } from '../game/items/useWarehouseStore'
+
+// Drag payload MIME type for a Warehouse gear tile being dragged *out* toward
+// Inventory to withdraw it (at the free Normal tier — dragging is a shortcut for
+// the common case; choosing a paid composition tier still goes through the
+// click-to-select detail card below). Kept distinct from the plain 'text/plain'
+// contract Inventory/Forge already use for their own item/stone drags, so a
+// Warehouse-origin drag can never be misread as one of those.
+export const WAREHOUSE_ITEM_DRAG_TYPE = 'application/x-warehouse-item'
 
 // The Warehouse's own 40-slot grid — a thin sibling of InventoryPanel, not the
 // same component, since a warehoused gear "token" (one row per template,
@@ -23,6 +31,7 @@ export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
   const busy = useWarehouseStore((state) => state.busy)
   const fullMessage = useWarehouseStore((state) => state.fullMessage)
   const depositItem = useWarehouseStore((state) => state.depositItem)
+  const depositStone = useWarehouseStore((state) => state.depositStone)
   const withdrawItem = useWarehouseStore((state) => state.withdrawItem)
   const clearFullMessage = useWarehouseStore((state) => state.clearFullMessage)
   const templates = useItemTemplatesStore((state) => state.templates)
@@ -44,10 +53,20 @@ export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault()
-    const itemId = event.dataTransfer.getData('text/plain')
-    if (itemId) {
-      void depositItem(characterId, itemId)
+    const draggedId = event.dataTransfer.getData('text/plain')
+    if (!draggedId) return
+
+    const stoneTier = parseStoneDragId(draggedId)
+    if (stoneTier !== null) {
+      void depositStone(characterId, stoneTier, 1)
+    } else {
+      void depositItem(characterId, draggedId)
     }
+  }
+
+  const handleGearDragStart = (templateId: string) => (event: DragEvent<HTMLButtonElement>) => {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData(WAREHOUSE_ITEM_DRAG_TYPE, templateId)
   }
 
   const selectEntry = (entryId: string) => {
@@ -84,6 +103,8 @@ export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
                 badge={`x${entry.count}`}
                 selected={selectedEntryId === entry.id}
                 onClick={() => selectEntry(entry.id)}
+                draggable
+                onDragStart={handleGearDragStart(entry.template_id)}
               />
             )
           })}

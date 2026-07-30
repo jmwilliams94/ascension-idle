@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import type { DragEvent } from 'react'
 import InventoryPanel from './InventoryPanel'
-import WarehouseGrid from './WarehouseGrid'
+import WarehouseGrid, { WAREHOUSE_ITEM_DRAG_TYPE } from './WarehouseGrid'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 import { useCompositionStore } from '../game/items/useCompositionStore'
 import { COMPOSITION_STONE_TIERS, compositionPointValue } from '../game/items/forgeCosts'
@@ -240,13 +241,39 @@ function AccountWideDepositsCard({ characterId }: { characterId: string }) {
 }
 
 export default function WarehousePanel({ characterId }: { characterId: string }) {
+  const withdrawItem = useWarehouseStore((state) => state.withdrawItem)
+  const items = useWarehouseStore((state) => state.items)
+
+  // Dropping a Warehouse gear tile onto Inventory below is a shortcut for
+  // withdrawing it at the free Normal tier — the click-to-select detail card in
+  // WarehouseGrid still handles choosing a paid composition tier.
+  const handleInventoryDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (event.dataTransfer.types.includes(WAREHOUSE_ITEM_DRAG_TYPE)) {
+      event.preventDefault()
+      event.dataTransfer.dropEffect = 'move'
+    }
+  }
+
+  const handleInventoryDrop = (event: DragEvent<HTMLDivElement>) => {
+    const templateId = event.dataTransfer.getData(WAREHOUSE_ITEM_DRAG_TYPE)
+    if (!templateId) return
+    event.preventDefault()
+    if (items.some((entry) => entry.template_id === templateId)) {
+      void withdrawItem(characterId, templateId, 0)
+    }
+  }
+
   return (
     <div>
-      <p className="text-xs uppercase tracking-wide text-slate-500">Gear (per character — drag from Inventory to deposit)</p>
+      <p className="text-xs uppercase tracking-wide text-slate-500">
+        Gear (drag between Inventory and Warehouse Storage to deposit/withdraw)
+      </p>
       <div className="mt-2 grid gap-4 lg:grid-cols-[1fr_360px]">
         <div className="space-y-4">
           <WarehouseGrid characterId={characterId} />
-          <InventoryPanel onItemDragStart={() => {}} />
+          <div onDragOver={handleInventoryDragOver} onDrop={handleInventoryDrop}>
+            <InventoryPanel onItemDragStart={() => {}} onStoneDragStart={() => {}} />
+          </div>
         </div>
 
         <AccountWideDepositsCard characterId={characterId} />

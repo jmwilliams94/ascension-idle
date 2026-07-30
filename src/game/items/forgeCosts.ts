@@ -1,4 +1,5 @@
 import type { ItemTooltipData } from './itemTooltip'
+import type { ItemTemplate } from './useItemTemplatesStore'
 
 // Mirrors the cost formulas in
 // supabase/migrations/20260727060000_scale_upgrade_costs.sql — preview only, for
@@ -23,6 +24,24 @@ export function previewQualityUpgradeCost(qualityTier: string): number {
 
 export function previewLevelUpgradeCost(level: number): number {
   return 1 + Math.floor(level / 5)
+}
+
+// Client-side mirror of level_upgrade's next-template lookup (see
+// 20260730020000_level_upgrade_next_tier.sql) — the next template sharing this
+// one's item_family with the lowest required_level above it, or null if this is
+// already the top of its chain (or has no chain at all, e.g. item_family is
+// null). Used only for the Forge's preview/disabled-state, never to decide the
+// actual outcome — the RPC is still the source of truth.
+export function findNextTemplateInChain(templates: ItemTemplate[], current: ItemTemplate): ItemTemplate | null {
+  if (!current.item_family) {
+    return null
+  }
+
+  return (
+    templates
+      .filter((template) => template.item_family === current.item_family && template.required_level > current.required_level)
+      .sort((a, b) => a.required_level - b.required_level)[0] ?? null
+  )
 }
 
 // Composition (see CLAUDE.md's Gear system section) — a points accumulator with

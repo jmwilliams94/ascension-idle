@@ -16,6 +16,11 @@ export interface ItemTemplate {
   // buildGearTooltip's "Class: ___" line and CLAUDE.md's Gear slots note).
   required_level: number
   required_class: string | null
+  // Groups templates into the same Level Upgrade progression chain (e.g. all 25
+  // Bows share 'bow') — distinct from slot_type, since slot_type 'weapon' also
+  // holds the standalone "Wooden Sword" freebie, which has no chain of its own.
+  // Null/absent means no further upgrade path (mirrors level_upgrade's SQL).
+  item_family: string | null
   // Gold cost in the Shop's Weapons/Armor tabs — a placeholder formula (roughly
   // 5x the item's main stat value), unresolved/not tuned like every other
   // economy number in this game.
@@ -41,7 +46,7 @@ export const useItemTemplatesStore = create<ItemTemplatesState>((set, get) => ({
 
     const { data, error } = await supabase
       .from('item_templates')
-      .select('id, name, slot_type, base_stats, required_level, required_class, price')
+      .select('id, name, slot_type, base_stats, required_level, required_class, item_family, price')
 
     if (error) {
       console.error('Failed to load item templates', error)

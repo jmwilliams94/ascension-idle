@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.24.0",
+    "date": "2026-07-30",
+    "changes": [
+      "Level Upgrade in the Forge now advances an item to the next real item in its line (e.g. a low-level Ring becomes the next Ring up), instead of just bumping a number with no effect",
+      "Warehouse: gear can now be dragged out to withdraw it, and stones can be dragged in to deposit them, matching how dragging already works everywhere else"
+    ]
+  },
+  {
     "version": "1.23.1",
     "date": "2026-07-30",
     "changes": [

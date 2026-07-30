@@ -78,7 +78,7 @@ interface InventoryState {
   // this just keeps the client's copy in sync without a full refetch.
   patchItem: (
     itemId: string,
-    patch: Partial<Pick<ItemInstance, 'quality_tier' | 'level' | 'composition_level' | 'composition_points'>>,
+    patch: Partial<Pick<ItemInstance, 'quality_tier' | 'level' | 'composition_level' | 'composition_points' | 'template_id'>>,
   ) => void
   // Resolves a pendingFullDrop: pass an existing gear item or arrow stack to discard
   // (freeing its slot) and grant the new drop in its place, or null to discard the

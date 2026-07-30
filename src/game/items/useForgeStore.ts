@@ -20,9 +20,13 @@ interface QualityUpgradeResult {
 
 interface LevelUpgradeResult {
   ok: boolean
-  error?: 'item_not_found' | 'not_owner' | 'already_max_level' | 'not_enough_meteors'
+  error?: 'item_not_found' | 'not_owner' | 'already_max_level' | 'not_enough_meteors' | 'no_upgrade_path'
   upgraded?: boolean
   level?: number
+  // The item's new template on success (Level Upgrade now advances the item to
+  // the next tier in its family's chain — see the migration/CLAUDE.md note),
+  // unchanged on failure.
+  template_id?: string
   cost?: number
   meteors?: number
   meteors_spent?: number
@@ -104,7 +108,10 @@ export const useForgeStore = create<ForgeState>((set) => ({
     const result = data as LevelUpgradeResult
 
     if (result.ok && typeof result.level === 'number') {
-      useInventoryStore.getState().patchItem(itemId, { level: result.level })
+      useInventoryStore.getState().patchItem(itemId, {
+        level: result.level,
+        ...(result.template_id ? { template_id: result.template_id } : {}),
+      })
     }
     if (result.ok && typeof result.meteors_remaining === 'number') {
       useCurrencyStore.getState().setMeteors(result.meteors_remaining)
