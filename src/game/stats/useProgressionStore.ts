@@ -67,6 +67,11 @@ interface ProgressionState {
   // authoritative character_balance (see useWarehouseStore) without touching EXP
   // or the level-up loop.
   setGold: (value: number) => void
+  // Reconciles local state with the resolve-combat Edge Function's authoritative
+  // response (see resolveCombat.ts) — gold/exp/level are now granted server-side,
+  // so this replaces rather than adds. Shows the level-up toast if the server's
+  // level is higher than what was already shown.
+  applyServerCombatResult: (values: { gold: number; exp: number; level: number }) => void
 }
 
 export const useProgressionStore = create<ProgressionState>((set, get) => ({
@@ -119,4 +124,14 @@ export const useProgressionStore = create<ProgressionState>((set, get) => ({
   },
 
   setGold: (value) => set({ gold: value }),
+
+  applyServerCombatResult: (values) => {
+    const previousLevel = get().level
+    set({
+      gold: values.gold,
+      exp: values.exp,
+      level: values.level,
+      lastLevelUp: values.level > previousLevel ? values.level : get().lastLevelUp,
+    })
+  },
 }))

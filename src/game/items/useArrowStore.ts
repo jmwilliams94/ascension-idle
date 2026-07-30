@@ -32,8 +32,15 @@ interface ArrowState {
   setEquippedStackId: (stackId: string | null) => void
   buyArrows: (characterId: string, type: ArrowTypeId, quantity: number) => Promise<void>
   // Returns whether an arrow was actually consumed — false means the attack should
-  // be blocked (no equipped stack, or it's empty).
+  // be blocked (no equipped stack, or it's empty). This is now purely a local,
+  // predictive gate for instant visual feedback — see CombatEngine.tsx/
+  // resolveCombat.ts, which no longer let this store's own autosave write real
+  // arrow counts (combat depletion is server-authoritative now).
   consumeArrow: () => boolean
+  // Reconciles a stack's count with resolve-combat's authoritative response
+  // (see resolveCombat.ts) — the server is now the sole real writer of combat-
+  // driven arrow depletion, this just syncs the local predictive copy back to it.
+  setStackCount: (stackId: string, count: number) => void
   saveStackCounts: (characterId: string) => Promise<void>
   // Permanently removes a stack (used only when the player picks an arrow stack to
   // discard to make room for a full-inventory gear drop — see useInventoryStore's
@@ -136,6 +143,12 @@ export const useArrowStore = create<ArrowState>((set, get) => ({
     nextStacks[index] = { ...nextStacks[index], count: nextStacks[index].count - 1 }
     set({ stacks: nextStacks })
     return true
+  },
+
+  setStackCount: (stackId, count) => {
+    set((state) => ({
+      stacks: state.stacks.map((stack) => (stack.id === stackId ? { ...stack, count } : stack)),
+    }))
   },
 
   saveStackCounts: async (characterId) => {

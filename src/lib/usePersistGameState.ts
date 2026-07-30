@@ -28,9 +28,13 @@ export function usePersistGameState(characterId: string | undefined, loaded: boo
         debounceTimer = undefined
       }
       void useCharacterRecordStore.getState().saveNow(characterId)
-      // Arrow stack counts live in their own table (arrow_stacks), not a column on
-      // characters, so they need their own bulk save alongside the row update above.
-      void useArrowStore.getState().saveStackCounts(characterId)
+      // Arrow stack COUNTS are no longer saved here — combat depletion is now
+      // server-authoritative via resolve-combat (see resolveCombat.ts), and
+      // re-saving this store's locally-predicted (possibly stale) count here
+      // could otherwise clobber the server's own, more accurate value between
+      // resolves. This subscription still exists so equipping a different
+      // stack (setEquippedStackId) triggers the characters-row save above,
+      // which is what actually persists equipped_arrow_stack_id.
     }
 
     const scheduleSave = () => {

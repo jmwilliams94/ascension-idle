@@ -20,6 +20,7 @@ import { usePersistGameState } from '../lib/usePersistGameState'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useArrowStore } from '../game/items/useArrowStore'
 import { useWarehouseStore } from '../game/items/useWarehouseStore'
+import { useLootHoldingStore } from '../game/items/useLootHoldingStore'
 import { useTabStore } from '../game/hud/useTabStore'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
@@ -44,6 +45,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
   const loadInventory = useInventoryStore((state) => state.loadInventory)
   const loadArrowStacks = useArrowStore((state) => state.loadStacks)
   const loadWarehouseItems = useWarehouseStore((state) => state.loadWarehouseItems)
+  const loadLootHolding = useLootHoldingStore((state) => state.loadLootHolding)
   const activeTab = useTabStore((state) => state.activeTab)
 
   useEffect(() => {
@@ -55,6 +57,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
         loadInventory(characterId),
         loadArrowStacks(characterId),
         loadWarehouseItems(characterId),
+        loadLootHolding(characterId),
       ])
 
       if (cancelled) {
@@ -89,7 +92,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
     return () => {
       cancelled = true
     }
-  }, [characterId, loadCharacterRecord, loadInventory, loadArrowStacks, loadWarehouseItems])
+  }, [characterId, loadCharacterRecord, loadInventory, loadArrowStacks, loadWarehouseItems, loadLootHolding])
 
   usePersistGameState(characterId, loaded)
 

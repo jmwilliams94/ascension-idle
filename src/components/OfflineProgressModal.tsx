@@ -55,10 +55,10 @@ export default function OfflineProgressModal() {
               <CountUp end={result.exp} duration={1.2} className="font-semibold text-sky-300" />
             </dd>
           </div>
-          {result.itemDrops.length > 0 && (
+          {result.itemsFoundCount > 0 && (
             <div className="col-span-2 flex justify-between">
               <dt className="text-slate-400">Items found</dt>
-              <dd>{result.itemDrops.length}</dd>
+              <dd>{result.itemsFoundCount}</dd>
             </div>
           )}
           {result.meteors > 0 && (

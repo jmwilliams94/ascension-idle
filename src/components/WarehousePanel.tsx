@@ -8,6 +8,9 @@ import { COMPOSITION_STONE_TIERS, compositionPointValue } from '../game/items/fo
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useWarehouseStore } from '../game/items/useWarehouseStore'
+import { LOOT_HOLDING_CAP, useLootHoldingStore } from '../game/items/useLootHoldingStore'
+import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
+import { formatItemDisplayName, getQualityColor } from '../game/items/equipmentBonus'
 
 type CurrencyId = 'gold' | 'meteors' | 'dragonballs'
 
@@ -244,6 +247,60 @@ function BankCard({ characterId }: { characterId: string }) {
   )
 }
 
+// Loot Holding (confirmed with the user, 2026-07-30): where a server-resolved
+// kill's item drop lands when Inventory is full — see useLootHoldingStore and
+// supabase/functions/resolve-combat. Nothing to drag here, just a "Claim"
+// button per entry, since these are already-granted rewards waiting for room
+// rather than something to choose a tier for.
+function LootHoldingCard() {
+  const entries = useLootHoldingStore((state) => state.entries)
+  const busy = useLootHoldingStore((state) => state.busy)
+  const claim = useLootHoldingStore((state) => state.claim)
+  const templates = useItemTemplatesStore((state) => state.templates)
+
+  if (entries.length === 0) {
+    return null
+  }
+
+  return (
+    <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+      <p className="text-xs uppercase tracking-wide text-slate-500">
+        Loot Holding ({entries.length}/{LOOT_HOLDING_CAP})
+      </p>
+      <p className="text-[11px] text-slate-500">
+        Drops that couldn't fit in Inventory land here — claim them once you have room.
+      </p>
+
+      <div className="space-y-2">
+        {entries.map((entry) => {
+          const template = templates.find((t) => t.id === entry.template_id)
+          const label = template ? formatItemDisplayName(template.name, entry.quality_tier) : 'Unknown item'
+
+          return (
+            <div key={entry.id} className="flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2">
+              <div
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-sm"
+                style={{ borderColor: getQualityColor(entry.quality_tier) }}
+              >
+                🗡️
+              </div>
+              <span className="flex-1 truncate text-sm text-slate-200">{label}</span>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void claim(entry.id)}
+                className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Claim
+              </button>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function WarehousePanel({ characterId }: { characterId: string }) {
   const withdrawItem = useWarehouseStore((state) => state.withdrawItem)
   const items = useWarehouseStore((state) => state.items)
@@ -280,7 +337,10 @@ export default function WarehousePanel({ characterId }: { characterId: string })
           </div>
         </div>
 
-        <BankCard characterId={characterId} />
+        <div className="space-y-4">
+          <BankCard characterId={characterId} />
+          <LootHoldingCard />
+        </div>
       </div>
     </div>
   )

@@ -1,0 +1,84 @@
+import { create } from 'zustand'
+import { supabase } from '../../lib/supabaseClient'
+import { useInventoryStore, occupiedSlotCount, INVENTORY_SLOT_CAP, type ItemInstance } from './useInventoryStore'
+
+// Loot Holding (confirmed with the user, 2026-07-30): where a server-resolved
+// kill's item drop lands when Inventory is full — replaces the old interactive
+// "choose what to discard" prompt, which doesn't have a natural moment to
+// appear anymore now that kills resolve in the background (see
+// resolveCombat.ts / supabase/functions/resolve-combat). A simple ~100-slot
+// holding area; claiming moves an item into Inventory whenever there's room.
+export const LOOT_HOLDING_CAP = 100
+
+export interface LootHoldingEntry {
+  id: string
+  template_id: string
+  quality_tier: string
+  created_at: string
+}
+
+interface ClaimResult {
+  ok: boolean
+  error?: 'not_found' | 'not_owner'
+  item?: ItemInstance
+}
+
+interface LootHoldingState {
+  entries: LootHoldingEntry[]
+  loaded: boolean
+  busy: boolean
+  loadLootHolding: (characterId: string) => Promise<void>
+  // Appends entries granted by a resolve-combat response without a refetch.
+  addEntries: (entries: LootHoldingEntry[]) => void
+  claim: (holdingId: string) => Promise<ClaimResult>
+}
+
+export const useLootHoldingStore = create<LootHoldingState>((set) => ({
+  entries: [],
+  loaded: false,
+  busy: false,
+
+  loadLootHolding: async (characterId) => {
+    const { data, error } = await supabase
+      .from('loot_holding')
+      .select('id, template_id, quality_tier, created_at')
+      .eq('character_id', characterId)
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      console.error('Failed to load loot holding', error)
+      return
+    }
+
+    set({ entries: (data ?? []) as LootHoldingEntry[], loaded: true })
+  },
+
+  addEntries: (entries) => {
+    if (entries.length === 0) return
+    set((state) => ({ entries: [...state.entries, ...entries] }))
+  },
+
+  claim: async (holdingId) => {
+    if (occupiedSlotCount(useInventoryStore.getState().items) >= INVENTORY_SLOT_CAP) {
+      return { ok: false }
+    }
+
+    set({ busy: true })
+    const { data, error } = await supabase.rpc('claim_loot_holding', { holding_id: holdingId })
+    set({ busy: false })
+
+    if (error) {
+      console.error('Claim loot holding call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as ClaimResult
+
+    if (result.ok && result.item) {
+      useInventoryStore.getState().addItem(result.item)
+      set((state) => ({ entries: state.entries.filter((entry) => entry.id !== holdingId) }))
+    }
+
+    return result
+  },
+}))

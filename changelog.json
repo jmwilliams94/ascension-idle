@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.27.0",
+    "date": "2026-07-30",
+    "changes": [
+      "Combat rewards (gold, EXP, item drops, Meteors, DragonBalls) are now verified by the server instead of trusted from your device, paving the way for future player trading",
+      "Added Loot Holding — a new storage area for item drops that couldn't fit in your Inventory, so nothing gets lost while combat resolves in the background"
+    ]
+  },
+  {
     "version": "1.26.0",
     "date": "2026-07-30",
     "changes": [

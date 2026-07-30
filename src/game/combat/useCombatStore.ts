@@ -2,14 +2,12 @@ import { create } from 'zustand'
 import { computeDerivedStats } from '../stats/derivedStats'
 import { useCharacterStore } from '../stats/useCharacterStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
-import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { computeEquipmentBonus } from '../items/equipmentBonus'
 import { useEquipmentStore } from '../items/useEquipmentStore'
 import { useArrowStore } from '../items/useArrowStore'
 import { useInventoryStore } from '../items/useInventoryStore'
 import { useItemTemplatesStore } from '../items/useItemTemplatesStore'
 import { useOutOfArrowsWarningStore } from '../items/useOutOfArrowsWarningStore'
-import { useActiveCharacterStore } from '../../lib/useActiveCharacterStore'
 import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
 import {
   MONSTER_ATTACK_INTERVAL_MS,
@@ -230,8 +228,15 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     }))
 
     if (nextHp <= 0) {
+      // PREDICTIVE ONLY — no real grants happen here anymore. gold/EXP/item/
+      // currency rewards are now server-authoritative (see resolveCombat.ts /
+      // supabase/functions/resolve-combat), applied by a periodic background
+      // call (CombatEngine.tsx) rather than instantly per kill. These numbers
+      // are shown purely for immediate visual feedback and may not exactly
+      // match what the next resolve confirms a few seconds later — the cost
+      // of making rewards genuinely server-verified without adding real
+      // per-attack network latency to the fighting itself.
       const { gold, exp } = killRewards(type, state.isRareInstance, useProgressionStore.getState().level)
-      useProgressionStore.getState().addRewards(gold, exp)
 
       set((s) => ({
         log: appendLog(s.log, {
@@ -242,34 +247,20 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         }),
       }))
 
-      // Loot grants instantly on kill again (reverting the ground-pickup deferred
-      // grant) — the 10% roll/odds are unchanged, only the delivery timing reverts.
       const drop = useInventoryStore.getState().rollItemDrop()
       if (drop) {
-        void useInventoryStore.getState().grantItemDrop(drop.template, true).then((granted) => {
-          if (granted) {
-            useCombatStore.setState((s) => ({
-              log: appendLog(s.log, { kind: 'item', message: `You found: ${granted.template.name}` }),
-            }))
-          }
-        })
+        set((s) => ({
+          log: appendLog(s.log, { kind: 'item', message: `You found: ${drop.template.name}` }),
+        }))
       }
 
-      // Meteor (1/500) / Dragonball (1/20,000) kill-drop rolls — confirmed rates,
-      // see combatResolver.ts. Granted via an atomic server-side RPC (not a local
-      // increment) since these two currencies are otherwise only ever mutated by
-      // the Forge upgrade functions — see useCurrencyStore's grantCurrencyReward.
       const bonusCurrency = rollBonusCurrencyDrops()
       if (bonusCurrency.meteors > 0 || bonusCurrency.dragonballs > 0) {
-        const characterId = useActiveCharacterStore.getState().characterId
-        if (characterId) {
-          void useCurrencyStore.getState().grantCurrencyReward(characterId, bonusCurrency.meteors, bonusCurrency.dragonballs)
-        }
         const parts = [
           bonusCurrency.meteors > 0 ? `+${bonusCurrency.meteors} Meteor` : null,
           bonusCurrency.dragonballs > 0 ? `+${bonusCurrency.dragonballs} DragonBall` : null,
         ].filter((part): part is string => part !== null)
-        useCombatStore.setState((s) => ({
+        set((s) => ({
           log: appendLog(s.log, { kind: 'currency', message: `You found: ${parts.join(', ')}` }),
         }))
       }
