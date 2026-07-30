@@ -350,7 +350,12 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   let expGained = 0
   let meteorsGained = 0
   let dragonballsGained = 0
-  const droppedTemplateIds: string[] = []
+  // PLACEHOLDER drop selection — same "always the first template in id
+  // order" gap useInventoryStore.rollItemDrop has client-side (no weighted
+  // loot table exists yet, see CLAUDE.md's Gear system section). Since it's
+  // always the identical template, just count how many rolled and fetch it
+  // once, rather than re-querying per roll.
+  let dropCount = 0
 
   if (totalAttacks > 0) {
     let isRare = rollIsRare()
@@ -367,13 +372,8 @@ async function handleResolveCombat(req: Request): Promise<Response> {
         goldGained += rewards.gold
         expGained += rewards.exp
 
-        // PLACEHOLDER drop selection — same "always the first template" gap
-        // useInventoryStore.rollItemDrop has client-side (no weighted loot
-        // table exists yet, see CLAUDE.md's Gear system section). Not fixed
-        // here — out of scope for this change.
         if (Math.random() < DROP_CHANCE) {
-          const { data: firstTemplate } = await db.from('item_templates').select('id').order('id', { ascending: true }).limit(1).maybeSingle()
-          if (firstTemplate) droppedTemplateIds.push(firstTemplate.id)
+          dropCount += 1
         }
 
         const bonusCurrency = rollBonusCurrencyDrops()
@@ -385,6 +385,11 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       }
     }
   }
+
+  const dropTemplate =
+    dropCount > 0
+      ? (await db.from('item_templates').select('id, required_level').order('id', { ascending: true }).limit(1).maybeSingle()).data
+      : null
 
   // Level-up loop, capped at MAX_CHARACTER_LEVEL — mirrors
   // useProgressionStore.addRewards.
@@ -433,19 +438,22 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const itemsGranted: GrantedItemRow[] = []
   const itemsHeld: { template_id: string }[] = []
 
-  for (const templateId of droppedTemplateIds) {
+  for (let i = 0; i < dropCount && dropTemplate; i += 1) {
     if (occupied < INVENTORY_SLOT_CAP) {
+      // level starts at the template's own required_level (not the schema
+      // default of 1) so a freshly-granted item's displayed level honestly
+      // reflects which tier it actually is.
       const { data: inserted } = await db
         .from('item_instances')
-        .insert({ template_id: templateId, owner_id: characterId })
+        .insert({ template_id: dropTemplate.id, owner_id: characterId, level: dropTemplate.required_level })
         .select('*')
         .single()
       occupied += 1
       if (inserted) itemsGranted.push(inserted)
     } else if (heldCount < LOOT_HOLDING_CAP) {
-      await db.from('loot_holding').insert({ character_id: characterId, template_id: templateId })
+      await db.from('loot_holding').insert({ character_id: characterId, template_id: dropTemplate.id })
       heldCount += 1
-      itemsHeld.push({ template_id: templateId })
+      itemsHeld.push({ template_id: dropTemplate.id })
     }
     // else: genuinely lost, both Inventory and Loot Holding are full.
   }

@@ -149,9 +149,13 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       return null
     }
 
+    // level starts at the template's own required_level (not the schema
+    // default of 1) so a freshly-granted item's displayed level honestly
+    // reflects which tier it actually is — matching what a successful Level
+    // Upgrade already does when it advances an item to a new template.
     const { data, error } = await supabase
       .from('item_instances')
-      .insert({ template_id: template.id, owner_id: characterId })
+      .insert({ template_id: template.id, owner_id: characterId, level: template.required_level })
       .select('*')
       .single()
 

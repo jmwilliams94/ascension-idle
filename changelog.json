@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.28.2",
+    "date": "2026-07-30",
+    "changes": [
+      "Fixed freshly bought/dropped/claimed gear showing as \"Lv 1\" instead of its real level",
+      "Hunter Hats and Coats now cap at level 120, matching the rest of Hunter's armor progression"
+    ]
+  },
+  {
     "version": "1.28.1",
     "date": "2026-07-30",
     "changes": [
