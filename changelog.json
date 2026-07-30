@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.26.0",
+    "date": "2026-07-30",
+    "changes": [
+      "Replaced the placeholder EXP curve with real leveling data, capped at level 130",
+      "Fixed a bug where Wuxia characters dealt 0 damage in combat",
+      "Combat damage now factors in the enemy's Defense instead of ignoring it entirely",
+      "Renamed the Warehouse's account-wide currency section to \"Bank\" for clarity"
+    ]
+  },
+  {
     "version": "1.25.0",
     "date": "2026-07-30",
     "changes": [

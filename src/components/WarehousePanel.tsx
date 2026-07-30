@@ -178,10 +178,14 @@ function StoneRow({ characterId, tier }: { characterId: string; tier: number }) 
   )
 }
 
-// One consolidated card for everything account-wide/points-based — totals plus
-// the actual deposit/withdraw controls for all 3 currencies and all 4 stone
-// tiers, rather than each having its own separate section/card as before.
-function AccountWideDepositsCard({ characterId }: { characterId: string }) {
+// "Bank" (account-wide) vs "Warehouse" (per-character gear/stones, see
+// WarehouseGrid) — a naming-only split confirmed by the user (2026-07-30), not
+// a behavior change: currency was already account-wide-shared and gear/stones
+// were already per-character-only, this just names the account-wide side
+// "Bank" instead of leaving everything under the one "Warehouse" label. One
+// consolidated card for everything account-wide/points-based — totals plus the
+// actual deposit/withdraw controls for all 3 currencies and all 4 stone tiers.
+function BankCard({ characterId }: { characterId: string }) {
   const points = useWarehouseStore((state) => state.points)
   const gold = useProgressionStore((state) => state.gold)
   const meteors = useCurrencyStore((state) => state.meteors)
@@ -193,7 +197,7 @@ function AccountWideDepositsCard({ characterId }: { characterId: string }) {
   return (
     <div className="h-fit space-y-4 rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
       <div>
-        <p className="text-xs uppercase tracking-wide text-slate-500">Account Wide Deposits</p>
+        <p className="text-xs uppercase tracking-wide text-slate-500">Bank</p>
         <dl className="mt-3 space-y-2 text-sm">
           <div className="flex justify-between gap-3">
             <dt className="text-slate-400">Warehouse Points</dt>
@@ -276,7 +280,7 @@ export default function WarehousePanel({ characterId }: { characterId: string })
           </div>
         </div>
 
-        <AccountWideDepositsCard characterId={characterId} />
+        <BankCard characterId={characterId} />
       </div>
     </div>
   )

@@ -83,3 +83,40 @@ export const MONSTER_ATTACK_INTERVAL_MS = 1000
 export function monsterAttackDamage(type: EnemyTypeDef): number {
   return type.attackDamage
 }
+
+// Simplified player-outgoing damage formula (confirmed direction 2026-07-30):
+// the user supplied the real Conquer Online formula, which layers in Rebirth,
+// Tortoise%, Blessed%, crit multipliers, Potency scaling, and Battle Power
+// instant-kill/damage-cap interactions — none of those systems exist in this
+// game yet, so this deliberately keeps only the core "Attack minus Defense,
+// with a minimum-damage floor" shape (the same floor concept CLAUDE.md already
+// flagged as a real later-patch reference point) rather than stubbing out
+// mechanics that don't exist. Revisit/expand once Rebirth or skills are
+// actually designed.
+//
+// Also closes a previously-documented gap: damage used to be `physicalAttack`
+// alone, so a Spirit-scaling class (Wuxia, physicalAttack always 0 per its
+// Str-0 starting attributes) dealt zero damage. Using physicalAttack +
+// magicAttack fixes this generally rather than branching on class — for every
+// class so far, starting attributes only ever put points in one of Strength
+// or Spirit, so exactly one of the two addends is ever nonzero in practice.
+const MIN_DAMAGE_PERCENT_OF_ATTACK = 0.1
+
+// Monster Defense — formula-derived from level (not stored on EnemyTypeDef
+// itself, since it's cheap to compute and keeps zoneData.ts free of yet
+// another hand-tuned field), tied to the same "independently formula-derived,
+// not sourced" convention the rest of each zone's stats already follow.
+export function monsterDefense(type: EnemyTypeDef): number {
+  return Math.round(type.level * 1.5)
+}
+
+// No monster-side equivalent exists for the player's own incoming damage yet:
+// only Main Hand is a functional equip slot today (see CLAUDE.md's Equipment/
+// Hero page section), so a player's Defense is always 0 in practice — there's
+// nothing yet for monsterAttackDamage to mitigate against. Revisit once armor
+// slots actually equip something with physical_defense.
+export function resolvePhysicalDamage(attack: number, defense: number): number {
+  const mitigated = attack - defense
+  const floor = Math.round(attack * MIN_DAMAGE_PERCENT_OF_ATTACK)
+  return Math.max(mitigated, floor, 1)
+}

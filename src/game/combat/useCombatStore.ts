@@ -15,6 +15,8 @@ import {
   MONSTER_ATTACK_INTERVAL_MS,
   killRewards,
   monsterAttackDamage,
+  monsterDefense,
+  resolvePhysicalDamage,
   rollBonusCurrencyDrops,
   rollIsRare,
   spawnMonsterHp,
@@ -215,10 +217,10 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       return
     }
 
-    // PLACEHOLDER damage formula, unchanged from the old attemptAttack(): raw
-    // Physical Attack applied directly, no mitigation. Wuxia's Spirit-based attack
-    // still deals 0 here — a pre-existing gap, not something this pivot introduces.
-    const damage = derived.physicalAttack
+    // Simplified Attack-minus-Defense formula (see combatResolver.ts) — closes
+    // the previous "Wuxia deals 0 damage" gap by summing physical + magic
+    // attack rather than reading physicalAttack alone.
+    const damage = resolvePhysicalDamage(derived.physicalAttack + derived.magicAttack, monsterDefense(type))
     const nextHp = Math.max(0, state.currentHp - damage)
 
     set((s) => ({

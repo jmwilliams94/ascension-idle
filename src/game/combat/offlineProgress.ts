@@ -11,7 +11,7 @@ import { useCharacterRecordStore } from '../../lib/useCharacterRecordStore'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { useZoneStore } from '../zones/useZoneStore'
 import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
-import { killRewards, rollBonusCurrencyDrops, rollIsRare, spawnMonsterHp } from './combatResolver'
+import { killRewards, monsterDefense, resolvePhysicalDamage, rollBonusCurrencyDrops, rollIsRare, spawnMonsterHp } from './combatResolver'
 
 // Idle progress while away is capped at 2 hours — a simple, deliberately generous
 // cap rather than a tuned economy decision (see CLAUDE.md).
@@ -84,6 +84,7 @@ export function simulateOfflineProgress(params: SimulateParams): OfflineProgress
   const type = ENEMY_TYPES[params.monsterTypeId]
   let isRare = rollIsRare()
   let hp = spawnMonsterHp(type, isRare)
+  const perAttackDamage = resolvePhysicalDamage(derived.physicalAttack + derived.magicAttack, monsterDefense(type))
 
   let kills = 0
   let rareKills = 0
@@ -94,7 +95,7 @@ export function simulateOfflineProgress(params: SimulateParams): OfflineProgress
   const itemDrops: ItemTemplate[] = []
 
   for (let i = 0; i < totalAttacks; i += 1) {
-    hp -= derived.physicalAttack
+    hp -= perAttackDamage
 
     if (hp <= 0) {
       kills += 1

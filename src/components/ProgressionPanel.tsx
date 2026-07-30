@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { requiredExpForLevel, useProgressionStore } from '../game/stats/useProgressionStore'
+import { MAX_CHARACTER_LEVEL, requiredExpForLevel, useProgressionStore } from '../game/stats/useProgressionStore'
 
 export default function ProgressionPanel() {
   const level = useProgressionStore((state) => state.level)
@@ -32,7 +32,7 @@ export default function ProgressionPanel() {
         <div className="flex items-baseline gap-2">
           <dt className="text-slate-400">EXP</dt>
           <dd className="font-semibold text-sky-300">
-            {exp} / {requiredExpForLevel(level)}
+            {level >= MAX_CHARACTER_LEVEL ? 'MAX' : `${exp} / ${requiredExpForLevel(level)}`}
           </dd>
         </div>
       </dl>
