@@ -26,7 +26,13 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+// Explicitly set via `supabase secrets set SERVICE_ROLE_KEY=...` (see the
+// deploy note in CLAUDE.md) rather than relying on the auto-injected
+// SUPABASE_SERVICE_ROLE_KEY — on a project using the newer publishable/secret
+// API key system, that auto-injected value may not be the currently-active
+// key, causing every query here to silently run under-privileged instead of
+// as a genuine service role.
+const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY')!
 
 // ---------------------------------------------------------------------------
 // Mirrors src/game/stats/classes.ts's CLASS_DEFINITIONS[...].baseAttributes —
@@ -245,7 +251,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // only after the ownership check just below — mirrors the SECURITY DEFINER
   // RPC pattern used everywhere else in this project (verify ownership, then
   // act with elevated privilege), just in a different runtime.
-  const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+  const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
   const { data: character, error: characterError } = await db
     .from('characters')
