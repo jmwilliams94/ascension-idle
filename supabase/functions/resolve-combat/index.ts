@@ -200,7 +200,12 @@ Deno.serve(async (req) => {
   try {
     return await handleResolveCombat(req)
   } catch (err) {
-    return json({ ok: false, error: 'unhandled_exception', detail: err instanceof Error ? err.message : String(err) }, 500)
+    const detail = err instanceof Error ? (err.stack ?? err.message) : String(err)
+    // Supabase's log table doesn't capture response bodies, only console
+    // output — logging here is what makes the Dashboard's Logs tab show the
+    // real cause instead of just a bare 500.
+    console.error('resolve-combat unhandled exception:', detail)
+    return json({ ok: false, error: 'unhandled_exception', detail }, 500)
   }
 })
 
@@ -254,6 +259,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // that doesn't exist yet because the migration hasn't run) should surface
   // as its own diagnosable error, not get silently folded into "not_owner".
   if (characterError) {
+    console.error('resolve-combat characters query failed:', characterError.message)
     return json({ ok: false, error: 'query_failed', detail: characterError.message }, 500)
   }
 
