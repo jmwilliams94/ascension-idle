@@ -5,8 +5,17 @@ export default function ProgressionPanel() {
   const level = useProgressionStore((state) => state.level)
   const exp = useProgressionStore((state) => state.exp)
   const gold = useProgressionStore((state) => state.gold)
+  // Local combat-log predictions layered on top of the confirmed gold/exp (see
+  // useProgressionStore's predictedGold/predictedExp) so this panel moves in
+  // real time with the combat log instead of sitting frozen until the next
+  // server confirmation.
+  const predictedGold = useProgressionStore((state) => state.predictedGold)
+  const predictedExp = useProgressionStore((state) => state.predictedExp)
   const lastLevelUp = useProgressionStore((state) => state.lastLevelUp)
   const clearLevelUpNotice = useProgressionStore((state) => state.clearLevelUpNotice)
+  const isMaxLevel = level >= MAX_CHARACTER_LEVEL
+  const displayedGold = gold + predictedGold
+  const displayedExp = isMaxLevel ? exp : exp + predictedExp
 
   useEffect(() => {
     if (lastLevelUp === null) {
@@ -27,13 +36,11 @@ export default function ProgressionPanel() {
         </div>
         <div className="flex items-baseline gap-2">
           <dt className="text-slate-400">Gold</dt>
-          <dd className="font-semibold text-amber-300">{gold}</dd>
+          <dd className="font-semibold text-amber-300">{displayedGold}</dd>
         </div>
         <div className="flex items-baseline gap-2">
           <dt className="text-slate-400">EXP</dt>
-          <dd className="font-semibold text-sky-300">
-            {level >= MAX_CHARACTER_LEVEL ? 'MAX' : `${exp} / ${requiredExpForLevel(level)}`}
-          </dd>
+          <dd className="font-semibold text-sky-300">{isMaxLevel ? 'MAX' : `${displayedExp} / ${requiredExpForLevel(level)}`}</dd>
         </div>
       </dl>
 

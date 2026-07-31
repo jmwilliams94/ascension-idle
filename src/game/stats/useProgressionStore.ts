@@ -52,10 +52,23 @@ interface ProgressionState {
   level: number
   exp: number
   gold: number
+  // Local-only running total from combat log predictions since the last
+  // resolve-combat confirmation (see useCombatStore.runTick's kill branch) —
+  // added on top of gold/exp for display (ExpBar/ProgressionPanel) so the
+  // visible counters move in real time with the log instead of sitting frozen
+  // for ~15s and then jumping all at once. Reset to 0 whenever
+  // applyServerCombatResult lands, since the confirmed totals already include
+  // whatever was predicted (closes a UX gap reported 2026-07-31 — the log
+  // text updated instantly, the actual displayed numbers didn't).
+  predictedGold: number
+  predictedExp: number
   // The level just reached, shown as a one-off toast by the UI, or null if there's
   // nothing new to show (cleared once the UI has displayed it).
   lastLevelUp: number | null
   addRewards: (gold: number, exp: number) => void
+  // Accumulates a local prediction only — never itself grants anything real,
+  // see the predictedGold/predictedExp field comments.
+  addPredictedRewards: (gold: number, exp: number) => void
   clearLevelUpNotice: () => void
   // Sets saved values loaded from persistence directly, bypassing the level-up loop
   // and toast in addRewards — this is restoring state, not a gameplay event.
@@ -78,6 +91,8 @@ export const useProgressionStore = create<ProgressionState>((set, get) => ({
   level: 1,
   exp: 0,
   gold: 0,
+  predictedGold: 0,
+  predictedExp: 0,
   lastLevelUp: null,
 
   addRewards: (goldReward, expReward) => {
@@ -108,9 +123,14 @@ export const useProgressionStore = create<ProgressionState>((set, get) => ({
     })
   },
 
+  addPredictedRewards: (gold, exp) => {
+    set((state) => ({ predictedGold: state.predictedGold + gold, predictedExp: state.predictedExp + exp }))
+  },
+
   clearLevelUpNotice: () => set({ lastLevelUp: null }),
 
-  hydrate: (saved) => set({ level: saved.level, gold: saved.gold, exp: saved.exp, lastLevelUp: null }),
+  hydrate: (saved) =>
+    set({ level: saved.level, gold: saved.gold, exp: saved.exp, predictedGold: 0, predictedExp: 0, lastLevelUp: null }),
 
   spendGold: (amount) => {
     const { gold } = get()
@@ -131,6 +151,8 @@ export const useProgressionStore = create<ProgressionState>((set, get) => ({
       gold: values.gold,
       exp: values.exp,
       level: values.level,
+      predictedGold: 0,
+      predictedExp: 0,
       lastLevelUp: values.level > previousLevel ? values.level : get().lastLevelUp,
     })
   },

@@ -6,9 +6,14 @@ import { MAX_CHARACTER_LEVEL, requiredExpForLevel, useProgressionStore } from '.
 export default function ExpBar() {
   const level = useProgressionStore((state) => state.level)
   const exp = useProgressionStore((state) => state.exp)
+  // Local combat-log predictions layered on top of the confirmed exp (see
+  // useProgressionStore's predictedExp) so this bar moves in real time with
+  // the log instead of sitting frozen until the next server confirmation.
+  const predictedExp = useProgressionStore((state) => state.predictedExp)
   const isMaxLevel = level >= MAX_CHARACTER_LEVEL
   const required = requiredExpForLevel(level)
-  const percent = isMaxLevel ? 100 : required > 0 ? Math.min(100, (exp / required) * 100) : 100
+  const displayedExp = isMaxLevel ? exp : exp + predictedExp
+  const percent = isMaxLevel ? 100 : required > 0 ? Math.min(100, (displayedExp / required) * 100) : 100
 
   return (
     <div className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950/80 px-2 py-1 text-[10px] text-slate-300 backdrop-blur">
@@ -16,7 +21,7 @@ export default function ExpBar() {
       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800">
         <div className={`h-full rounded-full ${isMaxLevel ? 'bg-amber-400' : 'bg-emerald-500'}`} style={{ width: `${percent}%` }} />
       </div>
-      <span className="shrink-0 text-slate-500">{isMaxLevel ? 'MAX' : `${exp} / ${required}`}</span>
+      <span className="shrink-0 text-slate-500">{isMaxLevel ? 'MAX' : `${displayedExp} / ${required}`}</span>
     </div>
   )
 }
