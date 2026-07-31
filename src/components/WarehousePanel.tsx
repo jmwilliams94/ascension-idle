@@ -20,7 +20,7 @@ import { useWarehouseStore } from '../game/items/useWarehouseStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { LOOT_HOLDING_CAP, useLootHoldingStore } from '../game/items/useLootHoldingStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
-import { formatItemDisplayName, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
+import { formatItemDisplayName, getItemIcon, getQualityColor, previewSellPrice } from '../game/items/equipmentBonus'
 
 type CurrencyId = 'gold' | 'meteors' | 'dragonballs'
 
@@ -34,12 +34,17 @@ const CURRENCIES: { id: CurrencyId; label: string }[] = [
 // character on the account) — the one thing in the Warehouse that isn't
 // slot-based and isn't per-character. See useWarehouseStore's transfer_currency.
 // Stage 5 (the "Banked" card, 2026-07-31): each row is collapsed to just its
-// Wallet/Bank totals plus Deposit/Withdraw buttons — tapping either reveals
-// that direction's own amount input instead of showing two always-visible
-// inputs at once, the same reveal-on-tap interaction GearCompositionRow
-// already established in stage 4. Confirmed with the user: both directions
-// stay (not Withdraw-only) since Gold/Meteors/DragonBalls have no
-// drag-and-drop deposit alternative the way gear/stones do.
+// running total plus Deposit/Withdraw buttons — tapping either reveals that
+// direction's own amount input instead of showing two always-visible inputs
+// at once, the same reveal-on-tap interaction GearCompositionRow already
+// established in stage 4. Confirmed with the user: both directions stay (not
+// Withdraw-only) since Gold/Meteors/DragonBalls have no drag-and-drop deposit
+// alternative the way gear/stones do.
+// Display fix (2026-07-31): this used to show "Wallet / Bank" side by side —
+// the user found that confusing on a card titled "Banked" (it wasn't obvious
+// which number was which) and asked for just the Bank balance, since the
+// Wallet count is already visible elsewhere (as Inventory tiles for Meteors/
+// DragonBalls, or the top HUD for Gold).
 function CurrencyRow({ characterId, currency, label }: { characterId: string; currency: CurrencyId; label: string }) {
   // Hooks must run unconditionally every render — read every store's value up
   // front, then pick the one that matches this row's currency afterward.
@@ -98,9 +103,7 @@ function CurrencyRow({ characterId, currency, label }: { characterId: string; cu
     <div className="rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2">
       <div className="flex flex-wrap items-center gap-3">
         <span className="w-28 text-sm font-medium text-slate-200">{label}</span>
-        <span className="text-xs text-slate-400">
-          {walletBalance.toLocaleString()} / {bankBalance.toLocaleString()}
-        </span>
+        <span className="text-xs text-slate-400">{bankBalance.toLocaleString()}</span>
         <div className="ml-auto flex gap-1.5">
           <button
             type="button"
@@ -481,77 +484,180 @@ function BankedCard({ characterId }: { characterId: string }) {
 
 // Loot Holding (confirmed with the user, 2026-07-30): where a server-resolved
 // kill's item drop lands when Inventory is full — see useLootHoldingStore and
-// supabase/functions/resolve-combat. Nothing to drag here, just a "Claim"
-// button per entry, since these are already-granted rewards waiting for room
-// rather than something to choose a tier for.
+// supabase/functions/resolve-combat.
+// Redesigned (2026-07-31, per the user's request) from a line-by-line list
+// into an inventory-slot-style grid — one InventorySlot tile per entry,
+// matching how Inventory/Warehouse Storage/Forge all already render gear —
+// rather than a bespoke row layout unique to this one card. Clicking a tile
+// opens the same click-to-select detail card convention used everywhere else
+// (Claim, plus Sell for gear entries — see below). Not a fixed 40/100-cell
+// grid like Inventory/Warehouse Storage — only actually-held entries render,
+// no empty filler tiles, since Loot Holding's whole point is "temporary
+// overflow," not a persistent slotted container.
+// Sell straight from here (confirmed with the user): a full Inventory
+// shouldn't force claiming junk just to immediately sell it from there — a
+// "Sell All Normal" shortcut sells every Normal-tier gear entry in one go
+// (same one-button convenience as the Shop's own "Select All Normal"), and
+// the per-entry detail card also offers a plain "Sell" button for any tier.
+// Both go through the new sell_loot_holding RPC (mirrors sell_item's price
+// formula exactly), which deletes the holding row directly — no Inventory
+// round-trip, no slot ever spent. Currency-type entries (Meteor/DragonBall)
+// have nothing to sell (no template/price) and only ever show Claim.
 function LootHoldingCard() {
   const entries = useLootHoldingStore((state) => state.entries)
   const busy = useLootHoldingStore((state) => state.busy)
   const claim = useLootHoldingStore((state) => state.claim)
+  const sell = useLootHoldingStore((state) => state.sell)
   const templates = useItemTemplatesStore((state) => state.templates)
+
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   if (entries.length === 0) {
     return null
   }
 
+  const selectedEntry = entries.find((entry) => entry.id === selectedId) ?? null
+  const selectedTemplate = selectedEntry?.template_id ? (templates.find((t) => t.id === selectedEntry.template_id) ?? null) : null
+
+  const normalEntries = entries.filter((entry) => entry.template_id && entry.quality_tier === 'normal')
+  const normalSellTotal = normalEntries.reduce((sum, entry) => {
+    const template = templates.find((t) => t.id === entry.template_id)
+    return sum + (template ? previewSellPrice(template.price, 'normal') : 0)
+  }, 0)
+
+  const handleSellAllNormal = async () => {
+    setError(null)
+    for (const entry of normalEntries) {
+      // Sequential, same reasoning the Shop's own bulk sell already uses —
+      // safe against ordering since each row's delete is independent.
+      await sell(entry.id)
+    }
+    setSelectedId(null)
+  }
+
+  const handleClaim = async () => {
+    if (!selectedEntry) {
+      return
+    }
+    setError(null)
+    const result = await claim(selectedEntry.id)
+    if (result.ok) {
+      setSelectedId(null)
+    } else {
+      setError("Couldn't claim that — make sure you have room.")
+    }
+  }
+
+  const handleSell = async () => {
+    if (!selectedEntry) {
+      return
+    }
+    setError(null)
+    const result = await sell(selectedEntry.id)
+    if (result.ok) {
+      setSelectedId(null)
+    } else {
+      setError("Couldn't sell that.")
+    }
+  }
+
+  const selectedIsCurrency = Boolean(selectedEntry?.currency_type)
+  const selectedLabel = selectedEntry
+    ? selectedIsCurrency
+      ? selectedEntry.currency_type === 'meteor'
+        ? 'Meteor'
+        : 'DragonBall'
+      : selectedTemplate && selectedEntry.quality_tier
+        ? formatItemDisplayName(selectedTemplate.name, selectedEntry.quality_tier)
+        : 'Unknown item'
+    : ''
+  const selectedSellPrice =
+    selectedEntry && !selectedIsCurrency && selectedTemplate && selectedEntry.quality_tier
+      ? previewSellPrice(selectedTemplate.price, selectedEntry.quality_tier)
+      : null
+
   return (
     <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-      <p className="text-xs uppercase tracking-wide text-slate-500">
-        Loot Holding ({entries.length}/{LOOT_HOLDING_CAP})
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs uppercase tracking-wide text-slate-500">
+          Loot Holding ({entries.length}/{LOOT_HOLDING_CAP})
+        </p>
+        {normalEntries.length > 0 && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void handleSellAllNormal()}
+            className="rounded-lg border border-amber-600 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Sell All Normal ({normalSellTotal.toLocaleString()} gold)
+          </button>
+        )}
+      </div>
       <p className="text-[11px] text-slate-500">
-        Drops that couldn't fit in Inventory land here — claim them once you have room.
+        Drops that couldn't fit in Inventory land here — claim them once you have room, or sell gear straight from here instead.
       </p>
 
-      <div className="space-y-2">
-        {entries.map((entry) => {
-          // Currency-type entries (Meteor/DragonBall) have no template at all —
-          // see useLootHoldingStore's 2026-07-31 extension.
-          if (entry.currency_type) {
-            const label = entry.currency_type === 'meteor' ? 'Meteor' : 'DragonBall'
+      <div className="overflow-x-auto">
+        <div className="grid grid-cols-[repeat(8,3.5rem)] gap-1.5 lg:grid-cols-[repeat(8,4rem)]">
+          {entries.map((entry) => {
+            const isCurrency = Boolean(entry.currency_type)
+            const template = entry.template_id ? templates.find((t) => t.id === entry.template_id) : null
+            const label = isCurrency
+              ? entry.currency_type === 'meteor'
+                ? 'Meteor'
+                : 'DragonBall'
+              : template && entry.quality_tier
+                ? formatItemDisplayName(template.name, entry.quality_tier)
+                : 'Unknown item'
+            const icon = isCurrency ? (entry.currency_type === 'meteor' ? '🌠' : '🔮') : getItemIcon(template?.slot_type)
 
             return (
-              <div key={entry.id} className="flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-sm">
-                  {entry.currency_type === 'meteor' ? '🌠' : '🔮'}
-                </div>
-                <span className="flex-1 truncate text-sm text-slate-200">{label}</span>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void claim(entry.id)}
-                  className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Claim
-                </button>
-              </div>
+              <InventorySlot
+                key={entry.id}
+                slotId={entry.id}
+                filled
+                sizeClassName={SLOT_SIZE_CLASS}
+                icon={icon}
+                label={label}
+                qualityColor={!isCurrency ? getQualityColor(entry.quality_tier ?? 'normal') : undefined}
+                selected={selectedId === entry.id}
+                onClick={() => {
+                  setSelectedId((current) => (current === entry.id ? null : entry.id))
+                  setError(null)
+                }}
+              />
             )
-          }
+          })}
+        </div>
+      </div>
 
-          const template = templates.find((t) => t.id === entry.template_id)
-          const label = template && entry.quality_tier ? formatItemDisplayName(template.name, entry.quality_tier) : 'Unknown item'
-
-          return (
-            <div key={entry.id} className="flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2">
-              <div
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-sm"
-                style={{ borderColor: getQualityColor(entry.quality_tier ?? 'normal') }}
-              >
-                {getItemIcon(template?.slot_type)}
-              </div>
-              <span className="flex-1 truncate text-sm text-slate-200">{label}</span>
+      {selectedEntry && (
+        <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+          <p className="text-sm font-medium text-slate-200">{selectedLabel}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void handleClaim()}
+              className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Claim
+            </button>
+            {selectedSellPrice !== null && (
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => void claim(entry.id)}
-                className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => void handleSell()}
+                className="rounded-lg border border-amber-600 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Claim
+                Sell ({selectedSellPrice.toLocaleString()} gold)
               </button>
-            </div>
-          )
-        })}
-      </div>
+            )}
+          </div>
+          {error && <p className="mt-2 text-xs text-amber-400">{error}</p>}
+        </div>
+      )}
     </div>
   )
 }

@@ -38,6 +38,8 @@ interface CurrencyState {
   hydrate: (saved: { meteors: number; dragonballs: number; meteorScrolls: number; dragonballScrolls: number }) => void
   setMeteors: (value: number) => void
   setDragonballs: (value: number) => void
+  setMeteorScrolls: (value: number) => void
+  setDragonballScrolls: (value: number) => void
   // Bundles 10 loose units into 1 Scroll — one fixed-size transaction per
   // call (mirrors buyArrows/buyPotions always purchasing one full stack),
   // not a variable amount.
@@ -63,6 +65,8 @@ export const useCurrencyStore = create<CurrencyState>((set) => ({
     }),
   setMeteors: (value) => set({ meteors: value }),
   setDragonballs: (value) => set({ dragonballs: value }),
+  setMeteorScrolls: (value) => set({ meteorScrolls: value }),
+  setDragonballScrolls: (value) => set({ dragonballScrolls: value }),
 
   bundleScroll: async (characterId, currencyType) => {
     const { data, error } = await supabase.rpc('bundle_currency_scroll', {

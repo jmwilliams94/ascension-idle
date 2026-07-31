@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { supabase } from '../../lib/supabaseClient'
 import { useInventoryStore, occupiedSlotCount, INVENTORY_SLOT_CAP, type ItemInstance } from './useInventoryStore'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
+import { useProgressionStore } from '../stats/useProgressionStore'
 
 // Loot Holding (confirmed with the user, 2026-07-30): where a server-resolved
 // kill's item drop lands when Inventory is full — replaces the old interactive
@@ -31,6 +32,18 @@ interface ClaimResult {
   new_count?: number
 }
 
+// sell_loot_holding (2026-07-31) — sells a pending gear drop straight out of
+// Loot Holding for gold, without claiming it into Inventory first. Mirrors
+// sell_item's own price formula exactly (see the migration). Currency-type
+// entries (Meteor/DragonBall) are rejected server-side with 'not_sellable' —
+// the UI only ever offers this on gear entries to begin with.
+interface SellResult {
+  ok: boolean
+  error?: 'not_found' | 'not_owner' | 'not_sellable'
+  gold_gained?: number
+  gold?: number
+}
+
 interface LootHoldingState {
   entries: LootHoldingEntry[]
   loaded: boolean
@@ -39,6 +52,7 @@ interface LootHoldingState {
   // Appends entries granted by a resolve-combat response without a refetch.
   addEntries: (entries: LootHoldingEntry[]) => void
   claim: (holdingId: string) => Promise<ClaimResult>
+  sell: (holdingId: string) => Promise<SellResult>
 }
 
 export const useLootHoldingStore = create<LootHoldingState>((set) => ({
@@ -94,6 +108,28 @@ export const useLootHoldingStore = create<LootHoldingState>((set) => ({
       } else {
         useCurrencyStore.getState().setDragonballs(result.new_count)
       }
+      set((state) => ({ entries: state.entries.filter((entry) => entry.id !== holdingId) }))
+    }
+
+    return result
+  },
+
+  sell: async (holdingId) => {
+    set({ busy: true })
+    const { data, error } = await supabase.rpc('sell_loot_holding', { holding_id: holdingId })
+    set({ busy: false })
+
+    if (error) {
+      console.error('Sell loot holding call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as SellResult
+
+    if (result.ok && typeof result.gold_gained === 'number') {
+      // gold-only — addRewards(gold, 0) adds gold without touching EXP/level,
+      // same convention useInventoryStore.sellItem already uses.
+      useProgressionStore.getState().addRewards(result.gold_gained, 0)
       set((state) => ({ entries: state.entries.filter((entry) => entry.id !== holdingId) }))
     }
 

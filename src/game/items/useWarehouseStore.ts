@@ -44,6 +44,11 @@ interface TransferCurrencyResult {
   error?: 'invalid_currency' | 'invalid_direction' | 'invalid_amount' | 'not_owner' | 'not_enough_balance'
   character_balance?: number
   bank_balance?: number
+  // Set only for meteors/dragonballs — a deposit that couldn't be covered by
+  // loose units alone auto-unbundles however many Scrolls it needed (see
+  // migration 20260731090000_smart_scroll_currency_deposit.sql), so the
+  // client's Scroll count can change too, not just the loose-unit count.
+  character_scroll_count?: number
 }
 
 interface DepositItemResult {
@@ -360,9 +365,15 @@ function applyCurrencyResult(currency: Currency, result: TransferCurrencyResult)
     usePlayerRecordStore.getState().setBankBalances({ bankGold: result.bank_balance })
   } else if (currency === 'meteors') {
     useCurrencyStore.getState().setMeteors(result.character_balance)
+    if (typeof result.character_scroll_count === 'number') {
+      useCurrencyStore.getState().setMeteorScrolls(result.character_scroll_count)
+    }
     usePlayerRecordStore.getState().setBankBalances({ bankMeteors: result.bank_balance })
   } else {
     useCurrencyStore.getState().setDragonballs(result.character_balance)
+    if (typeof result.character_scroll_count === 'number') {
+      useCurrencyStore.getState().setDragonballScrolls(result.character_scroll_count)
+    }
     usePlayerRecordStore.getState().setBankBalances({ bankDragonballs: result.bank_balance })
   }
 

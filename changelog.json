@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.39.2",
+    "date": "2026-07-31",
+    "changes": [
+      "Loot Holding now shows an inventory-style grid of tiles instead of a list, and gear can be sold straight from it (including a \"Sell All Normal\" shortcut) without claiming it into Inventory first",
+      "Fixed a bug where selling an item paid out less gold than the Shop's own preview promised",
+      "Fixed a bug where depositing Meteors or DragonBalls into the Bank failed if you didn't have enough loose ones, even when you owned a Scroll that covered the difference — deposits now break a Scroll automatically when needed",
+      "The Banked card's currency rows now show just the banked amount instead of \"wallet / bank\""
+    ]
+  },
+  {
     "version": "1.39.1",
     "date": "2026-07-31",
     "changes": [
