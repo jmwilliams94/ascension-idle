@@ -206,7 +206,7 @@ export const POTION_TYPES: Record<PotionTypeId, PotionTypeDef> = {
   },
 }
 
-// Ascending by requiredLevel — same convention as ARROW_TYPE_ORDER.
+// Ascending by requiredLevel.
 export const HP_POTION_ORDER: PotionTypeId[] = [
   'sprigroot_tonic',
   'verdant_balm',

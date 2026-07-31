@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../../lib/supabaseClient'
 import { useActiveCharacterStore } from '../../lib/useActiveCharacterStore'
-import { useArrowStore } from './useArrowStore'
 import { useCompositionStore } from './useCompositionStore'
 import { usePotionStore } from './usePotionStore'
 import { useEquipmentStore } from './useEquipmentStore'
@@ -68,15 +67,14 @@ export function pickLevelAppropriateTemplate(templates: ItemTemplate[], monsterL
 // max cap.
 export const INVENTORY_SLOT_CAP = 40
 
-// A stack of arrows takes up a slot just like a gear item does. Composition
-// stones don't stack at all — confirmed — so every individual stone takes up its
-// own slot (the full owned count across every tier, not just a count of which
-// tiers are non-empty). All three count against the same 40-slot cap (depleted
-// arrow stacks don't, since they're hidden/inert). Stones must be counted here,
-// not just visually shown in InventoryPanel — otherwise the grid's "always exactly
-// 40 rendered cells" invariant breaks the moment a player owns any stones (see
-// InventoryPanel, which also defensively clamps how many stone tiles it renders in
-// case a manually-set test value ever exceeds the remaining budget).
+// Composition stones don't stack at all — confirmed — so every individual stone
+// takes up its own slot (the full owned count across every tier, not just a
+// count of which tiers are non-empty). All count against the same 40-slot cap.
+// Stones must be counted here, not just visually shown in InventoryPanel —
+// otherwise the grid's "always exactly 40 rendered cells" invariant breaks the
+// moment a player owns any stones (see InventoryPanel, which also defensively
+// clamps how many stone tiles it renders in case a manually-set test value
+// ever exceeds the remaining budget).
 // The equipped item (if any) doesn't count either — equipping now frees its
 // Inventory slot, since it's shown only in the Equipment tab's paper doll once
 // worn (confirmed, 2026-07-30 — supersedes the earlier behavior where an
@@ -87,15 +85,11 @@ export const INVENTORY_SLOT_CAP = 40
 export function occupiedSlotCount(items: ItemInstance[]): number {
   const isEquipped = useEquipmentStore.getState().isEquipped
   const gearCount = items.filter((item) => !isEquipped(item.id)).length
-  // Stacks loaded into the Quiver leave the plain Inventory grid entirely —
-  // same "equipped gear leaves Inventory" convention, extended to arrow
-  // stacks (see useArrowStore's quiverSlot).
-  const arrowStackCount = useArrowStore.getState().stacks.filter((stack) => stack.count > 0 && stack.quiverSlot === null).length
   const totalStoneCount = Object.values(useCompositionStore.getState().stones).reduce((sum, count) => sum + count, 0)
-  // A potion stack occupies a slot exactly like an arrow stack does — see
+  // A potion stack occupies a slot exactly like a stone tier does — see
   // usePotionStore/potionTypes.ts.
   const potionStackCount = usePotionStore.getState().stacks.filter((stack) => stack.count > 0).length
-  return gearCount + arrowStackCount + totalStoneCount + potionStackCount
+  return gearCount + totalStoneCount + potionStackCount
 }
 
 interface InventoryState {
@@ -130,10 +124,10 @@ interface InventoryState {
     itemId: string,
     patch: Partial<Pick<ItemInstance, 'quality_tier' | 'level' | 'composition_level' | 'composition_points' | 'template_id'>>,
   ) => void
-  // Resolves a pendingFullDrop: pass an existing gear item, arrow stack, or potion
-  // stack to discard (freeing its slot) and grant the new drop in its place, or
-  // null to discard the new drop instead and keep the inventory as-is.
-  resolvePendingDrop: (discard: { kind: 'item' | 'arrow' | 'potion'; id: string } | null) => Promise<void>
+  // Resolves a pendingFullDrop: pass an existing gear item or potion stack to
+  // discard (freeing its slot) and grant the new drop in its place, or null to
+  // discard the new drop instead and keep the inventory as-is.
+  resolvePendingDrop: (discard: { kind: 'item' | 'potion'; id: string } | null) => Promise<void>
   // Drops the given items from the local cache without touching the DB — used
   // after composition_feed destroys fuel items server-side, so the client doesn't
   // need a full refetch just to stop showing them.
@@ -233,9 +227,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       return
     }
 
-    if (discard.kind === 'arrow') {
-      await useArrowStore.getState().deleteStack(discard.id)
-    } else if (discard.kind === 'potion') {
+    if (discard.kind === 'potion') {
       await usePotionStore.getState().deleteStack(discard.id)
     } else {
       const { error: deleteError } = await supabase.from('item_instances').delete().eq('id', discard.id)

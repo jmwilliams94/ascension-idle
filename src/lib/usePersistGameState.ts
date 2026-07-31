@@ -27,14 +27,10 @@ export function usePersistGameState(characterId: string | undefined, loaded: boo
         debounceTimer = undefined
       }
       void useCharacterRecordStore.getState().saveNow(characterId)
-      // Arrow stack counts/quiver-slot assignments are never saved here — combat
-      // depletion is server-authoritative via resolve-combat (see
-      // resolveCombat.ts), and loading/unloading a stack into the Quiver writes
-      // to arrow_stacks immediately (see useArrowStore.loadIntoQuiver), not
-      // through this debounced characters-row save at all. Only the Quiver
-      // *item itself* (equipped_quiver_id) lives on the characters row, and
-      // that's covered by the useEquipmentStore subscription below — no arrow-
-      // store subscription is needed here anymore.
+      // A Hunter's attack gate is just the Quiver item's equipped_quiver_id
+      // pointer now (no ammo economy at all — see CLAUDE.md's Classes
+      // section), so it's covered by the useEquipmentStore subscription below
+      // like every other equip slot; nothing else needs a separate save path.
     }
 
     const scheduleSave = () => {

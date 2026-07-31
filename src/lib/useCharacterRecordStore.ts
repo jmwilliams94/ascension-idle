@@ -15,10 +15,9 @@ import { useWarehouseStore } from '../game/items/useWarehouseStore'
 // usePlayerRecordStore used to do before the character-slots restructure; that
 // store is now account-level only. meteors/dragonballs/composition_stones are
 // intentionally excluded from both load-hydration-triggers-save and saveNow —
-// see useCurrencyStore for why (server-authoritative via the forge RPCs). Arrow
-// stacks themselves live in arrow_stacks (see useArrowStore), including which
-// Quiver slot (if any) each one occupies — this row only tracks the Quiver
-// item's own equipped pointer, same as every other equip slot.
+// see useCurrencyStore for why (server-authoritative via the forge RPCs). The
+// Quiver is just an equipped item like any other slot (equipped_quiver_id) —
+// having it equipped is the entire Hunter attack gate now, no ammo economy.
 interface CharacterRow {
   name: string
   class: string | null

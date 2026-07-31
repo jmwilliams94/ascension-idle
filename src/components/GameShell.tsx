@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import CombatEngine from '../game/combat/CombatEngine'
-import ArrowCounterHud from './ArrowCounterHud'
+import QuiverWarningHud from './QuiverWarningHud'
 import CombatPage from './CombatPage'
 import EquipmentTabPage from './EquipmentTabPage'
 import ExpBar from './ExpBar'
@@ -18,7 +18,6 @@ import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { usePersistGameState } from '../lib/usePersistGameState'
 import { useInventoryStore } from '../game/items/useInventoryStore'
-import { useArrowStore } from '../game/items/useArrowStore'
 import { usePotionStore } from '../game/items/usePotionStore'
 import { useWarehouseStore } from '../game/items/useWarehouseStore'
 import { useLootHoldingStore } from '../game/items/useLootHoldingStore'
@@ -44,7 +43,6 @@ export default function GameShell({ characterId }: { characterId: string }) {
   const loaded = useCharacterRecordStore((state) => state.loaded)
   const loadCharacterRecord = useCharacterRecordStore((state) => state.loadCharacterRecord)
   const loadInventory = useInventoryStore((state) => state.loadInventory)
-  const loadArrowStacks = useArrowStore((state) => state.loadStacks)
   const loadPotionStacks = usePotionStore((state) => state.loadStacks)
   const loadWarehouseItems = useWarehouseStore((state) => state.loadWarehouseItems)
   const loadLootHolding = useLootHoldingStore((state) => state.loadLootHolding)
@@ -57,7 +55,6 @@ export default function GameShell({ characterId }: { characterId: string }) {
       await Promise.all([
         loadCharacterRecord(characterId),
         loadInventory(characterId),
-        loadArrowStacks(characterId),
         loadPotionStacks(characterId),
         loadWarehouseItems(characterId),
         loadLootHolding(characterId),
@@ -95,7 +92,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
     return () => {
       cancelled = true
     }
-  }, [characterId, loadCharacterRecord, loadInventory, loadArrowStacks, loadPotionStacks, loadWarehouseItems, loadLootHolding])
+  }, [characterId, loadCharacterRecord, loadInventory, loadPotionStacks, loadWarehouseItems, loadLootHolding])
 
   usePersistGameState(characterId, loaded)
 
@@ -159,7 +156,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
           <div className="min-w-[240px] flex-1">
             <ExpBar />
           </div>
-          <ArrowCounterHud />
+          <QuiverWarningHud />
         </div>
 
         <ProgressionPanel />

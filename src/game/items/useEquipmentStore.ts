@@ -5,10 +5,10 @@ import { create } from 'zustand'
 // are real, functional slots alongside Main Hand. EquipSlot matches
 // item_templates.slot_type exactly, so routing "which slot does this item go
 // in" is just setEquippedItem(template.slot_type, item.id) — no slot-picker UI
-// needed. 'quiver' (added 2026-07-31) is the Hunter-only off-hand item itself
-// (see useArrowStore for the 3-slot ammo container it provides) — every other
-// class's off-hand stays a locked placeholder in EquipmentPanel, since no
-// shield item_family exists yet.
+// needed. 'quiver' (added 2026-07-31) is the Hunter-only off-hand item —
+// having it equipped is the entire Hunter attack gate (no ammo economy at
+// all, see CLAUDE.md's Classes section) — every other class's off-hand stays
+// a locked placeholder in EquipmentPanel, since no shield item_family exists yet.
 export type EquipSlot = 'weapon' | 'ring' | 'necklace' | 'boots' | 'hat' | 'coat' | 'quiver'
 
 export const EQUIP_SLOTS: EquipSlot[] = ['weapon', 'ring', 'necklace', 'boots', 'hat', 'coat', 'quiver']

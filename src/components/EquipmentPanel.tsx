@@ -11,8 +11,6 @@ import {
 import { useEquipmentStore, type EquipSlot } from '../game/items/useEquipmentStore'
 import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemTemplatesStore'
-import { useArrowStore, QUIVER_CAPACITY } from '../game/items/useArrowStore'
-import { ARROW_TYPES } from '../game/items/arrowTypes'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 
 // Slot size for this paper-doll — scaled up from the default h-16 w-16 now that
@@ -53,9 +51,6 @@ export default function EquipmentPanel() {
   const templates = useItemTemplatesStore((state) => state.templates)
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
   const isHunter = selectedClassId === 'hunter'
-  const arrowStacks = useArrowStore((state) => state.stacks)
-  const unloadFromQuiver = useArrowStore((state) => state.unloadFromQuiver)
-  const unloadAllFromQuiver = useArrowStore((state) => state.unloadAllFromQuiver)
 
   const [selectedSlot, setSelectedSlot] = useState<EquipSlot | null>(null)
 
@@ -67,8 +62,6 @@ export default function EquipmentPanel() {
   }
 
   const selected = selectedSlot ? findEquipped(selectedSlot) : null
-  // 0/1/2, ordered — same convention as combat's auto-advance consumption.
-  const quiverStacks = arrowStacks.filter((stack) => stack.quiverSlot !== null)
 
   return (
     <div className="space-y-4">
@@ -127,48 +120,10 @@ export default function EquipmentPanel() {
             </div>
           </div>
 
-          {selectedSlot === 'quiver' && (
-            <div className="mt-3 space-y-1.5">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Quiver slots</p>
-              {Array.from({ length: QUIVER_CAPACITY }, (_, slotIndex) => {
-                // A depleted stack (count 0) shows as Empty and is silently
-                // evictable by the next Load — see useArrowStore.loadIntoQuiver.
-                const stack = quiverStacks.find((entry) => entry.quiverSlot === slotIndex && entry.count > 0)
-
-                return (
-                  <div
-                    key={slotIndex}
-                    className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950/60 p-2 text-xs"
-                  >
-                    {stack ? (
-                      <>
-                        <span className="text-slate-200">
-                          {ARROW_TYPES[stack.arrowType].displayName}s: {stack.count}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => void unloadFromQuiver(stack.id)}
-                          className="shrink-0 rounded border border-slate-700 px-2 py-1 text-slate-300 hover:border-slate-500"
-                        >
-                          Unload
-                        </button>
-                      </>
-                    ) : (
-                      <span className="text-slate-600">Empty — load arrows from your Inventory</span>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
           <button
             type="button"
             onClick={() => {
               setEquippedItem(selectedSlot, null)
-              if (selectedSlot === 'quiver') {
-                void unloadAllFromQuiver()
-              }
               setSelectedSlot(null)
             }}
             className="mt-3 w-full rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 hover:border-slate-500"

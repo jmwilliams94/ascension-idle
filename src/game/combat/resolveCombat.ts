@@ -1,7 +1,6 @@
 import { supabase } from '../../lib/supabaseClient'
 import { useProgressionStore } from '../stats/useProgressionStore'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
-import { useArrowStore } from '../items/useArrowStore'
 import { useInventoryStore, type ItemInstance } from '../items/useInventoryStore'
 import { useLootHoldingStore } from '../items/useLootHoldingStore'
 
@@ -19,7 +18,6 @@ export interface ResolveCombatResult {
   gained?: { kills: number; rareKills: number; gold: number; exp: number; meteors: number; dragonballs: number }
   character?: { gold: number; exp: number; level: number; meteors: number; dragonballs: number }
   leveledUp?: boolean
-  arrowStacksRemaining?: { id: string; count: number }[]
   itemsGranted?: ItemInstance[]
   itemsHeld?: { template_id: string }[]
 }
@@ -41,10 +39,6 @@ export async function resolveCombat(characterId: string): Promise<ResolveCombatR
   useProgressionStore.getState().applyServerCombatResult(result.character)
   useCurrencyStore.getState().setMeteors(result.character.meteors)
   useCurrencyStore.getState().setDragonballs(result.character.dragonballs)
-
-  for (const stack of result.arrowStacksRemaining ?? []) {
-    useArrowStore.getState().setStackCount(stack.id, stack.count)
-  }
 
   for (const item of result.itemsGranted ?? []) {
     useInventoryStore.getState().addItem(item)

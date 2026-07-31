@@ -354,30 +354,14 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const attackIntervalMs = 1000 / derived.attackSpeed
   const attackMidpoint = derived.physicalAttack + derived.magicAttack
 
+  // Hunter must have the Quiver equipped to attack at all (confirmed with the
+  // user, 2026-07-31 — supersedes the earlier ammo-stack/consumption model
+  // entirely). No count, no per-attack consumption — equipped or not is the
+  // whole gate, same as the client-side mirror in useCombatStore.runTick.
   const isHunter = character.class === 'hunter'
-  let availableArrows = Infinity
-  // Ordered by quiver slot (0/1/2) — combat auto-consumes the lowest-slotted
-  // loaded stack first, then rolls onto the next once it hits 0 (see
-  // useArrowStore.consumeArrow's client-side mirror of this same algorithm).
-  let loadedStacks: { id: string; count: number }[] = []
-
-  if (isHunter && character.equipped_quiver_id) {
-    const { data: stacks } = await db
-      .from('arrow_stacks')
-      .select('id, count, quiver_slot')
-      .eq('character_id', characterId)
-      .not('quiver_slot', 'is', null)
-      .order('quiver_slot', { ascending: true })
-
-    loadedStacks = (stacks ?? []).map((s) => ({ id: s.id, count: s.count }))
-    availableArrows = loadedStacks.reduce((sum, s) => sum + s.count, 0)
-  } else if (isHunter) {
-    availableArrows = 0
-  }
-
   let totalAttacks = Math.floor(elapsedMs / attackIntervalMs)
-  if (isHunter) {
-    totalAttacks = Math.min(totalAttacks, availableArrows)
+  if (isHunter && !character.equipped_quiver_id) {
+    totalAttacks = 0
   }
 
   let kills = 0
@@ -464,21 +448,17 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // otherwise into loot_holding (confirmed with the user) up to its own cap —
   // beyond that, further drops in this window are genuinely lost, matching
   // the accepted extreme-edge-case behavior described in the plan.
-  const [{ count: gearCount }, { data: arrowStacks }, { data: composition }, { count: holdingCount }] = await Promise.all([
+  const [{ count: gearCount }, { data: composition }, { count: holdingCount }] = await Promise.all([
     db.from('item_instances').select('id', { count: 'exact', head: true }).eq('owner_id', characterId),
-    db.from('arrow_stacks').select('count, quiver_slot').eq('character_id', characterId),
     db.from('characters').select('composition_stones').eq('id', characterId).maybeSingle(),
     db.from('loot_holding').select('id', { count: 'exact', head: true }).eq('character_id', characterId),
   ])
 
-  // Stacks loaded into the Quiver leave the plain Inventory grid entirely —
-  // mirrors useInventoryStore.occupiedSlotCount's client-side exclusion.
-  const arrowSlotCount = (arrowStacks ?? []).filter((s: { count: number; quiver_slot: number | null }) => s.count > 0 && s.quiver_slot === null).length
   const stoneSlotCount = Object.values((composition?.composition_stones as Record<string, number>) ?? {}).reduce(
     (sum, v) => sum + (typeof v === 'number' ? v : 0),
     0,
   )
-  let occupied = (gearCount ?? 0) + arrowSlotCount + stoneSlotCount
+  let occupied = (gearCount ?? 0) + stoneSlotCount
   let heldCount = holdingCount ?? 0
 
   interface GrantedItemRow {
@@ -520,16 +500,6 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const newMeteors = character.meteors + meteorsGained
   const newDragonballs = character.dragonballs + dragonballsGained
 
-  // Distribute this window's consumption across the loaded stacks in slot
-  // order, one at a time — same algorithm as useArrowStore.consumeArrow.
-  let remainingToConsume = isHunter ? totalAttacks : 0
-  const arrowStacksRemaining: { id: string; count: number }[] = []
-  for (const stack of loadedStacks) {
-    const consumed = Math.min(stack.count, remainingToConsume)
-    remainingToConsume -= consumed
-    arrowStacksRemaining.push({ id: stack.id, count: stack.count - consumed })
-  }
-
   await db
     .from('characters')
     .update({
@@ -541,10 +511,6 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       combat_last_resolved_at: new Date(now).toISOString(),
     })
     .eq('id', characterId)
-
-  for (const stack of arrowStacksRemaining) {
-    await db.from('arrow_stacks').update({ count: stack.count }).eq('id', stack.id)
-  }
 
   return json({
     ok: true,
@@ -562,7 +528,6 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       dragonballs: newDragonballs,
     },
     leveledUp: level > character.level,
-    arrowStacksRemaining,
     itemsGranted,
     itemsHeld,
   })

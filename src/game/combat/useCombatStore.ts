@@ -4,10 +4,9 @@ import { useCharacterStore } from '../stats/useCharacterStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
 import { computeEquipmentBonus } from '../items/equipmentBonus'
 import { useEquipmentStore } from '../items/useEquipmentStore'
-import { useArrowStore } from '../items/useArrowStore'
 import { useInventoryStore } from '../items/useInventoryStore'
 import { useItemTemplatesStore } from '../items/useItemTemplatesStore'
-import { useOutOfArrowsWarningStore } from '../items/useOutOfArrowsWarningStore'
+import { useNoQuiverWarningStore } from '../items/useNoQuiverWarningStore'
 import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
 import {
   MONSTER_ATTACK_INTERVAL_MS,
@@ -31,7 +30,7 @@ export type CombatLogKind =
   | 'rare-kill'
   | 'item'
   | 'currency'
-  | 'out-of-arrows'
+  | 'no-quiver'
   | 'knockout'
 
 export interface CombatLogEntry {
@@ -225,14 +224,17 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       return
     }
 
-    // Hunter must have an equipped arrow stack with remaining count to attack at
-    // all. lastAttackAt still advances on a blocked attempt so it respects the
-    // cooldown instead of re-checking (and re-flashing the warning) every tick.
-    if (selectedClassId === 'hunter' && !useArrowStore.getState().consumeArrow()) {
-      useOutOfArrowsWarningStore.getState().trigger()
+    // Hunter must have the Quiver equipped to attack at all (confirmed with
+    // the user, 2026-07-31 — supersedes the earlier ammo-stack/consumption
+    // model entirely). No count, no consumption — equipped or not is the
+    // whole gate. lastAttackAt still advances on a blocked attempt so it
+    // respects the cooldown instead of re-checking (and re-flashing the
+    // warning) every tick.
+    if (selectedClassId === 'hunter' && !useEquipmentStore.getState().equippedIds.quiver) {
+      useNoQuiverWarningStore.getState().trigger()
       set((s) => ({
         lastAttackAt: nowMs,
-        log: appendLog(s.log, { kind: 'out-of-arrows', message: 'Out of arrows!' }),
+        log: appendLog(s.log, { kind: 'no-quiver', message: 'No quiver equipped!' }),
       }))
       return
     }

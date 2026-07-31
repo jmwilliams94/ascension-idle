@@ -42,7 +42,7 @@ function logLineClass(kind: CombatLogEntry['kind']): string {
     case 'item':
     case 'currency':
       return 'text-sky-300'
-    case 'out-of-arrows':
+    case 'no-quiver':
     case 'knockout':
       return 'text-red-400'
     case 'player-damage':

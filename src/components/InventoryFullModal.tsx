@@ -1,31 +1,24 @@
 import { formatItemDisplayName, formatQualityAndLevel, getQualityColor } from '../game/items/equipmentBonus'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
-import { useArrowStore } from '../game/items/useArrowStore'
 import { usePotionStore } from '../game/items/usePotionStore'
-import { ARROW_TYPES } from '../game/items/arrowTypes'
 import { POTION_TYPES } from '../game/items/potionTypes'
 
 // Only ever set while actively playing (see useInventoryStore.grantItemDrop) — a
 // full inventory during the not-yet-built AFK/offline simulation just wastes the
 // drop silently instead, per CLAUDE.md's Inventory design. Renders nothing when
 // there's no pending decision, so it's safe to mount unconditionally in GameShell.
-// Arrow stacks occupy a slot exactly like gear does (see occupiedSlotCount in
-// useInventoryStore), so they're listed here as discardable too.
 export default function InventoryFullModal() {
   const pendingFullDrop = useInventoryStore((state) => state.pendingFullDrop)
   const items = useInventoryStore((state) => state.items)
   const resolvePendingDrop = useInventoryStore((state) => state.resolvePendingDrop)
   const templates = useItemTemplatesStore((state) => state.templates)
+  // Potion stacks occupy a slot exactly like gear does (see occupiedSlotCount
+  // in useInventoryStore), so they're listed here as discardable too.
   // Filtering must happen outside the selector — a selector that returns a fresh
   // array every call (via .filter() inline) makes Zustand's useSyncExternalStore
   // subscription see a "different" snapshot on every render, which triggers an
   // infinite re-render loop (React error #185, "Maximum update depth exceeded").
-  const stacks = useArrowStore((state) => state.stacks)
-  const arrowStacks = stacks.filter((stack) => stack.count > 0)
-  // Potion stacks occupy a slot exactly like arrow stacks do (see
-  // occupiedSlotCount in useInventoryStore) — same infinite-render pitfall
-  // applies, so filter outside the selector here too.
   const potionStacks = usePotionStore((state) => state.stacks)
   const visiblePotionStacks = potionStacks.filter((stack) => stack.count > 0)
 
@@ -40,37 +33,11 @@ export default function InventoryFullModal() {
       <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl">
         <h2 className="text-lg font-semibold text-white">Inventory full</h2>
         <p className="mt-1 text-sm text-slate-400">
-          You found a {newItemName}, but your bag is full. Discard an existing item or arrow stack to make room for it,
-          or discard the new item instead.
+          You found a {newItemName}, but your bag is full. Discard an existing item to make room for it, or discard the
+          new item instead.
         </p>
 
         <div className="mt-4 max-h-64 space-y-2 overflow-y-auto">
-          {arrowStacks.map((stack) => {
-            const type = ARROW_TYPES[stack.arrowType]
-
-            return (
-              <div
-                key={stack.id}
-                className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950/60 p-2 text-xs"
-              >
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="truncate text-slate-200">{type.displayName}</span>
-                  <span className="shrink-0 text-slate-500">
-                    {stack.count} / {type.stackSize}
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => void resolvePendingDrop({ kind: 'arrow', id: stack.id })}
-                  className="shrink-0 rounded border border-red-900 px-2 py-1 text-red-400 hover:bg-red-500/10"
-                >
-                  Discard this
-                </button>
-              </div>
-            )
-          })}
-
           {visiblePotionStacks.map((stack) => {
             const type = POTION_TYPES[stack.potionType]
 

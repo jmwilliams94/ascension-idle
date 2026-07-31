@@ -15,9 +15,8 @@ interface PotionStackRow {
   count: number
 }
 
-// Mirrors useArrowStore's stack shape (real discrete stack rows, capped per
-// type, topped-up on purchase before a new stack is created). Diverges from
-// arrows on one point: potions are manual-use only, not consumed by the
+// Real discrete stack rows, capped per type, topped-up on purchase before a
+// new stack is created. Potions are manual-use only, not consumed by the
 // combat tick loop, so Use is a deliberate one-off action that writes to the
 // DB immediately (same trust tier as buying) rather than only updating local
 // state for the debounced autosave to pick up later.
@@ -33,8 +32,7 @@ interface PotionState {
   // practice, but stays honest (no-op heal) if it ever were.
   usePotion: (stackId: string) => Promise<void>
   // Permanently removes a stack — used only when discarding to make room for
-  // a full-inventory gear drop (see useInventoryStore.resolvePendingDrop),
-  // mirrors useArrowStore.deleteStack.
+  // a full-inventory gear drop (see useInventoryStore.resolvePendingDrop).
   deleteStack: (stackId: string) => Promise<void>
 }
 

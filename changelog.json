@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.34.0",
+    "date": "2026-07-31",
+    "changes": [
+      "Removed arrow purchasing/management entirely — Hunters can now fight freely as long as the Quiver is equipped, with no ammo to track"
+    ]
+  },
+  {
     "version": "1.33.2",
     "date": "2026-07-31",
     "changes": [
