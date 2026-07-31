@@ -3,7 +3,6 @@ import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
-import { useArrowStore } from '../game/items/useArrowStore'
 import { useCharacterRecordStore } from './useCharacterRecordStore'
 
 const AUTOSAVE_DEBOUNCE_MS = 2000
@@ -28,13 +27,14 @@ export function usePersistGameState(characterId: string | undefined, loaded: boo
         debounceTimer = undefined
       }
       void useCharacterRecordStore.getState().saveNow(characterId)
-      // Arrow stack COUNTS are no longer saved here — combat depletion is now
-      // server-authoritative via resolve-combat (see resolveCombat.ts), and
-      // re-saving this store's locally-predicted (possibly stale) count here
-      // could otherwise clobber the server's own, more accurate value between
-      // resolves. This subscription still exists so equipping a different
-      // stack (setEquippedStackId) triggers the characters-row save above,
-      // which is what actually persists equipped_arrow_stack_id.
+      // Arrow stack counts/quiver-slot assignments are never saved here — combat
+      // depletion is server-authoritative via resolve-combat (see
+      // resolveCombat.ts), and loading/unloading a stack into the Quiver writes
+      // to arrow_stacks immediately (see useArrowStore.loadIntoQuiver), not
+      // through this debounced characters-row save at all. Only the Quiver
+      // *item itself* (equipped_quiver_id) lives on the characters row, and
+      // that's covered by the useEquipmentStore subscription below — no arrow-
+      // store subscription is needed here anymore.
     }
 
     const scheduleSave = () => {
@@ -59,7 +59,6 @@ export function usePersistGameState(characterId: string | undefined, loaded: boo
     const unsubscribeCharacter = useCharacterStore.subscribe(() => scheduleSave())
     const unsubscribeZone = useZoneStore.subscribe(() => scheduleSave())
     const unsubscribeEquipment = useEquipmentStore.subscribe(() => scheduleSave())
-    const unsubscribeArrows = useArrowStore.subscribe(() => scheduleSave())
 
     // beforeunload isn't reliable (browsers may not wait for the fetch to complete),
     // and visibilitychange 'hidden' fires on tab switch/backgrounding too, giving the
@@ -85,7 +84,6 @@ export function usePersistGameState(characterId: string | undefined, loaded: boo
       unsubscribeCharacter()
       unsubscribeZone()
       unsubscribeEquipment()
-      unsubscribeArrows()
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('beforeunload', handleBeforeUnload)
     }

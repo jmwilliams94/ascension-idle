@@ -5,11 +5,13 @@ import { create } from 'zustand'
 // are real, functional slots alongside Main Hand. EquipSlot matches
 // item_templates.slot_type exactly, so routing "which slot does this item go
 // in" is just setEquippedItem(template.slot_type, item.id) — no slot-picker UI
-// needed. Off-hand/Shield has no catalog data at all yet, so it isn't one of
-// these — it stays a locked placeholder in EquipmentPanel.
-export type EquipSlot = 'weapon' | 'ring' | 'necklace' | 'boots' | 'hat' | 'coat'
+// needed. 'quiver' (added 2026-07-31) is the Hunter-only off-hand item itself
+// (see useArrowStore for the 3-slot ammo container it provides) — every other
+// class's off-hand stays a locked placeholder in EquipmentPanel, since no
+// shield item_family exists yet.
+export type EquipSlot = 'weapon' | 'ring' | 'necklace' | 'boots' | 'hat' | 'coat' | 'quiver'
 
-export const EQUIP_SLOTS: EquipSlot[] = ['weapon', 'ring', 'necklace', 'boots', 'hat', 'coat']
+export const EQUIP_SLOTS: EquipSlot[] = ['weapon', 'ring', 'necklace', 'boots', 'hat', 'coat', 'quiver']
 
 interface EquipmentState {
   equippedIds: Record<EquipSlot, string | null>
@@ -22,7 +24,7 @@ interface EquipmentState {
 }
 
 export const useEquipmentStore = create<EquipmentState>((set, get) => ({
-  equippedIds: { weapon: null, ring: null, necklace: null, boots: null, hat: null, coat: null },
+  equippedIds: { weapon: null, ring: null, necklace: null, boots: null, hat: null, coat: null, quiver: null },
   hydrate: (equipped) => set({ equippedIds: equipped }),
   setEquippedItem: (slot, itemId) => set((state) => ({ equippedIds: { ...state.equippedIds, [slot]: itemId } })),
   isEquipped: (itemId) => Object.values(get().equippedIds).includes(itemId),

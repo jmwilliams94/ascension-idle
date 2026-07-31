@@ -19,7 +19,7 @@ export interface ResolveCombatResult {
   gained?: { kills: number; rareKills: number; gold: number; exp: number; meteors: number; dragonballs: number }
   character?: { gold: number; exp: number; level: number; meteors: number; dragonballs: number }
   leveledUp?: boolean
-  arrowsRemaining?: number | null
+  arrowStacksRemaining?: { id: string; count: number }[]
   itemsGranted?: ItemInstance[]
   itemsHeld?: { template_id: string }[]
 }
@@ -42,11 +42,8 @@ export async function resolveCombat(characterId: string): Promise<ResolveCombatR
   useCurrencyStore.getState().setMeteors(result.character.meteors)
   useCurrencyStore.getState().setDragonballs(result.character.dragonballs)
 
-  if (typeof result.arrowsRemaining === 'number') {
-    const equippedStackId = useArrowStore.getState().equippedStackId
-    if (equippedStackId) {
-      useArrowStore.getState().setStackCount(equippedStackId, result.arrowsRemaining)
-    }
+  for (const stack of result.arrowStacksRemaining ?? []) {
+    useArrowStore.getState().setStackCount(stack.id, stack.count)
   }
 
   for (const item of result.itemsGranted ?? []) {

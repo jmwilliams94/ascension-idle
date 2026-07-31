@@ -22,6 +22,42 @@ export type CreateCharacterResult =
   | { ok: true; id: string }
   | { ok: false; error: 'duplicate_name' | 'invalid_name' | 'unknown' }
 
+// Hunters start with a Quiver already equipped (confirmed with the user,
+// 2026-07-31) — the first starter-item grant this game has ever had (the
+// legacy "Wooden Sword" is just a seeded template, never auto-granted to
+// anyone). Best-effort: a failure here logs but doesn't fail character
+// creation — a missing starter item is recoverable (buyable in the Shop),
+// unlike the character row itself.
+async function grantStarterQuiver(characterId: string): Promise<void> {
+  const { data: template, error: templateError } = await supabase
+    .from('item_templates')
+    .select('id, required_level')
+    .eq('name', "Hunter's Quiver")
+    .maybeSingle()
+
+  if (templateError || !template) {
+    console.error('Failed to find starter Quiver template', templateError)
+    return
+  }
+
+  const { data: item, error: itemError } = await supabase
+    .from('item_instances')
+    .insert({ template_id: template.id, owner_id: characterId, level: template.required_level })
+    .select('id')
+    .single()
+
+  if (itemError || !item) {
+    console.error('Failed to grant starter Quiver', itemError)
+    return
+  }
+
+  const { error: equipError } = await supabase.from('characters').update({ equipped_quiver_id: item.id }).eq('id', characterId)
+
+  if (equipError) {
+    console.error('Failed to auto-equip starter Quiver', equipError)
+  }
+}
+
 interface CharacterRosterState {
   loaded: boolean
   // Fixed-length array of MAX_CHARACTER_SLOTS — index 0 is slot 1, etc. Null means
@@ -79,6 +115,10 @@ export const useCharacterRosterStore = create<CharacterRosterState>((set) => ({
         return { ok: false, error: 'invalid_name' }
       }
       return { ok: false, error: 'unknown' }
+    }
+
+    if (classId === 'hunter') {
+      await grantStarterQuiver(data.id)
     }
 
     set((state) => {

@@ -256,7 +256,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const { data: character, error: characterError } = await db
     .from('characters')
     .select(
-      'id, account_id, class, level, gold, exp, meteors, dragonballs, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_arrow_stack_id, selected_monster_id, combat_last_resolved_at',
+      'id, account_id, class, level, gold, exp, meteors, dragonballs, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, selected_monster_id, combat_last_resolved_at',
     )
     .eq('id', characterId)
     .maybeSingle()
@@ -345,12 +345,21 @@ async function handleResolveCombat(req: Request): Promise<Response> {
 
   const isHunter = character.class === 'hunter'
   let availableArrows = Infinity
-  let arrowStackId: string | null = null
+  // Ordered by quiver slot (0/1/2) — combat auto-consumes the lowest-slotted
+  // loaded stack first, then rolls onto the next once it hits 0 (see
+  // useArrowStore.consumeArrow's client-side mirror of this same algorithm).
+  let loadedStacks: { id: string; count: number }[] = []
 
-  if (isHunter && character.equipped_arrow_stack_id) {
-    const { data: stack } = await db.from('arrow_stacks').select('id, count').eq('id', character.equipped_arrow_stack_id).maybeSingle()
-    availableArrows = stack?.count ?? 0
-    arrowStackId = stack?.id ?? null
+  if (isHunter && character.equipped_quiver_id) {
+    const { data: stacks } = await db
+      .from('arrow_stacks')
+      .select('id, count, quiver_slot')
+      .eq('character_id', characterId)
+      .not('quiver_slot', 'is', null)
+      .order('quiver_slot', { ascending: true })
+
+    loadedStacks = (stacks ?? []).map((s) => ({ id: s.id, count: s.count }))
+    availableArrows = loadedStacks.reduce((sum, s) => sum + s.count, 0)
   } else if (isHunter) {
     availableArrows = 0
   }
@@ -373,14 +382,15 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     // — level-appropriate selection (confirmed with the user, 2026-07-30):
     // picks a random gear family available to the character's class
     // (excluding the standalone 'sword' family — the legacy Wooden Sword
-    // freebie isn't meant to drop from monsters), then the template in that
-    // family whose required_level is closest to the monster's own level.
-    // Mirrors pickLevelAppropriateTemplate in useInventoryStore.ts — must
-    // stay in sync, same pattern as this file's other client/server mirrors.
+    // freebie isn't meant to drop from monsters — and 'quiver', a starter/
+    // shop-only item for the same reason), then the template in that family
+    // whose required_level is closest to the monster's own level. Mirrors
+    // pickLevelAppropriateTemplate in useInventoryStore.ts — must stay in
+    // sync, same pattern as this file's other client/server mirrors.
     const { data: dropPool } = await db
       .from('item_templates')
       .select('id, required_level, item_family, required_class')
-      .neq('item_family', 'sword')
+      .not('item_family', 'in', '("sword","quiver")')
 
     const pickDropTemplate = (): { id: string; required_level: number } | null => {
       const candidates = (dropPool ?? []).filter((t) => t.required_class === null || t.required_class === character.class)
@@ -440,12 +450,14 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // the accepted extreme-edge-case behavior described in the plan.
   const [{ count: gearCount }, { data: arrowStacks }, { data: composition }, { count: holdingCount }] = await Promise.all([
     db.from('item_instances').select('id', { count: 'exact', head: true }).eq('owner_id', characterId),
-    db.from('arrow_stacks').select('count').eq('character_id', characterId),
+    db.from('arrow_stacks').select('count, quiver_slot').eq('character_id', characterId),
     db.from('characters').select('composition_stones').eq('id', characterId).maybeSingle(),
     db.from('loot_holding').select('id', { count: 'exact', head: true }).eq('character_id', characterId),
   ])
 
-  const arrowSlotCount = (arrowStacks ?? []).filter((s: { count: number }) => s.count > 0).length
+  // Stacks loaded into the Quiver leave the plain Inventory grid entirely —
+  // mirrors useInventoryStore.occupiedSlotCount's client-side exclusion.
+  const arrowSlotCount = (arrowStacks ?? []).filter((s: { count: number; quiver_slot: number | null }) => s.count > 0 && s.quiver_slot === null).length
   const stoneSlotCount = Object.values((composition?.composition_stones as Record<string, number>) ?? {}).reduce(
     (sum, v) => sum + (typeof v === 'number' ? v : 0),
     0,
@@ -491,7 +503,16 @@ async function handleResolveCombat(req: Request): Promise<Response> {
 
   const newMeteors = character.meteors + meteorsGained
   const newDragonballs = character.dragonballs + dragonballsGained
-  const newArrowCount = isHunter ? Math.max(0, availableArrows - totalAttacks) : null
+
+  // Distribute this window's consumption across the loaded stacks in slot
+  // order, one at a time — same algorithm as useArrowStore.consumeArrow.
+  let remainingToConsume = isHunter ? totalAttacks : 0
+  const arrowStacksRemaining: { id: string; count: number }[] = []
+  for (const stack of loadedStacks) {
+    const consumed = Math.min(stack.count, remainingToConsume)
+    remainingToConsume -= consumed
+    arrowStacksRemaining.push({ id: stack.id, count: stack.count - consumed })
+  }
 
   await db
     .from('characters')
@@ -505,8 +526,8 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     })
     .eq('id', characterId)
 
-  if (isHunter && arrowStackId && newArrowCount !== null) {
-    await db.from('arrow_stacks').update({ count: newArrowCount }).eq('id', arrowStackId)
+  for (const stack of arrowStacksRemaining) {
+    await db.from('arrow_stacks').update({ count: stack.count }).eq('id', stack.id)
   }
 
   return json({
@@ -525,7 +546,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       dragonballs: newDragonballs,
     },
     leveledUp: level > character.level,
-    arrowsRemaining: newArrowCount,
+    arrowStacksRemaining,
     itemsGranted,
     itemsHeld,
   })

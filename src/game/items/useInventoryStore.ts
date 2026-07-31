@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabaseClient'
 import { useActiveCharacterStore } from '../../lib/useActiveCharacterStore'
 import { useArrowStore } from './useArrowStore'
 import { useCompositionStore } from './useCompositionStore'
+import { usePotionStore } from './usePotionStore'
 import { useEquipmentStore } from './useEquipmentStore'
 import { useItemTemplatesStore, type ItemTemplate } from './useItemTemplatesStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
@@ -34,14 +35,19 @@ const DROP_CHANCE = 0.1
 // supersedes the earlier "always the first template" placeholder. Picks a
 // random gear family available to the character's class (excluding the
 // standalone 'sword' family — the legacy Wooden Sword freebie isn't meant to
-// drop from monsters), then the template in that family whose required_level
-// is closest to the monster's own level. Mirrored server-side in
+// drop from monsters — and 'quiver', a starter/shop-only item for the same
+// reason), then the template in that family whose required_level is closest
+// to the monster's own level. Mirrored server-side in
 // supabase/functions/resolve-combat (the actual grant), since Deno can't
 // import this file directly — must stay in sync, same pattern as
 // combatResolver.ts's other server/client mirrors.
+const NON_DROPPABLE_FAMILIES = ['sword', 'quiver']
+
 export function pickLevelAppropriateTemplate(templates: ItemTemplate[], monsterLevel: number, classId: string): ItemTemplate | null {
   const candidates = templates.filter(
-    (template) => template.item_family !== 'sword' && (template.required_class === null || template.required_class === classId),
+    (template) =>
+      !NON_DROPPABLE_FAMILIES.includes(template.item_family ?? '') &&
+      (template.required_class === null || template.required_class === classId),
   )
 
   if (candidates.length === 0) {
@@ -81,9 +87,15 @@ export const INVENTORY_SLOT_CAP = 40
 export function occupiedSlotCount(items: ItemInstance[]): number {
   const isEquipped = useEquipmentStore.getState().isEquipped
   const gearCount = items.filter((item) => !isEquipped(item.id)).length
-  const arrowStackCount = useArrowStore.getState().stacks.filter((stack) => stack.count > 0).length
+  // Stacks loaded into the Quiver leave the plain Inventory grid entirely —
+  // same "equipped gear leaves Inventory" convention, extended to arrow
+  // stacks (see useArrowStore's quiverSlot).
+  const arrowStackCount = useArrowStore.getState().stacks.filter((stack) => stack.count > 0 && stack.quiverSlot === null).length
   const totalStoneCount = Object.values(useCompositionStore.getState().stones).reduce((sum, count) => sum + count, 0)
-  return gearCount + arrowStackCount + totalStoneCount
+  // A potion stack occupies a slot exactly like an arrow stack does — see
+  // usePotionStore/potionTypes.ts.
+  const potionStackCount = usePotionStore.getState().stacks.filter((stack) => stack.count > 0).length
+  return gearCount + arrowStackCount + totalStoneCount + potionStackCount
 }
 
 interface InventoryState {
@@ -118,10 +130,10 @@ interface InventoryState {
     itemId: string,
     patch: Partial<Pick<ItemInstance, 'quality_tier' | 'level' | 'composition_level' | 'composition_points' | 'template_id'>>,
   ) => void
-  // Resolves a pendingFullDrop: pass an existing gear item or arrow stack to discard
-  // (freeing its slot) and grant the new drop in its place, or null to discard the
-  // new drop instead and keep the inventory as-is.
-  resolvePendingDrop: (discard: { kind: 'item' | 'arrow'; id: string } | null) => Promise<void>
+  // Resolves a pendingFullDrop: pass an existing gear item, arrow stack, or potion
+  // stack to discard (freeing its slot) and grant the new drop in its place, or
+  // null to discard the new drop instead and keep the inventory as-is.
+  resolvePendingDrop: (discard: { kind: 'item' | 'arrow' | 'potion'; id: string } | null) => Promise<void>
   // Drops the given items from the local cache without touching the DB — used
   // after composition_feed destroys fuel items server-side, so the client doesn't
   // need a full refetch just to stop showing them.
@@ -223,6 +235,8 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
 
     if (discard.kind === 'arrow') {
       await useArrowStore.getState().deleteStack(discard.id)
+    } else if (discard.kind === 'potion') {
+      await usePotionStore.getState().deleteStack(discard.id)
     } else {
       const { error: deleteError } = await supabase.from('item_instances').delete().eq('id', discard.id)
       if (deleteError) {

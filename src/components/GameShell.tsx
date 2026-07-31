@@ -19,6 +19,7 @@ import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { usePersistGameState } from '../lib/usePersistGameState'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useArrowStore } from '../game/items/useArrowStore'
+import { usePotionStore } from '../game/items/usePotionStore'
 import { useWarehouseStore } from '../game/items/useWarehouseStore'
 import { useLootHoldingStore } from '../game/items/useLootHoldingStore'
 import { useTabStore } from '../game/hud/useTabStore'
@@ -44,6 +45,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
   const loadCharacterRecord = useCharacterRecordStore((state) => state.loadCharacterRecord)
   const loadInventory = useInventoryStore((state) => state.loadInventory)
   const loadArrowStacks = useArrowStore((state) => state.loadStacks)
+  const loadPotionStacks = usePotionStore((state) => state.loadStacks)
   const loadWarehouseItems = useWarehouseStore((state) => state.loadWarehouseItems)
   const loadLootHolding = useLootHoldingStore((state) => state.loadLootHolding)
   const activeTab = useTabStore((state) => state.activeTab)
@@ -56,6 +58,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
         loadCharacterRecord(characterId),
         loadInventory(characterId),
         loadArrowStacks(characterId),
+        loadPotionStacks(characterId),
         loadWarehouseItems(characterId),
         loadLootHolding(characterId),
       ])
@@ -92,7 +95,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
     return () => {
       cancelled = true
     }
-  }, [characterId, loadCharacterRecord, loadInventory, loadArrowStacks, loadWarehouseItems, loadLootHolding])
+  }, [characterId, loadCharacterRecord, loadInventory, loadArrowStacks, loadPotionStacks, loadWarehouseItems, loadLootHolding])
 
   usePersistGameState(characterId, loaded)
 

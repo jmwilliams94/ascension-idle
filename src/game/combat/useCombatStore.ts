@@ -87,6 +87,12 @@ interface CombatState {
   // Driven by CombatEngine's interval — a no-op if not currently fighting or if the
   // attack-speed cooldown hasn't elapsed yet.
   runTick: (nowMs: number) => void
+  // Called by usePotionStore.usePotion for an HP potion — heals the player's
+  // current HP, clamped to their max. No-ops if maxPlayerHp hasn't been
+  // lazily initialized yet (0/0 sentinel — see the field comments above),
+  // since there's nothing meaningful to clamp against before combat has
+  // ticked at least once.
+  healPlayerHp: (amount: number) => void
 }
 
 export const useCombatStore = create<CombatState>((set, get) => ({
@@ -304,5 +310,14 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         ),
       }))
     }
+  },
+
+  healPlayerHp: (amount) => {
+    set((state) => {
+      if (state.maxPlayerHp <= 0) {
+        return {}
+      }
+      return { currentPlayerHp: Math.min(state.maxPlayerHp, state.currentPlayerHp + amount) }
+    })
   },
 }))

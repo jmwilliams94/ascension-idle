@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.32.0",
+    "date": "2026-07-31",
+    "changes": [
+      "Hunters now start with a Quiver equipped, holding up to 3 arrow stacks that are automatically used one at a time as you fight",
+      "Loading arrows into your Quiver frees up bag space, since they no longer take up an Inventory slot"
+    ]
+  },
+  {
+    "version": "1.31.0",
+    "date": "2026-07-31",
+    "changes": [
+      "Added HP and Mana potions — buy them from a new Potions tab in the Shop, and use them from your Inventory to heal"
+    ]
+  },
+  {
     "version": "1.30.2",
     "date": "2026-07-31",
     "changes": [

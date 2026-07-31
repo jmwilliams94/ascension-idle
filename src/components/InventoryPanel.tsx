@@ -17,17 +17,25 @@ import type { ItemTooltipData } from '../game/items/itemTooltip'
 import { useCompositionStore } from '../game/items/useCompositionStore'
 import { INVENTORY_SLOT_CAP, useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
-import { useArrowStore } from '../game/items/useArrowStore'
+import { useArrowStore, QUIVER_CAPACITY } from '../game/items/useArrowStore'
+import { usePotionStore } from '../game/items/usePotionStore'
+import { useCombatStore } from '../game/combat/useCombatStore'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { ARROW_TYPES } from '../game/items/arrowTypes'
+import { POTION_TYPES } from '../game/items/potionTypes'
 
 // A single fixed 40-cell grid shared by gear (item_instances), Hunter arrow
-// stacks, and Composition stones — a stack/stone tier takes up a slot exactly
-// like a gear item does, all counting against the same cap (see
-// occupiedSlotCount in useInventoryStore). Always renders all 40 cells, empty
-// ones dimmed/unclickable, so Forge's drag-and-drop has a stable, always-present
-// set of slots to pick gear/stones up from.
-type SelectedSlot = { kind: 'item'; id: string } | { kind: 'arrow'; id: string } | { kind: 'stone'; dragId: string; tier: number } | null
+// stacks, Composition stones, and HP/Mana potion stacks — a stack/stone tier
+// takes up a slot exactly like a gear item does, all counting against the
+// same cap (see occupiedSlotCount in useInventoryStore). Always renders all
+// 40 cells, empty ones dimmed/unclickable, so Forge's drag-and-drop has a
+// stable, always-present set of slots to pick gear/stones up from.
+type SelectedSlot =
+  | { kind: 'item'; id: string }
+  | { kind: 'arrow'; id: string }
+  | { kind: 'stone'; dragId: string; tier: number }
+  | { kind: 'potion'; id: string }
+  | null
 
 interface InventoryPanelProps {
   // Gear items/stone tiers currently sitting in Forge's Upgrade Slot and/or Fuel
@@ -78,9 +86,13 @@ export default function InventoryPanel({
 
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
   const arrowStacks = useArrowStore((state) => state.stacks)
-  const equippedStackId = useArrowStore((state) => state.equippedStackId)
-  const setEquippedStackId = useArrowStore((state) => state.setEquippedStackId)
+  const loadIntoQuiver = useArrowStore((state) => state.loadIntoQuiver)
+  const equippedQuiverId = useEquipmentStore((state) => state.equippedIds.quiver)
   const stones = useCompositionStore((state) => state.stones)
+  const potionStacks = usePotionStore((state) => state.stacks)
+  const handlePotionUse = usePotionStore((state) => state.usePotion)
+  const currentPlayerHp = useCombatStore((state) => state.currentPlayerHp)
+  const maxPlayerHp = useCombatStore((state) => state.maxPlayerHp)
 
   const [selectedSlot, setSelectedSlot] = useState<SelectedSlot>(null)
   const [sellBusy, setSellBusy] = useState(false)
@@ -89,7 +101,12 @@ export default function InventoryPanel({
   const isHunter = selectedClassId === 'hunter'
   // Empty (fully depleted) stacks stay in the DB so the debounced autosave doesn't
   // need insert/delete diffing (see useArrowStore) — hide them from view here.
-  const visibleArrowStacks = isHunter ? arrowStacks.filter((stack) => stack.count > 0) : []
+  // Stacks loaded into the Quiver leave the main grid entirely — same
+  // "equipped gear leaves Inventory" convention, extended to the Quiver's own
+  // 3 slots (shown instead in EquipmentPanel's Quiver detail card).
+  const visibleArrowStacks = isHunter ? arrowStacks.filter((stack) => stack.count > 0 && stack.quiverSlot === null) : []
+  // Potions aren't class-restricted (unlike arrows) — every class can buy/use them.
+  const visiblePotionStacks = potionStacks.filter((stack) => stack.count > 0)
 
   // The equipped item (if any) no longer shows here at all — once worn, it's
   // shown only in the Equipment tab's paper doll (confirmed, 2026-07-30), and
@@ -105,7 +122,10 @@ export default function InventoryPanel({
   // stay a pure reduce) clamps how many tiles actually render so the grid never
   // exceeds its fixed 40 cells, rather than owning stones simply not showing up as
   // a hard error.
-  const baseStoneBudget = Math.max(0, INVENTORY_SLOT_CAP - visibleArrowStacks.length - visibleItems.length)
+  const baseStoneBudget = Math.max(
+    0,
+    INVENTORY_SLOT_CAP - visibleArrowStacks.length - visiblePotionStacks.length - visibleItems.length,
+  )
   const stoneTiles = COMPOSITION_STONE_TIERS.reduce<{ tier: number; index: number; dragId: string }[]>((acc, tier) => {
     const owned = stones[String(tier)] ?? 0
     const shown = Math.min(owned, Math.max(0, baseStoneBudget - acc.length))
@@ -117,7 +137,7 @@ export default function InventoryPanel({
     return acc
   }, [])
 
-  const occupiedCount = visibleArrowStacks.length + stoneTiles.length + visibleItems.length
+  const occupiedCount = visibleArrowStacks.length + stoneTiles.length + visiblePotionStacks.length + visibleItems.length
   const emptySlotCount = Math.max(0, INVENTORY_SLOT_CAP - occupiedCount)
 
   const selectedItem =
@@ -134,6 +154,8 @@ export default function InventoryPanel({
   const selectedStack =
     selectedSlot?.kind === 'arrow' ? visibleArrowStacks.find((stack) => stack.id === selectedSlot.id) : undefined
   const selectedStoneTier = selectedSlot?.kind === 'stone' ? selectedSlot.tier : undefined
+  const selectedPotionStack =
+    selectedSlot?.kind === 'potion' ? visiblePotionStacks.find((stack) => stack.id === selectedSlot.id) : undefined
 
   const slotKey = (slot: NonNullable<SelectedSlot>): string => (slot.kind === 'stone' ? slot.dragId : `${slot.kind}:${slot.id}`)
 
@@ -189,7 +211,7 @@ export default function InventoryPanel({
             const arrowTooltip: ItemTooltipData = {
               title: type.displayName,
               lines: ['Ammo', `${stack.count} / ${type.stackSize}`],
-              stats: [type.description, 'Right-click to equip'],
+              stats: [type.description],
             }
 
             return (
@@ -204,7 +226,30 @@ export default function InventoryPanel({
                 badge={`${stack.count}/${type.stackSize}`}
                 selected={selectedSlot?.kind === 'arrow' && selectedSlot.id === stack.id}
                 onClick={() => toggleSlot({ kind: 'arrow', id: stack.id })}
-                onContextMenu={() => setEquippedStackId(stack.id)}
+              />
+            )
+          })}
+
+          {visiblePotionStacks.map((stack) => {
+            const type = POTION_TYPES[stack.potionType]
+            const potionTooltip: ItemTooltipData = {
+              title: type.displayName,
+              lines: [type.kind === 'hp' ? 'HP Potion' : 'Mana Potion', `${stack.count} / ${type.stackSize}`],
+              stats: [type.description],
+            }
+
+            return (
+              <InventorySlot
+                key={stack.id}
+                slotId={stack.id}
+                filled
+                sizeClassName={SLOT_SIZE_CLASS}
+                icon={type.kind === 'hp' ? '🧪' : '💧'}
+                label={`${type.displayName} (${stack.count}/${type.stackSize})`}
+                tooltip={potionTooltip}
+                badge={`${stack.count}/${type.stackSize}`}
+                selected={selectedSlot?.kind === 'potion' && selectedSlot.id === stack.id}
+                onClick={() => toggleSlot({ kind: 'potion', id: stack.id })}
               />
             )
           })}
@@ -313,18 +358,27 @@ export default function InventoryPanel({
             </div>
           </div>
 
-          <button
-            type="button"
-            disabled={selectedStack.id === equippedStackId}
-            onClick={() => setEquippedStackId(selectedStack.id)}
-            className={`mt-3 w-full rounded-lg border px-3 py-1.5 text-xs font-medium ${
-              selectedStack.id === equippedStackId
-                ? 'cursor-not-allowed border-slate-800 text-slate-600'
-                : 'border-sky-500 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'
-            }`}
-          >
-            {selectedStack.id === equippedStackId ? 'Equipped' : 'Equip'}
-          </button>
+          {(() => {
+            const quiverFull = arrowStacks.filter((stack) => stack.quiverSlot !== null).length >= QUIVER_CAPACITY
+            const disabled = !equippedQuiverId || quiverFull
+            const reason = !equippedQuiverId ? 'No quiver equipped' : quiverFull ? 'Quiver is full' : undefined
+
+            return (
+              <button
+                type="button"
+                disabled={disabled}
+                title={reason}
+                onClick={() => void loadIntoQuiver(selectedStack.id)}
+                className={`mt-3 w-full rounded-lg border px-3 py-1.5 text-xs font-medium ${
+                  disabled
+                    ? 'cursor-not-allowed border-slate-800 text-slate-600'
+                    : 'border-sky-500 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'
+                }`}
+              >
+                {reason ?? 'Load into Quiver'}
+              </button>
+            )
+          })()}
         </div>
       )}
 
@@ -341,6 +395,47 @@ export default function InventoryPanel({
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {selectedPotionStack && (
+        <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg">
+              {POTION_TYPES[selectedPotionStack.potionType].kind === 'hp' ? '🧪' : '💧'}
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-200">{POTION_TYPES[selectedPotionStack.potionType].displayName}</p>
+              <p className="text-xs text-slate-500">{POTION_TYPES[selectedPotionStack.potionType].description}</p>
+              <p className="text-xs text-slate-500">
+                {selectedPotionStack.count} / {POTION_TYPES[selectedPotionStack.potionType].stackSize}
+              </p>
+            </div>
+          </div>
+
+          {(() => {
+            const type = POTION_TYPES[selectedPotionStack.potionType]
+            const isMana = type.kind === 'mp'
+            const hpFull = type.kind === 'hp' && maxPlayerHp > 0 && currentPlayerHp >= maxPlayerHp
+            const disabled = isMana || hpFull
+            const label = isMana ? 'Nothing to restore yet' : hpFull ? 'HP already full' : 'Use'
+
+            return (
+              <button
+                type="button"
+                disabled={disabled}
+                title={isMana ? 'No ability/skill system exists yet to spend MP on' : hpFull ? 'HP already full' : undefined}
+                onClick={() => void handlePotionUse(selectedPotionStack.id)}
+                className={`mt-3 w-full rounded-lg border px-3 py-1.5 text-xs font-medium ${
+                  disabled
+                    ? 'cursor-not-allowed border-slate-800 text-slate-600'
+                    : 'border-sky-500 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'
+                }`}
+              >
+                {label}
+              </button>
+            )
+          })()}
         </div>
       )}
 

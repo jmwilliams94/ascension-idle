@@ -2,7 +2,9 @@ import { formatItemDisplayName, formatQualityAndLevel, getQualityColor } from '.
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { useArrowStore } from '../game/items/useArrowStore'
+import { usePotionStore } from '../game/items/usePotionStore'
 import { ARROW_TYPES } from '../game/items/arrowTypes'
+import { POTION_TYPES } from '../game/items/potionTypes'
 
 // Only ever set while actively playing (see useInventoryStore.grantItemDrop) — a
 // full inventory during the not-yet-built AFK/offline simulation just wastes the
@@ -21,6 +23,11 @@ export default function InventoryFullModal() {
   // infinite re-render loop (React error #185, "Maximum update depth exceeded").
   const stacks = useArrowStore((state) => state.stacks)
   const arrowStacks = stacks.filter((stack) => stack.count > 0)
+  // Potion stacks occupy a slot exactly like arrow stacks do (see
+  // occupiedSlotCount in useInventoryStore) — same infinite-render pitfall
+  // applies, so filter outside the selector here too.
+  const potionStacks = usePotionStore((state) => state.stacks)
+  const visiblePotionStacks = potionStacks.filter((stack) => stack.count > 0)
 
   if (!pendingFullDrop) {
     return null
@@ -56,6 +63,32 @@ export default function InventoryFullModal() {
                 <button
                   type="button"
                   onClick={() => void resolvePendingDrop({ kind: 'arrow', id: stack.id })}
+                  className="shrink-0 rounded border border-red-900 px-2 py-1 text-red-400 hover:bg-red-500/10"
+                >
+                  Discard this
+                </button>
+              </div>
+            )
+          })}
+
+          {visiblePotionStacks.map((stack) => {
+            const type = POTION_TYPES[stack.potionType]
+
+            return (
+              <div
+                key={stack.id}
+                className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950/60 p-2 text-xs"
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="truncate text-slate-200">{type.displayName}</span>
+                  <span className="shrink-0 text-slate-500">
+                    {stack.count} / {type.stackSize}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => void resolvePendingDrop({ kind: 'potion', id: stack.id })}
                   className="shrink-0 rounded border border-red-900 px-2 py-1 text-red-400 hover:bg-red-500/10"
                 >
                   Discard this

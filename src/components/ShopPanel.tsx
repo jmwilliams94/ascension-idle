@@ -3,14 +3,19 @@ import InventoryPanel from './InventoryPanel'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useArrowStore } from '../game/items/useArrowStore'
+import { usePotionStore } from '../game/items/usePotionStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemTemplatesStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { ARROW_TYPES, ARROW_TYPE_ORDER, type ArrowTypeId } from '../game/items/arrowTypes'
+import { POTION_TYPES, HP_POTION_ORDER, MP_POTION_ORDER, type PotionTypeId } from '../game/items/potionTypes'
 
-type ShopTab = 'arrows' | 'weapons' | 'armor'
+type ShopTab = 'arrows' | 'weapons' | 'armor' | 'potions'
 
-const ARMOR_SLOTS = ['ring', 'necklace', 'boots', 'hat', 'coat']
+// 'quiver' rides along here (not a dedicated tab) so a Hunter can
+// re-purchase one through the same generic GearRow/grantItemDrop path if
+// they ever sell or lose their starter Quiver.
+const ARMOR_SLOTS = ['ring', 'necklace', 'boots', 'hat', 'coat', 'quiver']
 
 // A template is available to the current class if it has no class restriction
 // at all (required_class null — bows/rings/necklaces/boots today) or matches
@@ -81,6 +86,9 @@ export default function ShopPanel() {
   const stacks = useArrowStore((state) => state.stacks)
   const buyArrows = useArrowStore((state) => state.buyArrows)
 
+  const potionStacks = usePotionStore((state) => state.stacks)
+  const buyPotions = usePotionStore((state) => state.buyPotions)
+
   const templates = useItemTemplatesStore((state) => state.templates)
 
   const [tab, setTab] = useState<ShopTab>('arrows')
@@ -101,6 +109,20 @@ export default function ShopPanel() {
     void buyArrows(characterId, typeId, type.stackSize)
   }
 
+  const buyPotionStack = (typeId: PotionTypeId) => {
+    if (!characterId) {
+      return
+    }
+
+    const type = POTION_TYPES[typeId]
+    const cost = type.price * type.stackSize
+    if (!spendGold(cost)) {
+      return
+    }
+
+    void buyPotions(characterId, typeId, type.stackSize)
+  }
+
   const weaponTemplates = templates
     .filter((t) => t.slot_type === 'weapon' && availableToClass(t, selectedClassId))
     .sort((a, b) => a.required_level - b.required_level)
@@ -112,7 +134,7 @@ export default function ShopPanel() {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="space-y-3">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           <button
             type="button"
             onClick={() => setTab('arrows')}
@@ -139,6 +161,15 @@ export default function ShopPanel() {
             }`}
           >
             Armor
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab('potions')}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+              tab === 'potions' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
+            }`}
+          >
+            Potions
           </button>
         </div>
 
@@ -205,6 +236,95 @@ export default function ShopPanel() {
             ) : (
               armorTemplates.map((template) => <GearRow key={template.id} template={template} />)
             )}
+          </div>
+        )}
+
+        {/* Available to every class, unlike Arrows — HP/Mana are universal stats. */}
+        {tab === 'potions' && (
+          <div className="max-h-96 space-y-3 overflow-y-auto">
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-wide text-slate-500">HP Potions</p>
+              {HP_POTION_ORDER.map((typeId) => {
+                const type = POTION_TYPES[typeId]
+                const owned = potionStacks
+                  .filter((stack) => stack.potionType === typeId)
+                  .reduce((sum, stack) => sum + stack.count, 0)
+                const stackCost = type.price * type.stackSize
+                const meetsLevel = level >= type.requiredLevel
+                const canAfford = gold >= stackCost
+                const canBuy = meetsLevel && canAfford
+
+                return (
+                  <div
+                    key={typeId}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs"
+                  >
+                    <div>
+                      <p className="font-medium text-slate-200">{type.displayName}</p>
+                      <p className="text-slate-500">{type.description}</p>
+                      <p className="text-slate-500">
+                        Owned: {owned} · stack of {type.stackSize} for {stackCost}g
+                      </p>
+                      {type.requiredLevel > 1 && (
+                        <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {type.requiredLevel}</p>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={!canBuy}
+                      title={!meetsLevel ? `Requires level ${type.requiredLevel}` : undefined}
+                      onClick={() => buyPotionStack(typeId)}
+                      className="shrink-0 rounded border border-slate-700 px-2 py-1 text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Buy
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Mana Potions</p>
+              {MP_POTION_ORDER.map((typeId) => {
+                const type = POTION_TYPES[typeId]
+                const owned = potionStacks
+                  .filter((stack) => stack.potionType === typeId)
+                  .reduce((sum, stack) => sum + stack.count, 0)
+                const stackCost = type.price * type.stackSize
+                const meetsLevel = level >= type.requiredLevel
+                const canAfford = gold >= stackCost
+                const canBuy = meetsLevel && canAfford
+
+                return (
+                  <div
+                    key={typeId}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs"
+                  >
+                    <div>
+                      <p className="font-medium text-slate-200">{type.displayName}</p>
+                      <p className="text-slate-500">{type.description}</p>
+                      <p className="text-slate-500">
+                        Owned: {owned} · stack of {type.stackSize} for {stackCost}g
+                      </p>
+                      {type.requiredLevel > 1 && (
+                        <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {type.requiredLevel}</p>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={!canBuy}
+                      title={!meetsLevel ? `Requires level ${type.requiredLevel}` : undefined}
+                      onClick={() => buyPotionStack(typeId)}
+                      className="shrink-0 rounded border border-slate-700 px-2 py-1 text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Buy
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
       </div>

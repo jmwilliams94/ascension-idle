@@ -7,18 +7,18 @@ import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useEquipmentStore, type EquipSlot } from '../game/items/useEquipmentStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
-import { useArrowStore } from '../game/items/useArrowStore'
 import { useCompositionStore, type CompositionStones } from '../game/items/useCompositionStore'
 import { useWarehouseStore } from '../game/items/useWarehouseStore'
 
 // Loads/saves the active character's row (characters table) — class, level, gold,
-// exp, zone, equipped item, equipped arrow stack. Replaces what usePlayerRecordStore
-// used to do before the character-slots restructure; that store is now
-// account-level only. meteors/dragonballs/composition_stones are intentionally
-// excluded from both load-hydration-triggers-save and saveNow — see useCurrencyStore
-// for why (server-authoritative via the forge RPCs). The arrow stacks themselves
-// live in arrow_stacks (see useArrowStore), not on this row — only the equipped
-// pointer does.
+// exp, zone, equipped items (including the Quiver, for Hunters). Replaces what
+// usePlayerRecordStore used to do before the character-slots restructure; that
+// store is now account-level only. meteors/dragonballs/composition_stones are
+// intentionally excluded from both load-hydration-triggers-save and saveNow —
+// see useCurrencyStore for why (server-authoritative via the forge RPCs). Arrow
+// stacks themselves live in arrow_stacks (see useArrowStore), including which
+// Quiver slot (if any) each one occupies — this row only tracks the Quiver
+// item's own equipped pointer, same as every other equip slot.
 interface CharacterRow {
   name: string
   class: string | null
@@ -32,9 +32,9 @@ interface CharacterRow {
   equipped_boots_id: string | null
   equipped_hat_id: string | null
   equipped_coat_id: string | null
+  equipped_quiver_id: string | null
   meteors: number
   dragonballs: number
-  equipped_arrow_stack_id: string | null
   composition_stones: CompositionStones
   warehouse_points: number
   selected_monster_id: string | null
@@ -70,7 +70,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     const { data, error } = await supabase
       .from('characters')
       .select(
-        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, meteors, dragonballs, equipped_arrow_stack_id, composition_stones, warehouse_points, selected_monster_id, last_active_at',
+        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, meteors, dragonballs, composition_stones, warehouse_points, selected_monster_id, last_active_at',
       )
       .eq('id', characterId)
       .maybeSingle<CharacterRow>()
@@ -96,9 +96,9 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
       boots: data.equipped_boots_id,
       hat: data.equipped_hat_id,
       coat: data.equipped_coat_id,
+      quiver: data.equipped_quiver_id,
     } satisfies Record<EquipSlot, string | null>)
     useCurrencyStore.getState().hydrate({ meteors: data.meteors, dragonballs: data.dragonballs })
-    useArrowStore.getState().setEquippedStackId(data.equipped_arrow_stack_id)
     useCompositionStore.getState().hydrate(data.composition_stones)
     useWarehouseStore.getState().hydratePoints(data.warehouse_points)
 
@@ -114,7 +114,6 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     const progression = useProgressionStore.getState()
     const zone = useZoneStore.getState()
     const equipment = useEquipmentStore.getState()
-    const arrows = useArrowStore.getState()
 
     const { error } = await supabase
       .from('characters')
@@ -130,7 +129,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
         equipped_boots_id: equipment.equippedIds.boots,
         equipped_hat_id: equipment.equippedIds.hat,
         equipped_coat_id: equipment.equippedIds.coat,
-        equipped_arrow_stack_id: arrows.equippedStackId,
+        equipped_quiver_id: equipment.equippedIds.quiver,
         selected_monster_id: zone.selectedMonsterId,
         last_active_at: new Date().toISOString(),
       })
