@@ -58,6 +58,43 @@ async function grantStarterQuiver(characterId: string): Promise<void> {
   }
 }
 
+// Hunters also start with a real bow equipped (confirmed with the user,
+// 2026-07-31) — previously no class started with any weapon at all, leaving
+// Hunters with nothing until they bought either the generic Wooden Sword or
+// saved up for the real Bow chain's cheapest entry. Mirrors
+// grantStarterQuiver's exact pattern; kept as a separate function rather than
+// a shared generic helper since there are only these two starter-item grants
+// so far (see CLAUDE.md — revisit if a third starter item ever needs this).
+async function grantStarterBow(characterId: string): Promise<void> {
+  const { data: template, error: templateError } = await supabase
+    .from('item_templates')
+    .select('id, required_level')
+    .eq('name', 'Lucky Bow')
+    .maybeSingle()
+
+  if (templateError || !template) {
+    console.error('Failed to find starter Lucky Bow template', templateError)
+    return
+  }
+
+  const { data: item, error: itemError } = await supabase
+    .from('item_instances')
+    .insert({ template_id: template.id, owner_id: characterId, level: template.required_level })
+    .select('id')
+    .single()
+
+  if (itemError || !item) {
+    console.error('Failed to grant starter Lucky Bow', itemError)
+    return
+  }
+
+  const { error: equipError } = await supabase.from('characters').update({ equipped_weapon_id: item.id }).eq('id', characterId)
+
+  if (equipError) {
+    console.error('Failed to auto-equip starter Lucky Bow', equipError)
+  }
+}
+
 interface CharacterRosterState {
   loaded: boolean
   // Fixed-length array of MAX_CHARACTER_SLOTS — index 0 is slot 1, etc. Null means
@@ -119,6 +156,7 @@ export const useCharacterRosterStore = create<CharacterRosterState>((set) => ({
 
     if (classId === 'hunter') {
       await grantStarterQuiver(data.id)
+      await grantStarterBow(data.id)
     }
 
     set((state) => {

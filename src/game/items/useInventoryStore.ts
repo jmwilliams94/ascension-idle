@@ -41,7 +41,7 @@ const DROP_CHANCE = 0.1
 // supabase/functions/resolve-combat (the actual grant), since Deno can't
 // import this file directly — must stay in sync, same pattern as
 // combatResolver.ts's other server/client mirrors.
-const NON_DROPPABLE_FAMILIES = ['sword', 'quiver']
+const NON_DROPPABLE_FAMILIES = ['sword', 'quiver', 'lucky-bow']
 
 export function pickLevelAppropriateTemplate(templates: ItemTemplate[], monsterLevel: number, classId: string): ItemTemplate | null {
   const candidates = templates.filter(

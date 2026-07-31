@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.33.2",
+    "date": "2026-07-31",
+    "changes": [
+      "Hunters now start with a Lucky Bow equipped, instead of no weapon at all"
+    ]
+  },
+  {
     "version": "1.33.1",
     "date": "2026-07-31",
     "changes": [
