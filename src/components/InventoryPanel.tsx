@@ -449,7 +449,9 @@ export default function InventoryPanel({
           </div>
 
           {(() => {
-            const quiverFull = arrowStacks.filter((stack) => stack.quiverSlot !== null).length >= QUIVER_CAPACITY
+            // A depleted (count 0) stack no longer blocks its slot — matches
+            // useArrowStore.loadIntoQuiver's own eviction logic.
+            const quiverFull = arrowStacks.filter((stack) => stack.quiverSlot !== null && stack.count > 0).length >= QUIVER_CAPACITY
             const disabled = !equippedQuiverId || quiverFull
             const reason = !equippedQuiverId ? 'No quiver equipped' : quiverFull ? 'Quiver is full' : undefined
 
