@@ -86,6 +86,11 @@ const RARE_CHANCE = 0.05
 const RARE_HP_MULTIPLIER = 2
 const RARE_REWARD_MULTIPLIER = 5
 const MIN_DAMAGE_PERCENT_OF_ATTACK = 0.1
+// Min/max hit range (see combatResolver.ts's mirror) — ±50% around the
+// midpoint, matching the real reference data's Iron Ring (min 1/max 3 at
+// midpoint 2).
+const DAMAGE_ROLL_MIN_RATIO = 0.5
+const DAMAGE_ROLL_MAX_RATIO = 1.5
 const METEOR_DROP_CHANCE = 1 / 500
 const DRAGONBALL_DROP_CHANCE = 1 / 20000
 const DROP_CHANCE = 0.1
@@ -135,6 +140,12 @@ function resolvePhysicalDamage(attack: number, defense: number): number {
   const mitigated = attack - defense
   const floor = Math.round(attack * MIN_DAMAGE_PERCENT_OF_ATTACK)
   return Math.max(mitigated, floor, 1)
+}
+
+function rollDamageInRange(midpoint: number): number {
+  const min = Math.max(1, Math.round(midpoint * DAMAGE_ROLL_MIN_RATIO))
+  const max = Math.max(min, Math.round(midpoint * DAMAGE_ROLL_MAX_RATIO))
+  return min + Math.floor(Math.random() * (max - min + 1))
 }
 
 function rollBonusCurrencyDrops() {
@@ -341,7 +352,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
 
   const derived = computeDerivedStats(attributes, equipmentBonus)
   const attackIntervalMs = 1000 / derived.attackSpeed
-  const perAttackDamage = resolvePhysicalDamage(derived.physicalAttack + derived.magicAttack, monsterDefense(monster))
+  const attackMidpoint = derived.physicalAttack + derived.magicAttack
 
   const isHunter = character.class === 'hunter'
   let availableArrows = Infinity
@@ -407,7 +418,12 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     let hp = spawnMonsterHp(monster, isRare)
 
     for (let i = 0; i < totalAttacks; i += 1) {
-      hp -= perAttackDamage
+      // Rolled independently per attack (see rollDamageInRange) rather than
+      // a single precomputed value reused every iteration, so the offline/
+      // idle simulation matches live combat's per-hit variance exactly
+      // instead of falling back to an expected-value approximation.
+      const damage = resolvePhysicalDamage(rollDamageInRange(attackMidpoint), monsterDefense(monster))
+      hp -= damage
 
       if (hp <= 0) {
         kills += 1

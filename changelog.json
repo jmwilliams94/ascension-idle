@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.33.0",
+    "date": "2026-07-31",
+    "changes": [
+      "Attacks now hit for a range of damage instead of a fixed number, for both you and monsters",
+      "Gear tooltips now show attack as a min-max range to match"
+    ]
+  },
+  {
     "version": "1.32.3",
     "date": "2026-07-31",
     "changes": [

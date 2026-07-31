@@ -4,6 +4,7 @@ import type { ItemTooltipData } from './itemTooltip'
 import type { ItemInstance } from './useInventoryStore'
 import type { ItemTemplate } from './useItemTemplatesStore'
 import { EQUIP_SLOTS, type EquipSlot } from './useEquipmentStore'
+import { damageRangeFromMidpoint } from '../combat/combatResolver'
 
 // How much stronger each quality tier is than the template's stored (Normal-tier)
 // base_stats — an approximate, rounded pattern (not any single sourced item's
@@ -91,9 +92,23 @@ export function previewSellPrice(price: number, qualityTier: string): number {
 // Normal one everywhere (Inventory detail card, Equipment paper doll, the
 // universal tooltip). qualityTier is now required so every caller scales
 // consistently with what combat actually uses.
+// Attack stats now roll a min/max range in actual combat (see
+// combatResolver.ts's rollDamageInRange) rather than dealing a flat number —
+// shown here as a range too, so gear tooltips honestly reflect what a hit
+// with this item actually looks like. Other stats (defense, dodge) aren't
+// ranged and keep showing a flat "+N".
+const RANGED_STAT_KEYS = ['physical_attack', 'magic_attack']
+
 export function formatBaseStats(baseStats: Record<string, number>, qualityTier: string): string {
   return Object.entries(baseStats)
-    .map(([key]) => `+${scaledStat(baseStats, key, qualityTier)} ${key.replace(/_/g, ' ')}`)
+    .map(([key]) => {
+      const value = scaledStat(baseStats, key, qualityTier)
+      if (RANGED_STAT_KEYS.includes(key)) {
+        const { min, max } = damageRangeFromMidpoint(value ?? 0)
+        return `${min}-${max} ${key.replace(/_/g, ' ')}`
+      }
+      return `+${value} ${key.replace(/_/g, ' ')}`
+    })
     .join(', ')
 }
 

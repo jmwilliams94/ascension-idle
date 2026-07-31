@@ -77,11 +77,33 @@ export function rollBonusCurrencyDrops(): { meteors: number; dragonballs: number
 // player's own derived.attackSpeed).
 export const MONSTER_ATTACK_INTERVAL_MS = 1000
 
+// Min/max hit range (confirmed with the user, 2026-07-31) — attack is now a
+// rolled range rather than a flat number, for both the player and monsters,
+// matching the real reference data's per-tier Min/Max Atk columns
+// (co.99.com/guide/items/rings.shtml's Iron Ring: min 1/max 3 at a midpoint
+// of 2, exactly a ±50% spread). Formula-derived from the existing single
+// stat value rather than stored per item/monster — no schema change needed,
+// every base_stats.physical_attack/magic_attack and EnemyTypeDef.attackDamage
+// number is now just interpreted as the midpoint wherever it's read.
+export const DAMAGE_ROLL_MIN_RATIO = 0.5
+export const DAMAGE_ROLL_MAX_RATIO = 1.5
+
+export function damageRangeFromMidpoint(midpoint: number): { min: number; max: number } {
+  const min = Math.max(1, Math.round(midpoint * DAMAGE_ROLL_MIN_RATIO))
+  const max = Math.max(min, Math.round(midpoint * DAMAGE_ROLL_MAX_RATIO))
+  return { min, max }
+}
+
+export function rollDamageInRange(midpoint: number): number {
+  const { min, max } = damageRangeFromMidpoint(midpoint)
+  return min + Math.floor(Math.random() * (max - min + 1))
+}
+
 // Rare status only affects HP/rewards per CLAUDE.md's confirmed design (2x HP,
 // 5x gold/EXP) — deliberately not a harder-hitting monster, so this ignores
 // isRare unlike spawnMonsterHp/killRewards above.
 export function monsterAttackDamage(type: EnemyTypeDef): number {
-  return type.attackDamage
+  return rollDamageInRange(type.attackDamage)
 }
 
 // Simplified player-outgoing damage formula (confirmed direction 2026-07-30):

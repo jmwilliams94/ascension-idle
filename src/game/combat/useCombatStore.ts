@@ -16,6 +16,7 @@ import {
   monsterDefense,
   resolvePhysicalDamage,
   rollBonusCurrencyDrops,
+  rollDamageInRange,
   rollIsHit,
   rollIsRare,
   spawnMonsterHp,
@@ -238,8 +239,9 @@ export const useCombatStore = create<CombatState>((set, get) => ({
 
     // Simplified Attack-minus-Defense formula (see combatResolver.ts) — closes
     // the previous "Wuxia deals 0 damage" gap by summing physical + magic
-    // attack rather than reading physicalAttack alone.
-    const damage = resolvePhysicalDamage(derived.physicalAttack + derived.magicAttack, monsterDefense(type))
+    // attack rather than reading physicalAttack alone. Attack is now a rolled
+    // min/max range (see rollDamageInRange), not a flat number.
+    const damage = resolvePhysicalDamage(rollDamageInRange(derived.physicalAttack + derived.magicAttack), monsterDefense(type))
     const nextHp = Math.max(0, state.currentHp - damage)
 
     set((s) => ({
