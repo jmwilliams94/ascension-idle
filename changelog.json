@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.35.1",
+    "date": "2026-07-31",
+    "changes": [
+      "Fixed the top header and tab bar overflowing off the edge of the screen on phones"
+    ]
+  },
+  {
     "version": "1.35.0",
     "date": "2026-07-31",
     "changes": [

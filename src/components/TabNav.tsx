@@ -14,13 +14,17 @@ export default function TabNav() {
   const setActiveTab = useTabStore((state) => state.setActiveTab)
 
   return (
-    <div className="grid grid-cols-6 gap-2">
+    // 3 columns (2 rows) below `lg`, unchanged single-row 6 columns at `lg`+ —
+    // a fixed 6-column grid squeezed every label (worst offenders: "Equipment"/
+    // "Warehouse") into a column too narrow to hold it, overflowing into the
+    // neighboring tab's column instead of wrapping or shrinking.
+    <div className="grid grid-cols-3 gap-2 lg:grid-cols-6">
       {TAB_ITEMS.map((item) => (
         <button
           key={item.id}
           type="button"
           onClick={() => setActiveTab(item.id)}
-          className={`rounded-xl border px-3 py-3 text-sm font-medium ${
+          className={`rounded-xl border px-2 py-2 text-xs font-medium sm:px-3 sm:py-3 sm:text-sm ${
             item.id === activeTab
               ? 'border-sky-500 bg-sky-500/10 text-sky-300'
               : 'border-slate-700 text-slate-300 hover:border-slate-500'

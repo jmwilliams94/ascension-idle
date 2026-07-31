@@ -99,14 +99,14 @@ export default function GameShell({ characterId }: { characterId: string }) {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#1e293b,_#020617_70%)] text-slate-100">
       <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-y-2 px-6 py-4">
           <div>
             <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Ascension Idle</p>
             <h1 className="text-xl font-semibold text-white">Idle Combat</h1>
           </div>
 
-          <div className="flex items-center gap-3">
-            {session?.user.email && <span className="text-sm text-slate-400">{session.user.email}</span>}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            {session?.user.email && <span className="hidden text-sm text-slate-400 sm:inline">{session.user.email}</span>}
             <button
               type="button"
               onClick={() => setActiveCharacterId(null)}
