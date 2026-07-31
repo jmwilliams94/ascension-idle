@@ -1,14 +1,38 @@
 import { useState } from 'react'
 import InventoryPanel from './InventoryPanel'
+import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useArrowStore } from '../game/items/useArrowStore'
 import { usePotionStore } from '../game/items/usePotionStore'
-import { useInventoryStore } from '../game/items/useInventoryStore'
+import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemTemplatesStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { ARROW_TYPES, ARROW_TYPE_ORDER, type ArrowTypeId } from '../game/items/arrowTypes'
 import { POTION_TYPES, HP_POTION_ORDER, MP_POTION_ORDER, type PotionTypeId } from '../game/items/potionTypes'
+import { buildGearTooltip, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
+import type { ItemTooltipData } from '../game/items/itemTooltip'
+
+// A Shop template isn't an owned ItemInstance yet, but buildGearTooltip (the
+// same universal tooltip builder Inventory/Equipment/Forge all use) needs one
+// — this stands in a synthetic Normal-quality, level-at-required-level,
+// no-composition preview instance, matching exactly what grantItemDrop
+// actually creates on purchase (see useInventoryStore.grantItemDrop), so the
+// preview honestly reflects what buying yields.
+function previewInstance(template: ItemTemplate): ItemInstance {
+  return {
+    id: template.id,
+    template_id: template.id,
+    owner_id: '',
+    quality_tier: 'normal',
+    level: template.required_level,
+    composition_level: 0,
+    composition_points: 0,
+    sockets: [],
+    enchant: null,
+    created_at: '',
+  }
+}
 
 type ShopTab = 'arrows' | 'weapons' | 'armor' | 'potions'
 
@@ -50,12 +74,23 @@ function GearRow({ template }: { template: ItemTemplate }) {
 
   return (
     <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs">
-      <div>
-        <p className="font-medium text-slate-200">{template.name}</p>
-        <p className="text-slate-500">{template.price}g</p>
-        {template.required_level > 1 && (
-          <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {template.required_level}</p>
-        )}
+      <div className="flex min-w-0 items-center gap-2">
+        <InventorySlot
+          slotId={template.id}
+          filled
+          sizeClassName={SLOT_SIZE_CLASS}
+          icon={getItemIcon(template.slot_type)}
+          qualityColor={getQualityColor('normal')}
+          label={template.name}
+          tooltip={buildGearTooltip(previewInstance(template), template)}
+        />
+        <div className="min-w-0">
+          <p className="truncate font-medium text-slate-200">{template.name}</p>
+          <p className="text-slate-500">{template.price}g</p>
+          {template.required_level > 1 && (
+            <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {template.required_level}</p>
+          )}
+        </div>
       </div>
 
       <button
@@ -186,20 +221,29 @@ export default function ShopPanel() {
                 const canAfford = gold >= stackCost
                 const canBuy = meetsLevel && canAfford
 
+                const arrowTooltip: ItemTooltipData = {
+                  title: type.displayName,
+                  lines: ['Ammo'],
+                  stats: [type.description],
+                }
+
                 return (
                   <div
                     key={typeId}
                     className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs"
                   >
-                    <div>
-                      <p className="font-medium text-slate-200">{type.displayName}</p>
-                      <p className="text-slate-500">{type.description}</p>
-                      <p className="text-slate-500">
-                        Owned: {owned} · stack of {type.stackSize} for {stackCost}g
-                      </p>
-                      {type.requiredLevel > 1 && (
-                        <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {type.requiredLevel}</p>
-                      )}
+                    <div className="flex min-w-0 items-center gap-2">
+                      <InventorySlot slotId={typeId} filled sizeClassName={SLOT_SIZE_CLASS} icon="🏹" label={type.displayName} tooltip={arrowTooltip} />
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-slate-200">{type.displayName}</p>
+                        <p className="text-slate-500">{type.description}</p>
+                        <p className="text-slate-500">
+                          Owned: {owned} · stack of {type.stackSize} for {stackCost}g
+                        </p>
+                        {type.requiredLevel > 1 && (
+                          <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {type.requiredLevel}</p>
+                        )}
+                      </div>
                     </div>
 
                     <button
@@ -254,20 +298,29 @@ export default function ShopPanel() {
                 const canAfford = gold >= stackCost
                 const canBuy = meetsLevel && canAfford
 
+                const potionTooltip: ItemTooltipData = {
+                  title: type.displayName,
+                  lines: ['HP Potion'],
+                  stats: [type.description],
+                }
+
                 return (
                   <div
                     key={typeId}
                     className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs"
                   >
-                    <div>
-                      <p className="font-medium text-slate-200">{type.displayName}</p>
-                      <p className="text-slate-500">{type.description}</p>
-                      <p className="text-slate-500">
-                        Owned: {owned} · stack of {type.stackSize} for {stackCost}g
-                      </p>
-                      {type.requiredLevel > 1 && (
-                        <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {type.requiredLevel}</p>
-                      )}
+                    <div className="flex min-w-0 items-center gap-2">
+                      <InventorySlot slotId={typeId} filled sizeClassName={SLOT_SIZE_CLASS} icon="🧪" label={type.displayName} tooltip={potionTooltip} />
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-slate-200">{type.displayName}</p>
+                        <p className="text-slate-500">{type.description}</p>
+                        <p className="text-slate-500">
+                          Owned: {owned} · stack of {type.stackSize} for {stackCost}g
+                        </p>
+                        {type.requiredLevel > 1 && (
+                          <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {type.requiredLevel}</p>
+                        )}
+                      </div>
                     </div>
 
                     <button
@@ -296,20 +349,29 @@ export default function ShopPanel() {
                 const canAfford = gold >= stackCost
                 const canBuy = meetsLevel && canAfford
 
+                const potionTooltip: ItemTooltipData = {
+                  title: type.displayName,
+                  lines: ['Mana Potion'],
+                  stats: [type.description],
+                }
+
                 return (
                   <div
                     key={typeId}
                     className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs"
                   >
-                    <div>
-                      <p className="font-medium text-slate-200">{type.displayName}</p>
-                      <p className="text-slate-500">{type.description}</p>
-                      <p className="text-slate-500">
-                        Owned: {owned} · stack of {type.stackSize} for {stackCost}g
-                      </p>
-                      {type.requiredLevel > 1 && (
-                        <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {type.requiredLevel}</p>
-                      )}
+                    <div className="flex min-w-0 items-center gap-2">
+                      <InventorySlot slotId={typeId} filled sizeClassName={SLOT_SIZE_CLASS} icon="💧" label={type.displayName} tooltip={potionTooltip} />
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-slate-200">{type.displayName}</p>
+                        <p className="text-slate-500">{type.description}</p>
+                        <p className="text-slate-500">
+                          Owned: {owned} · stack of {type.stackSize} for {stackCost}g
+                        </p>
+                        {type.requiredLevel > 1 && (
+                          <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {type.requiredLevel}</p>
+                        )}
+                      </div>
                     </div>
 
                     <button

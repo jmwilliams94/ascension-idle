@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.33.1",
+    "date": "2026-07-31",
+    "changes": [
+      "Shop listings now show an item icon with the same hover tooltip Inventory uses, so you can preview what you're buying"
+    ]
+  },
+  {
     "version": "1.33.0",
     "date": "2026-07-31",
     "changes": [
