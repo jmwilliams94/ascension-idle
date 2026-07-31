@@ -20,6 +20,7 @@ export interface ResolveCombatResult {
   leveledUp?: boolean
   itemsGranted?: ItemInstance[]
   itemsHeld?: { template_id: string }[]
+  currencyHeld?: { currency_type: 'meteor' | 'dragonball' }[]
 }
 
 export async function resolveCombat(characterId: string): Promise<ResolveCombatResult | null> {
@@ -44,10 +45,11 @@ export async function resolveCombat(characterId: string): Promise<ResolveCombatR
     useInventoryStore.getState().addItem(item)
   }
 
-  if (result.itemsHeld && result.itemsHeld.length > 0) {
+  if ((result.itemsHeld && result.itemsHeld.length > 0) || (result.currencyHeld && result.currencyHeld.length > 0)) {
     // resolve-combat doesn't return loot_holding row ids (it's fire-and-forget
     // from its perspective) — a lightweight refetch keeps this simple rather
-    // than threading ids back through the response.
+    // than threading ids back through the response. Covers both gear and
+    // currency-type holds (Meteor/DragonBall — see useLootHoldingStore).
     void useLootHoldingStore.getState().loadLootHolding(characterId)
   }
 

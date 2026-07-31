@@ -273,14 +273,37 @@ function LootHoldingCard() {
 
       <div className="space-y-2">
         {entries.map((entry) => {
+          // Currency-type entries (Meteor/DragonBall) have no template at all —
+          // see useLootHoldingStore's 2026-07-31 extension.
+          if (entry.currency_type) {
+            const label = entry.currency_type === 'meteor' ? 'Meteor' : 'DragonBall'
+
+            return (
+              <div key={entry.id} className="flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-sm">
+                  {entry.currency_type === 'meteor' ? '🌠' : '🔮'}
+                </div>
+                <span className="flex-1 truncate text-sm text-slate-200">{label}</span>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void claim(entry.id)}
+                  className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Claim
+                </button>
+              </div>
+            )
+          }
+
           const template = templates.find((t) => t.id === entry.template_id)
-          const label = template ? formatItemDisplayName(template.name, entry.quality_tier) : 'Unknown item'
+          const label = template && entry.quality_tier ? formatItemDisplayName(template.name, entry.quality_tier) : 'Unknown item'
 
           return (
             <div key={entry.id} className="flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2">
               <div
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-sm"
-                style={{ borderColor: getQualityColor(entry.quality_tier) }}
+                style={{ borderColor: getQualityColor(entry.quality_tier ?? 'normal') }}
               >
                 {getItemIcon(template?.slot_type)}
               </div>

@@ -130,3 +130,34 @@ export function buildStoneTooltip(tier: number): ItemTooltipData {
     stats: [`${compositionPointValue(tier)} pts`],
   }
 }
+
+// Meteors/DragonBalls are individual, non-stacking Inventory items now (confirmed
+// with the user, 2026-07-31 — see CLAUDE.md's Warehouse economy redesign note),
+// same pattern as Composition Stones above: no per-unit id in the backend (just a
+// running count, characters.meteor_count/dragonball_count), so each rendered tile
+// gets a synthetic id combining the currency with a render-time index, purely for
+// a stable React key — same-currency units are fully fungible, the index has no
+// other meaning.
+export function meteorDragId(index: number): string {
+  return `meteor:${index}`
+}
+
+export function dragonballDragId(index: number): string {
+  return `dragonball:${index}`
+}
+
+export function buildMeteorTooltip(): ItemTooltipData {
+  return {
+    title: 'Meteor',
+    lines: ['Forge material'],
+    stats: ['Used for Level Upgrade'],
+  }
+}
+
+export function buildDragonballTooltip(): ItemTooltipData {
+  return {
+    title: 'DragonBall',
+    lines: ['Forge material'],
+    stats: ['Used for Quality Upgrade'],
+  }
+}

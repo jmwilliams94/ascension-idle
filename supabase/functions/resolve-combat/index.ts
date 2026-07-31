@@ -66,13 +66,15 @@ function computeDerivedStats(attributes: Attributes, equipmentBonus: { physicalA
   return { hp, physicalAttack, magicAttack, attackSpeed: BASE_ATTACK_SPEED }
 }
 
-// Mirrors src/game/items/equipmentBonus.ts
+// Mirrors src/game/items/equipmentBonus.ts (recalibrated 2026-07-31 — 1 + weight/4
+// using the confirmed battle-power weighting, was a stale 1/1.1/1.2/1.35/1.5 that
+// never got updated here when the client-side constant changed).
 const QUALITY_STAT_MULTIPLIERS: Record<string, number> = {
   normal: 1,
-  refined: 1.1,
-  unique: 1.2,
-  elite: 1.35,
-  super: 1.5,
+  refined: 1.25,
+  unique: 1.5,
+  elite: 1.75,
+  super: 2,
 }
 
 function scaledStat(baseStats: Record<string, number>, key: string, qualityTier: string): number | undefined {
@@ -267,7 +269,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const { data: character, error: characterError } = await db
     .from('characters')
     .select(
-      'id, account_id, class, level, gold, exp, meteors, dragonballs, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, selected_monster_id, combat_last_resolved_at',
+      'id, account_id, class, level, gold, exp, meteor_count, dragonball_count, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, selected_monster_id, combat_last_resolved_at',
     )
     .eq('id', characterId)
     .maybeSingle()
@@ -296,9 +298,16 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       ok: true,
       elapsedMs,
       gained: { kills: 0, rareKills: 0, gold: 0, exp: 0, meteors: 0, dragonballs: 0 },
-      character: { gold: character.gold, exp: character.exp, level: character.level, meteors: character.meteors, dragonballs: character.dragonballs },
+      character: {
+        gold: character.gold,
+        exp: character.exp,
+        level: character.level,
+        meteors: character.meteor_count,
+        dragonballs: character.dragonball_count,
+      },
       itemsGranted: [],
       itemsHeld: [],
+      currencyHeld: [],
     })
   }
 
@@ -476,6 +485,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
 
   const itemsGranted: GrantedItemRow[] = []
   const itemsHeld: { template_id: string }[] = []
+  const currencyHeld: { currency_type: 'meteor' | 'dragonball' }[] = []
 
   for (const template of droppedTemplates) {
     if (occupied < INVENTORY_SLOT_CAP) {
@@ -497,8 +507,38 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     // else: genuinely lost, both Inventory and Loot Holding are full.
   }
 
-  const newMeteors = character.meteors + meteorsGained
-  const newDragonballs = character.dragonballs + dragonballsGained
+  // Meteors/DragonBalls are now individual, non-stacking Inventory items
+  // (confirmed with the user, 2026-07-31 — see CLAUDE.md's Warehouse economy
+  // redesign note) — each gained unit competes for the same 40-slot cap as
+  // gear, overflowing into Loot Holding exactly like a full-inventory gear
+  // drop already does, rather than always being added regardless of cap.
+  let meteorsToGrant = 0
+  for (let i = 0; i < meteorsGained; i += 1) {
+    if (occupied < INVENTORY_SLOT_CAP) {
+      meteorsToGrant += 1
+      occupied += 1
+    } else if (heldCount < LOOT_HOLDING_CAP) {
+      await db.from('loot_holding').insert({ character_id: characterId, currency_type: 'meteor' })
+      heldCount += 1
+      currencyHeld.push({ currency_type: 'meteor' })
+    }
+    // else: genuinely lost, both Inventory and Loot Holding are full.
+  }
+
+  let dragonballsToGrant = 0
+  for (let i = 0; i < dragonballsGained; i += 1) {
+    if (occupied < INVENTORY_SLOT_CAP) {
+      dragonballsToGrant += 1
+      occupied += 1
+    } else if (heldCount < LOOT_HOLDING_CAP) {
+      await db.from('loot_holding').insert({ character_id: characterId, currency_type: 'dragonball' })
+      heldCount += 1
+      currencyHeld.push({ currency_type: 'dragonball' })
+    }
+  }
+
+  const newMeteors = character.meteor_count + meteorsToGrant
+  const newDragonballs = character.dragonball_count + dragonballsToGrant
 
   await db
     .from('characters')
@@ -506,8 +546,8 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       gold: character.gold + goldGained,
       exp,
       level,
-      meteors: newMeteors,
-      dragonballs: newDragonballs,
+      meteor_count: newMeteors,
+      dragonball_count: newDragonballs,
       combat_last_resolved_at: new Date(now).toISOString(),
     })
     .eq('id', characterId)
@@ -516,6 +556,9 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     ok: true,
     elapsedMs,
     // Deltas — for display/toast purposes only (combat-log flavor text).
+    // Deliberately the full rolled amount (meteorsGained/dragonballsGained),
+    // not just what actually fit in Inventory — matches how gear drops'
+    // flavor text isn't reduced either when a drop overflows to Loot Holding.
     gained: { kills, rareKills, gold: goldGained, exp: expGained, meteors: meteorsGained, dragonballs: dragonballsGained },
     // Absolute, authoritative new totals — this is what the client reconciles
     // its local state to (replace, not add — see useProgressionStore's
@@ -530,5 +573,6 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     leveledUp: level > character.level,
     itemsGranted,
     itemsHeld,
+    currencyHeld,
   })
 }

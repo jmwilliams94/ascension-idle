@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.37.0",
+    "date": "2026-07-31",
+    "changes": [
+      "Meteors and DragonBalls are now individual items in your Inventory instead of an invisible wallet balance, matching Composition Stones",
+      "A Meteor/DragonBall drop that can't fit in a full Inventory now lands in Loot Holding instead of being lost"
+    ]
+  },
+  {
     "version": "1.36.1",
     "date": "2026-07-31",
     "changes": [

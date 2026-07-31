@@ -4,6 +4,7 @@ import { useActiveCharacterStore } from '../../lib/useActiveCharacterStore'
 import { useCompositionStore } from './useCompositionStore'
 import { usePotionStore } from './usePotionStore'
 import { useEquipmentStore } from './useEquipmentStore'
+import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { useItemTemplatesStore, type ItemTemplate } from './useItemTemplatesStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
 import { useCharacterStore } from '../stats/useCharacterStore'
@@ -89,7 +90,12 @@ export function occupiedSlotCount(items: ItemInstance[]): number {
   // A potion stack occupies a slot exactly like a stone tier does — see
   // usePotionStore/potionTypes.ts.
   const potionStackCount = usePotionStore.getState().stacks.filter((stack) => stack.count > 0).length
-  return gearCount + totalStoneCount + potionStackCount
+  // Meteors/DragonBalls are individual, non-stacking Inventory items now
+  // (confirmed with the user, 2026-07-31) — same "one tile per unit" term
+  // shape as the stone total above.
+  const currency = useCurrencyStore.getState()
+  const currencyCount = currency.meteors + currency.dragonballs
+  return gearCount + totalStoneCount + potionStackCount + currencyCount
 }
 
 interface InventoryState {

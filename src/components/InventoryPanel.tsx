@@ -11,25 +11,37 @@ import {
   previewSellPrice,
 } from '../game/items/equipmentBonus'
 import { EQUIP_SLOTS, useEquipmentStore, type EquipSlot } from '../game/items/useEquipmentStore'
-import { COMPOSITION_STONE_TIERS, buildStoneTooltip, compositionPointValue, stoneDragId } from '../game/items/forgeCosts'
+import {
+  COMPOSITION_STONE_TIERS,
+  buildDragonballTooltip,
+  buildMeteorTooltip,
+  buildStoneTooltip,
+  compositionPointValue,
+  dragonballDragId,
+  meteorDragId,
+  stoneDragId,
+} from '../game/items/forgeCosts'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
 import { useCompositionStore } from '../game/items/useCompositionStore'
 import { INVENTORY_SLOT_CAP, useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { usePotionStore } from '../game/items/usePotionStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
+import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { POTION_TYPES } from '../game/items/potionTypes'
 
 // A single fixed 40-cell grid shared by gear (item_instances), Composition
-// stones, and HP/Mana potion stacks — a stack/stone tier takes up a slot
-// exactly like a gear item does, all counting against the same cap (see
-// occupiedSlotCount in useInventoryStore). Always renders all 40 cells, empty
-// ones dimmed/unclickable, so Forge's drag-and-drop has a stable,
-// always-present set of slots to pick gear/stones up from.
+// stones, Meteors/DragonBalls, and HP/Mana potion stacks — a stack/stone/
+// currency unit takes up a slot exactly like a gear item does, all counting
+// against the same cap (see occupiedSlotCount in useInventoryStore). Always
+// renders all 40 cells, empty ones dimmed/unclickable, so Forge's
+// drag-and-drop has a stable, always-present set of slots to pick gear/
+// stones up from.
 type SelectedSlot =
   | { kind: 'item'; id: string }
   | { kind: 'stone'; dragId: string; tier: number }
   | { kind: 'potion'; id: string }
+  | { kind: 'currency'; dragId: string; currencyType: 'meteor' | 'dragonball' }
   | null
 
 interface InventoryPanelProps {
@@ -74,6 +86,8 @@ export default function InventoryPanel({
   const isEquipped = useEquipmentStore((state) => state.isEquipped)
 
   const stones = useCompositionStore((state) => state.stones)
+  const meteors = useCurrencyStore((state) => state.meteors)
+  const dragonballs = useCurrencyStore((state) => state.dragonballs)
   const potionStacks = usePotionStore((state) => state.stacks)
   const handlePotionUse = usePotionStore((state) => state.usePotion)
   const currentPlayerHp = useCombatStore((state) => state.currentPlayerHp)
@@ -114,7 +128,18 @@ export default function InventoryPanel({
     return acc
   }, [])
 
-  const occupiedCount = stoneTiles.length + visiblePotionStacks.length + visibleItems.length
+  // Meteors/DragonBalls don't stack either (same as Stones — confirmed with the
+  // user, 2026-07-31) — one tile per owned unit, sharing the same remaining-
+  // budget clamp, allocated after Stones in the same greedy fashion.
+  const remainingAfterStones = Math.max(0, baseStoneBudget - stoneTiles.length)
+  const meteorShown = Math.min(meteors, remainingAfterStones)
+  const meteorTiles = Array.from({ length: meteorShown }, (_, index) => ({ index, dragId: meteorDragId(index) }))
+  const remainingAfterMeteors = Math.max(0, remainingAfterStones - meteorTiles.length)
+  const dragonballShown = Math.min(dragonballs, remainingAfterMeteors)
+  const dragonballTiles = Array.from({ length: dragonballShown }, (_, index) => ({ index, dragId: dragonballDragId(index) }))
+
+  const occupiedCount =
+    stoneTiles.length + meteorTiles.length + dragonballTiles.length + visiblePotionStacks.length + visibleItems.length
   const emptySlotCount = Math.max(0, INVENTORY_SLOT_CAP - occupiedCount)
 
   const selectedItem =
@@ -131,8 +156,10 @@ export default function InventoryPanel({
   const selectedStoneTier = selectedSlot?.kind === 'stone' ? selectedSlot.tier : undefined
   const selectedPotionStack =
     selectedSlot?.kind === 'potion' ? visiblePotionStacks.find((stack) => stack.id === selectedSlot.id) : undefined
+  const selectedCurrencyType = selectedSlot?.kind === 'currency' ? selectedSlot.currencyType : undefined
 
-  const slotKey = (slot: NonNullable<SelectedSlot>): string => (slot.kind === 'stone' ? slot.dragId : `${slot.kind}:${slot.id}`)
+  const slotKey = (slot: NonNullable<SelectedSlot>): string =>
+    slot.kind === 'stone' || slot.kind === 'currency' ? slot.dragId : `${slot.kind}:${slot.id}`
 
   // Fixed-size tracks (not grid-cols-N's equal-fraction columns) so tiles stay a
   // consistent size regardless of how wide the surrounding column/page is — matches
@@ -306,6 +333,34 @@ export default function InventoryPanel({
             return <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'stone', dragId, tier })} />
           })}
 
+          {meteorTiles.map(({ dragId }) => (
+            <InventorySlot
+              key={dragId}
+              slotId={dragId}
+              filled
+              sizeClassName={SLOT_SIZE_CLASS}
+              icon="🌠"
+              label="Meteor"
+              tooltip={buildMeteorTooltip()}
+              selected={selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId}
+              onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'meteor' })}
+            />
+          ))}
+
+          {dragonballTiles.map(({ dragId }) => (
+            <InventorySlot
+              key={dragId}
+              slotId={dragId}
+              filled
+              sizeClassName={SLOT_SIZE_CLASS}
+              icon="🔮"
+              label="DragonBall"
+              tooltip={buildDragonballTooltip()}
+              selected={selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId}
+              onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'dragonball' })}
+            />
+          ))}
+
           {visibleItems.map((item) => {
             if (reservedItemIds.includes(item.id)) {
               return <InventorySlot key={item.id} slotId={item.id} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
@@ -382,6 +437,22 @@ export default function InventoryPanel({
               <p className="text-sm font-medium text-slate-200">+{selectedStoneTier} Stone</p>
               <p className="text-xs text-slate-500">
                 {compositionPointValue(selectedStoneTier)} pts · {stones[String(selectedStoneTier)] ?? 0} owned total
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedCurrencyType && (
+        <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg">
+              {selectedCurrencyType === 'meteor' ? '🌠' : '🔮'}
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-200">{selectedCurrencyType === 'meteor' ? 'Meteor' : 'DragonBall'}</p>
+              <p className="text-xs text-slate-500">
+                {selectedCurrencyType === 'meteor' ? meteors : dragonballs} owned total
               </p>
             </div>
           </div>
