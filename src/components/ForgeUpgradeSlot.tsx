@@ -11,7 +11,7 @@ interface ForgeUpgradeSlotProps {
 }
 
 // The drop target for Forge's drag-and-drop flow (see dragDrop.tsx) — its
-// wrapper carries data-forge-drop="upgrade" so a tile dragged from the
+// wrapper carries data-drop-zone="upgrade" so a tile dragged from the
 // Inventory grid can land here; onDropItemId is invoked by ForgePanel via that
 // grid tile's own drag hook, not from anything in this component. Occupied,
 // the item itself becomes draggable so dragging it back out clears the
@@ -31,7 +31,7 @@ export default function ForgeUpgradeSlot({ item, template, onRemove }: ForgeUpgr
     <div className="flex flex-col items-center gap-2">
       <p className="text-xs uppercase tracking-wide text-slate-500">Upgrade Slot</p>
 
-      <div data-forge-drop="upgrade" className={`${SLOT_SIZE_CLASS} shrink-0`}>
+      <div data-drop-zone="upgrade" className={`${SLOT_SIZE_CLASS} shrink-0`}>
         <InventorySlot
           slotId="forge-upgrade-slot"
           filled={Boolean(item)}

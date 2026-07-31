@@ -183,7 +183,7 @@ export default function ForgePanel() {
   }
 
   // Routes a grid tile's drop (see dragDrop.tsx) to whichever Forge target it
-  // landed on, identified by that target's data-forge-drop key — "upgrade" (see
+  // landed on, identified by that target's data-drop-zone key — "upgrade" (see
   // ForgeUpgradeSlot) or "fuel-0"/"fuel-1" (see ForgeFuelSlots).
   const handleTileDrop = (overTarget: string, id: string) => {
     if (overTarget === 'upgrade') {
@@ -290,14 +290,18 @@ export default function ForgePanel() {
   return (
     <DragDropProvider>
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="flex justify-center gap-6">
+        {/* Stacks vertically below `lg` — the Result Preview's fixed 240px
+            width plus the Upgrade Slot next to it (no flex-wrap) was wider
+            than a phone viewport, the same overflow pattern Combat/Warehouse
+            had. Unchanged side-by-side layout at `lg`+. */}
+        <div className="flex flex-col items-center gap-4 lg:flex-row lg:justify-center lg:gap-6">
           <ForgeUpgradeSlot
             item={selectedItem}
             template={selectedTemplate}
             onRemove={handleRemove}
           />
 
-          <div className="w-60 shrink-0 space-y-3">
+          <div className="w-full space-y-3 lg:w-60 lg:shrink-0">
             <p className="text-xs uppercase tracking-wide text-slate-500">Result Preview</p>
 
             {attemptResult ? (

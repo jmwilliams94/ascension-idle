@@ -21,7 +21,7 @@ interface ForgeFuelSlotsProps {
 
 // Exactly two fixed drop targets (not an unbounded list) — confirmed: Composition
 // feeds are capped at two fuel inputs at a time. Each wrapper carries
-// data-forge-drop="fuel-<index>" (see dragDrop.tsx) so a tile dragged from the
+// data-drop-zone="fuel-<index>" (see dragDrop.tsx) so a tile dragged from the
 // Inventory grid can land here — the actual drop is handled by ForgePanel via
 // that grid tile's own drag hook, not from anything in this component.
 export default function ForgeFuelSlots({ slots, templates, onRemoveSlot }: ForgeFuelSlotsProps) {
@@ -35,7 +35,7 @@ export default function ForgeFuelSlots({ slots, templates, onRemoveSlot }: Forge
 
           if (!entry) {
             return (
-              <div key={index} data-forge-drop={dropKey} className={SLOT_SIZE_CLASS}>
+              <div key={index} data-drop-zone={dropKey} className={SLOT_SIZE_CLASS}>
                 <InventorySlot slotId={`fuel-slot-${index}`} filled={false} sizeClassName={SLOT_SIZE_CLASS} emptyHint="Drop stone or item" />
               </div>
             )
@@ -45,7 +45,7 @@ export default function ForgeFuelSlots({ slots, templates, onRemoveSlot }: Forge
             const value = compositionPointValue(entry.tier)
 
             return (
-              <div key={index} data-forge-drop={dropKey} className={SLOT_SIZE_CLASS}>
+              <div key={index} data-drop-zone={dropKey} className={SLOT_SIZE_CLASS}>
                 <InventorySlot
                   slotId={`fuel-slot-${index}`}
                   filled
@@ -63,7 +63,7 @@ export default function ForgeFuelSlots({ slots, templates, onRemoveSlot }: Forge
           const template = templates.find((t) => t.id === entry.item.template_id)
 
           return (
-            <div key={index} data-forge-drop={dropKey} className={SLOT_SIZE_CLASS}>
+            <div key={index} data-drop-zone={dropKey} className={SLOT_SIZE_CLASS}>
               <InventorySlot
                 slotId={`fuel-slot-${index}`}
                 filled

@@ -2,12 +2,18 @@ import { createContext, useContext, useRef } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 
 // A minimal cross-input (mouse + touch + pen) drag-and-drop primitive built on
-// Pointer Events, used only within Forge. Replaces native HTML5 drag-and-drop
-// (draggable/dragstart/dragover/drop), which never fires on touchscreens — see
-// CLAUDE.md's "PWA & Mobile" section. A drop target just needs a
-// `data-forge-drop="<key>"` attribute on its wrapper element; the drag source
-// resolves which target (if any) is under the pointer via
-// `document.elementFromPoint`, so drop targets themselves need no handlers.
+// Pointer Events, shared by Forge and Warehouse (originally built for Forge
+// only, generalized 2026-07-31 when Warehouse's own native-DnD gap was fixed
+// the same way). Replaces native HTML5 drag-and-drop (draggable/dragstart/
+// dragover/drop), which never fires on touchscreens — see CLAUDE.md's "PWA &
+// Mobile" section. A drop target just needs a `data-drop-zone="<key>"`
+// attribute on its wrapper element; the drag source resolves which target (if
+// any) is under the pointer via `document.elementFromPoint`, so drop targets
+// themselves need no handlers. Key namespacing is the caller's responsibility
+// — Forge uses `"upgrade"`/`"fuel-0"`/`"fuel-1"`, Warehouse uses
+// `"warehouse-storage"`/`"inventory"`; each page's own DragDropProvider is a
+// separate React context, so there's no cross-page collision risk even though
+// the keys aren't prefixed.
 // Split from dragDrop.tsx (which holds the components) because a file mixing
 // component and non-component exports breaks React Fast Refresh.
 
@@ -38,8 +44,8 @@ export const DragDropContext = createContext<DragDropContextValue | null>(null)
 
 export function resolveDropTarget(x: number, y: number): string | null {
   const element = document.elementFromPoint(x, y)
-  const target = element?.closest<HTMLElement>('[data-forge-drop]')
-  return target?.dataset.forgeDrop ?? null
+  const target = element?.closest<HTMLElement>('[data-drop-zone]')
+  return target?.dataset.dropZone ?? null
 }
 
 function useDragDropContext(): DragDropContextValue {
@@ -53,7 +59,7 @@ function useDragDropContext(): DragDropContextValue {
 interface UseDraggableTileArgs {
   enabled: boolean
   payload: DragPayload | null
-  // overTarget is whatever data-forge-drop key the pointer was released over
+  // overTarget is whatever data-drop-zone key the pointer was released over
   // (or null if released somewhere with no valid target) — same "no-op if
   // nowhere valid" behavior the old native-DnD drop targets already had.
   onDrop: (overTarget: string | null, draggedId: string) => void

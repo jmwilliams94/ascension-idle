@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.36.0",
+    "date": "2026-07-31",
+    "changes": [
+      "Fixed the Equipment paper doll and Forge screens overflowing off the edge of phone screens",
+      "Warehouse now fits on phones too, and dragging gear/stones in and out of it works by touch, not just mouse",
+      "Item tooltips can now be opened on phones with a long press, not just mouse hover"
+    ]
+  },
+  {
     "version": "1.35.1",
     "date": "2026-07-31",
     "changes": [

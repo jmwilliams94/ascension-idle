@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 // Matches ItemTooltip's own w-52 (208px) — used only for horizontal clamping math
@@ -10,26 +10,120 @@ const VIEWPORT_MARGIN = 8
 // room above the trigger, flip the tooltip below it instead of clipping upward.
 const FLIP_BELOW_THRESHOLD = 160
 
+// Touch has no "hover" — long-press is the fallback (confirmed with the user,
+// 2026-07-31), not tap-to-toggle: a plain tap already means "select" on nearly
+// every tile this wraps (Inventory/Forge/Equipment), so reusing tap for
+// "show tooltip" would collide with that. Long-press is a separate gesture by
+// construction (time-based, requires stillness) so it can't collide with
+// either a tap-to-select or the drag-and-drop gesture (movement-based) that
+// some of these same tiles also use — see dragDropContext.ts's own
+// movement-threshold, which is the mirror-image reason a hold that never
+// moves never starts a drag.
+const LONG_PRESS_MS = 450
+const LONG_PRESS_MOVE_CANCEL_PX = 10
+
 interface HoverTooltipProps {
   content: ReactNode
   children: ReactNode
 }
 
-// Wraps any trigger element and shows `content` on hover, portaled into
-// document.body and positioned with `position: fixed` from the trigger's own
-// bounding rect — this is what makes it immune to clipping by a scrollable/
-// overflow ancestor (e.g. OverlayPanel's scroll container), unlike a plain CSS
-// absolute-positioned tooltip nested inside that same clipped DOM subtree.
+// Wraps any trigger element and shows `content` on hover (mouse/pen) or
+// long-press (touch), portaled into document.body and positioned with
+// `position: fixed` from the trigger's own bounding rect — this is what makes
+// it immune to clipping by a scrollable/overflow ancestor (e.g. a panel's
+// scroll container), unlike a plain CSS absolute-positioned tooltip nested
+// inside that same clipped DOM subtree.
 export default function HoverTooltip({ content, children }: HoverTooltipProps) {
   const [rect, setRect] = useState<DOMRect | null>(null)
   const triggerRef = useRef<HTMLDivElement>(null)
+
+  const longPressTimerRef = useRef<number | null>(null)
+  const longPressStartRef = useRef<{ x: number; y: number } | null>(null)
+  // Read-then-cleared by onClickCapture so the tap that ends a long-press
+  // doesn't also fire whatever onClick the wrapped tile has (e.g. a select
+  // toggle) — same "swallow the click that follows a real gesture" pattern
+  // dragDropContext.ts uses for drag-and-drop.
+  const longPressFiredRef = useRef(false)
 
   const handleEnter = () => {
     setRect(triggerRef.current?.getBoundingClientRect() ?? null)
   }
 
+  const clearLongPressTimer = () => {
+    if (longPressTimerRef.current !== null) {
+      window.clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }
+
+  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'touch') {
+      return
+    }
+    longPressStartRef.current = { x: event.clientX, y: event.clientY }
+    clearLongPressTimer()
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressFiredRef.current = true
+      setRect(triggerRef.current?.getBoundingClientRect() ?? null)
+    }, LONG_PRESS_MS)
+  }
+
+  const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'touch' || !longPressStartRef.current) {
+      return
+    }
+    const dx = event.clientX - longPressStartRef.current.x
+    const dy = event.clientY - longPressStartRef.current.y
+    // Movement past this point reads as a scroll or a drag attempt, not a
+    // hold-still-to-peek — cancel before the timer fires rather than showing
+    // a tooltip mid-scroll.
+    if (Math.hypot(dx, dy) > LONG_PRESS_MOVE_CANCEL_PX) {
+      clearLongPressTimer()
+    }
+  }
+
+  const handlePointerEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'touch') {
+      return
+    }
+    clearLongPressTimer()
+    longPressStartRef.current = null
+    if (longPressFiredRef.current) {
+      setRect(null)
+    }
+  }
+
+  const handleClickCapture = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (longPressFiredRef.current) {
+      longPressFiredRef.current = false
+      event.preventDefault()
+      event.stopPropagation()
+    }
+  }
+
+  const handleContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
+    // Only suppresses the native long-press callout/context menu some mobile
+    // browsers show — longPressFiredRef is only ever set from a touch
+    // pointerType, so this never touches desktop right-click behavior
+    // (InventorySlot's own onContextMenu prop, used elsewhere for its own
+    // right-click shortcuts, is unaffected).
+    if (longPressFiredRef.current) {
+      event.preventDefault()
+    }
+  }
+
   return (
-    <div ref={triggerRef} onMouseEnter={handleEnter} onMouseLeave={() => setRect(null)}>
+    <div
+      ref={triggerRef}
+      onMouseEnter={handleEnter}
+      onMouseLeave={() => setRect(null)}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerEnd}
+      onPointerCancel={handlePointerEnd}
+      onClickCapture={handleClickCapture}
+      onContextMenu={handleContextMenu}
+    >
       {children}
 
       {rect &&

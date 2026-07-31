@@ -1,19 +1,11 @@
 import { useState } from 'react'
-import type { DragEvent } from 'react'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
+import { DraggableInventorySlot } from './dragDrop'
 import { getItemIcon } from '../game/items/equipmentBonus'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
-import { COMPOSITION_STONE_TIERS, compositionPointValue, parseStoneDragId } from '../game/items/forgeCosts'
+import { COMPOSITION_STONE_TIERS, compositionPointValue } from '../game/items/forgeCosts'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { WAREHOUSE_SLOT_CAP, useWarehouseStore } from '../game/items/useWarehouseStore'
-
-// Drag payload MIME type for a Warehouse gear tile being dragged *out* toward
-// Inventory to withdraw it (at the free Normal tier — dragging is a shortcut for
-// the common case; choosing a paid composition tier still goes through the
-// click-to-select detail card below). Kept distinct from the plain 'text/plain'
-// contract Inventory/Forge already use for their own item/stone drags, so a
-// Warehouse-origin drag can never be misread as one of those.
-export const WAREHOUSE_ITEM_DRAG_TYPE = 'application/x-warehouse-item'
 
 // The Warehouse's own 40-slot grid — a thin sibling of InventoryPanel, not the
 // same component, since a warehoused gear "token" (one row per template,
@@ -24,15 +16,20 @@ export const WAREHOUSE_ITEM_DRAG_TYPE = 'application/x-warehouse-item'
 // number shown in WarehousePanel, not a physical tile (see useWarehouseStore).
 interface WarehouseGridProps {
   characterId: string
+  // Dragging a tile *out* of this grid (toward Inventory, to withdraw at the
+  // free Normal tier — a shortcut for the common case; choosing a paid
+  // composition tier still goes through the click-to-select detail card
+  // below) calls back with whichever data-drop-zone target the tile was
+  // released over — WarehousePanel (the actual owner of withdrawItem) decides
+  // what to do with it, same routing pattern ForgePanel uses. See dragDrop.tsx.
+  onTileDrop?: (overTarget: string, id: string) => void
 }
 
-export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
+export default function WarehouseGrid({ characterId, onTileDrop }: WarehouseGridProps) {
   const items = useWarehouseStore((state) => state.items)
   const points = useWarehouseStore((state) => state.points)
   const busy = useWarehouseStore((state) => state.busy)
   const fullMessage = useWarehouseStore((state) => state.fullMessage)
-  const depositItem = useWarehouseStore((state) => state.depositItem)
-  const depositStone = useWarehouseStore((state) => state.depositStone)
   const withdrawItem = useWarehouseStore((state) => state.withdrawItem)
   const clearFullMessage = useWarehouseStore((state) => state.clearFullMessage)
   const templates = useItemTemplatesStore((state) => state.templates)
@@ -47,27 +44,10 @@ export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
   const selectedTemplate = selectedEntry && templates.find((template) => template.id === selectedEntry.template_id)
   const withdrawCost = compositionPointValue(withdrawTier)
 
-  const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    event.dataTransfer.dropEffect = 'move'
-  }
-
-  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault()
-    const draggedId = event.dataTransfer.getData('text/plain')
-    if (!draggedId) return
-
-    const stoneTier = parseStoneDragId(draggedId)
-    if (stoneTier !== null) {
-      void depositStone(characterId, stoneTier, 1)
-    } else {
-      void depositItem(characterId, draggedId)
+  const handleTileDrop = (overTarget: string | null, id: string) => {
+    if (overTarget) {
+      onTileDrop?.(overTarget, id)
     }
-  }
-
-  const handleGearDragStart = (templateId: string) => (event: DragEvent<HTMLButtonElement>) => {
-    event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData(WAREHOUSE_ITEM_DRAG_TYPE, templateId)
   }
 
   const selectEntry = (entryId: string) => {
@@ -83,7 +63,13 @@ export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
           Warehouse Storage ({occupiedCount}/{WAREHOUSE_SLOT_CAP})
         </p>
 
-        <div onDragOver={handleDragOver} onDrop={handleDrop} className="mt-2 grid grid-cols-[repeat(8,4rem)] gap-1.5">
+        {/* Responsive tracks matching InventoryPanel's own fix (3.5rem below
+            `lg`, unchanged 4rem at `lg`+) — the previous fixed 4rem-per-column
+            grid was the same overflow bug InventoryPanel had before it was
+            fixed, just never caught here since this grid didn't exist yet at
+            the time. overflow-x-auto is the same defensive backstop. */}
+        <div data-drop-zone="warehouse-storage" className="mt-2 overflow-x-auto">
+        <div className="grid grid-cols-[repeat(8,3.5rem)] gap-1.5 lg:grid-cols-[repeat(8,4rem)]">
           {items.map((entry) => {
             const template = templates.find((t) => t.id === entry.template_id)
             const label = template ? template.name : 'Unknown item'
@@ -91,28 +77,39 @@ export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
               title: label,
               lines: [`x${entry.count} in Warehouse`, 'Choose a tier to withdraw at'],
             }
+            const icon = getItemIcon(template?.slot_type)
 
-            return (
-              <InventorySlot
-                key={entry.id}
-                slotId={entry.id}
-                filled
-                sizeClassName={SLOT_SIZE_CLASS}
-                icon={getItemIcon(template?.slot_type)}
-                label={label}
-                tooltip={tooltip}
-                badge={`x${entry.count}`}
-                selected={selectedEntryId === entry.id}
-                onClick={() => selectEntry(entry.id)}
-                draggable
-                onDragStart={handleGearDragStart(entry.template_id)}
-              />
-            )
+            const commonProps = {
+              slotId: entry.id,
+              filled: true as const,
+              sizeClassName: SLOT_SIZE_CLASS,
+              icon,
+              label,
+              tooltip,
+              badge: `x${entry.count}`,
+              selected: selectedEntryId === entry.id,
+            }
+
+            if (onTileDrop) {
+              return (
+                <DraggableInventorySlot
+                  key={entry.id}
+                  {...commonProps}
+                  dragEnabled
+                  dragPayload={{ id: entry.template_id, icon, badge: `x${entry.count}` }}
+                  onDrop={handleTileDrop}
+                  onClick={() => selectEntry(entry.id)}
+                />
+              )
+            }
+
+            return <InventorySlot key={entry.id} {...commonProps} onClick={() => selectEntry(entry.id)} />
           })}
 
           {Array.from({ length: emptySlotCount }, (_, index) => (
             <InventorySlot key={`empty-${index}`} slotId={`wh-empty-${index}`} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
           ))}
+        </div>
         </div>
 
         {fullMessage && (

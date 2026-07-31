@@ -15,7 +15,12 @@ import { useCharacterStore } from '../game/stats/useCharacterStore'
 
 // Slot size for this paper-doll — scaled up from the default h-16 w-16 now that
 // there's no central character placeholder competing for room (see below).
-const SLOT_SIZE = 'h-24 w-24'
+// Responsive: the fixed 96px size didn't shrink to fit the percentage-based
+// grid columns below (`gridTemplateColumns: '30% 40% 30%'` inside a max-w-sm
+// container), which get tight enough on a phone that a 96px tile would
+// overflow its own column — same fixed-size-tile pattern that broke the
+// Inventory grid before. Unchanged 96px at `lg`+.
+const SLOT_SIZE = 'h-16 w-16 lg:h-24 lg:w-24'
 
 // Multi-slot equipping (confirmed, 2026-07-31 — supersedes the earlier
 // "only Main Hand is functional" version). Matches the 6 slot_types that
@@ -66,7 +71,7 @@ export default function EquipmentPanel() {
   return (
     <div className="space-y-4">
       <div
-        className="mx-auto grid max-w-sm gap-3"
+        className="mx-auto grid max-w-sm gap-2 lg:gap-3"
         style={{
           gridTemplateColumns: '30% 40% 30%',
           gridTemplateAreas: '". . head" ". . neck" ". . ring" ". . main" "boots offhand armor"',

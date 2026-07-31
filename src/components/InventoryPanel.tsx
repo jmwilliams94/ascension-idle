@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import type { DragEvent } from 'react'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import { DraggableInventorySlot } from './dragDrop'
 import {
@@ -40,23 +39,18 @@ interface InventoryPanelProps {
   // Stone tiers use the synthetic id from stoneDragId, real items use their own id.
   // Only ForgePanel passes this; every other usage is unaffected.
   reservedItemIds?: string[]
-  // Present only when rendered inside Forge — makes gear and stone tiles
-  // draggable (see dragDrop.tsx), calling back with whichever data-forge-drop
-  // target (see ForgeUpgradeSlot/ForgeFuelSlots) the tile was released over, and
-  // the dragged id (a real item id, or a synthetic stoneDragId for a stone).
-  // Not called if the tile was dropped somewhere with no valid target. Stones
+  // Present when rendered inside Forge or Warehouse — makes gear and stone
+  // tiles draggable (see dragDrop.tsx), calling back with whichever
+  // data-drop-zone target (Forge: ForgeUpgradeSlot/ForgeFuelSlots; Warehouse:
+  // WarehouseGrid's own storage grid) the tile was released over, and the
+  // dragged id (a real item id, or a synthetic stoneDragId for a stone). Not
+  // called if the tile was dropped somewhere with no valid target. Stones
   // don't stack — each tile is exactly one stone, so dragging one tile feeds
-  // exactly one; feeding more means dragging in more individual tiles.
+  // exactly one; feeding more means dragging in more individual tiles. The
+  // grid area itself always carries data-drop-zone="inventory" (below) so a
+  // tile dragged the other way — e.g. from WarehouseGrid — can land back here,
+  // regardless of whether this instance's own tiles are draggable.
   onTileDrop?: (overTarget: string, id: string) => void
-  // Present only when rendered inside Warehouse (see WarehousePanel) — makes gear
-  // and stone tiles draggable via the older native HTML5 DnD system instead
-  // (text/plain dataTransfer, read by WarehouseGrid's own drop zone). Kept as
-  // native DnD rather than migrated to Forge's newer Pointer Events system this
-  // step — Warehouse's own touch-drag gap is a separate, not-yet-scoped
-  // follow-up, not something to fix as a side effect of Forge's fix. Mutually
-  // exclusive with onTileDrop — a given InventoryPanel instance uses one system
-  // or the other, never both.
-  nativeDraggable?: boolean
   // Present only when rendered inside the Shop — adds a "Sell" button to the gear
   // detail card. Every other usage omits this, so gear elsewhere has no sell action.
   // The actual sell logic lives entirely in useInventoryStore.sellItem (removes
@@ -70,7 +64,6 @@ interface InventoryPanelProps {
 export default function InventoryPanel({
   reservedItemIds = [],
   onTileDrop,
-  nativeDraggable = false,
   enableSelling = false,
   columns = 8,
 }: InventoryPanelProps) {
@@ -163,14 +156,6 @@ export default function InventoryPanel({
     }
   }
 
-  // Native HTML5 DnD source for Warehouse (see nativeDraggable above) — sets the
-  // same 'text/plain' payload the old Forge system used to, which WarehouseGrid's
-  // drop zone already reads.
-  const handleNativeDragStart = (id: string) => (event: DragEvent<HTMLButtonElement>) => {
-    event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('text/plain', id)
-  }
-
   const handleSell = async (item: ItemInstance) => {
     setSellError(null)
     setSellBusy(true)
@@ -261,8 +246,10 @@ export default function InventoryPanel({
             responsive tile/track sizes above (SLOT_SIZE_CLASS/gridColsClass)
             should already fit any phone width; this just guarantees the grid
             scrolls within itself instead of blowing out the page if it ever
-            doesn't (e.g. a future higher column count). */}
-        <div className="mt-2 overflow-x-auto">
+            doesn't (e.g. a future higher column count). data-drop-zone is
+            inert unless a DragDropProvider ancestor is actively tracking a
+            drag (see dragDropContext.ts) — harmless on every other page. */}
+        <div data-drop-zone="inventory" className="mt-2 overflow-x-auto">
         <div className={`grid ${gridColsClass} gap-1.5`}>
           {visiblePotionStacks.map((stack) => {
             const type = POTION_TYPES[stack.potionType]
@@ -316,15 +303,7 @@ export default function InventoryPanel({
               )
             }
 
-            return (
-              <InventorySlot
-                key={dragId}
-                {...commonProps}
-                onClick={() => toggleSlot({ kind: 'stone', dragId, tier })}
-                draggable={nativeDraggable}
-                onDragStart={nativeDraggable ? handleNativeDragStart(dragId) : undefined}
-              />
-            )
+            return <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'stone', dragId, tier })} />
           })}
 
           {visibleItems.map((item) => {
@@ -361,15 +340,7 @@ export default function InventoryPanel({
               )
             }
 
-            const slot = (
-              <InventorySlot
-                key={item.id}
-                {...commonProps}
-                onClick={() => toggleSlot({ kind: 'item', id: item.id })}
-                draggable={nativeDraggable}
-                onDragStart={nativeDraggable ? handleNativeDragStart(item.id) : undefined}
-              />
-            )
+            const slot = <InventorySlot key={item.id} {...commonProps} onClick={() => toggleSlot({ kind: 'item', id: item.id })} />
 
             // Bulk-sell checkbox (Shop only, confirmed with the user, 2026-07-31) —
             // an overlay on top of the tile rather than a change to InventorySlot

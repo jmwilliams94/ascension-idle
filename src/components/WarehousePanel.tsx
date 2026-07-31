@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import type { DragEvent } from 'react'
 import InventoryPanel from './InventoryPanel'
-import WarehouseGrid, { WAREHOUSE_ITEM_DRAG_TYPE } from './WarehouseGrid'
+import WarehouseGrid from './WarehouseGrid'
+import { DragDropProvider } from './dragDrop'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 import { useCompositionStore } from '../game/items/useCompositionStore'
-import { COMPOSITION_STONE_TIERS, compositionPointValue } from '../game/items/forgeCosts'
+import { COMPOSITION_STONE_TIERS, compositionPointValue, parseStoneDragId } from '../game/items/forgeCosts'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useWarehouseStore } from '../game/items/useWarehouseStore'
@@ -303,24 +303,29 @@ function LootHoldingCard() {
 
 export default function WarehousePanel({ characterId }: { characterId: string }) {
   const withdrawItem = useWarehouseStore((state) => state.withdrawItem)
+  const depositItem = useWarehouseStore((state) => state.depositItem)
+  const depositStone = useWarehouseStore((state) => state.depositStone)
   const items = useWarehouseStore((state) => state.items)
 
-  // Dropping a Warehouse gear tile onto Inventory below is a shortcut for
-  // withdrawing it at the free Normal tier — the click-to-select detail card in
-  // WarehouseGrid still handles choosing a paid composition tier.
-  const handleInventoryDragOver = (event: DragEvent<HTMLDivElement>) => {
-    if (event.dataTransfer.types.includes(WAREHOUSE_ITEM_DRAG_TYPE)) {
-      event.preventDefault()
-      event.dataTransfer.dropEffect = 'move'
+  // Routes a dragged tile to whichever side it landed on, identified by that
+  // side's data-drop-zone key (see dragDrop.tsx) — "warehouse-storage" means a
+  // grid or stone tile was dragged in from Inventory to deposit; "inventory"
+  // means a Warehouse tile was dragged out to withdraw it at the free Normal
+  // tier (a shortcut for the common case — the click-to-select detail card in
+  // WarehouseGrid still handles choosing a paid composition tier).
+  const handleTileDrop = (overTarget: string, id: string) => {
+    if (overTarget === 'warehouse-storage') {
+      const stoneTier = parseStoneDragId(id)
+      if (stoneTier !== null) {
+        void depositStone(characterId, stoneTier, 1)
+      } else {
+        void depositItem(characterId, id)
+      }
+      return
     }
-  }
 
-  const handleInventoryDrop = (event: DragEvent<HTMLDivElement>) => {
-    const templateId = event.dataTransfer.getData(WAREHOUSE_ITEM_DRAG_TYPE)
-    if (!templateId) return
-    event.preventDefault()
-    if (items.some((entry) => entry.template_id === templateId)) {
-      void withdrawItem(characterId, templateId, 0)
+    if (overTarget === 'inventory' && items.some((entry) => entry.template_id === id)) {
+      void withdrawItem(characterId, id, 0)
     }
   }
 
@@ -329,19 +334,19 @@ export default function WarehousePanel({ characterId }: { characterId: string })
       <p className="text-xs uppercase tracking-wide text-slate-500">
         Gear (drag between Inventory and Warehouse Storage to deposit/withdraw)
       </p>
-      <div className="mt-2 grid gap-4 lg:grid-cols-[1fr_360px]">
-        <div className="space-y-4">
-          <WarehouseGrid characterId={characterId} />
-          <div onDragOver={handleInventoryDragOver} onDrop={handleInventoryDrop}>
-            <InventoryPanel nativeDraggable />
+      <DragDropProvider>
+        <div className="mt-2 grid gap-4 lg:grid-cols-[1fr_360px]">
+          <div className="space-y-4">
+            <WarehouseGrid characterId={characterId} onTileDrop={handleTileDrop} />
+            <InventoryPanel onTileDrop={handleTileDrop} />
+          </div>
+
+          <div className="space-y-4">
+            <BankCard characterId={characterId} />
+            <LootHoldingCard />
           </div>
         </div>
-
-        <div className="space-y-4">
-          <BankCard characterId={characterId} />
-          <LootHoldingCard />
-        </div>
-      </div>
+      </DragDropProvider>
     </div>
   )
 }
