@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.38.1",
+    "date": "2026-07-31",
+    "changes": [
+      "Forge upgrades (Quality and Level) now cost a flat 1 Meteor / 1 DragonBall per attempt instead of a scaling amount"
+    ]
+  },
+  {
     "version": "1.38.0",
     "date": "2026-07-31",
     "changes": [

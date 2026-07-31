@@ -200,8 +200,8 @@ export default function ForgePanel() {
   const isMaxQuality = selectedItem?.quality_tier === 'super'
   const nextLevelTemplate = selectedTemplate ? findNextTemplateInChain(templates, selectedTemplate) : null
   const isMaxLevel = Boolean(selectedTemplate) && !nextLevelTemplate
-  const qualityCost = selectedItem ? previewQualityUpgradeCost(selectedItem.quality_tier) : 0
-  const levelCost = selectedItem ? previewLevelUpgradeCost(selectedItem.level) : 0
+  const qualityCost = selectedItem ? previewQualityUpgradeCost() : 0
+  const levelCost = selectedItem ? previewLevelUpgradeCost() : 0
 
   const qualityDisabledReason = !selectedItem
     ? null

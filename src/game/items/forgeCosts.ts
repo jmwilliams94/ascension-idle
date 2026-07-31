@@ -1,29 +1,19 @@
 import type { ItemTooltipData } from './itemTooltip'
 import type { ItemTemplate } from './useItemTemplatesStore'
 
-// Mirrors the cost formulas in
-// supabase/migrations/20260727060000_scale_upgrade_costs.sql — preview only, for
+// Mirrors the flat cost in supabase/migrations/20260731070000_forge_flat_currency_cost.sql
+// (stage 3 of the Bank/Warehouse redesign — supersedes the earlier scaling
+// formulas from 20260727060000_scale_upgrade_costs.sql) — preview only, for
 // showing the player a cost before they commit. The actual cost/roll is always
 // enforced server-side in the Postgres function; if these drift out of sync the
 // worst case is a wrong preview number, not a wrong charge. Keep them in sync.
 
-export function previewQualityUpgradeCost(qualityTier: string): number {
-  switch (qualityTier) {
-    case 'normal':
-      return 1
-    case 'refined':
-      return 2
-    case 'unique':
-      return 3
-    case 'elite':
-      return 4
-    default:
-      return 1
-  }
+export function previewQualityUpgradeCost(): number {
+  return 1
 }
 
-export function previewLevelUpgradeCost(level: number): number {
-  return 1 + Math.floor(level / 5)
+export function previewLevelUpgradeCost(): number {
+  return 1
 }
 
 // Client-side mirror of level_upgrade's next-template lookup (see
