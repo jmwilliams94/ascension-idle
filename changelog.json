@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.41.0",
+    "date": "2026-07-31",
+    "changes": [
+      "Trimmed every zone's monster roster down to 5 enemies each (was up to 11), evenly spaced by level for a smoother climb"
+    ]
+  },
+  {
     "version": "1.40.0",
     "date": "2026-07-31",
     "changes": [
