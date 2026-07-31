@@ -335,13 +335,18 @@ export default function WarehousePanel({ characterId }: { characterId: string })
         Gear (drag between Inventory and Warehouse Storage to deposit/withdraw)
       </p>
       <DragDropProvider>
+        {/* min-w-0 on both columns: grid items default to min-width:auto (content-
+            based), so without it a wide unwrapped row (e.g. BankCard's
+            currency/stone rows below) grows the whole grid track — and the
+            whole page — wider than the viewport instead of actually wrapping,
+            even though the row itself has flex-wrap. */}
         <div className="mt-2 grid gap-4 lg:grid-cols-[1fr_360px]">
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             <WarehouseGrid characterId={characterId} onTileDrop={handleTileDrop} />
             <InventoryPanel onTileDrop={handleTileDrop} />
           </div>
 
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             <BankCard characterId={characterId} />
             <LootHoldingCard />
           </div>

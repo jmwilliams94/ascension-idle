@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.36.1",
+    "date": "2026-07-31",
+    "changes": [
+      "Fixed the Warehouse's Bank card still stretching the page wider than the phone screen"
+    ]
+  },
+  {
     "version": "1.36.0",
     "date": "2026-07-31",
     "changes": [
