@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.39.1",
+    "date": "2026-07-31",
+    "changes": [
+      "Redesigned the Warehouse's \"Banked\" card — Gold/Meteors/DragonBalls/Stones now show a compact total with Deposit/Withdraw buttons, revealing the amount (and tier, for Stones) only once you tap one, instead of always showing every input at once"
+    ]
+  },
+  {
     "version": "1.39.0",
     "date": "2026-07-31",
     "changes": [

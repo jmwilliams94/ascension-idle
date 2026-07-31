@@ -33,8 +33,13 @@ const CURRENCIES: { id: CurrencyId; label: string }[] = [
 // Currency row: per-character amount vs. bank (account-wide, shared across every
 // character on the account) — the one thing in the Warehouse that isn't
 // slot-based and isn't per-character. See useWarehouseStore's transfer_currency.
-// No inline balance counters here (deliberately decluttered) — current totals
-// are shown once, together, in the summary card beside Warehouse Storage below.
+// Stage 5 (the "Banked" card, 2026-07-31): each row is collapsed to just its
+// Wallet/Bank totals plus Deposit/Withdraw buttons — tapping either reveals
+// that direction's own amount input instead of showing two always-visible
+// inputs at once, the same reveal-on-tap interaction GearCompositionRow
+// already established in stage 4. Confirmed with the user: both directions
+// stay (not Withdraw-only) since Gold/Meteors/DragonBalls have no
+// drag-and-drop deposit alternative the way gear/stones do.
 function CurrencyRow({ characterId, currency, label }: { characterId: string; currency: CurrencyId; label: string }) {
   // Hooks must run unconditionally every render — read every store's value up
   // front, then pick the one that matches this row's currency afterward.
@@ -52,141 +57,232 @@ function CurrencyRow({ characterId, currency, label }: { characterId: string; cu
   const depositCurrency = useWarehouseStore((state) => state.depositCurrency)
   const withdrawCurrency = useWarehouseStore((state) => state.withdrawCurrency)
 
+  const [openMode, setOpenMode] = useState<'deposit' | 'withdraw' | null>(null)
   const [amount, setAmount] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const parsedAmount = Math.floor(Number(amount))
   const validAmount = amount.trim() !== '' && Number.isFinite(parsedAmount) && parsedAmount > 0
+  const availableForMode = openMode === 'deposit' ? walletBalance : bankBalance
 
-  const handleDeposit = async () => {
+  const toggleMode = (mode: 'deposit' | 'withdraw') => {
+    setOpenMode((current) => (current === mode ? null : mode))
+    setAmount('')
     setError(null)
-    if (!validAmount) return
-    const result = await depositCurrency(characterId, currency, parsedAmount)
-    if (!result.ok) {
-      setError(result.error === 'not_enough_balance' ? "You don't have that much." : 'Something went wrong.')
-    } else {
-      setAmount('')
-    }
   }
 
-  const handleWithdraw = async () => {
+  const handleConfirm = async () => {
+    if (!openMode || !validAmount) {
+      return
+    }
     setError(null)
-    if (!validAmount) return
-    const result = await withdrawCurrency(characterId, currency, parsedAmount)
+    const result =
+      openMode === 'deposit'
+        ? await depositCurrency(characterId, currency, parsedAmount)
+        : await withdrawCurrency(characterId, currency, parsedAmount)
     if (!result.ok) {
-      setError(result.error === 'not_enough_balance' ? "The bank doesn't have that much." : 'Something went wrong.')
+      setError(
+        result.error === 'not_enough_balance'
+          ? openMode === 'deposit'
+            ? "You don't have that much."
+            : "The bank doesn't have that much."
+          : 'Something went wrong.',
+      )
     } else {
       setAmount('')
+      setOpenMode(null)
     }
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2">
-      <span className="w-24 text-sm font-medium text-slate-200">{label}</span>
+    <div className="rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="w-28 text-sm font-medium text-slate-200">{label}</span>
+        <span className="text-xs text-slate-400">
+          {walletBalance.toLocaleString()} / {bankBalance.toLocaleString()}
+        </span>
+        <div className="ml-auto flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => toggleMode('deposit')}
+            className={`rounded-lg border px-3 py-1 text-xs font-medium ${
+              openMode === 'deposit'
+                ? 'border-sky-500 bg-sky-500/10 text-sky-300'
+                : 'border-slate-700 text-slate-300 hover:border-slate-500'
+            }`}
+          >
+            Deposit
+          </button>
+          <button
+            type="button"
+            onClick={() => toggleMode('withdraw')}
+            className={`rounded-lg border px-3 py-1 text-xs font-medium ${
+              openMode === 'withdraw'
+                ? 'border-sky-500 bg-sky-500/10 text-sky-300'
+                : 'border-slate-700 text-slate-300 hover:border-slate-500'
+            }`}
+          >
+            Withdraw
+          </button>
+        </div>
+      </div>
 
-      <input
-        type="number"
-        min={1}
-        value={amount}
-        onChange={(event) => setAmount(event.target.value)}
-        placeholder="Amount"
-        className="ml-auto w-24 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200"
-      />
-      <button
-        type="button"
-        disabled={busy || !validAmount || walletBalance < parsedAmount}
-        onClick={handleDeposit}
-        className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        Deposit
-      </button>
-      <button
-        type="button"
-        disabled={busy || !validAmount || bankBalance < parsedAmount}
-        onClick={handleWithdraw}
-        className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-300 hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        Withdraw
-      </button>
+      {openMode && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <input
+            type="number"
+            min={1}
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            placeholder="Amount"
+            className="w-24 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200"
+          />
+          <button
+            type="button"
+            disabled={busy || !validAmount || availableForMode < parsedAmount}
+            onClick={() => void handleConfirm()}
+            className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Confirm {openMode === 'deposit' ? 'Deposit' : 'Withdraw'}
+          </button>
+        </div>
+      )}
 
-      {error && <p className="w-full text-xs text-amber-400">{error}</p>}
+      {error && <p className="mt-2 text-xs text-amber-400">{error}</p>}
     </div>
   )
 }
 
-// Depositing a stone liquidates it into the shared Warehouse points balance
-// (compositionPointValue(tier) points each); withdrawing spends that many
-// points back for a fresh stone of the chosen tier. Points are fungible across
-// tiers — e.g. 3 deposited tier-1 stones (30 pts) can withdraw one tier-2 stone
-// (also 30 pts) — see useWarehouseStore/transfer_stone.
-function StoneRow({ characterId, tier }: { characterId: string; tier: number }) {
-  const inventoryCount = useCompositionStore((state) => state.stones[String(tier)] ?? 0)
+// Stage 5 (2026-07-31): the four always-visible per-tier StoneRows collapse
+// into a single "Stones" line — a tier picker + amount input, revealed only
+// after tapping Deposit or Withdraw, same interaction CurrencyRow/
+// GearCompositionRow now use. Depositing a stone liquidates it into the
+// shared Warehouse Points balance (compositionPointValue(tier) points each);
+// withdrawing spends that many points back for a fresh stone of the chosen
+// tier. Points are fungible across tiers — e.g. 3 deposited tier-1 stones
+// (30 pts) can withdraw one tier-2 stone (also 30 pts) — see
+// useWarehouseStore/transfer_stone.
+function StonesRow({ characterId }: { characterId: string }) {
+  const stones = useCompositionStore((state) => state.stones)
   const points = useWarehouseStore((state) => state.points)
   const busy = useWarehouseStore((state) => state.busy)
   const depositStone = useWarehouseStore((state) => state.depositStone)
   const withdrawStone = useWarehouseStore((state) => state.withdrawStone)
 
+  const [openMode, setOpenMode] = useState<'deposit' | 'withdraw' | null>(null)
+  const [tier, setTier] = useState<number>(COMPOSITION_STONE_TIERS[0])
   const [amount, setAmount] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const parsedAmount = Math.floor(Number(amount))
   const validAmount = amount.trim() !== '' && Number.isFinite(parsedAmount) && parsedAmount > 0
   const pointValue = compositionPointValue(tier)
-  const withdrawCost = parsedAmount * pointValue
+  const cost = parsedAmount * pointValue
+  const ownedAtTier = stones[String(tier)] ?? 0
 
-  const handleDeposit = async () => {
+  const toggleMode = (mode: 'deposit' | 'withdraw') => {
+    setOpenMode((current) => (current === mode ? null : mode))
+    setAmount('')
     setError(null)
-    if (!validAmount) return
-    const result = await depositStone(characterId, tier, parsedAmount)
-    if (!result.ok) {
-      setError(result.error === 'not_enough_stones' ? "You don't have that many." : 'Something went wrong.')
-    } else {
-      setAmount('')
-    }
   }
 
-  const handleWithdraw = async () => {
+  const handleConfirm = async () => {
+    if (!openMode || !validAmount) {
+      return
+    }
     setError(null)
-    if (!validAmount) return
-    const result = await withdrawStone(characterId, tier, parsedAmount)
+    const result =
+      openMode === 'deposit' ? await depositStone(characterId, tier, parsedAmount) : await withdrawStone(characterId, tier, parsedAmount)
     if (!result.ok) {
-      setError(result.error === 'not_enough_points' ? "You don't have enough Warehouse points." : 'Something went wrong.')
+      setError(
+        result.error === 'not_enough_stones'
+          ? "You don't have that many."
+          : result.error === 'not_enough_points'
+            ? "You don't have enough Warehouse points."
+            : 'Something went wrong.',
+      )
     } else {
       setAmount('')
+      setOpenMode(null)
     }
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2">
-      <span className="w-24 text-sm font-medium text-slate-200">+{tier} Stone</span>
-      <span className="text-xs text-slate-400">{pointValue} pts each</span>
+    <div className="rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="w-28 text-sm font-medium text-slate-200">Stones</span>
+        <span className="text-xs text-slate-400">{points.toLocaleString()} pts</span>
+        <div className="ml-auto flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => toggleMode('deposit')}
+            className={`rounded-lg border px-3 py-1 text-xs font-medium ${
+              openMode === 'deposit'
+                ? 'border-sky-500 bg-sky-500/10 text-sky-300'
+                : 'border-slate-700 text-slate-300 hover:border-slate-500'
+            }`}
+          >
+            Deposit
+          </button>
+          <button
+            type="button"
+            onClick={() => toggleMode('withdraw')}
+            className={`rounded-lg border px-3 py-1 text-xs font-medium ${
+              openMode === 'withdraw'
+                ? 'border-sky-500 bg-sky-500/10 text-sky-300'
+                : 'border-slate-700 text-slate-300 hover:border-slate-500'
+            }`}
+          >
+            Withdraw
+          </button>
+        </div>
+      </div>
 
-      <input
-        type="number"
-        min={1}
-        value={amount}
-        onChange={(event) => setAmount(event.target.value)}
-        placeholder="Amount"
-        className="ml-auto w-24 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200"
-      />
-      <button
-        type="button"
-        disabled={busy || !validAmount || inventoryCount < parsedAmount}
-        onClick={handleDeposit}
-        className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        Deposit
-      </button>
-      <button
-        type="button"
-        disabled={busy || !validAmount || points < withdrawCost}
-        onClick={handleWithdraw}
-        className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-300 hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        Withdraw{validAmount ? ` (${withdrawCost} pts)` : ''}
-      </button>
+      {openMode && (
+        <div className="mt-2 space-y-2">
+          <div className="flex flex-wrap gap-1.5">
+            {COMPOSITION_STONE_TIERS.map((stoneTier) => (
+              <button
+                key={stoneTier}
+                type="button"
+                onClick={() => setTier(stoneTier)}
+                className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${
+                  tier === stoneTier
+                    ? 'border-sky-500 bg-sky-500/10 text-sky-300'
+                    : 'border-slate-700 text-slate-300 hover:border-slate-500'
+                }`}
+              >
+                +{stoneTier} ({compositionPointValue(stoneTier)} pts)
+              </button>
+            ))}
+          </div>
 
-      {error && <p className="w-full text-xs text-amber-400">{error}</p>}
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="number"
+              min={1}
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              placeholder="Amount"
+              className="w-24 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200"
+            />
+            <button
+              type="button"
+              disabled={
+                busy || !validAmount || (openMode === 'deposit' ? ownedAtTier < parsedAmount : points < cost)
+              }
+              onClick={() => void handleConfirm()}
+              className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Confirm {openMode === 'deposit' ? 'Deposit' : `Withdraw${validAmount ? ` (${cost} pts)` : ''}`}
+            </button>
+          </div>
+
+          {openMode === 'deposit' && <p className="text-[10px] text-slate-500">You own {ownedAtTier} tier +{tier} stone(s).</p>}
+        </div>
+      )}
+
+      {error && <p className="mt-2 text-xs text-amber-400">{error}</p>}
     </div>
   )
 }
@@ -218,9 +314,8 @@ function CompositionDropZone() {
 // template identity at all, so the player picks any template of the matching
 // slot_type (filtered to their own class, same as the Shop's own availability
 // check) before choosing a tier to pay for. Picker only reveals on tapping
-// Withdraw, applying the same "reveal on tap" interaction the future unified
-// Banked card (stage 5) is meant to use everywhere — scoped to just this
-// section for now, the rest of BankCard's layout is unchanged.
+// Withdraw — the same "reveal on tap" interaction stage 5 later applied to
+// every other row in the Banked card below (CurrencyRow/StonesRow) too.
 function GearCompositionRow({ characterId, slotType }: { characterId: string; slotType: GearSlotType }) {
   const points = useWarehouseStore((state) => state.gearCompositionPoints[slotType])
   const busy = useWarehouseStore((state) => state.busy)
@@ -340,51 +435,19 @@ function GearCompositionRow({ characterId, slotType }: { characterId: string; sl
   )
 }
 
-// "Bank" (account-wide) vs "Warehouse" (per-character gear/stones, see
-// WarehouseGrid) — a naming-only split confirmed by the user (2026-07-30), not
-// a behavior change: currency was already account-wide-shared and gear/stones
-// were already per-character-only, this just names the account-wide side
-// "Bank" instead of leaving everything under the one "Warehouse" label. One
-// consolidated card for everything account-wide/points-based — totals plus the
-// actual deposit/withdraw controls for all 3 currencies and all 4 stone tiers.
-function BankCard({ characterId }: { characterId: string }) {
-  const points = useWarehouseStore((state) => state.points)
-  const gold = useProgressionStore((state) => state.gold)
-  const meteors = useCurrencyStore((state) => state.meteors)
-  const dragonballs = useCurrencyStore((state) => state.dragonballs)
-  const bankGold = usePlayerRecordStore((state) => state.bankGold)
-  const bankMeteors = usePlayerRecordStore((state) => state.bankMeteors)
-  const bankDragonballs = usePlayerRecordStore((state) => state.bankDragonballs)
-
+// "Banked" (stage 5 of the Warehouse economy redesign, 2026-07-31) — replaces
+// BankCard. Same underlying account-wide/points-based data (currency Wallet
+// vs. account Bank, Warehouse Points, per-slot-type Gear Points), but every
+// row now shows just its running total(s) plus Deposit/Withdraw buttons —
+// the amount input (and, for Stones/Gear Points, the tier/template picker)
+// only reveals once a button is tapped, rather than sitting always-visible.
+// "Bank" vs "Warehouse" (per-character gear/stones, see WarehouseGrid)
+// remains a naming-only split confirmed 2026-07-30 — not a behavior change,
+// just which side of the account-wide/per-character split a label refers to.
+function BankedCard({ characterId }: { characterId: string }) {
   return (
     <div className="h-fit space-y-4 rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-      <div>
-        <p className="text-xs uppercase tracking-wide text-slate-500">Bank</p>
-        <dl className="mt-3 space-y-2 text-sm">
-          <div className="flex justify-between gap-3">
-            <dt className="text-slate-400">Warehouse Points</dt>
-            <dd className="font-semibold text-sky-300">{points.toLocaleString()}</dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt className="text-slate-400">Gold (Wallet / Bank)</dt>
-            <dd className="font-semibold text-amber-300">
-              {gold.toLocaleString()} / {bankGold.toLocaleString()}
-            </dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt className="text-slate-400">Meteors (Wallet / Bank)</dt>
-            <dd className="font-semibold text-slate-200">
-              {meteors.toLocaleString()} / {bankMeteors.toLocaleString()}
-            </dd>
-          </div>
-          <div className="flex justify-between gap-3">
-            <dt className="text-slate-400">DragonBalls (Wallet / Bank)</dt>
-            <dd className="font-semibold text-slate-200">
-              {dragonballs.toLocaleString()} / {bankDragonballs.toLocaleString()}
-            </dd>
-          </div>
-        </dl>
-      </div>
+      <p className="text-xs uppercase tracking-wide text-slate-500">Banked</p>
 
       <div className="space-y-2">
         {CURRENCIES.map((currency) => (
@@ -396,10 +459,8 @@ function BankCard({ characterId }: { characterId: string }) {
         <p className="text-[11px] text-slate-500">
           Depositing a stone (or composed gear as an item) converts it into points — spend points to withdraw any tier back.
         </p>
-        <div className="mt-2 space-y-2">
-          {COMPOSITION_STONE_TIERS.map((tier) => (
-            <StoneRow key={tier} characterId={characterId} tier={tier} />
-          ))}
+        <div className="mt-2">
+          <StonesRow characterId={characterId} />
         </div>
       </div>
 
@@ -553,7 +614,7 @@ export default function WarehousePanel({ characterId }: { characterId: string })
           </div>
 
           <div className="min-w-0 space-y-4">
-            <BankCard characterId={characterId} />
+            <BankedCard characterId={characterId} />
             <LootHoldingCard />
           </div>
         </div>
