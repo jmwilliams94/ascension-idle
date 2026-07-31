@@ -11,12 +11,23 @@ import { EQUIP_SLOTS, type EquipSlot } from './useEquipmentStore'
 // separate row per tier. This is what makes a quality upgrade actually do
 // something mechanically — previously quality_tier was stored but never read
 // here at all (a documented gap; see CLAUDE.md's Forge/Gear system notes).
+//
+// Recalibrated (2026-07-31) to actually match the confirmed real "battle-power
+// weighting" reference already noted in CLAUDE.md (Refined=1, Unique=2,
+// Elite=3, Super=4, Normal=0 baseline) — the previous 1/1.1/1.2/1.35/1.5
+// values were an invented placeholder that never implemented that reference,
+// which crushed to near-nothing on small low-level base stats (a real Ring
+// item's Normal-to-Super gap roughly doubles the stat per co.99.com's rings
+// guide, not +50%). Each multiplier here is 1 + weight/4, i.e. an additive
+// step of base_stat/4 per battle-power point — mathematically an additive
+// bonus scaled to the item's own base value, just expressed as a multiplier
+// since that's all scaledStat needs.
 export const QUALITY_STAT_MULTIPLIERS: Record<string, number> = {
   normal: 1,
-  refined: 1.1,
-  unique: 1.2,
-  elite: 1.35,
-  super: 1.5,
+  refined: 1.25,
+  unique: 1.5,
+  elite: 1.75,
+  super: 2,
 }
 
 function scaledStat(baseStats: Record<string, number>, key: string, qualityTier: string): number | undefined {

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.32.3",
+    "date": "2026-07-31",
+    "changes": [
+      "Rebalanced Quality tier stat scaling so Ascended gear is meaningfully stronger than Normal at every level, not just a small rounding difference on low-level items"
+    ]
+  },
+  {
     "version": "1.32.2",
     "date": "2026-07-31",
     "changes": [
