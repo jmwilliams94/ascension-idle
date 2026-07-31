@@ -72,9 +72,17 @@ export function previewSellPrice(price: number, qualityTier: string): number {
   return Math.round(price * 0.5 * (QUALITY_STAT_MULTIPLIERS[qualityTier] ?? 1))
 }
 
-export function formatBaseStats(baseStats: Record<string, number>): string {
+// Bug fix (2026-07-31): every call site used to pass the template's raw,
+// unscaled base_stats directly, so an item's displayed stats never changed
+// with quality tier even though computeEquipmentBonus already applied
+// QUALITY_STAT_MULTIPLIERS correctly for actual combat math — an Ascended
+// item was genuinely stronger in battle, it just displayed identically to a
+// Normal one everywhere (Inventory detail card, Equipment paper doll, the
+// universal tooltip). qualityTier is now required so every caller scales
+// consistently with what combat actually uses.
+export function formatBaseStats(baseStats: Record<string, number>, qualityTier: string): string {
   return Object.entries(baseStats)
-    .map(([key, value]) => `+${value} ${key.replace(/_/g, ' ')}`)
+    .map(([key]) => `+${scaledStat(baseStats, key, qualityTier)} ${key.replace(/_/g, ' ')}`)
     .join(', ')
 }
 
@@ -169,6 +177,6 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
       : 'Unknown item',
     titleColor: getQualityColor(item.quality_tier),
     lines: [formatQualityAndLevel(item.quality_tier, item.level), ...(classLine ? [classLine] : [])],
-    stats: template ? formatBaseStats(template.base_stats).split(', ').filter(Boolean) : [],
+    stats: template ? formatBaseStats(template.base_stats, item.quality_tier).split(', ').filter(Boolean) : [],
   }
 }

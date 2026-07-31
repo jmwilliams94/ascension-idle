@@ -360,7 +360,9 @@ export default function InventoryPanel({
                   : 'Unknown item'}
               </p>
               <p className="text-xs text-slate-500">{formatQualityAndLevel(selectedItem.quality_tier, selectedItem.level)}</p>
-              {selectedTemplate && <p className="text-xs text-slate-500">{formatBaseStats(selectedTemplate.base_stats)}</p>}
+              {selectedTemplate && (
+                <p className="text-xs text-slate-500">{formatBaseStats(selectedTemplate.base_stats, selectedItem.quality_tier)}</p>
+              )}
             </div>
           </div>
 
