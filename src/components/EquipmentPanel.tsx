@@ -131,7 +131,9 @@ export default function EquipmentPanel() {
             <div className="mt-3 space-y-1.5">
               <p className="text-xs uppercase tracking-wide text-slate-500">Quiver slots</p>
               {Array.from({ length: QUIVER_CAPACITY }, (_, slotIndex) => {
-                const stack = quiverStacks.find((entry) => entry.quiverSlot === slotIndex)
+                // A depleted stack (count 0) shows as Empty and is silently
+                // evictable by the next Load — see useArrowStore.loadIntoQuiver.
+                const stack = quiverStacks.find((entry) => entry.quiverSlot === slotIndex && entry.count > 0)
 
                 return (
                   <div

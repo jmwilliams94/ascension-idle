@@ -178,7 +178,15 @@ export const useArrowStore = create<ArrowState>((set, get) => ({
 
   loadIntoQuiver: async (stackId) => {
     const { stacks } = get()
-    const occupiedSlots = new Set(stacks.map((stack) => stack.quiverSlot).filter((slot): slot is number => slot !== null))
+    // A slot held by a fully-depleted stack (count <= 0, drained by combat
+    // consumption) is treated as free — otherwise a spent stack would sit
+    // there forever blocking that slot, since depleted stacks are never
+    // auto-deleted (same "leave it, just hide it" convention arrows have
+    // always used outside the Quiver too). Genuinely occupied (non-empty)
+    // slots still block a new load.
+    const occupiedSlots = new Set(
+      stacks.filter((stack) => stack.quiverSlot !== null && stack.count > 0).map((stack) => stack.quiverSlot as number),
+    )
 
     let freeSlot: number | null = null
     for (let slot = 0; slot < QUIVER_CAPACITY; slot += 1) {
@@ -192,6 +200,19 @@ export const useArrowStore = create<ArrowState>((set, get) => ({
       return
     }
 
+    // If the chosen slot is actually still tagged on a depleted stack, clear
+    // that stack's own assignment first in the same operation — the DB has a
+    // unique index on (character_id, quiver_slot), so two stacks can never
+    // both claim the same slot at once.
+    const staleOccupant = stacks.find((stack) => stack.quiverSlot === freeSlot && stack.count <= 0)
+    if (staleOccupant) {
+      const { error: clearError } = await supabase.from('arrow_stacks').update({ quiver_slot: null }).eq('id', staleOccupant.id)
+      if (clearError) {
+        console.error('Failed to evict depleted arrow stack from quiver', clearError)
+        return
+      }
+    }
+
     const { error } = await supabase.from('arrow_stacks').update({ quiver_slot: freeSlot }).eq('id', stackId)
     if (error) {
       console.error('Failed to load arrow stack into quiver', error)
@@ -199,7 +220,11 @@ export const useArrowStore = create<ArrowState>((set, get) => ({
     }
 
     set({
-      stacks: stacks.map((stack) => (stack.id === stackId ? { ...stack, quiverSlot: freeSlot } : stack)),
+      stacks: stacks.map((stack) => {
+        if (stack.id === stackId) return { ...stack, quiverSlot: freeSlot }
+        if (staleOccupant && stack.id === staleOccupant.id) return { ...stack, quiverSlot: null }
+        return stack
+      }),
     })
   },
 

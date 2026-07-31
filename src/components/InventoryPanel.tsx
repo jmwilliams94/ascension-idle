@@ -97,6 +97,9 @@ export default function InventoryPanel({
   const [selectedSlot, setSelectedSlot] = useState<SelectedSlot>(null)
   const [sellBusy, setSellBusy] = useState(false)
   const [sellError, setSellError] = useState<string | null>(null)
+  // Bulk-sell checkbox selection (Shop only, see enableSelling) — independent
+  // of selectedSlot, which drives the single-item detail card.
+  const [selectedForSale, setSelectedForSale] = useState<Set<string>>(new Set())
 
   const isHunter = selectedClassId === 'hunter'
   // Empty (fully depleted) stacks stay in the DB so the debounced autosave doesn't
@@ -198,12 +201,77 @@ export default function InventoryPanel({
     setSelectedSlot(null)
   }
 
+  const toggleSaleSelection = (itemId: string) => {
+    setSelectedForSale((current) => {
+      const next = new Set(current)
+      if (next.has(itemId)) {
+        next.delete(itemId)
+      } else {
+        next.add(itemId)
+      }
+      return next
+    })
+  }
+
+  // Convenience shortcut for the common case (dumping junk) — doesn't stop
+  // the player from also hand-picking higher-tier items via the checkboxes.
+  const selectAllNormal = () => {
+    setSelectedForSale(new Set(visibleItems.filter((item) => item.quality_tier === 'normal').map((item) => item.id)))
+  }
+
+  const saleTotal = visibleItems
+    .filter((item) => selectedForSale.has(item.id))
+    .reduce((sum, item) => {
+      const template = templates.find((entry) => entry.id === item.template_id)
+      return sum + previewSellPrice(template?.price ?? 0, item.quality_tier)
+    }, 0)
+
+  const sellSelected = async () => {
+    setSellError(null)
+    setSellBusy(true)
+    let failures = 0
+    for (const itemId of selectedForSale) {
+      const result = await sellItem(itemId)
+      if (!result.ok) {
+        failures += 1
+      }
+    }
+    setSellBusy(false)
+    setSelectedForSale(new Set())
+    if (failures > 0) {
+      setSellError(`Couldn't sell ${failures} item${failures === 1 ? '' : 's'}.`)
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-xs uppercase tracking-wide text-slate-500">
-          Items ({occupiedCount}/{INVENTORY_SLOT_CAP})
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs uppercase tracking-wide text-slate-500">
+            Items ({occupiedCount}/{INVENTORY_SLOT_CAP})
+          </p>
+
+          {enableSelling && (
+            <div className="flex items-center gap-2 text-xs">
+              {sellError && <span className="text-amber-400">{sellError}</span>}
+              <button
+                type="button"
+                onClick={selectAllNormal}
+                className="rounded border border-slate-700 px-2 py-1 text-slate-300 hover:border-slate-500"
+              >
+                Select All Normal
+              </button>
+              <button
+                type="button"
+                disabled={selectedForSale.size === 0 || sellBusy}
+                onClick={() => void sellSelected()}
+                className="rounded border border-amber-600 bg-amber-500/10 px-2 py-1 font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {sellBusy ? 'Selling…' : `Sell Selected (${saleTotal}g)`}
+              </button>
+            </div>
+          )}
+        </div>
 
         <div className={`mt-2 grid ${gridColsClass} gap-1.5`}>
           {visibleArrowStacks.map((stack) => {
@@ -327,7 +395,7 @@ export default function InventoryPanel({
               )
             }
 
-            return (
+            const slot = (
               <InventorySlot
                 key={item.id}
                 {...commonProps}
@@ -335,6 +403,28 @@ export default function InventoryPanel({
                 draggable={nativeDraggable}
                 onDragStart={nativeDraggable ? handleNativeDragStart(item.id) : undefined}
               />
+            )
+
+            // Bulk-sell checkbox (Shop only, confirmed with the user, 2026-07-31) —
+            // an overlay on top of the tile rather than a change to InventorySlot
+            // itself, so every other embedding is unaffected. stopPropagation keeps
+            // checking a box from also opening the detail card underneath it.
+            if (!enableSelling) {
+              return slot
+            }
+
+            return (
+              <div key={item.id} className="relative">
+                {slot}
+                <input
+                  type="checkbox"
+                  checked={selectedForSale.has(item.id)}
+                  onClick={(event) => event.stopPropagation()}
+                  onChange={() => toggleSaleSelection(item.id)}
+                  className="absolute left-1 top-1 h-3.5 w-3.5 cursor-pointer accent-amber-500"
+                  aria-label={`Select ${label} for bulk sale`}
+                />
+              </div>
             )
           })}
 

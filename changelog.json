@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.32.1",
+    "date": "2026-07-31",
+    "changes": [
+      "Added a Consumable slot to the Combat page that surfaces your best HP potion so you can heal without leaving the fight",
+      "Added bulk-selling in the Shop: check off items (with a Select All Normal shortcut) and sell them all at once",
+      "Fixed a Quiver bug where a fully-used arrow stack would stay stuck in its slot instead of freeing it up for new arrows"
+    ]
+  },
+  {
     "version": "1.32.0",
     "date": "2026-07-31",
     "changes": [

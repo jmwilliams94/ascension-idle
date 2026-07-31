@@ -8,6 +8,8 @@ import { useCombatStore, type CombatLogEntry } from '../game/combat/useCombatSto
 import { getLevelDiffColor } from '../game/combat/combatResolver'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
+import { usePotionStore } from '../game/items/usePotionStore'
+import { POTION_TYPES, HP_POTION_ORDER } from '../game/items/potionTypes'
 
 // Matches getLevelDiffColor's tiers — White is an even match, Green means the
 // character comfortably outlevels the monster (reduced EXP), Red/Black mean
@@ -90,6 +92,9 @@ export default function CombatPage() {
   const characterLevel = useProgressionStore((state) => state.level)
   const characterName = useCharacterRecordStore((state) => state.characterName)
 
+  const potionStacks = usePotionStore((state) => state.stacks)
+  const handleUsePotion = usePotionStore((state) => state.usePotion)
+
   const [logExpanded, setLogExpanded] = useState(false)
 
   // Floating damage numbers are derived from the log itself (recent 'damage'
@@ -130,6 +135,20 @@ export default function CombatPage() {
 
   const activeType = monsterTypeId ? ENEMY_TYPES[monsterTypeId] : null
   const currentZone = ZONES[currentZoneId]
+
+  // "Best available" HP potion (confirmed with the user, 2026-07-31) — the
+  // highest-tier owned stack with any left, so the strongest potion is
+  // always the one surfaced here rather than whichever happens to sit first
+  // in Inventory. Mana potions are deliberately skipped — they're inert
+  // (nothing consumes MP yet), so there's nothing useful to surface here.
+  let bestHpPotionStack: (typeof potionStacks)[number] | null = null
+  for (let i = HP_POTION_ORDER.length - 1; i >= 0; i -= 1) {
+    const found = potionStacks.find((stack) => stack.potionType === HP_POTION_ORDER[i] && stack.count > 0)
+    if (found) {
+      bestHpPotionStack = found
+      break
+    }
+  }
   const dropdownMonsterId = selectedMonsterId ?? currentZone.monsterOrder[0] ?? null
 
   const handleFight = (typeId: EnemyTypeId) => {
@@ -234,6 +253,32 @@ export default function CombatPage() {
                   </motion.div>
                 ))}
               </AnimatePresence>
+            </div>
+
+            {/* Consumable slot (confirmed with the user, 2026-07-31) — surfaces the
+                best (highest-tier) owned HP potion right on the Combat page so
+                healing mid-fight doesn't require leaving to the Inventory grid. */}
+            <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs">
+              {bestHpPotionStack ? (
+                <>
+                  <span className="flex min-w-0 items-center gap-2 text-slate-200">
+                    <span className="shrink-0 text-base">🧪</span>
+                    <span className="truncate">
+                      {POTION_TYPES[bestHpPotionStack.potionType].displayName} ({bestHpPotionStack.count})
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    disabled={maxPlayerHp > 0 && currentPlayerHp >= maxPlayerHp}
+                    onClick={() => void handleUsePotion(bestHpPotionStack!.id)}
+                    className="shrink-0 rounded border border-sky-500 bg-sky-500/10 px-2 py-1 font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-transparent disabled:text-slate-600"
+                  >
+                    {maxPlayerHp > 0 && currentPlayerHp >= maxPlayerHp ? 'HP full' : 'Use'}
+                  </button>
+                </>
+              ) : (
+                <span className="text-slate-600">No HP potions — visit the Shop</span>
+              )}
             </div>
           </div>
         )}
