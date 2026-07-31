@@ -32,6 +32,7 @@ import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { usePotionStore } from '../game/items/usePotionStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
+import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { POTION_TYPES } from '../game/items/potionTypes'
 
@@ -90,6 +91,7 @@ export default function InventoryPanel({
   const templates = useItemTemplatesStore((state) => state.templates)
   const setEquippedItem = useEquipmentStore((state) => state.setEquippedItem)
   const isEquipped = useEquipmentStore((state) => state.isEquipped)
+  const characterLevel = useProgressionStore((state) => state.level)
 
   const stones = useCompositionStore((state) => state.stones)
   const meteors = useCurrencyStore((state) => state.meteors)
@@ -186,6 +188,12 @@ export default function InventoryPanel({
   // forward-compat only — it'd only ever be false for a future slot_type
   // (e.g. a shield) that doesn't have a real paper-doll slot yet.
   const isEquippableSlot = Boolean(selectedTemplate && EQUIP_SLOTS.includes(selectedTemplate.slot_type as EquipSlot))
+  // Bug fix: required_level was never actually enforced anywhere — only
+  // ShopPanel's purchase gate checked it (`meetsLevel`, same pattern mirrored
+  // here). Equipping went entirely ungated, so a level 1 character could wear
+  // a level 130 item. Client-side only, same trust model as equipping itself
+  // (there's no server-side equip check at all, gated or not).
+  const meetsLevelRequirement = Boolean(selectedTemplate && characterLevel >= selectedTemplate.required_level)
   const selectedStoneTier = selectedSlot?.kind === 'stone' ? selectedSlot.tier : undefined
   const selectedPotionStack =
     selectedSlot?.kind === 'potion' ? visiblePotionStacks.find((stack) => stack.id === selectedSlot.id) : undefined
@@ -665,21 +673,40 @@ export default function InventoryPanel({
               {selectedTemplate && (
                 <p className="text-xs text-slate-500">{formatBaseStats(selectedTemplate.base_stats, selectedItem.quality_tier)}</p>
               )}
+              {selectedTemplate && selectedTemplate.required_level > 1 && (
+                <p className={meetsLevelRequirement ? 'text-xs text-slate-500' : 'text-xs text-amber-500'}>
+                  Requires level {selectedTemplate.required_level}
+                </p>
+              )}
             </div>
           </div>
 
           <button
             type="button"
-            disabled={isEquipped(selectedItem.id) || !isEquippableSlot}
-            title={!isEquippableSlot ? "This slot isn't wearable yet" : undefined}
-            onClick={() => selectedTemplate && setEquippedItem(selectedTemplate.slot_type as EquipSlot, selectedItem.id)}
+            disabled={isEquipped(selectedItem.id) || !isEquippableSlot || !meetsLevelRequirement}
+            title={
+              !isEquippableSlot
+                ? "This slot isn't wearable yet"
+                : !meetsLevelRequirement
+                  ? `Requires level ${selectedTemplate?.required_level}`
+                  : undefined
+            }
+            onClick={() =>
+              selectedTemplate && meetsLevelRequirement && setEquippedItem(selectedTemplate.slot_type as EquipSlot, selectedItem.id)
+            }
             className={`mt-3 w-full rounded-lg border px-3 py-1.5 text-xs font-medium ${
-              isEquipped(selectedItem.id) || !isEquippableSlot
+              isEquipped(selectedItem.id) || !isEquippableSlot || !meetsLevelRequirement
                 ? 'cursor-not-allowed border-slate-800 text-slate-600'
                 : 'border-sky-500 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'
             }`}
           >
-            {isEquipped(selectedItem.id) ? 'Equipped' : !isEquippableSlot ? 'Not wearable yet' : 'Equip'}
+            {isEquipped(selectedItem.id)
+              ? 'Equipped'
+              : !isEquippableSlot
+                ? 'Not wearable yet'
+                : !meetsLevelRequirement
+                  ? `Requires level ${selectedTemplate?.required_level}`
+                  : 'Equip'}
           </button>
 
           {enableSelling && (

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.41.1",
+    "date": "2026-08-01",
+    "changes": [
+      "Fixed a bug where an item's level requirement wasn't actually enforced when equipping it — a low-level character could equip gear meant for much higher levels"
+    ]
+  },
+  {
     "version": "1.41.0",
     "date": "2026-07-31",
     "changes": [
