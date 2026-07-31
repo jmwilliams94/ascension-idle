@@ -1,13 +1,23 @@
 import { useState } from 'react'
 import InventoryPanel from './InventoryPanel'
+import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import WarehouseGrid from './WarehouseGrid'
 import { DragDropProvider } from './dragDrop'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 import { useCompositionStore } from '../game/items/useCompositionStore'
-import { COMPOSITION_STONE_TIERS, compositionPointValue, parseStoneDragId } from '../game/items/forgeCosts'
+import {
+  COMPOSITION_STONE_TIERS,
+  GEAR_SLOT_TYPES,
+  compositionPointValue,
+  formatGearSlotLabel,
+  parseStoneDragId,
+  type GearSlotType,
+} from '../game/items/forgeCosts'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
+import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useWarehouseStore } from '../game/items/useWarehouseStore'
+import { useInventoryStore } from '../game/items/useInventoryStore'
 import { LOOT_HOLDING_CAP, useLootHoldingStore } from '../game/items/useLootHoldingStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { formatItemDisplayName, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
@@ -181,6 +191,155 @@ function StoneRow({ characterId, tier }: { characterId: string; tier: number }) 
   )
 }
 
+// Gear's second, independent deposit path (stage 4 of the Warehouse economy
+// redesign, 2026-07-31) — "Deposit as Item" (drag onto Warehouse Storage,
+// above) is unchanged; dropping a gear tile here instead destroys it outright
+// and cashes only its composition tier into a pool scoped to that item's own
+// slot_type (weapon/ring/necklace/boots/hat/coat — six separate, non-fungible
+// pools, distinct from the shared Warehouse Points balance above). No
+// quantity/tier picker for depositing — same "drag one item at a time"
+// convention as depositing a gear item as a token.
+function CompositionDropZone() {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-dashed border-purple-800/60 bg-purple-950/10 px-3 py-2">
+      <div data-drop-zone="composition-pool" className={`${SLOT_SIZE_CLASS} shrink-0`}>
+        <InventorySlot slotId="composition-drop-zone" filled={false} sizeClassName={SLOT_SIZE_CLASS} emptyHint="Drop here" />
+      </div>
+      <p className="text-xs text-slate-400">
+        <span className="font-medium text-purple-300">Deposit as Composition</span> — destroys the item and its stats/quality/level,
+        banking only its composition tier as points for that gear slot (see Gear Points below), instead of storing the item itself.
+      </p>
+    </div>
+  )
+}
+
+// One row per slot_type pool. Withdrawing needs a template chosen up front —
+// unlike withdraw_item (a fungible per-template token), this pool tracks no
+// template identity at all, so the player picks any template of the matching
+// slot_type (filtered to their own class, same as the Shop's own availability
+// check) before choosing a tier to pay for. Picker only reveals on tapping
+// Withdraw, applying the same "reveal on tap" interaction the future unified
+// Banked card (stage 5) is meant to use everywhere — scoped to just this
+// section for now, the rest of BankCard's layout is unchanged.
+function GearCompositionRow({ characterId, slotType }: { characterId: string; slotType: GearSlotType }) {
+  const points = useWarehouseStore((state) => state.gearCompositionPoints[slotType])
+  const busy = useWarehouseStore((state) => state.busy)
+  const withdrawGearComposition = useWarehouseStore((state) => state.withdrawGearComposition)
+  const templates = useItemTemplatesStore((state) => state.templates)
+  const classId = useCharacterStore((state) => state.selectedClassId)
+
+  const [open, setOpen] = useState(false)
+  const [templateId, setTemplateId] = useState('')
+  const [tier, setTier] = useState(0)
+  const [error, setError] = useState<string | null>(null)
+
+  const eligibleTemplates = templates
+    .filter((template) => template.slot_type === slotType && (template.required_class === null || template.required_class === classId))
+    .sort((a, b) => a.required_level - b.required_level)
+
+  const cost = compositionPointValue(tier)
+
+  const handleWithdraw = async () => {
+    setError(null)
+    if (!templateId) {
+      return
+    }
+    const result = await withdrawGearComposition(characterId, templateId, tier)
+    if (!result.ok) {
+      setError(
+        result.error === 'inventory_full'
+          ? 'Inventory is full.'
+          : result.error === 'not_enough_points'
+            ? "You don't have enough points for this slot."
+            : "Couldn't withdraw that item.",
+      )
+    } else {
+      setOpen(false)
+      setTemplateId('')
+      setTier(0)
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="w-24 text-sm font-medium text-slate-200">{formatGearSlotLabel(slotType)}</span>
+        <span className="text-xs text-slate-400">{points.toLocaleString()} pts</span>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen((current) => !current)
+            setError(null)
+          }}
+          className="ml-auto rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-300 hover:border-slate-400"
+        >
+          {open ? 'Cancel' : 'Withdraw'}
+        </button>
+      </div>
+
+      {open && (
+        <div className="mt-2 space-y-2">
+          {eligibleTemplates.length === 0 ? (
+            <p className="text-xs text-slate-500">No {formatGearSlotLabel(slotType).toLowerCase()} items available for your class.</p>
+          ) : (
+            <>
+              <select
+                value={templateId}
+                onChange={(event) => setTemplateId(event.target.value)}
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200"
+              >
+                <option value="">Choose an item…</option>
+                {eligibleTemplates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name} (Lv {template.required_level})
+                  </option>
+                ))}
+              </select>
+
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setTier(0)}
+                  className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${
+                    tier === 0 ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
+                  }`}
+                >
+                  Normal (free)
+                </button>
+                {COMPOSITION_STONE_TIERS.map((stoneTier) => (
+                  <button
+                    key={stoneTier}
+                    type="button"
+                    onClick={() => setTier(stoneTier)}
+                    className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${
+                      tier === stoneTier
+                        ? 'border-sky-500 bg-sky-500/10 text-sky-300'
+                        : 'border-slate-700 text-slate-300 hover:border-slate-500'
+                    }`}
+                  >
+                    +{stoneTier} ({compositionPointValue(stoneTier)} pts)
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                disabled={busy || !templateId || points < cost}
+                onClick={() => void handleWithdraw()}
+                className="w-full rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Withdraw{cost > 0 ? ` (${cost} pts)` : ''}
+              </button>
+            </>
+          )}
+
+          {error && <p className="text-xs text-amber-400">{error}</p>}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // "Bank" (account-wide) vs "Warehouse" (per-character gear/stones, see
 // WarehouseGrid) — a naming-only split confirmed by the user (2026-07-30), not
 // a behavior change: currency was already account-wide-shared and gear/stones
@@ -235,11 +394,23 @@ function BankCard({ characterId }: { characterId: string }) {
 
       <div>
         <p className="text-[11px] text-slate-500">
-          Depositing a stone (or composed gear) converts it into points — spend points to withdraw any tier back.
+          Depositing a stone (or composed gear as an item) converts it into points — spend points to withdraw any tier back.
         </p>
         <div className="mt-2 space-y-2">
           {COMPOSITION_STONE_TIERS.map((tier) => (
             <StoneRow key={tier} characterId={characterId} tier={tier} />
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <p className="text-[11px] text-slate-500">
+          Gear Points: dropping an item on "Deposit as Composition" (below) banks its tier here instead — six separate pools, one per
+          gear slot, not fungible with each other or with Warehouse Points above.
+        </p>
+        <div className="mt-2 space-y-2">
+          {GEAR_SLOT_TYPES.map((slotType) => (
+            <GearCompositionRow key={slotType} characterId={characterId} slotType={slotType} />
           ))}
         </div>
       </div>
@@ -327,6 +498,7 @@ function LootHoldingCard() {
 export default function WarehousePanel({ characterId }: { characterId: string }) {
   const withdrawItem = useWarehouseStore((state) => state.withdrawItem)
   const depositItem = useWarehouseStore((state) => state.depositItem)
+  const depositItemAsComposition = useWarehouseStore((state) => state.depositItemAsComposition)
   const depositStone = useWarehouseStore((state) => state.depositStone)
   const items = useWarehouseStore((state) => state.items)
 
@@ -335,7 +507,12 @@ export default function WarehousePanel({ characterId }: { characterId: string })
   // grid or stone tile was dragged in from Inventory to deposit; "inventory"
   // means a Warehouse tile was dragged out to withdraw it at the free Normal
   // tier (a shortcut for the common case — the click-to-select detail card in
-  // WarehouseGrid still handles choosing a paid composition tier).
+  // WarehouseGrid still handles choosing a paid composition tier);
+  // "composition-pool" (stage 4) deposits a real gear item's composition tier
+  // into its slot_type's points pool instead, destroying the item outright —
+  // stone/currency/scroll synthetic ids aren't real item_instances rows and
+  // are silently ignored here (parseStoneDragId already excludes stones; the
+  // items.some check excludes everything else that isn't a real gear item).
   const handleTileDrop = (overTarget: string, id: string) => {
     if (overTarget === 'warehouse-storage') {
       const stoneTier = parseStoneDragId(id)
@@ -344,6 +521,11 @@ export default function WarehousePanel({ characterId }: { characterId: string })
       } else {
         void depositItem(characterId, id)
       }
+      return
+    }
+
+    if (overTarget === 'composition-pool' && useInventoryStore.getState().items.some((item) => item.id === id)) {
+      void depositItemAsComposition(id)
       return
     }
 
@@ -366,6 +548,7 @@ export default function WarehousePanel({ characterId }: { characterId: string })
         <div className="mt-2 grid gap-4 lg:grid-cols-[1fr_360px]">
           <div className="min-w-0 space-y-4">
             <WarehouseGrid characterId={characterId} onTileDrop={handleTileDrop} />
+            <CompositionDropZone />
             <InventoryPanel onTileDrop={handleTileDrop} />
           </div>
 

@@ -4,6 +4,7 @@ import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { useCompositionStore, type CompositionStones } from './useCompositionStore'
+import { DEFAULT_GEAR_COMPOSITION_POINTS, type GearCompositionPoints, type GearSlotType } from './forgeCosts'
 import { useInventoryStore, occupiedSlotCount, INVENTORY_SLOT_CAP, type ItemInstance } from './useInventoryStore'
 
 // Warehouse: per-character storage for gear tokens and Composition stones (its
@@ -65,9 +66,30 @@ interface WithdrawItemResult {
   warehouse_points?: number
 }
 
+// deposit_item_as_composition / withdraw_gear_composition (stage 4) — a second,
+// independent gear deposit path alongside deposit_item/withdraw_item above: no
+// warehouse_items token, points go into a per-slot-type pool instead of the
+// shared warehouse_points balance. See forgeCosts.ts's GearCompositionPoints.
+interface DepositItemAsCompositionResult {
+  ok: boolean
+  error?: 'item_not_found' | 'not_owner' | 'unsupported_slot_type' | 'no_points_contributed'
+  slot_type?: GearSlotType
+  points_gained?: number
+  gear_composition_points?: GearCompositionPoints
+}
+
+interface WithdrawGearCompositionResult {
+  ok: boolean
+  error?: 'not_owner' | 'invalid_request' | 'template_not_found' | 'unsupported_slot_type' | 'not_enough_points' | 'inventory_full'
+  item?: ItemInstance
+  slot_type?: GearSlotType
+  gear_composition_points?: GearCompositionPoints
+}
+
 interface WarehouseState {
   items: WarehouseItemEntry[]
   points: number
+  gearCompositionPoints: GearCompositionPoints
   loaded: boolean
   busy: boolean
   // Surfaces a client-side "Warehouse is full" block — deposits are always a
@@ -76,9 +98,16 @@ interface WarehouseState {
   fullMessage: string | null
   loadWarehouseItems: (characterId: string) => Promise<void>
   hydratePoints: (points: number) => void
+  hydrateGearCompositionPoints: (points: GearCompositionPoints) => void
   occupiedSlotCount: () => number
   depositItem: (characterId: string, itemId: string) => Promise<DepositItemResult>
   withdrawItem: (characterId: string, templateId: string, compositionLevel: number) => Promise<WithdrawItemResult>
+  depositItemAsComposition: (itemId: string) => Promise<DepositItemAsCompositionResult>
+  withdrawGearComposition: (
+    characterId: string,
+    templateId: string,
+    compositionLevel: number,
+  ) => Promise<WithdrawGearCompositionResult>
   depositStone: (characterId: string, tier: number, amount: number) => Promise<TransferStoneResult>
   withdrawStone: (characterId: string, tier: number, amount: number) => Promise<TransferStoneResult>
   depositCurrency: (characterId: string, currency: Currency, amount: number) => Promise<TransferCurrencyResult>
@@ -89,6 +118,7 @@ interface WarehouseState {
 export const useWarehouseStore = create<WarehouseState>((set, get) => ({
   items: [],
   points: 0,
+  gearCompositionPoints: DEFAULT_GEAR_COMPOSITION_POINTS,
   loaded: false,
   busy: false,
   fullMessage: null,
@@ -105,6 +135,7 @@ export const useWarehouseStore = create<WarehouseState>((set, get) => ({
   },
 
   hydratePoints: (points) => set({ points }),
+  hydrateGearCompositionPoints: (points) => set({ gearCompositionPoints: points }),
 
   // Only gear tokens count toward the Warehouse's 40-slot cap — points are a
   // fungible balance, same as currency, not a physical stack of tiles.
@@ -181,6 +212,54 @@ export const useWarehouseStore = create<WarehouseState>((set, get) => ({
             : state.items.map((entry) => (entry.template_id === templateId ? { ...entry, count: result.warehouse_count! } : entry)),
         points: typeof result.warehouse_points === 'number' ? result.warehouse_points : state.points,
       }))
+    }
+
+    return result
+  },
+
+  depositItemAsComposition: async (itemId) => {
+    set({ busy: true })
+    const { data, error } = await supabase.rpc('deposit_item_as_composition', { item_id: itemId })
+    set({ busy: false })
+
+    if (error) {
+      console.error('Deposit item as composition call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as DepositItemAsCompositionResult
+
+    if (result.ok && result.gear_composition_points) {
+      useInventoryStore.getState().removeItems([itemId])
+      set({ gearCompositionPoints: result.gear_composition_points })
+    }
+
+    return result
+  },
+
+  withdrawGearComposition: async (characterId, templateId, compositionLevel) => {
+    if (occupiedSlotCount(useInventoryStore.getState().items) >= INVENTORY_SLOT_CAP) {
+      return { ok: false, error: 'inventory_full' }
+    }
+
+    set({ busy: true })
+    const { data, error } = await supabase.rpc('withdraw_gear_composition', {
+      character_id: characterId,
+      template_id: templateId,
+      composition_level: compositionLevel,
+    })
+    set({ busy: false })
+
+    if (error) {
+      console.error('Withdraw gear composition call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as WithdrawGearCompositionResult
+
+    if (result.ok && result.item && result.gear_composition_points) {
+      useInventoryStore.getState().addItem(result.item)
+      set({ gearCompositionPoints: result.gear_composition_points })
     }
 
     return result

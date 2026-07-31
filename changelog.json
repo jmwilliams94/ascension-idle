@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.39.0",
+    "date": "2026-07-31",
+    "changes": [
+      "Added a second way to deposit gear in the Warehouse — \"Deposit as Composition\" destroys the item but banks its enhancement tier as points for that gear slot (weapon/ring/necklace/boots/hat/coat), which you can later spend to withdraw a fresh item of that slot at whatever tier you can afford"
+    ]
+  },
+  {
     "version": "1.38.1",
     "date": "2026-07-31",
     "changes": [

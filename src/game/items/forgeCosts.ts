@@ -180,3 +180,38 @@ export function buildDragonballScrollTooltip(): ItemTooltipData {
     stats: ['Holds 10 DragonBalls — Open to unbundle'],
   }
 }
+
+// Gear's "Deposit as Composition" path (stage 4 of the Warehouse economy
+// redesign, 2026-07-31) — six separate, non-fungible per-slot-type point
+// pools (characters.gear_composition_points jsonb), distinct from the shared
+// warehouse_points balance stones/"Deposit as Item" tokens liquidate into. A
+// Ring's points can only ever buy back a Ring, never a Coat. Same point-value/
+// cost formulas as Composition/Stones (compositionPointValue/
+// compositionPointsRequired above) — mirrors deposit_item_as_composition/
+// withdraw_gear_composition's SQL; keep in sync.
+export const GEAR_SLOT_TYPES = ['weapon', 'ring', 'necklace', 'boots', 'hat', 'coat'] as const
+export type GearSlotType = (typeof GEAR_SLOT_TYPES)[number]
+
+export type GearCompositionPoints = Record<GearSlotType, number>
+
+export const DEFAULT_GEAR_COMPOSITION_POINTS: GearCompositionPoints = {
+  weapon: 0,
+  ring: 0,
+  necklace: 0,
+  boots: 0,
+  hat: 0,
+  coat: 0,
+}
+
+const GEAR_SLOT_LABELS: Record<GearSlotType, string> = {
+  weapon: 'Weapon',
+  ring: 'Ring',
+  necklace: 'Necklace',
+  boots: 'Boots',
+  hat: 'Hat',
+  coat: 'Coat',
+}
+
+export function formatGearSlotLabel(slotType: GearSlotType): string {
+  return GEAR_SLOT_LABELS[slotType]
+}
