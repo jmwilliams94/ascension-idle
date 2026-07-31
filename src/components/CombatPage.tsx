@@ -23,6 +23,33 @@ const LEVEL_DIFF_TEXT_CLASS: Record<string, string> = {
   black: 'text-slate-500',
 }
 
+// Same White/Green/Red/Black convention, extended to the Zone/Monster picker
+// dropdowns (2026-07-31, per the user's request) so a player can judge a
+// zone or monster's fit before committing to Fight, not just after. <option>
+// elements don't reliably respect Tailwind's generated utility classes across
+// browsers the way a normal element does, so this is a plain inline hex map
+// instead — same colors as LEVEL_DIFF_TEXT_CLASS, just usable via `style`.
+const LEVEL_DIFF_HEX_COLOR: Record<string, string> = {
+  white: '#e2e8f0',
+  green: '#34d399',
+  red: '#f87171',
+  black: '#64748b',
+}
+
+// A zone spans a range of monster levels rather than having one level of its
+// own — shown as "Lv min-max" in the picker, colored using the midpoint's
+// level-diff (a reasonable "is this zone roughly where I'm at" signal, not
+// meant to be exact for every monster inside it).
+function zoneLevelRange(zone: { monsterOrder: EnemyTypeId[] }): { min: number; max: number; mid: number } | null {
+  if (zone.monsterOrder.length === 0) {
+    return null
+  }
+  const levels = zone.monsterOrder.map((id) => ENEMY_TYPES[id].level)
+  const min = Math.min(...levels)
+  const max = Math.max(...levels)
+  return { min, max, mid: Math.round((min + max) / 2) }
+}
+
 // Enemy colors are stored as 0xRRGGBB numbers (a Phaser-era convention, kept as-is
 // since nothing else about EnemyTypeDef needed to change) — this is the one spot
 // that converts to a CSS hex string for the placeholder portrait swatch.
@@ -303,9 +330,16 @@ export default function CombatPage() {
               >
                 {ZONE_ORDER.map((zoneId) => {
                   const zone = ZONES[zoneId]
+                  const range = zoneLevelRange(zone)
                   return (
-                    <option key={zoneId} value={zoneId} disabled={zone.locked}>
+                    <option
+                      key={zoneId}
+                      value={zoneId}
+                      disabled={zone.locked}
+                      style={range ? { color: LEVEL_DIFF_HEX_COLOR[getLevelDiffColor(characterLevel, range.mid)] } : undefined}
+                    >
                       {zone.displayName}
+                      {range ? ` (Lv ${range.min}-${range.max})` : ''}
                       {zone.locked ? ' (coming soon)' : ''}
                     </option>
                   )
@@ -324,11 +358,14 @@ export default function CombatPage() {
                 {currentZone.monsterOrder.length === 0 ? (
                   <option value="">Coming soon</option>
                 ) : (
-                  currentZone.monsterOrder.map((typeId) => (
-                    <option key={typeId} value={typeId}>
-                      {ENEMY_TYPES[typeId].displayName}
-                    </option>
-                  ))
+                  currentZone.monsterOrder.map((typeId) => {
+                    const type = ENEMY_TYPES[typeId]
+                    return (
+                      <option key={typeId} value={typeId} style={{ color: LEVEL_DIFF_HEX_COLOR[getLevelDiffColor(characterLevel, type.level)] }}>
+                        {type.displayName} (Lv {type.level})
+                      </option>
+                    )
+                  })
                 )}
               </select>
             </label>
@@ -412,9 +449,16 @@ export default function CombatPage() {
               >
                 {ZONE_ORDER.map((zoneId) => {
                   const zone = ZONES[zoneId]
+                  const range = zoneLevelRange(zone)
                   return (
-                    <option key={zoneId} value={zoneId} disabled={zone.locked}>
+                    <option
+                      key={zoneId}
+                      value={zoneId}
+                      disabled={zone.locked}
+                      style={range ? { color: LEVEL_DIFF_HEX_COLOR[getLevelDiffColor(characterLevel, range.mid)] } : undefined}
+                    >
                       {zone.displayName}
+                      {range ? ` (Lv ${range.min}-${range.max})` : ''}
                       {zone.locked ? ' (coming soon)' : ''}
                     </option>
                   )
@@ -433,11 +477,14 @@ export default function CombatPage() {
                 {currentZone.monsterOrder.length === 0 ? (
                   <option value="">Coming soon</option>
                 ) : (
-                  currentZone.monsterOrder.map((typeId) => (
-                    <option key={typeId} value={typeId}>
-                      {ENEMY_TYPES[typeId].displayName}
-                    </option>
-                  ))
+                  currentZone.monsterOrder.map((typeId) => {
+                    const type = ENEMY_TYPES[typeId]
+                    return (
+                      <option key={typeId} value={typeId} style={{ color: LEVEL_DIFF_HEX_COLOR[getLevelDiffColor(characterLevel, type.level)] }}>
+                        {type.displayName} (Lv {type.level})
+                      </option>
+                    )
+                  })
                 )}
               </select>
             </label>

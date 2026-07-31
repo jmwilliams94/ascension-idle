@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.39.3",
+    "date": "2026-07-31",
+    "changes": [
+      "The Zone and Monster dropdowns now show each option's level (or level range for zones), colored the same white/green/red/black way a monster's name already was, so you can judge the fit before committing"
+    ]
+  },
+  {
     "version": "1.39.2",
     "date": "2026-07-31",
     "changes": [
