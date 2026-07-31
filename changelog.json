@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.40.0",
+    "date": "2026-07-31",
+    "changes": [
+      "A full Inventory now stops live combat outright and shows an \"Inventory full\" warning, instead of quietly holding the drop for later",
+      "Loot Holding moved out of the Warehouse tab — it now only appears inside the \"welcome back\" popup after you return from being away, since that's the only case it's still needed for"
+    ]
+  },
+  {
     "version": "1.39.3",
     "date": "2026-07-31",
     "changes": [

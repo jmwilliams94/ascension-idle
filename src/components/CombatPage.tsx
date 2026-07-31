@@ -71,6 +71,7 @@ function logLineClass(kind: CombatLogEntry['kind']): string {
       return 'text-sky-300'
     case 'no-quiver':
     case 'knockout':
+    case 'inventory-full':
       return 'text-red-400'
     case 'player-damage':
       return 'text-rose-400'

@@ -32,6 +32,7 @@ export type CombatLogKind =
   | 'currency'
   | 'no-quiver'
   | 'knockout'
+  | 'inventory-full'
 
 export interface CombatLogEntry {
   id: string
@@ -93,6 +94,13 @@ interface CombatState {
   // since there's nothing meaningful to clamp against before combat has
   // ticked at least once.
   healPlayerHp: (amount: number) => void
+  // Called by resolveCombat.ts when a live (not offline) resolve-combat
+  // response reports inventoryFull — a kill rolled a drop that had nowhere
+  // to go, so the fight stops outright rather than silently discarding it or
+  // parking it in Loot Holding (confirmed with the user, 2026-07-31: "a full
+  // inventory should stop combat," Loot Holding is for idle/offline overflow
+  // only now — see CLAUDE.md's Loot section).
+  stopForInventoryFull: () => void
 }
 
 export const useCombatStore = create<CombatState>((set, get) => ({
@@ -324,4 +332,13 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       return { currentPlayerHp: Math.min(state.maxPlayerHp, state.currentPlayerHp + amount) }
     })
   },
+
+  stopForInventoryFull: () =>
+    set((state) => ({
+      isFighting: false,
+      log: appendLog(state.log, {
+        kind: 'inventory-full',
+        message: 'Inventory is full — combat stopped. Clear some space to keep fighting.',
+      }),
+    })),
 }))

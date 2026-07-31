@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import CombatEngine from '../game/combat/CombatEngine'
 import QuiverWarningHud from './QuiverWarningHud'
+import InventoryFullWarningHud from './InventoryFullWarningHud'
 import CombatPage from './CombatPage'
 import EquipmentTabPage from './EquipmentTabPage'
 import ExpBar from './ExpBar'
@@ -157,6 +158,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
             <ExpBar />
           </div>
           <QuiverWarningHud />
+          <InventoryFullWarningHud />
         </div>
 
         <ProgressionPanel />

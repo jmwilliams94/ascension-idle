@@ -235,9 +235,19 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   }
 
   let characterId: string | undefined
+  // 'live' (periodic/triggered calls while actively fighting, CombatEngine.tsx)
+  // vs. 'offline' (the once-at-login away-time catch-up, offlineProgress.ts) —
+  // confirmed with the user, 2026-07-31: these now diverge on what happens
+  // when a drop can't fit in Inventory. Defaults to 'offline' (the original,
+  // Loot-Holding-overflow behavior) if a caller ever omits it, rather than
+  // failing the request outright.
+  let mode: 'live' | 'offline' = 'offline'
   try {
     const body = await req.json()
     characterId = body.characterId
+    if (body.mode === 'live' || body.mode === 'offline') {
+      mode = body.mode
+    }
   } catch {
     // fall through to the missing-characterId check below
   }
@@ -308,6 +318,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       itemsGranted: [],
       itemsHeld: [],
       currencyHeld: [],
+      inventoryFull: false,
     })
   }
 
@@ -379,7 +390,55 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   let expGained = 0
   let meteorsGained = 0
   let dragonballsGained = 0
+  // Live mode only (confirmed with the user, 2026-07-31): set the moment a
+  // kill rolls a drop that can't fit, at which point the whole simulated
+  // window stops right there rather than continuing to fight and stashing
+  // the overflow in Loot Holding — "a full inventory should stop combat."
+  // Loot Holding is now exclusively for the offline/idle catch-up window
+  // (surfaced in OfflineProgressModal, not a persistent Warehouse card).
+  let inventoryFull = false
   const droppedTemplates: { id: string; required_level: number }[] = []
+
+  // Inventory-full handling baseline — fetched BEFORE the loop now (used to
+  // be after), so live mode can check fit live, kill by kill, as the window
+  // is simulated. Functionally identical for offline mode either way, since
+  // nothing else in this function touches these tables mid-request.
+  const [{ count: gearCount }, { data: composition }, { count: holdingCount }, { count: potionCount }] = await Promise.all([
+    db.from('item_instances').select('id', { count: 'exact', head: true }).eq('owner_id', characterId),
+    db.from('characters').select('composition_stones').eq('id', characterId).maybeSingle(),
+    db.from('loot_holding').select('id', { count: 'exact', head: true }).eq('character_id', characterId),
+    db.from('potion_stacks').select('id', { count: 'exact', head: true }).eq('character_id', characterId).gt('count', 0),
+  ])
+
+  const stoneSlotCount = Object.values((composition?.composition_stones as Record<string, number>) ?? {}).reduce(
+    (sum, v) => sum + (typeof v === 'number' ? v : 0),
+    0,
+  )
+  // Bug fix (2026-07-31): this baseline previously omitted potions and the
+  // character's own already-owned Meteor/DragonBall/Scroll counts entirely —
+  // it only ever counted gear + stones, silently under-counting real
+  // Inventory fullness (see CLAUDE.md's Warehouse economy redesign note,
+  // stage 2 — caught while adding Scroll accounting here). Mirrors
+  // useInventoryStore.occupiedSlotCount's client-side formula in full now.
+  let occupied =
+    (gearCount ?? 0) +
+    stoneSlotCount +
+    (potionCount ?? 0) +
+    character.meteor_count +
+    character.dragonball_count +
+    character.meteor_scroll_count +
+    character.dragonball_scroll_count
+  let heldCount = holdingCount ?? 0
+  // Live mode only — a running projection of `occupied` as this window's
+  // kills are simulated, so a mid-window fit-check can be made without
+  // mutating the real `occupied` the post-loop granting pass still uses.
+  // The two never disagree (both start from the same baseline and increment
+  // by the same items in the same order), so the post-loop pass never needs
+  // its own live/offline branch — for live mode, anything in
+  // droppedTemplates/meteorsGained/dragonballsGained was already confirmed
+  // to fit at roll time, so occupied is guaranteed to still have room when
+  // the post-loop pass reaches it.
+  let projectedOccupied = occupied
 
   if (totalAttacks > 0) {
     // Fetched once (not per-roll) and reused for every drop this window rolls
@@ -428,12 +487,50 @@ async function handleResolveCombat(req: Request): Promise<Response> {
 
         if (Math.random() < DROP_CHANCE) {
           const dropped = pickDropTemplate()
-          if (dropped) droppedTemplates.push(dropped)
+          if (dropped) {
+            if (mode === 'live') {
+              if (projectedOccupied < INVENTORY_SLOT_CAP) {
+                droppedTemplates.push(dropped)
+                projectedOccupied += 1
+              } else {
+                inventoryFull = true
+              }
+            } else {
+              droppedTemplates.push(dropped)
+            }
+          }
         }
 
         const bonusCurrency = rollBonusCurrencyDrops()
-        meteorsGained += bonusCurrency.meteors
-        dragonballsGained += bonusCurrency.dragonballs
+        if (mode === 'live') {
+          if (bonusCurrency.meteors > 0) {
+            if (projectedOccupied < INVENTORY_SLOT_CAP) {
+              meteorsGained += bonusCurrency.meteors
+              projectedOccupied += 1
+            } else {
+              inventoryFull = true
+            }
+          }
+          if (bonusCurrency.dragonballs > 0) {
+            if (projectedOccupied < INVENTORY_SLOT_CAP) {
+              dragonballsGained += bonusCurrency.dragonballs
+              projectedOccupied += 1
+            } else {
+              inventoryFull = true
+            }
+          }
+        } else {
+          meteorsGained += bonusCurrency.meteors
+          dragonballsGained += bonusCurrency.dragonballs
+        }
+
+        // Live mode stops the whole window right here — this kill's own
+        // gold/EXP still count (already accumulated above), it's just the
+        // rest of the window that never happens, matching "you'd have
+        // stopped fighting the moment you couldn't carry any more loot."
+        if (mode === 'live' && inventoryFull) {
+          break
+        }
 
         isRare = rollIsRare()
         hp = spawnMonsterHp(monster, isRare)
@@ -452,37 +549,6 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     exp -= requiredExpForLevel(level)
     level += 1
   }
-
-  // Inventory-full handling: grant into item_instances while there's room,
-  // otherwise into loot_holding (confirmed with the user) up to its own cap —
-  // beyond that, further drops in this window are genuinely lost, matching
-  // the accepted extreme-edge-case behavior described in the plan.
-  const [{ count: gearCount }, { data: composition }, { count: holdingCount }, { count: potionCount }] = await Promise.all([
-    db.from('item_instances').select('id', { count: 'exact', head: true }).eq('owner_id', characterId),
-    db.from('characters').select('composition_stones').eq('id', characterId).maybeSingle(),
-    db.from('loot_holding').select('id', { count: 'exact', head: true }).eq('character_id', characterId),
-    db.from('potion_stacks').select('id', { count: 'exact', head: true }).eq('character_id', characterId).gt('count', 0),
-  ])
-
-  const stoneSlotCount = Object.values((composition?.composition_stones as Record<string, number>) ?? {}).reduce(
-    (sum, v) => sum + (typeof v === 'number' ? v : 0),
-    0,
-  )
-  // Bug fix (2026-07-31): this baseline previously omitted potions and the
-  // character's own already-owned Meteor/DragonBall/Scroll counts entirely —
-  // it only ever counted gear + stones, silently under-counting real
-  // Inventory fullness (see CLAUDE.md's Warehouse economy redesign note,
-  // stage 2 — caught while adding Scroll accounting here). Mirrors
-  // useInventoryStore.occupiedSlotCount's client-side formula in full now.
-  let occupied =
-    (gearCount ?? 0) +
-    stoneSlotCount +
-    (potionCount ?? 0) +
-    character.meteor_count +
-    character.dragonball_count +
-    character.meteor_scroll_count +
-    character.dragonball_scroll_count
-  let heldCount = holdingCount ?? 0
 
   interface GrantedItemRow {
     id: string
@@ -513,30 +579,31 @@ async function handleResolveCombat(req: Request): Promise<Response> {
         .single()
       occupied += 1
       if (inserted) itemsGranted.push(inserted)
-    } else if (heldCount < LOOT_HOLDING_CAP) {
+    } else if (mode === 'offline' && heldCount < LOOT_HOLDING_CAP) {
+      // Live mode never reaches this branch — droppedTemplates only ever
+      // contains items already confirmed to fit at roll time (see above).
       await db.from('loot_holding').insert({ character_id: characterId, template_id: template.id })
       heldCount += 1
       itemsHeld.push({ template_id: template.id })
     }
-    // else: genuinely lost, both Inventory and Loot Holding are full.
+    // else: genuinely lost — offline only, both Inventory and Loot Holding
+    // are full.
   }
 
-  // Meteors/DragonBalls are now individual, non-stacking Inventory items
-  // (confirmed with the user, 2026-07-31 — see CLAUDE.md's Warehouse economy
-  // redesign note) — each gained unit competes for the same 40-slot cap as
-  // gear, overflowing into Loot Holding exactly like a full-inventory gear
-  // drop already does, rather than always being added regardless of cap.
+  // Meteors/DragonBalls are individual, non-stacking Inventory items — each
+  // gained unit competes for the same 40-slot cap as gear. Offline mode
+  // overflows into Loot Holding exactly like a full-inventory gear drop;
+  // live mode never reaches the overflow branch (see above).
   let meteorsToGrant = 0
   for (let i = 0; i < meteorsGained; i += 1) {
     if (occupied < INVENTORY_SLOT_CAP) {
       meteorsToGrant += 1
       occupied += 1
-    } else if (heldCount < LOOT_HOLDING_CAP) {
+    } else if (mode === 'offline' && heldCount < LOOT_HOLDING_CAP) {
       await db.from('loot_holding').insert({ character_id: characterId, currency_type: 'meteor' })
       heldCount += 1
       currencyHeld.push({ currency_type: 'meteor' })
     }
-    // else: genuinely lost, both Inventory and Loot Holding are full.
   }
 
   let dragonballsToGrant = 0
@@ -544,7 +611,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     if (occupied < INVENTORY_SLOT_CAP) {
       dragonballsToGrant += 1
       occupied += 1
-    } else if (heldCount < LOOT_HOLDING_CAP) {
+    } else if (mode === 'offline' && heldCount < LOOT_HOLDING_CAP) {
       await db.from('loot_holding').insert({ character_id: characterId, currency_type: 'dragonball' })
       heldCount += 1
       currencyHeld.push({ currency_type: 'dragonball' })
@@ -588,5 +655,6 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     itemsGranted,
     itemsHeld,
     currencyHeld,
+    inventoryFull,
   })
 }

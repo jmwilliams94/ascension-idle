@@ -36,7 +36,7 @@ export default function CombatEngine() {
     const resolve = () => {
       const characterId = useActiveCharacterStore.getState().characterId
       if (characterId && useCombatStore.getState().isFighting) {
-        void resolveCombat(characterId)
+        void resolveCombat(characterId, 'live')
       }
     }
 

@@ -36,7 +36,7 @@ export async function runOfflineProgressCheck(characterId: string): Promise<Offl
     return null
   }
 
-  const result = await resolveCombat(characterId)
+  const result = await resolveCombat(characterId, 'offline')
 
   if (!result || !result.ok || !result.gained || (result.elapsedMs ?? 0) < OFFLINE_SUMMARY_THRESHOLD_MS) {
     return null
