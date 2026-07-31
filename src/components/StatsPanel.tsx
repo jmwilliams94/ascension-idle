@@ -6,6 +6,7 @@ import { computeEquipmentBonus } from '../game/items/equipmentBonus'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
+import { damageRangeFromMidpoint } from '../game/combat/combatResolver'
 
 const ATTRIBUTE_LABELS = {
   strength: 'Strength',
@@ -80,11 +81,21 @@ export default function StatsPanel() {
               </div>
               <div className="flex justify-between">
                 <dt className="text-slate-400">Physical Attack</dt>
-                <dd>{derived.physicalAttack}</dd>
+                <dd>
+                  {(() => {
+                    const { min, max } = damageRangeFromMidpoint(derived.physicalAttack)
+                    return `${min}-${max}`
+                  })()}
+                </dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-slate-400">Magic Attack</dt>
-                <dd>{derived.magicAttack}</dd>
+                <dd>
+                  {(() => {
+                    const { min, max } = damageRangeFromMidpoint(derived.magicAttack)
+                    return `${min}-${max}`
+                  })()}
+                </dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-slate-400">Attack Speed</dt>

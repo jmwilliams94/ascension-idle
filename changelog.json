@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.34.1",
+    "date": "2026-07-31",
+    "changes": [
+      "Physical Attack and Magic Attack on the Character panel now show as a hit range, matching what combat actually rolls"
+    ]
+  },
+  {
     "version": "1.34.0",
     "date": "2026-07-31",
     "changes": [
