@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.35.0",
+    "date": "2026-07-31",
+    "changes": [
+      "Redesigned the Combat screen for phones: your fight (HP bars, Fight/Stop, Consumable) is now front and center, with Inventory and the Combat Log tucked behind a tap-to-expand section instead of one long scroll",
+      "Fixed the Inventory grid overflowing off the edge of narrow phone screens (Combat, Forge, Shop, Warehouse all affected)"
+    ]
+  },
+  {
     "version": "1.34.1",
     "date": "2026-07-31",
     "changes": [

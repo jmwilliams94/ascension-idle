@@ -6,7 +6,11 @@ import type { ItemTooltipData } from '../game/items/itemTooltip'
 // Shared standard tile size — the main Inventory grid, Forge's Upgrade Slot, and
 // Forge's Fuel slots all use this so every tile in the game reads as the same
 // "unit," rather than three different sizes depending on which panel it's in.
-export const SLOT_SIZE_CLASS = 'h-16 w-16'
+// Responsive (smaller below `lg`, unchanged 4rem at `lg` and up) — a fixed 4rem
+// tile size was the root cause of the Inventory grid overflowing narrow phone
+// viewports (see CLAUDE.md's PWA & Mobile section); shrinking it here fixes
+// every InventoryPanel/Forge/Warehouse usage at once since they all share it.
+export const SLOT_SIZE_CLASS = 'h-14 w-14 lg:h-16 lg:w-16'
 
 interface InventorySlotProps {
   // Stable id for this cell (an item's/arrow stack's id for filled slots, a

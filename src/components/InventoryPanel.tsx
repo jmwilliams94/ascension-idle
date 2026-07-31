@@ -143,10 +143,15 @@ export default function InventoryPanel({
 
   // Fixed-size tracks (not grid-cols-N's equal-fraction columns) so tiles stay a
   // consistent size regardless of how wide the surrounding column/page is — matches
-  // SLOT_SIZE below, and the same fixed size Forge's Upgrade/Fuel slots use.
-  // Tailwind needs each literal spelled out somewhere so its scanner picks it up —
-  // a template-literal class name wouldn't be found at build time.
-  const gridColsClass = columns === 5 ? 'grid-cols-[repeat(5,4rem)]' : 'grid-cols-[repeat(8,4rem)]'
+  // SLOT_SIZE_CLASS (InventorySlot.tsx), and the same sizes Forge's Upgrade/Fuel
+  // slots use. Responsive to match: 3.5rem tracks below `lg` (matching h-14/w-14),
+  // 4rem at `lg` and up (matching h-16/w-16, unchanged from before this was
+  // responsive). Tailwind needs each literal spelled out somewhere so its scanner
+  // picks it up — a template-literal class name wouldn't be found at build time.
+  const gridColsClass =
+    columns === 5
+      ? 'grid-cols-[repeat(5,3.5rem)] lg:grid-cols-[repeat(5,4rem)]'
+      : 'grid-cols-[repeat(8,3.5rem)] lg:grid-cols-[repeat(8,4rem)]'
 
   const toggleSlot = (slot: NonNullable<SelectedSlot>) => {
     setSelectedSlot((current) => (current && slotKey(current) === slotKey(slot) ? null : slot))
@@ -252,7 +257,13 @@ export default function InventoryPanel({
           )}
         </div>
 
-        <div className={`mt-2 grid ${gridColsClass} gap-1.5`}>
+        {/* overflow-x-auto is a defensive backstop, not the primary fix — the
+            responsive tile/track sizes above (SLOT_SIZE_CLASS/gridColsClass)
+            should already fit any phone width; this just guarantees the grid
+            scrolls within itself instead of blowing out the page if it ever
+            doesn't (e.g. a future higher column count). */}
+        <div className="mt-2 overflow-x-auto">
+        <div className={`grid ${gridColsClass} gap-1.5`}>
           {visiblePotionStacks.map((stack) => {
             const type = POTION_TYPES[stack.potionType]
             const potionTooltip: ItemTooltipData = {
@@ -386,6 +397,7 @@ export default function InventoryPanel({
           {Array.from({ length: emptySlotCount }, (_, index) => (
             <InventorySlot key={`empty-${index}`} slotId={`empty-${index}`} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
           ))}
+        </div>
         </div>
       </div>
 

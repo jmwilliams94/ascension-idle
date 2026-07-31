@@ -96,6 +96,10 @@ export default function CombatPage() {
   const handleUsePotion = usePotionStore((state) => state.usePotion)
 
   const [logExpanded, setLogExpanded] = useState(false)
+  // Mobile-only (see the lg:hidden layout below) — Inventory defaults collapsed
+  // there so the action area (monster/player HP, Fight/Stop) is what's visible
+  // without scrolling, matching the Combat Log's existing collapse convention.
+  const [inventoryExpanded, setInventoryExpanded] = useState(false)
 
   // Floating damage numbers are derived from the log itself (recent 'damage'
   // entries, by timestamp) rather than tracked as their own state — avoids
@@ -173,7 +177,227 @@ export default function CombatPage() {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <>
+      {/* Mobile-only layout (below `lg`) — action area (monster/player HP,
+          Fight/Stop, Consumable) prioritized at the top since that's what's
+          looked at moment-to-moment; Zone/Monster picker below it (still
+          always reachable, just not the first thing on screen); Inventory and
+          Combat Log both collapsed by default so the initial view is short
+          enough to not require scrolling on a phone. No Gold/EXP row here —
+          ProgressionPanel (GameShell's persistent top strip, shown above every
+          tab) already covers that, so repeating it here would just be more
+          scroll for nothing. Desktop's layout (below) is untouched — this is
+          entirely separate markup, not a responsive reflow of the same JSX, so
+          nothing here can regress the desktop view. */}
+      <div className="space-y-3 lg:hidden">
+        {activeType && (
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+            <div className="flex items-center gap-4">
+              <div className="relative h-16 w-16 shrink-0">
+                <div
+                  key={monsterInstanceKey}
+                  className={`h-16 w-16 rounded-2xl border-2 border-slate-700 ${isRareInstance ? 'super-quality-glow' : ''}`}
+                  style={{ backgroundColor: hexColor(activeType.color) }}
+                />
+                <AnimatePresence>
+                  {floatingNumbers.map((entry) => (
+                    <motion.div
+                      key={entry.id}
+                      initial={{ opacity: 1, y: 0 }}
+                      animate={{ opacity: 0, y: -32 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.8, ease: 'easeOut' }}
+                      className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 text-sm font-bold text-amber-300"
+                    >
+                      -{entry.amount}
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className={`truncate text-sm font-medium ${LEVEL_DIFF_TEXT_CLASS[getLevelDiffColor(characterLevel, activeType.level)]}`}>
+                  {activeType.displayName}
+                  {isRareInstance && <span className="ml-2 text-xs font-bold text-amber-300">RARE</span>}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {currentHp} / {maxHp} HP
+                </p>
+                <div className="mt-2">
+                  <HpBar current={currentHp} max={maxHp} />
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleToggle}
+              className="mt-4 w-full rounded-lg border border-slate-700 py-2.5 text-sm font-medium text-slate-200 hover:border-slate-500"
+            >
+              {isFighting ? 'Stop' : 'Resume'}
+            </button>
+          </div>
+        )}
+
+        {activeType && (
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+            <p className="text-xs font-medium text-slate-400">{characterName}</p>
+            <div className="relative mt-1">
+              <p className="text-xs text-slate-500">
+                {currentPlayerHp} / {maxPlayerHp} HP
+              </p>
+              <div className="mt-1">
+                <HpBar current={currentPlayerHp} max={maxPlayerHp} barColorClass="bg-rose-500" />
+              </div>
+              <AnimatePresence>
+                {playerFloatingNumbers.map((entry) => (
+                  <motion.div
+                    key={entry.id}
+                    initial={{ opacity: 1, y: 0 }}
+                    animate={{ opacity: 0, y: -20 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.8, ease: 'easeOut' }}
+                    className="pointer-events-none absolute right-0 top-0 text-sm font-bold text-rose-300"
+                  >
+                    -{entry.amount}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+
+            <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs">
+              {bestHpPotionStack ? (
+                <>
+                  <span className="flex min-w-0 items-center gap-2 text-slate-200">
+                    <span className="shrink-0 text-base">🧪</span>
+                    <span className="truncate">
+                      {POTION_TYPES[bestHpPotionStack.potionType].displayName} ({bestHpPotionStack.count})
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    disabled={maxPlayerHp > 0 && currentPlayerHp >= maxPlayerHp}
+                    onClick={() => void handleUsePotion(bestHpPotionStack!.id)}
+                    className="shrink-0 rounded border border-sky-500 bg-sky-500/10 px-3 py-1.5 font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-transparent disabled:text-slate-600"
+                  >
+                    {maxPlayerHp > 0 && currentPlayerHp >= maxPlayerHp ? 'HP full' : 'Use'}
+                  </button>
+                </>
+              ) : (
+                <span className="text-slate-600">No HP potions — visit the Shop</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+          <p className="text-sm font-medium text-slate-200">Zone &amp; Monster</p>
+
+          <div className="mt-2 flex flex-wrap gap-3">
+            <label className="min-w-[140px] flex-1 text-xs text-slate-400">
+              Zone
+              <select
+                value={currentZoneId}
+                onChange={(event) => handleSelectZone(event.target.value as ZoneId)}
+                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-2 text-sm text-slate-200"
+              >
+                {ZONE_ORDER.map((zoneId) => {
+                  const zone = ZONES[zoneId]
+                  return (
+                    <option key={zoneId} value={zoneId} disabled={zone.locked}>
+                      {zone.displayName}
+                      {zone.locked ? ' (coming soon)' : ''}
+                    </option>
+                  )
+                })}
+              </select>
+            </label>
+
+            <label className="min-w-[140px] flex-1 text-xs text-slate-400">
+              Monster
+              <select
+                value={dropdownMonsterId ?? ''}
+                disabled={currentZone.monsterOrder.length === 0}
+                onChange={(event) => setSelectedMonsterId(event.target.value as EnemyTypeId)}
+                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-2 text-sm text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {currentZone.monsterOrder.length === 0 ? (
+                  <option value="">Coming soon</option>
+                ) : (
+                  currentZone.monsterOrder.map((typeId) => (
+                    <option key={typeId} value={typeId}>
+                      {ENEMY_TYPES[typeId].displayName}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+          </div>
+
+          <button
+            type="button"
+            disabled={!dropdownMonsterId || (isFighting && monsterTypeId === dropdownMonsterId)}
+            onClick={() => dropdownMonsterId && handleFight(dropdownMonsterId)}
+            className="mt-3 w-full rounded-lg border border-emerald-700 py-2.5 text-sm font-medium text-emerald-300 hover:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {isFighting && monsterTypeId === dropdownMonsterId ? 'Fighting' : 'Fight'}
+          </button>
+        </div>
+
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+          <button
+            type="button"
+            onClick={() => setInventoryExpanded((value) => !value)}
+            className="flex w-full items-center justify-between text-left"
+          >
+            <p className="text-sm font-medium text-slate-200">Inventory</p>
+            <span className="text-xs text-slate-400">{inventoryExpanded ? 'Hide ▲' : 'Show ▼'}</span>
+          </button>
+
+          {inventoryExpanded && (
+            <div className="mt-3">
+              <InventoryPanel columns={5} />
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+          <button
+            type="button"
+            onClick={() => setLogExpanded((value) => !value)}
+            className="flex w-full items-center justify-between text-left"
+          >
+            <p className="text-sm font-medium text-slate-200">Combat Log</p>
+            <span className="text-xs text-slate-400">{logExpanded ? 'Hide ▲' : 'Show ▼'}</span>
+          </button>
+
+          {logExpanded && (
+            <div className="mt-3 max-h-64 space-y-1 overflow-y-auto text-xs">
+              <AnimatePresence initial={false}>
+                {log.length === 0 && (
+                  <p key="empty" className="text-slate-600">
+                    Pick a monster from the roster to start fighting.
+                  </p>
+                )}
+                {log.map((entry) => (
+                  <motion.p
+                    key={entry.id}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0 }}
+                    className={logLineClass(entry.kind)}
+                  >
+                    {entry.message}
+                  </motion.p>
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Desktop layout (`lg` and up) — unchanged from before this step. */}
+      <div className="hidden gap-4 lg:grid lg:grid-cols-2">
       <div className="space-y-4">
         <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
           <p className="text-sm font-medium text-slate-200">Zone &amp; Monster</p>
@@ -385,6 +609,7 @@ export default function CombatPage() {
           <InventoryPanel columns={5} />
         </div>
       </div>
-    </div>
+      </div>
+    </>
   )
 }
