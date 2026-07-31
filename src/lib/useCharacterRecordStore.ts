@@ -34,6 +34,8 @@ interface CharacterRow {
   equipped_quiver_id: string | null
   meteor_count: number
   dragonball_count: number
+  meteor_scroll_count: number
+  dragonball_scroll_count: number
   composition_stones: CompositionStones
   warehouse_points: number
   selected_monster_id: string | null
@@ -69,7 +71,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     const { data, error } = await supabase
       .from('characters')
       .select(
-        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, meteor_count, dragonball_count, composition_stones, warehouse_points, selected_monster_id, last_active_at',
+        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, meteor_count, dragonball_count, meteor_scroll_count, dragonball_scroll_count, composition_stones, warehouse_points, selected_monster_id, last_active_at',
       )
       .eq('id', characterId)
       .maybeSingle<CharacterRow>()
@@ -97,7 +99,12 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
       coat: data.equipped_coat_id,
       quiver: data.equipped_quiver_id,
     } satisfies Record<EquipSlot, string | null>)
-    useCurrencyStore.getState().hydrate({ meteors: data.meteor_count, dragonballs: data.dragonball_count })
+    useCurrencyStore.getState().hydrate({
+      meteors: data.meteor_count,
+      dragonballs: data.dragonball_count,
+      meteorScrolls: data.meteor_scroll_count,
+      dragonballScrolls: data.dragonball_scroll_count,
+    })
     useCompositionStore.getState().hydrate(data.composition_stones)
     useWarehouseStore.getState().hydratePoints(data.warehouse_points)
 

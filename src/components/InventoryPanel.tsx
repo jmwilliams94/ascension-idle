@@ -13,12 +13,16 @@ import {
 import { EQUIP_SLOTS, useEquipmentStore, type EquipSlot } from '../game/items/useEquipmentStore'
 import {
   COMPOSITION_STONE_TIERS,
+  buildDragonballScrollTooltip,
   buildDragonballTooltip,
+  buildMeteorScrollTooltip,
   buildMeteorTooltip,
   buildStoneTooltip,
   compositionPointValue,
   dragonballDragId,
+  dragonballScrollDragId,
   meteorDragId,
+  meteorScrollDragId,
   stoneDragId,
 } from '../game/items/forgeCosts'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
@@ -28,20 +32,22 @@ import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { usePotionStore } from '../game/items/usePotionStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
+import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { POTION_TYPES } from '../game/items/potionTypes'
 
 // A single fixed 40-cell grid shared by gear (item_instances), Composition
-// stones, Meteors/DragonBalls, and HP/Mana potion stacks — a stack/stone/
-// currency unit takes up a slot exactly like a gear item does, all counting
-// against the same cap (see occupiedSlotCount in useInventoryStore). Always
-// renders all 40 cells, empty ones dimmed/unclickable, so Forge's
-// drag-and-drop has a stable, always-present set of slots to pick gear/
-// stones up from.
+// stones, Meteors/DragonBalls (+ their Scrolls), and HP/Mana potion stacks —
+// a stack/stone/currency unit takes up a slot exactly like a gear item does,
+// all counting against the same cap (see occupiedSlotCount in
+// useInventoryStore). Always renders all 40 cells, empty ones
+// dimmed/unclickable, so Forge's drag-and-drop has a stable, always-present
+// set of slots to pick gear/stones up from.
 type SelectedSlot =
   | { kind: 'item'; id: string }
   | { kind: 'stone'; dragId: string; tier: number }
   | { kind: 'potion'; id: string }
   | { kind: 'currency'; dragId: string; currencyType: 'meteor' | 'dragonball' }
+  | { kind: 'scroll'; dragId: string; currencyType: 'meteor' | 'dragonball' }
   | null
 
 interface InventoryPanelProps {
@@ -88,6 +94,11 @@ export default function InventoryPanel({
   const stones = useCompositionStore((state) => state.stones)
   const meteors = useCurrencyStore((state) => state.meteors)
   const dragonballs = useCurrencyStore((state) => state.dragonballs)
+  const meteorScrolls = useCurrencyStore((state) => state.meteorScrolls)
+  const dragonballScrolls = useCurrencyStore((state) => state.dragonballScrolls)
+  const bundleScroll = useCurrencyStore((state) => state.bundleScroll)
+  const unbundleScroll = useCurrencyStore((state) => state.unbundleScroll)
+  const characterId = useActiveCharacterStore((state) => state.characterId)
   const potionStacks = usePotionStore((state) => state.stacks)
   const handlePotionUse = usePotionStore((state) => state.usePotion)
   const currentPlayerHp = useCombatStore((state) => state.currentPlayerHp)
@@ -99,6 +110,10 @@ export default function InventoryPanel({
   // Bulk-sell checkbox selection (Shop only, see enableSelling) — independent
   // of selectedSlot, which drives the single-item detail card.
   const [selectedForSale, setSelectedForSale] = useState<Set<string>>(new Set())
+  // Bundle/unbundle busy+error feedback (stage 2, 2026-07-31) — separate from
+  // sellBusy/sellError since they're independent actions on different tiles.
+  const [scrollBusy, setScrollBusy] = useState(false)
+  const [scrollError, setScrollError] = useState<string | null>(null)
 
   const visiblePotionStacks = potionStacks.filter((stack) => stack.count > 0)
 
@@ -138,8 +153,26 @@ export default function InventoryPanel({
   const dragonballShown = Math.min(dragonballs, remainingAfterMeteors)
   const dragonballTiles = Array.from({ length: dragonballShown }, (_, index) => ({ index, dragId: dragonballDragId(index) }))
 
+  // Scrolls (stage 2, 2026-07-31) are their own non-stacking item too — one
+  // tile per owned Scroll, allocated last in the same greedy chain.
+  const remainingAfterDragonballs = Math.max(0, remainingAfterMeteors - dragonballTiles.length)
+  const meteorScrollShown = Math.min(meteorScrolls, remainingAfterDragonballs)
+  const meteorScrollTiles = Array.from({ length: meteorScrollShown }, (_, index) => ({ index, dragId: meteorScrollDragId(index) }))
+  const remainingAfterMeteorScrolls = Math.max(0, remainingAfterDragonballs - meteorScrollTiles.length)
+  const dragonballScrollShown = Math.min(dragonballScrolls, remainingAfterMeteorScrolls)
+  const dragonballScrollTiles = Array.from({ length: dragonballScrollShown }, (_, index) => ({
+    index,
+    dragId: dragonballScrollDragId(index),
+  }))
+
   const occupiedCount =
-    stoneTiles.length + meteorTiles.length + dragonballTiles.length + visiblePotionStacks.length + visibleItems.length
+    stoneTiles.length +
+    meteorTiles.length +
+    dragonballTiles.length +
+    meteorScrollTiles.length +
+    dragonballScrollTiles.length +
+    visiblePotionStacks.length +
+    visibleItems.length
   const emptySlotCount = Math.max(0, INVENTORY_SLOT_CAP - occupiedCount)
 
   const selectedItem =
@@ -157,9 +190,10 @@ export default function InventoryPanel({
   const selectedPotionStack =
     selectedSlot?.kind === 'potion' ? visiblePotionStacks.find((stack) => stack.id === selectedSlot.id) : undefined
   const selectedCurrencyType = selectedSlot?.kind === 'currency' ? selectedSlot.currencyType : undefined
+  const selectedScrollType = selectedSlot?.kind === 'scroll' ? selectedSlot.currencyType : undefined
 
   const slotKey = (slot: NonNullable<SelectedSlot>): string =>
-    slot.kind === 'stone' || slot.kind === 'currency' ? slot.dragId : `${slot.kind}:${slot.id}`
+    slot.kind === 'stone' || slot.kind === 'currency' || slot.kind === 'scroll' ? slot.dragId : `${slot.kind}:${slot.id}`
 
   // Fixed-size tracks (not grid-cols-N's equal-fraction columns) so tiles stay a
   // consistent size regardless of how wide the surrounding column/page is — matches
@@ -191,6 +225,40 @@ export default function InventoryPanel({
 
     if (!result.ok) {
       setSellError("Couldn't sell that item.")
+      return
+    }
+
+    setSelectedSlot(null)
+  }
+
+  const handleBundle = async (currencyType: 'meteor' | 'dragonball') => {
+    if (!characterId) {
+      return
+    }
+    setScrollError(null)
+    setScrollBusy(true)
+    const result = await bundleScroll(characterId, currencyType)
+    setScrollBusy(false)
+
+    if (!result.ok) {
+      setScrollError(result.error === 'not_enough_units' ? 'Need 10 to bundle.' : "Couldn't bundle.")
+      return
+    }
+
+    setSelectedSlot(null)
+  }
+
+  const handleUnbundle = async (currencyType: 'meteor' | 'dragonball') => {
+    if (!characterId) {
+      return
+    }
+    setScrollError(null)
+    setScrollBusy(true)
+    const result = await unbundleScroll(characterId, currencyType)
+    setScrollBusy(false)
+
+    if (!result.ok) {
+      setScrollError(result.error === 'not_enough_room' ? 'Not enough room for all 10.' : "Couldn't open.")
       return
     }
 
@@ -361,6 +429,34 @@ export default function InventoryPanel({
             />
           ))}
 
+          {meteorScrollTiles.map(({ dragId }) => (
+            <InventorySlot
+              key={dragId}
+              slotId={dragId}
+              filled
+              sizeClassName={SLOT_SIZE_CLASS}
+              icon="📜"
+              label="Meteor Scroll"
+              tooltip={buildMeteorScrollTooltip()}
+              selected={selectedSlot?.kind === 'scroll' && selectedSlot.dragId === dragId}
+              onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'meteor' })}
+            />
+          ))}
+
+          {dragonballScrollTiles.map(({ dragId }) => (
+            <InventorySlot
+              key={dragId}
+              slotId={dragId}
+              filled
+              sizeClassName={SLOT_SIZE_CLASS}
+              icon="📜"
+              label="DragonBall Scroll"
+              tooltip={buildDragonballScrollTooltip()}
+              selected={selectedSlot?.kind === 'scroll' && selectedSlot.dragId === dragId}
+              onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'dragonball' })}
+            />
+          ))}
+
           {visibleItems.map((item) => {
             if (reservedItemIds.includes(item.id)) {
               return <InventorySlot key={item.id} slotId={item.id} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
@@ -456,6 +552,56 @@ export default function InventoryPanel({
               </p>
             </div>
           </div>
+
+          {(() => {
+            const owned = selectedCurrencyType === 'meteor' ? meteors : dragonballs
+            const disabled = owned < 10 || scrollBusy
+
+            return (
+              <button
+                type="button"
+                disabled={disabled}
+                title={owned < 10 ? 'Need 10 to bundle' : undefined}
+                onClick={() => void handleBundle(selectedCurrencyType)}
+                className={`mt-3 w-full rounded-lg border px-3 py-1.5 text-xs font-medium ${
+                  disabled
+                    ? 'cursor-not-allowed border-slate-800 text-slate-600'
+                    : 'border-sky-500 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'
+                }`}
+              >
+                {scrollBusy ? 'Bundling…' : 'Bundle (10 → 1 Scroll)'}
+              </button>
+            )
+          })()}
+          {scrollError && <p className="mt-2 text-xs text-amber-400">{scrollError}</p>}
+        </div>
+      )}
+
+      {selectedScrollType && (
+        <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg">
+              📜
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-200">
+                {selectedScrollType === 'meteor' ? 'Meteor Scroll' : 'DragonBall Scroll'}
+              </p>
+              <p className="text-xs text-slate-500">
+                {selectedScrollType === 'meteor' ? meteorScrolls : dragonballScrolls} owned total
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={scrollBusy}
+            onClick={() => void handleUnbundle(selectedScrollType)}
+            className="mt-3 w-full rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {scrollBusy ? 'Opening…' : 'Open (→ 10 loose)'}
+          </button>
+          {scrollError && <p className="mt-2 text-xs text-amber-400">{scrollError}</p>}
         </div>
       )}
 

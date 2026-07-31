@@ -269,7 +269,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const { data: character, error: characterError } = await db
     .from('characters')
     .select(
-      'id, account_id, class, level, gold, exp, meteor_count, dragonball_count, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, selected_monster_id, combat_last_resolved_at',
+      'id, account_id, class, level, gold, exp, meteor_count, dragonball_count, meteor_scroll_count, dragonball_scroll_count, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, selected_monster_id, combat_last_resolved_at',
     )
     .eq('id', characterId)
     .maybeSingle()
@@ -457,17 +457,31 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // otherwise into loot_holding (confirmed with the user) up to its own cap —
   // beyond that, further drops in this window are genuinely lost, matching
   // the accepted extreme-edge-case behavior described in the plan.
-  const [{ count: gearCount }, { data: composition }, { count: holdingCount }] = await Promise.all([
+  const [{ count: gearCount }, { data: composition }, { count: holdingCount }, { count: potionCount }] = await Promise.all([
     db.from('item_instances').select('id', { count: 'exact', head: true }).eq('owner_id', characterId),
     db.from('characters').select('composition_stones').eq('id', characterId).maybeSingle(),
     db.from('loot_holding').select('id', { count: 'exact', head: true }).eq('character_id', characterId),
+    db.from('potion_stacks').select('id', { count: 'exact', head: true }).eq('character_id', characterId).gt('count', 0),
   ])
 
   const stoneSlotCount = Object.values((composition?.composition_stones as Record<string, number>) ?? {}).reduce(
     (sum, v) => sum + (typeof v === 'number' ? v : 0),
     0,
   )
-  let occupied = (gearCount ?? 0) + stoneSlotCount
+  // Bug fix (2026-07-31): this baseline previously omitted potions and the
+  // character's own already-owned Meteor/DragonBall/Scroll counts entirely —
+  // it only ever counted gear + stones, silently under-counting real
+  // Inventory fullness (see CLAUDE.md's Warehouse economy redesign note,
+  // stage 2 — caught while adding Scroll accounting here). Mirrors
+  // useInventoryStore.occupiedSlotCount's client-side formula in full now.
+  let occupied =
+    (gearCount ?? 0) +
+    stoneSlotCount +
+    (potionCount ?? 0) +
+    character.meteor_count +
+    character.dragonball_count +
+    character.meteor_scroll_count +
+    character.dragonball_scroll_count
   let heldCount = holdingCount ?? 0
 
   interface GrantedItemRow {

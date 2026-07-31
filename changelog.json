@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.38.0",
+    "date": "2026-07-31",
+    "changes": [
+      "Added Meteor Scrolls and DragonBall Scrolls — bundle 10 loose Meteors/DragonBalls into 1 compact Scroll, and open a Scroll to unbundle it back",
+      "Fixed a bug where offline/idle combat could grant Meteor/DragonBall or gear drops past a full Inventory instead of routing them to Loot Holding"
+    ]
+  },
+  {
     "version": "1.37.0",
     "date": "2026-07-31",
     "changes": [

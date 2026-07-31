@@ -92,9 +92,10 @@ export function occupiedSlotCount(items: ItemInstance[]): number {
   const potionStackCount = usePotionStore.getState().stacks.filter((stack) => stack.count > 0).length
   // Meteors/DragonBalls are individual, non-stacking Inventory items now
   // (confirmed with the user, 2026-07-31) — same "one tile per unit" term
-  // shape as the stone total above.
+  // shape as the stone total above. Scrolls (stage 2, same day) are their
+  // own non-stacking item too — one Scroll tile per owned Scroll.
   const currency = useCurrencyStore.getState()
-  const currencyCount = currency.meteors + currency.dragonballs
+  const currencyCount = currency.meteors + currency.dragonballs + currency.meteorScrolls + currency.dragonballScrolls
   return gearCount + totalStoneCount + potionStackCount + currencyCount
 }
 

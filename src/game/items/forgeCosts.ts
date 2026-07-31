@@ -161,3 +161,32 @@ export function buildDragonballTooltip(): ItemTooltipData {
     stats: ['Used for Quality Upgrade'],
   }
 }
+
+// Meteor Scroll / DragonBall Scroll (stage 2 of the Warehouse economy
+// redesign, 2026-07-31) — a compact-storage bundle of 10 loose units into 1
+// non-stacking Inventory item. Same synthetic-id convention as the units
+// themselves (no per-unit DB row, just a running count —
+// characters.meteor_scroll_count/dragonball_scroll_count).
+export function meteorScrollDragId(index: number): string {
+  return `meteor-scroll:${index}`
+}
+
+export function dragonballScrollDragId(index: number): string {
+  return `dragonball-scroll:${index}`
+}
+
+export function buildMeteorScrollTooltip(): ItemTooltipData {
+  return {
+    title: 'Meteor Scroll',
+    lines: ['Compact storage'],
+    stats: ['Holds 10 Meteors — Open to unbundle'],
+  }
+}
+
+export function buildDragonballScrollTooltip(): ItemTooltipData {
+  return {
+    title: 'DragonBall Scroll',
+    lines: ['Compact storage'],
+    stats: ['Holds 10 DragonBalls — Open to unbundle'],
+  }
+}
