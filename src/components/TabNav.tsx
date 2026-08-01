@@ -6,7 +6,7 @@ const TAB_ITEMS: { id: TabId; label: string }[] = [
   { id: 'forge', label: 'Forge' },
   { id: 'marketplace', label: 'Market' },
   { id: 'shop', label: 'Shop' },
-  { id: 'warehouse', label: 'Warehouse' },
+  { id: 'warehouse', label: 'Bank' },
   { id: 'achievements', label: 'Achievements' },
 ]
 

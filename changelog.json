@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.44.4",
+    "date": "2026-08-02",
+    "changes": [
+      "Renamed the Warehouse tab to Bank",
+      "Bank and Achievements now have real icon art on the mobile nav bar instead of emoji"
+    ]
+  },
+  {
     "version": "1.44.3",
     "date": "2026-08-02",
     "changes": [

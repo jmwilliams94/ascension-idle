@@ -199,7 +199,7 @@ function StonesRow({ characterId }: { characterId: string }) {
         result.error === 'not_enough_stones'
           ? "You don't have that many."
           : result.error === 'not_enough_points'
-            ? "You don't have enough Warehouse points."
+            ? "You don't have enough Bank points."
             : 'Something went wrong.',
       )
     } else {
@@ -438,13 +438,15 @@ function GearCompositionRow({ characterId, slotType }: { characterId: string; sl
 
 // "Banked" (stage 5 of the Warehouse economy redesign, 2026-07-31) — replaces
 // BankCard. Same underlying account-wide/points-based data (currency Wallet
-// vs. account Bank, Warehouse Points, per-slot-type Gear Points), but every
+// vs. account Bank, Bank Points, per-slot-type Gear Points), but every
 // row now shows just its running total(s) plus Deposit/Withdraw buttons —
 // the amount input (and, for Stones/Gear Points, the tier/template picker)
 // only reveals once a button is tapped, rather than sitting always-visible.
-// "Bank" vs "Warehouse" (per-character gear/stones, see WarehouseGrid)
-// remains a naming-only split confirmed 2026-07-30 — not a behavior change,
-// just which side of the account-wide/per-character split a label refers to.
+// Superseded (2026-08-02): the tab itself (was "Warehouse") and the
+// WarehouseGrid section (was "Warehouse Storage") are both now just "Bank"/
+// "Storage" — see CLAUDE.md's Warehouse/Bank unification note. This card's
+// own "Banked" heading was already its own distinct section label, so it
+// didn't need to change.
 function BankedCard({ characterId }: { characterId: string }) {
   return (
     <div className="h-fit space-y-4 rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
@@ -468,7 +470,7 @@ function BankedCard({ characterId }: { characterId: string }) {
       <div>
         <p className="text-[11px] text-slate-500">
           Gear Points: dropping an item on "Deposit as Composition" (below) banks its tier here instead — six separate pools, one per
-          gear slot, not fungible with each other or with Warehouse Points above.
+          gear slot, not fungible with each other or with Bank Points above.
         </p>
         <div className="mt-2 space-y-2">
           {GEAR_SLOT_TYPES.map((slotType) => (
@@ -522,7 +524,7 @@ export default function WarehousePanel({ characterId }: { characterId: string })
   return (
     <div>
       <p className="text-xs uppercase tracking-wide text-slate-500">
-        Gear (drag between Inventory and Warehouse Storage to deposit/withdraw)
+        Gear (drag between Inventory and Storage to deposit/withdraw)
       </p>
       <DragDropProvider>
         {/* min-w-0 on both columns: grid items default to min-width:auto (content-

@@ -152,7 +152,7 @@ export const useWarehouseStore = create<WarehouseState>((set, get) => ({
     const wouldNeedNewSlot = !existingEntry
 
     if (wouldNeedNewSlot && get().occupiedSlotCount() >= WAREHOUSE_SLOT_CAP) {
-      set({ fullMessage: 'Warehouse is full.' })
+      set({ fullMessage: 'Storage is full.' })
       return { ok: false }
     }
 

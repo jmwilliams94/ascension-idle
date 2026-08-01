@@ -20,12 +20,12 @@ const BASE_URL = import.meta.env.BASE_URL
 //
 // Grouping either side of center is arbitrary (no design reason to split any
 // particular way) — kept in TabNav's own existing left-to-right order, split
-// around Combat: Equipment/Forge/Market before it, Shop/Warehouse/
+// around Combat: Equipment/Forge/Market before it, Shop/Bank/
 // Achievements after.
 //
-// Equipment/Forge/Shop use real icon art (public/nav-icons/, supplied
-// 2026-08-02); Market/Warehouse/Achievements stay emoji since no art exists
-// for those yet.
+// Equipment/Forge/Shop/Bank/Achievements all use real icon art now
+// (public/nav-icons/, supplied 2026-08-02); Market stays emoji since no art
+// exists for it yet.
 type NavIcon = { kind: 'emoji'; value: string } | { kind: 'image'; src: string; alt: string }
 
 const LEFT_ITEMS: { id: TabId; label: string; icon: NavIcon }[] = [
@@ -36,8 +36,8 @@ const LEFT_ITEMS: { id: TabId; label: string; icon: NavIcon }[] = [
 
 const RIGHT_ITEMS: { id: TabId; label: string; icon: NavIcon }[] = [
   { id: 'shop', label: 'Shop', icon: { kind: 'image', src: `${BASE_URL}nav-icons/shop.png`, alt: 'Shop' } },
-  { id: 'warehouse', label: 'Wareh.', icon: { kind: 'emoji', value: '📦' } },
-  { id: 'achievements', label: 'Achiev.', icon: { kind: 'emoji', value: '🏆' } },
+  { id: 'warehouse', label: 'Bank', icon: { kind: 'image', src: `${BASE_URL}nav-icons/bank.png`, alt: 'Bank' } },
+  { id: 'achievements', label: 'Achiev.', icon: { kind: 'image', src: `${BASE_URL}nav-icons/achievements.png`, alt: 'Achievements' } },
 ]
 
 function NavIconGlyph({ icon }: { icon: NavIcon }) {

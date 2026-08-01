@@ -60,7 +60,7 @@ export default function WarehouseGrid({ characterId, onTileDrop }: WarehouseGrid
     <div className="space-y-4">
       <div>
         <p className="text-xs uppercase tracking-wide text-slate-500">
-          Warehouse Storage ({occupiedCount}/{WAREHOUSE_SLOT_CAP})
+          Storage ({occupiedCount}/{WAREHOUSE_SLOT_CAP})
         </p>
 
         {/* Responsive tracks matching InventoryPanel's own fix (3.5rem below
@@ -75,7 +75,7 @@ export default function WarehouseGrid({ characterId, onTileDrop }: WarehouseGrid
             const label = template ? template.name : 'Unknown item'
             const tooltip: ItemTooltipData = {
               title: label,
-              lines: [`x${entry.count} in Warehouse`, 'Choose a tier to withdraw at'],
+              lines: [`x${entry.count} in Storage`, 'Choose a tier to withdraw at'],
             }
             const icon = getItemIcon(template?.slot_type)
 
@@ -130,7 +130,7 @@ export default function WarehouseGrid({ characterId, onTileDrop }: WarehouseGrid
             </div>
             <div>
               <p className="text-sm font-medium text-slate-200">{selectedTemplate ? selectedTemplate.name : 'Unknown item'}</p>
-              <p className="text-xs text-slate-500">x{selectedEntry.count} in Warehouse</p>
+              <p className="text-xs text-slate-500">x{selectedEntry.count} in Storage</p>
             </div>
           </div>
 
@@ -174,7 +174,7 @@ export default function WarehouseGrid({ characterId, onTileDrop }: WarehouseGrid
                   result.error === 'inventory_full'
                     ? 'Inventory is full.'
                     : result.error === 'not_enough_points'
-                      ? "You don't have enough Warehouse points."
+                      ? "You don't have enough Bank points."
                       : "Couldn't withdraw that item.",
                 )
               }
