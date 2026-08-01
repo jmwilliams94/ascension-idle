@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { ENEMY_TYPES, ZONES, ZONE_ORDER, type EnemyTypeId } from '../game/zones/zoneData'
+import { ENEMY_TYPES, ZONES, ZONE_ORDER, type EnemyTypeId, type ZoneId } from '../game/zones/zoneData'
 import { useAchievementsStore } from '../game/achievements/useAchievementsStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
@@ -56,13 +56,15 @@ function MonsterCard({ displayName, children }: { displayName: string; children:
   )
 }
 
-// A single continuous progress bar spanning all 6 tiers (not one bar per
-// tier) with a small marker dot at each tier's boundary — confirmed with the
-// user (2026-08-01), replacing the earlier "just the next tier's own 0-100%
-// bar" version, which showed no sense of where you stood on the ladder as a
-// whole or what any tier beyond the next one actually paid out. Hovering a
-// dot shows that tier's own reward via the same universal ItemTooltip every
-// other tile in this game already uses.
+// Six separate pill-shaped segments, one per tier, each its own fill/hover
+// target — supersedes an earlier version (2026-08-01) that used one thin
+// continuous bar with tiny 2.5px dots overlaid on top, which read fine on
+// desktop but was too narrow a hover/long-press target on a phone. Each pill
+// fills independently based on progress within that tier's own kill range
+// (not a shared whole-ladder scale), and the *entire* pill is the hover/
+// long-press target now, not a small dot — much easier to hit on a
+// touchscreen. Hovering a pill shows that tier's own reward via the same
+// universal ItemTooltip every other tile in this game already uses.
 function TierLadderBar({
   kills,
   getState,
@@ -72,58 +74,33 @@ function TierLadderBar({
   getState: (tierIndex: number) => TierVisualState
   getTooltipLines: (tierIndex: number, state: TierVisualState) => string[]
 }) {
-  // Overall fill = how far across the *whole* ladder, not just the current
-  // tier — each of the 6 tiers contributes an equal 1/6 share regardless of
-  // how far apart its kill thresholds are (100 to 250 vs. 5000 to 10000),
-  // since a linear kill-count scale would squash every early tier invisibly
-  // small next to the later ones.
-  let filledSegments = 0
-  for (let index = 0; index < ACHIEVEMENT_TIERS.length; index += 1) {
-    const threshold = ACHIEVEMENT_TIERS[index]
-    const prevThreshold = index === 0 ? 0 : ACHIEVEMENT_TIERS[index - 1]
-    filledSegments += Math.max(0, Math.min(1, (kills - prevThreshold) / (threshold - prevThreshold)))
-  }
-  const overallPct = (filledSegments / ACHIEVEMENT_TIERS.length) * 100
-
   return (
-    <div className="relative py-1">
-      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
-        <div className="h-full rounded-full bg-sky-500 transition-[width]" style={{ width: `${overallPct}%` }} />
-      </div>
-      <div className="pointer-events-none absolute inset-0 flex items-center">
-        {ACHIEVEMENT_TIERS.map((threshold, index) => {
-          const state = getState(index)
-          const color = TIER_STATE_COLOR[state]
-          const leftPct = ((index + 1) / ACHIEVEMENT_TIERS.length) * 100
+    <div className="flex gap-1.5">
+      {ACHIEVEMENT_TIERS.map((threshold, index) => {
+        const prevThreshold = index === 0 ? 0 : ACHIEVEMENT_TIERS[index - 1]
+        const state = getState(index)
+        const color = TIER_STATE_COLOR[state]
+        const fillPct = Math.max(0, Math.min(100, ((kills - prevThreshold) / (threshold - prevThreshold)) * 100))
 
-          const tooltip = (
-            <ItemTooltip
-              title={`Tier ${index + 1} · ${threshold.toLocaleString()} kills`}
-              titleColor={color}
-              lines={getTooltipLines(index, state)}
-            />
-          )
+        const tooltip = (
+          <ItemTooltip
+            title={`Tier ${index + 1} · ${threshold.toLocaleString()} kills`}
+            titleColor={color}
+            lines={getTooltipLines(index, state)}
+          />
+        )
 
-          return (
+        return (
+          <HoverTooltip key={threshold} content={tooltip}>
             <div
-              key={threshold}
-              className="pointer-events-auto absolute -translate-x-1/2"
-              style={{ left: `${leftPct}%` }}
+              className={`h-3.5 flex-1 overflow-hidden rounded-full border-2 bg-slate-900 ${state === 'active' ? 'accent-glow' : ''}`}
+              style={{ borderColor: color, color }}
             >
-              <HoverTooltip content={tooltip}>
-                <div
-                  className={`h-2.5 w-2.5 rounded-full border-2 ${state === 'active' ? 'accent-glow' : ''}`}
-                  style={{
-                    borderColor: color,
-                    backgroundColor: state === 'locked' ? '#020617' : color,
-                    color,
-                  }}
-                />
-              </HoverTooltip>
+              <div className="h-full rounded-full transition-[width]" style={{ width: `${fillPct}%`, backgroundColor: color }} />
             </div>
-          )
-        })}
-      </div>
+          </HoverTooltip>
+        )
+      })}
     </div>
   )
 }
@@ -312,6 +289,132 @@ function PetTile({ monsterId, displayName }: { monsterId: EnemyTypeId; displayNa
   )
 }
 
+function PlaceholderCard({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 p-6 text-center">
+      <p className="text-sm font-medium text-slate-300">{title}</p>
+      <p className="mt-1 text-xs text-slate-500">{description}</p>
+    </div>
+  )
+}
+
+// Same per-zone monster data as ZoneGroups, but each zone starts collapsed
+// and only shows its monster rows once selected — confirmed with the user
+// (2026-08-01), an accordion (one zone open at a time, selecting another
+// collapses the previous one) rather than the always-expanded list every
+// other tab still uses, since this is the sub-tab most likely to be scrolled
+// through repeatedly.
+function CollapsibleZoneGroups({
+  expandedZoneId,
+  onToggleZone,
+  renderMonster,
+}: {
+  expandedZoneId: ZoneId | null
+  onToggleZone: (zoneId: ZoneId) => void
+  renderMonster: (monsterId: EnemyTypeId, displayName: string) => ReactNode
+}) {
+  return (
+    <>
+      {ZONE_ORDER.map((zoneId) => {
+        const zone = ZONES[zoneId]
+        if (zone.monsterOrder.length === 0) {
+          return null
+        }
+
+        const rows = zone.monsterOrder
+          .map((monsterId) => ({ monsterId, node: renderMonster(monsterId, ENEMY_TYPES[monsterId].displayName) }))
+          .filter((entry) => entry.node !== null)
+
+        if (rows.length === 0) {
+          return null
+        }
+
+        const expanded = expandedZoneId === zoneId
+
+        return (
+          <div key={zoneId} className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/80">
+            <button type="button" onClick={() => onToggleZone(zoneId)} className="flex w-full items-center justify-between p-4 text-left">
+              <p className="text-sm font-medium text-slate-200">{zone.displayName}</p>
+              <span className={`text-slate-500 transition-transform ${expanded ? 'rotate-180' : ''}`}>▾</span>
+            </button>
+            {expanded && (
+              <div className="space-y-2 border-t border-slate-800 p-4 pt-3">
+                {rows.map((entry) => (
+                  <div key={entry.monsterId}>{entry.node}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </>
+  )
+}
+
+// The Character top-level tab's own sub-navigation (confirmed with the user,
+// 2026-08-01) — Zones/Quests, a page-local sub-tab state (not useTabStore)
+// matching the same "sub-navigation inside one top-level tab" pattern
+// ShopPanel's own Weapons/Armor/Potions tabs already established. An earlier
+// version of this also had a third "Character" sub-tab, dropped after the
+// user felt it was redundant (it duplicated the identity of the top-level tab
+// it lived inside, which is already named after this character, and had no
+// content of its own yet anyway). "Zones" has real content (the per-monster
+// kill ladder that used to be this whole top-level tab's only view, now
+// collapsible by zone — see CollapsibleZoneGroups); "Quests" (named per the
+// user, 2026-08-01 — a brand-new, entirely undesigned concept as of this
+// pass) is a placeholder pending design — don't invent content for it.
+type PlayerSubTab = 'zones' | 'quests'
+
+const PLAYER_SUB_TAB_DESCRIPTIONS: Record<PlayerSubTab, string> = {
+  zones: 'Kill a monster repeatedly to climb its personal ladder. Hover a tier segment to see its reward. Tap a zone to expand it.',
+  quests: 'Quests aren’t designed yet.',
+}
+
+function PlayerTabContent() {
+  const [subTab, setSubTab] = useState<PlayerSubTab>('zones')
+  const [expandedZoneId, setExpandedZoneId] = useState<ZoneId | null>(null)
+
+  const SUB_TABS: { id: PlayerSubTab; label: string }[] = [
+    { id: 'zones', label: 'Zones' },
+    { id: 'quests', label: 'Quests' },
+  ]
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        {SUB_TABS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setSubTab(item.id)}
+            className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${
+              subTab === item.id ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-400 hover:border-slate-500'
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      <p className="text-xs text-slate-500">{PLAYER_SUB_TAB_DESCRIPTIONS[subTab]}</p>
+
+      {subTab === 'zones' && (
+        <CollapsibleZoneGroups
+          expandedZoneId={expandedZoneId}
+          onToggleZone={(zoneId) => setExpandedZoneId((current) => (current === zoneId ? null : zoneId))}
+          renderMonster={(monsterId, displayName) => (
+            <MonsterCard displayName={displayName}>
+              <CharacterProgress monsterId={monsterId} />
+            </MonsterCard>
+          )}
+        />
+      )}
+
+      {subTab === 'quests' && <PlaceholderCard title="Coming soon" description="Quests aren't designed yet." />}
+    </div>
+  )
+}
+
 // Shared "grouped by zone" shell — every tab renders the same zone structure,
 // just with a different per-monster row renderer. `layout="grid"` (Pets
 // only) renders a tile grid instead of a vertical list of rows.
@@ -354,7 +457,7 @@ function ZoneGroups({
 }
 
 const TAB_DESCRIPTIONS: Record<AchievementsTab, string> = {
-  player: 'Kill a monster repeatedly to climb its personal ladder. Hover a tier marker to see its reward.',
+  player: 'This character’s own achievements, organized into sub-tabs below.',
   account: 'Every character on this account contributes to the same account-wide ladder per monster — its own reward category is still being designed.',
   unlocks: 'Spend Meteors/DragonBalls to unlock the next tier on a monster’s personal ladder. Unlocking ahead of your kill count is fine — the reward just won’t be active until you catch up.',
   pets: `Every monster has a 1 in ${(1 / PET_DROP_CHANCE).toLocaleString()} chance per kill to drop its pet — account-wide, one per monster, forever.`,
@@ -390,15 +493,7 @@ export default function AchievementsPanel({ characterId }: { characterId: string
         ))}
       </div>
 
-      {tab === 'player' && (
-        <ZoneGroups
-          renderMonster={(monsterId, displayName) => (
-            <MonsterCard displayName={displayName}>
-              <CharacterProgress monsterId={monsterId} />
-            </MonsterCard>
-          )}
-        />
-      )}
+      {tab === 'player' && <PlayerTabContent />}
 
       {tab === 'account' && (
         <ZoneGroups

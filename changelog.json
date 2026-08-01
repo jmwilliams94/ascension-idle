@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.43.10",
+    "date": "2026-08-01",
+    "changes": [
+      "Made the Achievements tier bars bigger, pill-shaped touch targets for mobile, and reorganized the character tab into Zones/Quests sub-tabs (Quests is a placeholder for now)"
+    ]
+  },
+  {
     "version": "1.43.9",
     "date": "2026-08-01",
     "changes": [
