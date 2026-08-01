@@ -97,11 +97,10 @@ export default function LootHoldingCard() {
 
   const handleSellAllNormal = async () => {
     setError(null)
-    for (const entry of normalEntries) {
-      // Sequential, same reasoning the Shop's own bulk sell already uses —
-      // safe against ordering since each row's delete is independent.
-      await sell(entry.id)
-    }
+    // Parallel, not sequential (2026-08-01, fixes a visible "sells one at a
+    // time" delay) — each sell call is an independent row delete, same
+    // reasoning as InventoryPanel's own bulk sell.
+    await Promise.all(normalEntries.map((entry) => sell(entry.id)))
     setSelectedId(null)
   }
 
@@ -112,13 +111,8 @@ export default function LootHoldingCard() {
   const handleClaimAll = async () => {
     setClaimAllError(null)
     setClaimAllBusy(true)
-    let failures = 0
-    for (const entry of entries) {
-      const result = await claim(entry.id)
-      if (!result.ok) {
-        failures += 1
-      }
-    }
+    const results = await Promise.all(entries.map((entry) => claim(entry.id)))
+    const failures = results.filter((result) => !result.ok).length
     setClaimAllBusy(false)
     setSelectedId(null)
     if (failures > 0) {
@@ -155,13 +149,8 @@ export default function LootHoldingCard() {
   const handleBulkClaim = async () => {
     setBulkError(null)
     setBulkBusy(true)
-    let failures = 0
-    for (const id of bulkSelected) {
-      const result = await claim(id)
-      if (!result.ok) {
-        failures += 1
-      }
-    }
+    const results = await Promise.all(Array.from(bulkSelected).map((id) => claim(id)))
+    const failures = results.filter((result) => !result.ok).length
     setBulkBusy(false)
     setBulkSelected(new Set())
     if (failures > 0) {
@@ -172,17 +161,12 @@ export default function LootHoldingCard() {
   const handleBulkSell = async () => {
     setBulkError(null)
     setBulkBusy(true)
-    let failures = 0
-    for (const id of bulkSelected) {
+    const sellableIds = Array.from(bulkSelected).filter((id) => {
       const entry = entries.find((candidate) => candidate.id === id)
-      if (!entry?.template_id || !entry.quality_tier) {
-        continue
-      }
-      const result = await sell(id)
-      if (!result.ok) {
-        failures += 1
-      }
-    }
+      return Boolean(entry?.template_id && entry.quality_tier)
+    })
+    const results = await Promise.all(sellableIds.map((id) => sell(id)))
+    const failures = results.filter((result) => !result.ok).length
     setBulkBusy(false)
     setBulkSelected(new Set())
     if (failures > 0) {

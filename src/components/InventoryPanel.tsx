@@ -301,13 +301,13 @@ export default function InventoryPanel({
   const sellSelected = async () => {
     setSellError(null)
     setSellBusy(true)
-    let failures = 0
-    for (const itemId of selectedForSale) {
-      const result = await sellItem(itemId)
-      if (!result.ok) {
-        failures += 1
-      }
-    }
+    // Parallel, not sequential (2026-08-01, fixes a visible "sells one at a
+    // time" delay) — each sellItem call is an independent row delete with no
+    // shared state to race on (see sell_item's own ownership-scoped
+    // transaction), so there's no correctness reason to wait for one before
+    // firing the next.
+    const results = await Promise.all(Array.from(selectedForSale).map((itemId) => sellItem(itemId)))
+    const failures = results.filter((result) => !result.ok).length
     setSellBusy(false)
     setSelectedForSale(new Set())
     if (failures > 0) {
