@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.42.1",
+    "date": "2026-08-01",
+    "changes": [
+      "Fixed the \"welcome back\" popup not being scrollable on phones, which could hide the Claim/Sell buttons below the screen edge when you had a lot of items waiting"
+    ]
+  },
+  {
     "version": "1.42.0",
     "date": "2026-08-01",
     "changes": [

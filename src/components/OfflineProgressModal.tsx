@@ -52,7 +52,12 @@ export default function OfflineProgressModal() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4">
-      <div className="w-full max-w-md space-y-4 rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl">
+      {/* max-h + overflow-y-auto — the backdrop is a fixed, non-scrolling
+          viewport-filling flex container, so without a height cap and its own
+          scroll the card just overflows past the screen edge on a phone with
+          no way to reach whatever's below the fold (Loot Holding's grid,
+          bulk-action bar, detail card, even the "Got it" button itself). */}
+      <div className="max-h-[90vh] w-full max-w-md space-y-4 overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl">
         <div>
           <h2 className="text-lg font-semibold text-white">{result ? 'Welcome back' : 'Unclaimed rewards'}</h2>
           {result && type && (
