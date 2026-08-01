@@ -157,7 +157,17 @@ grant select on public.account_pets to authenticated;
 -- active until the kill count catches up) -- see resolve-combat's own
 -- currentAchievementGoldMultiplier.
 -- ============================================================================
-create or replace function public.unlock_next_achievement_tier(character_id uuid, monster_id text)
+-- Parameters are prefixed p_ (2026-08-02, supersedes the previous
+-- funcname.paramname qualification attempt, which turned out not to be
+-- enough) -- both character_monster_kills columns and these bare parameter
+-- names collided ("character_id"/"monster_id"), and quoting one occurrence
+-- in the VALUES list still left the error recurring elsewhere. Renaming the
+-- parameters outright removes the whole class of ambiguity instead of
+-- patching individual call sites — the standard PL/pgSQL fix for this,
+-- rather than relying on qualification syntax. The RPC is called with named
+-- arguments from the client (see useAchievementsStore.ts's unlockNextTier),
+-- so that call was updated to match: p_character_id/p_monster_id.
+create or replace function public.unlock_next_achievement_tier(p_character_id uuid, p_monster_id text)
 returns jsonb
 language plpgsql
 security definer
@@ -176,7 +186,7 @@ declare
 begin
   select account_id, meteor_count, dragonball_count into v_account_id, v_meteors, v_dragonballs
   from public.characters
-  where id = character_id
+  where id = p_character_id
   for update;
 
   if v_account_id is null or v_account_id <> auth.uid() then
@@ -185,8 +195,8 @@ begin
 
   select unlocked_tier_index into v_current_index
   from public.character_monster_kills
-  where character_monster_kills.character_id = unlock_next_achievement_tier.character_id
-    and character_monster_kills.monster_id = unlock_next_achievement_tier.monster_id;
+  where character_id = p_character_id
+    and monster_id = p_monster_id;
 
   v_current_index := coalesce(v_current_index, 0);
   v_next_index := v_current_index + 1;
@@ -208,25 +218,20 @@ begin
     if v_meteors < v_cost then
       return jsonb_build_object('ok', false, 'error', 'not_enough_meteors', 'cost', v_cost, 'currency', v_currency, 'meteors', v_meteors);
     end if;
-    update public.characters set meteor_count = meteor_count - v_cost where id = character_id
+    update public.characters set meteor_count = meteor_count - v_cost where id = p_character_id
     returning meteor_count into v_new_meteors;
     v_new_dragonballs := v_dragonballs;
   else
     if v_dragonballs < v_cost then
       return jsonb_build_object('ok', false, 'error', 'not_enough_dragonballs', 'cost', v_cost, 'currency', v_currency, 'dragonballs', v_dragonballs);
     end if;
-    update public.characters set dragonball_count = dragonball_count - v_cost where id = character_id
+    update public.characters set dragonball_count = dragonball_count - v_cost where id = p_character_id
     returning dragonball_count into v_new_dragonballs;
     v_new_meteors := v_meteors;
   end if;
 
-  -- Qualified against the function's own name (same fix already applied to
-  -- unbundle_currency_scroll's potion_stacks lookup) -- character_monster_kills
-  -- has its own character_id/monster_id columns, which would otherwise be
-  -- ambiguous against this function's identically-named parameters in the
-  -- VALUES list.
   insert into public.character_monster_kills (character_id, monster_id, kills, unlocked_tier_index)
-  values (unlock_next_achievement_tier.character_id, unlock_next_achievement_tier.monster_id, 0, v_next_index)
+  values (p_character_id, p_monster_id, 0, v_next_index)
   on conflict (character_id, monster_id)
   do update set unlocked_tier_index = v_next_index;
 

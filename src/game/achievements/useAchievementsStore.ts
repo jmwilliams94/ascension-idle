@@ -97,7 +97,15 @@ export const useAchievementsStore = create<AchievementsState>((set, get) => ({
 
   unlockNextTier: async (characterId, monsterId) => {
     set({ busy: true })
-    const { data, error } = await supabase.rpc('unlock_next_achievement_tier', { character_id: characterId, monster_id: monsterId })
+    // Argument keys must match the SQL function's own parameter names exactly
+    // (PostgREST maps them by name) — p_character_id/p_monster_id, not
+    // character_id/monster_id, since the SQL function's parameters were
+    // renamed to avoid colliding with character_monster_kills' own columns
+    // of the same name (see the migration's own comment on this).
+    const { data, error } = await supabase.rpc('unlock_next_achievement_tier', {
+      p_character_id: characterId,
+      p_monster_id: monsterId,
+    })
     set({ busy: false })
 
     if (error) {

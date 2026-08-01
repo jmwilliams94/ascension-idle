@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.43.7",
+    "date": "2026-08-01",
+    "changes": [
+      "Actually fixed the achievement tier-unlock \"ambiguous column\" error this time — the previous fix wasn't enough"
+    ]
+  },
+  {
     "version": "1.43.6",
     "date": "2026-08-01",
     "changes": [
