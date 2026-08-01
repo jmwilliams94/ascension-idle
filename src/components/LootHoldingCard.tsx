@@ -57,6 +57,8 @@ export default function LootHoldingCard() {
   const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set())
   const [bulkBusy, setBulkBusy] = useState(false)
   const [bulkError, setBulkError] = useState<string | null>(null)
+  const [claimAllBusy, setClaimAllBusy] = useState(false)
+  const [claimAllError, setClaimAllError] = useState<string | null>(null)
 
   if (entries.length === 0) {
     return null
@@ -101,6 +103,27 @@ export default function LootHoldingCard() {
       await sell(entry.id)
     }
     setSelectedId(null)
+  }
+
+  // One-click claim of every entry, gear and currency alike — no selection
+  // step needed (confirmed with the user, 2026-08-01), unlike the existing
+  // "Select All" + "Move to Inventory" two-step flow below, which is kept for
+  // when the player wants to claim only *some* entries and sell the rest.
+  const handleClaimAll = async () => {
+    setClaimAllError(null)
+    setClaimAllBusy(true)
+    let failures = 0
+    for (const entry of entries) {
+      const result = await claim(entry.id)
+      if (!result.ok) {
+        failures += 1
+      }
+    }
+    setClaimAllBusy(false)
+    setSelectedId(null)
+    if (failures > 0) {
+      setClaimAllError(`Couldn't claim ${failures} item${failures === 1 ? '' : 's'} — make sure you have room.`)
+    }
   }
 
   const handleClaim = async () => {
@@ -183,34 +206,50 @@ export default function LootHoldingCard() {
       : null
 
   return (
-    <div className="space-y-3 rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+    <div className="space-y-3 rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900/80 to-slate-950/80 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs uppercase tracking-wide text-slate-500">
-          Loot Holding ({entries.length}/{LOOT_HOLDING_CAP})
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setBulkSelected(new Set(entries.map((entry) => entry.id)))}
-            className="rounded-lg border border-slate-700 px-3 py-1 text-xs text-slate-300 hover:border-slate-500"
-          >
-            Select All
-          </button>
-          {normalEntries.length > 0 && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void handleSellAllNormal()}
-              className="rounded-lg border border-amber-600 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Sell All Normal ({normalSellTotal.toLocaleString()} gold)
-            </button>
-          )}
+        <div className="flex items-center gap-2">
+          <span className="text-lg">🎁</span>
+          <div>
+            <p className="text-sm font-semibold text-slate-200">Loot Holding</p>
+            <p className="text-[11px] text-slate-500">
+              {entries.length}/{LOOT_HOLDING_CAP} pending
+            </p>
+          </div>
         </div>
       </div>
       <p className="text-[11px] text-slate-500">
-        Drops that couldn't fit while you were away land here — claim them once you have room, or sell gear straight from here instead.
+        Drops that couldn't fit while you were away land here — claim them all at once, or sell gear straight from here instead.
       </p>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          disabled={claimAllBusy}
+          onClick={() => void handleClaimAll()}
+          className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {claimAllBusy ? 'Claiming…' : `Claim All (${entries.length})`}
+        </button>
+        {normalEntries.length > 0 && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void handleSellAllNormal()}
+            className="rounded-lg border border-amber-600 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Sell All Normal ({normalSellTotal.toLocaleString()} gold)
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => setBulkSelected(new Set(entries.map((entry) => entry.id)))}
+          className="rounded-lg border border-slate-700 px-3 py-1 text-xs text-slate-300 hover:border-slate-500"
+        >
+          Select individually…
+        </button>
+      </div>
+      {claimAllError && <p className="text-[11px] text-amber-400">{claimAllError}</p>}
 
       <div className="overflow-x-auto">
         <div className="grid grid-cols-[repeat(8,3.5rem)] gap-1.5 lg:grid-cols-[repeat(8,4rem)]">

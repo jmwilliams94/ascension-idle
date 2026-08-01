@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.43.12",
+    "date": "2026-08-01",
+    "changes": [
+      "Reverted the Achievements tier bar back to one bar with mouseover marker dots (just made thicker) after the divided-pill version made early progress hard to see",
+      "The Unlocks tab now shows the full 6-tier bar for each monster, not just the next tier",
+      "Fixed the \"Welcome back\" popup not showing after minimizing the app and coming back — it now checks again whenever the app returns to the foreground, not only on a full relaunch",
+      "Loot Holding (shown in the Welcome Back screen) got a one-click Claim All button and a visual refresh",
+      "Added 4 locked placeholder slots under the fought monster on the Combat page, reserved for a future multi-target feature"
+    ]
+  },
+  {
     "version": "1.43.11",
     "date": "2026-08-01",
     "changes": [

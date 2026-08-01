@@ -57,18 +57,21 @@ export default function OfflineProgressModal() {
           scroll the card just overflows past the screen edge on a phone with
           no way to reach whatever's below the fold (Loot Holding's grid,
           bulk-action bar, detail card, even the "Got it" button itself). */}
-      <div className="max-h-[90vh] w-full max-w-md space-y-4 overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl">
-        <div>
-          <h2 className="text-lg font-semibold text-white">{result ? 'Welcome back' : 'Unclaimed rewards'}</h2>
-          {result && type && (
-            <p className="mt-1 text-sm text-slate-400">
-              While you were away ({formatDuration(result.elapsedMs)}), your character kept fighting {type.displayName}.
-            </p>
-          )}
+      <div className="max-h-[90vh] w-full max-w-md space-y-4 overflow-y-auto rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900 to-slate-950 p-5 shadow-2xl shadow-black/60">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl">{result ? '👋' : '📦'}</span>
+          <div>
+            <h2 className="text-lg font-semibold text-white">{result ? 'Welcome back' : 'Unclaimed rewards'}</h2>
+            {result && type && (
+              <p className="mt-1 text-sm text-slate-400">
+                While you were away ({formatDuration(result.elapsedMs)}), your character kept fighting {type.displayName}.
+              </p>
+            )}
+          </div>
         </div>
 
         {result && (
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-slate-300">
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-sm text-slate-300">
             <div className="flex justify-between">
               <dt className="text-slate-400">Kills</dt>
               <dd>{result.kills}</dd>

@@ -51,18 +51,18 @@ function MonsterCard({ displayName, children }: { displayName: string; children:
   )
 }
 
-// One continuous pill-shaped bar spanning the whole ladder — confirmed with
-// the user (2026-08-01), replacing an earlier version that used 6 separate,
-// equal-width pill segments with gaps between them. This is a single rounded
-// bar, internally divided into 6 sections by thin dividers, whose *widths are
-// proportional to each tier's own kill-range size* (e.g. the 5000→10000 span
-// is naturally much wider than the 100→250 span) rather than equal slices —
-// early, tightly-packed tiers show as a small sliver, later ones stretch
-// wide, same shape the user sketched. Each section is still its own
-// independent hover target (mouseover) showing that tier's reward, and still
-// fills independently based on progress within its own range — only the
-// layout changed (one continuous bar with internal dividers, not separate
-// gapped pills), not the underlying state/tooltip logic.
+// One continuous bar spanning the whole ladder, with a small marker dot at
+// each tier's boundary — reverted (2026-08-01) back to this shape after the
+// proportional-width divided-pill version broke both the visual sense of
+// kill progress (the huge later tiers' ranges dwarfed the early ones, so
+// early kills barely moved anything visible) and the "mouseover points"
+// design the user actually wanted dots for. Every tier still contributes an
+// equal 1/6 share of the overall fill regardless of how far apart its kill
+// thresholds are (100 to 250 vs. 5000 to 10000) — a linear kill-count scale
+// would make that same problem worse, not better. Thicker than the original
+// version per the user's follow-up ("just needed to be a bit of a thicker
+// bar"). Hovering a dot shows that tier's own reward via the same universal
+// ItemTooltip every other tile in this game already uses.
 function TierLadderBar({
   kills,
   getState,
@@ -72,37 +72,69 @@ function TierLadderBar({
   getState: (tierIndex: number) => TierVisualState
   getTooltipLines: (tierIndex: number, state: TierVisualState) => string[]
 }) {
+  let filledSegments = 0
+  for (let index = 0; index < ACHIEVEMENT_TIERS.length; index += 1) {
+    const threshold = ACHIEVEMENT_TIERS[index]
+    const prevThreshold = index === 0 ? 0 : ACHIEVEMENT_TIERS[index - 1]
+    filledSegments += Math.max(0, Math.min(1, (kills - prevThreshold) / (threshold - prevThreshold)))
+  }
+  const overallPct = (filledSegments / ACHIEVEMENT_TIERS.length) * 100
+
   return (
-    <div className="flex h-4 w-full overflow-hidden rounded-full bg-slate-900">
-      {ACHIEVEMENT_TIERS.map((threshold, index) => {
-        const prevThreshold = index === 0 ? 0 : ACHIEVEMENT_TIERS[index - 1]
-        const rangeSize = threshold - prevThreshold
-        const state = getState(index)
-        const color = TIER_STATE_COLOR[state]
-        const fillPct = Math.max(0, Math.min(100, ((kills - prevThreshold) / rangeSize) * 100))
-        const isLast = index === ACHIEVEMENT_TIERS.length - 1
+    <div className="relative py-1.5">
+      <div className="h-3 w-full overflow-hidden rounded-full bg-slate-800">
+        <div className="h-full rounded-full bg-sky-500 transition-[width]" style={{ width: `${overallPct}%` }} />
+      </div>
+      <div className="pointer-events-none absolute inset-0 flex items-center">
+        {ACHIEVEMENT_TIERS.map((threshold, index) => {
+          const state = getState(index)
+          const color = TIER_STATE_COLOR[state]
+          const leftPct = ((index + 1) / ACHIEVEMENT_TIERS.length) * 100
 
-        const tooltip = (
-          <ItemTooltip
-            title={`Tier ${index + 1} · ${threshold.toLocaleString()} kills`}
-            titleColor={color}
-            lines={getTooltipLines(index, state)}
-          />
-        )
+          const tooltip = (
+            <ItemTooltip
+              title={`Tier ${index + 1} · ${threshold.toLocaleString()} kills`}
+              titleColor={color}
+              lines={getTooltipLines(index, state)}
+            />
+          )
 
-        return (
-          <HoverTooltip key={threshold} content={tooltip}>
-            <div
-              className={`relative h-full ${!isLast ? 'border-r-2 border-slate-950' : ''} ${state === 'active' ? 'accent-glow' : ''}`}
-              style={{ flexGrow: rangeSize, flexBasis: 0, minWidth: 0, color }}
-            >
-              <div className="h-full transition-[width]" style={{ width: `${fillPct}%`, backgroundColor: color }} />
+          return (
+            <div key={threshold} className="pointer-events-auto absolute -translate-x-1/2" style={{ left: `${leftPct}%` }}>
+              <HoverTooltip content={tooltip}>
+                <div
+                  className={`h-3 w-3 rounded-full border-2 ${state === 'active' ? 'accent-glow' : ''}`}
+                  style={{
+                    borderColor: color,
+                    backgroundColor: state === 'locked' ? '#020617' : color,
+                    color,
+                  }}
+                />
+              </HoverTooltip>
             </div>
-          </HoverTooltip>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
+}
+
+// Shared by CharacterProgress and UnlockRow — both show the same
+// character-owned ladder (kills + unlockedTierIndex), just in different
+// contexts (pure progress display vs. the row that also has a Buy button).
+function characterTierState(kills: number, unlockedTierIndex: number, tierIndex: number): TierVisualState {
+  const threshold = ACHIEVEMENT_TIERS[tierIndex]
+  if (kills < threshold) return 'locked'
+  return tierIndex < unlockedTierIndex ? 'active' : 'partial'
+}
+
+function characterTierTooltipLines(tierIndex: number, state: TierVisualState, kills: number): string[] {
+  const threshold = ACHIEVEMENT_TIERS[tierIndex]
+  const rewardPct = Math.round((ACHIEVEMENT_GOLD_MULTIPLIER[threshold] - 1) * 100)
+  const rewardLine = `Reward: +${rewardPct}% gold`
+  if (state === 'active') return [rewardLine, 'Active now']
+  if (state === 'partial') return [rewardLine, 'Reached — unlock this tier in Unlocks to activate']
+  return [rewardLine, `${(threshold - kills).toLocaleString()} kills to go`]
 }
 
 // Pure progress display — no unlock button here anymore, see UnlockRow.
@@ -114,20 +146,8 @@ function CharacterProgress({ monsterId }: { monsterId: EnemyTypeId }) {
   const tier = currentAchievementTier(kills, unlockedTierIndex)
   const activePct = tier ? Math.round((ACHIEVEMENT_GOLD_MULTIPLIER[tier] - 1) * 100) : 0
 
-  const getState = (tierIndex: number): TierVisualState => {
-    const threshold = ACHIEVEMENT_TIERS[tierIndex]
-    if (kills < threshold) return 'locked'
-    return tierIndex < unlockedTierIndex ? 'active' : 'partial'
-  }
-
-  const getTooltipLines = (tierIndex: number, state: TierVisualState): string[] => {
-    const threshold = ACHIEVEMENT_TIERS[tierIndex]
-    const rewardPct = Math.round((ACHIEVEMENT_GOLD_MULTIPLIER[threshold] - 1) * 100)
-    const rewardLine = `Reward: +${rewardPct}% gold`
-    if (state === 'active') return [rewardLine, 'Active now']
-    if (state === 'partial') return [rewardLine, 'Reached — unlock this tier in Unlocks to activate']
-    return [rewardLine, `${(threshold - kills).toLocaleString()} kills to go`]
-  }
+  const getState = (tierIndex: number) => characterTierState(kills, unlockedTierIndex, tierIndex)
+  const getTooltipLines = (tierIndex: number, state: TierVisualState) => characterTierTooltipLines(tierIndex, state, kills)
 
   return (
     <div>
@@ -181,7 +201,13 @@ function AccountProgress({ monsterId }: { monsterId: EnemyTypeId }) {
 }
 
 // Only renders for a monster that actually has a next tier to buy — fully
-// maxed (tier 6) monsters simply don't show up on this tab at all.
+// maxed (tier 6) monsters simply don't show up on this tab at all. Now shows
+// the full 6-tier TierLadderBar (confirmed with the user, 2026-08-01 —
+// supersedes an earlier version that only ever showed the single next-tier
+// button and a "tier X of 6" text line, with nothing visualizing the other
+// 5 tiers at all) — the Buy button still only ever purchases the next tier
+// in sequence, but the bar now gives the same full-ladder context every
+// other tab already shows.
 function UnlockRow({ characterId, monsterId, displayName }: { characterId: string; monsterId: EnemyTypeId; displayName: string }) {
   const characterEntry = useAchievementsStore((state) => state.characterKills[monsterId])
   const busy = useAchievementsStore((state) => state.busy)
@@ -200,14 +226,8 @@ function UnlockRow({ characterId, monsterId, displayName }: { characterId: strin
     return null
   }
 
-  const rewardPct = Math.round((ACHIEVEMENT_GOLD_MULTIPLIER[toUnlock.tier] - 1) * 100)
-  const tooltip = (
-    <ItemTooltip
-      title={`Tier ${unlockedTierIndex + 1} · ${toUnlock.tier.toLocaleString()} kills`}
-      titleColor="#f59e0b"
-      lines={[`Reward: +${rewardPct}% gold`, 'Becomes active once you reach the kill count']}
-    />
-  )
+  const getState = (tierIndex: number) => characterTierState(kills, unlockedTierIndex, tierIndex)
+  const getTooltipLines = (tierIndex: number, state: TierVisualState) => characterTierTooltipLines(tierIndex, state, kills)
 
   const handleUnlock = async () => {
     setError(null)
@@ -230,26 +250,27 @@ function UnlockRow({ characterId, monsterId, displayName }: { characterId: strin
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-      <HoverTooltip content={tooltip}>
-        <div className="cursor-help">
+    <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
           <p className="text-sm font-medium text-slate-200">{displayName}</p>
-          <p className="text-[11px] text-slate-500">
-            {kills.toLocaleString()} kills · tier {unlockedTierIndex + 1} of 6
-          </p>
+          <p className="text-[11px] text-slate-500">{kills.toLocaleString()} kills</p>
         </div>
-      </HoverTooltip>
-      <div className="text-right">
-        <button
-          type="button"
-          disabled={busy || !affordable}
-          onClick={() => void handleUnlock()}
-          title={!affordable ? `Need ${toUnlock.cost.amount} ${toUnlock.cost.currency === 'meteor' ? 'Meteors' : 'DragonBalls'}` : undefined}
-          className="rounded-lg border border-purple-600 bg-purple-500/10 px-2.5 py-1 text-[11px] font-medium text-purple-300 hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Unlock tier {unlockedTierIndex + 1} ({toUnlock.cost.amount} {toUnlock.cost.currency === 'meteor' ? 'Meteors' : 'DragonBalls'})
-        </button>
-        {error && <p className="mt-1 text-[11px] text-amber-400">{error}</p>}
+        <div className="text-right">
+          <button
+            type="button"
+            disabled={busy || !affordable}
+            onClick={() => void handleUnlock()}
+            title={!affordable ? `Need ${toUnlock.cost.amount} ${toUnlock.cost.currency === 'meteor' ? 'Meteors' : 'DragonBalls'}` : undefined}
+            className="rounded-lg border border-purple-600 bg-purple-500/10 px-2.5 py-1 text-[11px] font-medium text-purple-300 hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Unlock tier {unlockedTierIndex + 1} ({toUnlock.cost.amount} {toUnlock.cost.currency === 'meteor' ? 'Meteors' : 'DragonBalls'})
+          </button>
+          {error && <p className="mt-1 text-[11px] text-amber-400">{error}</p>}
+        </div>
+      </div>
+      <div className="mt-2">
+        <TierLadderBar kills={kills} getState={getState} getTooltipLines={getTooltipLines} />
       </div>
     </div>
   )

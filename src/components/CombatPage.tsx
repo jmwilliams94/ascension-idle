@@ -97,6 +97,28 @@ function HpBar({ current, max, barColorClass = 'bg-emerald-500' }: { current: nu
   )
 }
 
+// Purely a placeholder for now (confirmed with the user, 2026-08-01) — 4
+// locked slots under the currently-summoned monster, reserved for a future
+// multi-target unlock (see CLAUDE.md's "under consideration" note on a
+// higher account-wide ladder tier unlocking simultaneous targets for a
+// specific monster). Not wired to anything yet: no click handler, no data —
+// just scaffolding so the eventual feature has an obvious home to slot into.
+function MultiTargetSlots() {
+  return (
+    <div className="mt-3 grid grid-cols-4 gap-2">
+      {[0, 1, 2, 3].map((slot) => (
+        <div
+          key={slot}
+          title="Additional target — coming soon"
+          className="flex aspect-square items-center justify-center rounded-lg border-2 border-dashed border-slate-800 bg-slate-950/60 text-slate-600"
+        >
+          🔒
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function CombatPage() {
   const currentZoneId = useZoneStore((state) => state.currentZoneId)
   const setCurrentZoneId = useZoneStore((state) => state.setCurrentZoneId)
@@ -266,6 +288,8 @@ export default function CombatPage() {
                 </div>
               </div>
             </div>
+
+            <MultiTargetSlots />
 
             <button
               type="button"
@@ -611,6 +635,10 @@ export default function CombatPage() {
                   <HpBar current={currentHp} max={maxHp} />
                 </div>
               </div>
+            </div>
+
+            <div className="max-w-xs">
+              <MultiTargetSlots />
             </div>
 
             <button

@@ -100,6 +100,35 @@ export default function GameShell({ characterId }: { characterId: string }) {
     }
   }, [characterId, loadCharacterRecord, loadInventory, loadPotionStacks, loadWarehouseItems, loadLootHolding, loadAchievements, accountId])
 
+  // Re-run the offline-progress check whenever the app comes back to the
+  // foreground, not just once at mount — fixes a bug where minimizing/
+  // backgrounding the app (mobile PWA, switching tabs) never triggered the
+  // "welcome back" summary at all, only a genuine force-quit-and-relaunch
+  // did (which remounts GameShell, re-running the load effect above from
+  // scratch). CombatEngine already resolves live combat when visibility goes
+  // *hidden* (closing out the window right before backgrounding, so
+  // combat_last_resolved_at accurately marks when the away-time starts) —
+  // this is that flow's missing other half, resolving the *offline* window
+  // when visibility comes back. runOfflineProgressCheck's own
+  // OFFLINE_SUMMARY_THRESHOLD_MS guard means a brief app-switcher glance
+  // just quietly returns null here — safe to call on every resume.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') {
+        return
+      }
+      void (async () => {
+        const offlineResult = await runOfflineProgressCheck(characterId)
+        if (offlineResult) {
+          useOfflineProgressStore.getState().show(offlineResult)
+        }
+      })()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [characterId])
+
   usePersistGameState(characterId, loaded)
 
   return (
