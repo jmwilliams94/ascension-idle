@@ -139,13 +139,17 @@ const ACHIEVEMENT_GOLD_MULTIPLIER: Record<number, number> = {
 // other roll this function makes.
 const PET_DROP_CHANCE = 1 / 5000
 
-// Tiers 1000/5000/10000 only count once tier2_unlocked is true for this
-// character+monster (see unlock_achievement_tier2) — the free ladder tops out
-// at 500 until that paid upgrade is bought.
-function currentAchievementGoldMultiplier(kills: number, tier2Unlocked: boolean): number {
-  const eligibleTiers = tier2Unlocked ? ACHIEVEMENT_TIERS : ACHIEVEMENT_TIERS.filter((tier) => tier <= 500)
+// Every tier now costs something to unlock (confirmed with the user,
+// 2026-08-01 — supersedes the original "first 3 free, pay once for the rest"
+// design), paid one at a time in order via unlock_next_achievement_tier — a
+// tier only counts toward the multiplier once BOTH its kill count is reached
+// AND it's been paid for (unlockedTierIndex counts how many of the 6 tiers,
+// in order, have been unlocked so far).
+function currentAchievementGoldMultiplier(kills: number, unlockedTierIndex: number): number {
   let multiplier = 1
-  for (const tier of eligibleTiers) {
+  for (let i = 0; i < ACHIEVEMENT_TIERS.length; i += 1) {
+    if (i >= unlockedTierIndex) break
+    const tier = ACHIEVEMENT_TIERS[i]
     if (kills >= tier) {
       multiplier = ACHIEVEMENT_GOLD_MULTIPLIER[tier]
     }
@@ -482,7 +486,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     // separate round-trip.
     db
       .from('character_monster_kills')
-      .select('kills, tier2_unlocked')
+      .select('kills, unlocked_tier_index')
       .eq('character_id', characterId)
       .eq('monster_id', character.selected_monster_id)
       .maybeSingle(),
@@ -500,10 +504,10 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // established for the level-diff EXP multiplier in the offline simulator,
   // not a claim of new precision.
   const characterKillsBefore = characterKillsRow?.kills ?? 0
-  const tier2Unlocked = characterKillsRow?.tier2_unlocked ?? false
+  const unlockedTierIndex = characterKillsRow?.unlocked_tier_index ?? 0
   const accountKillsBefore = accountKillsRow?.kills ?? 0
   const petAlreadyUnlocked = Boolean(petRow)
-  const achievementGoldMultiplier = currentAchievementGoldMultiplier(characterKillsBefore, tier2Unlocked)
+  const achievementGoldMultiplier = currentAchievementGoldMultiplier(characterKillsBefore, unlockedTierIndex)
   let killsThisWindow = 0
   let petObtained = false
 
@@ -673,7 +677,12 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       db
         .from('character_monster_kills')
         .upsert(
-          { character_id: characterId, monster_id: character.selected_monster_id, kills: characterKillCount, tier2_unlocked: tier2Unlocked },
+          {
+            character_id: characterId,
+            monster_id: character.selected_monster_id,
+            kills: characterKillCount,
+            unlocked_tier_index: unlockedTierIndex,
+          },
           { onConflict: 'character_id,monster_id' },
         ),
       db

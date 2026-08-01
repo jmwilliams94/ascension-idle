@@ -6,22 +6,25 @@ import { useCurrencyStore } from '../stats/useCurrencyStore'
 // server-authoritative tables (character_monster_kills/account_monster_kills/
 // account_pets). The client never writes these directly (no insert/update
 // grant exists on any of them) — kill counts are only ever incremented inside
-// resolve-combat, and the free→paid tier2 unlock only ever happens through
-// unlock_achievement_tier2. This store just mirrors what the server already
-// decided, same "server response reconciles local state" pattern every other
-// store in this game already follows (useCurrencyStore, useCompositionStore,
-// useWarehouseStore, etc.).
+// resolve-combat, and unlocking a tier only ever happens through
+// unlock_next_achievement_tier. This store just mirrors what the server
+// already decided, same "server response reconciles local state" pattern
+// every other store in this game already follows (useCurrencyStore,
+// useCompositionStore, useWarehouseStore, etc.).
 export interface CharacterKillEntry {
   kills: number
-  tier2Unlocked: boolean
+  unlockedTierIndex: number
 }
 
-interface UnlockTier2Result {
+interface UnlockNextTierResult {
   ok: boolean
-  error?: 'not_owner' | 'already_unlocked' | 'not_enough_dragonballs'
+  error?: 'not_owner' | 'already_maxed' | 'not_enough_meteors' | 'not_enough_dragonballs'
   cost?: number
+  currency?: 'meteor' | 'dragonball'
+  meteors?: number
   dragonballs?: number
-  dragonballs_spent?: number
+  unlocked_tier_index?: number
+  meteors_remaining?: number
   dragonballs_remaining?: number
 }
 
@@ -33,7 +36,7 @@ interface AchievementsState {
   loaded: boolean
   busy: boolean
   loadAchievements: (characterId: string, accountId: string) => Promise<void>
-  unlockTier2: (characterId: string, monsterId: string) => Promise<UnlockTier2Result>
+  unlockNextTier: (characterId: string, monsterId: string) => Promise<UnlockNextTierResult>
   // Called from resolveCombat.ts with a resolve-combat response's
   // monsterId/characterKillCount/accountKillCount/petObtained — reflects the
   // server's already-confirmed result without a refetch, same pattern
@@ -55,7 +58,7 @@ export const useAchievementsStore = create<AchievementsState>((set, get) => ({
 
   loadAchievements: async (characterId, accountId) => {
     const [characterResult, accountResult, petsResult] = await Promise.all([
-      supabase.from('character_monster_kills').select('monster_id, kills, tier2_unlocked').eq('character_id', characterId),
+      supabase.from('character_monster_kills').select('monster_id, kills, unlocked_tier_index').eq('character_id', characterId),
       supabase.from('account_monster_kills').select('monster_id, kills').eq('account_id', accountId),
       supabase.from('account_pets').select('monster_id').eq('account_id', accountId),
     ])
@@ -70,7 +73,7 @@ export const useAchievementsStore = create<AchievementsState>((set, get) => ({
 
     const characterKills: Record<string, CharacterKillEntry> = {}
     for (const row of characterResult.data ?? []) {
-      characterKills[row.monster_id] = { kills: row.kills, tier2Unlocked: row.tier2_unlocked }
+      characterKills[row.monster_id] = { kills: row.kills, unlockedTierIndex: row.unlocked_tier_index }
     }
 
     const accountKills: Record<string, number> = {}
@@ -83,26 +86,29 @@ export const useAchievementsStore = create<AchievementsState>((set, get) => ({
     set({ characterKills, accountKills, pets, loaded: true })
   },
 
-  unlockTier2: async (characterId, monsterId) => {
+  unlockNextTier: async (characterId, monsterId) => {
     set({ busy: true })
-    const { data, error } = await supabase.rpc('unlock_achievement_tier2', { character_id: characterId, monster_id: monsterId })
+    const { data, error } = await supabase.rpc('unlock_next_achievement_tier', { character_id: characterId, monster_id: monsterId })
     set({ busy: false })
 
     if (error) {
-      console.error('Unlock achievement tier2 call failed', error)
+      console.error('Unlock next achievement tier call failed', error)
       return { ok: false }
     }
 
-    const result = data as UnlockTier2Result
+    const result = data as UnlockNextTierResult
 
-    if (result.ok) {
+    if (result.ok && typeof result.unlocked_tier_index === 'number') {
+      if (typeof result.meteors_remaining === 'number') {
+        useCurrencyStore.getState().setMeteors(result.meteors_remaining)
+      }
       if (typeof result.dragonballs_remaining === 'number') {
         useCurrencyStore.getState().setDragonballs(result.dragonballs_remaining)
       }
       set((state) => ({
         characterKills: {
           ...state.characterKills,
-          [monsterId]: { kills: state.characterKills[monsterId]?.kills ?? 0, tier2Unlocked: true },
+          [monsterId]: { kills: state.characterKills[monsterId]?.kills ?? 0, unlockedTierIndex: result.unlocked_tier_index! },
         },
       }))
     }
@@ -114,7 +120,7 @@ export const useAchievementsStore = create<AchievementsState>((set, get) => ({
     set((state) => ({
       characterKills: {
         ...state.characterKills,
-        [monsterId]: { kills: characterKillCount, tier2Unlocked: state.characterKills[monsterId]?.tier2Unlocked ?? false },
+        [monsterId]: { kills: characterKillCount, unlockedTierIndex: state.characterKills[monsterId]?.unlockedTierIndex ?? 0 },
       },
       accountKills: { ...state.accountKills, [monsterId]: accountKillCount },
       pets: petObtained ? new Set(get().pets).add(petObtained) : state.pets,

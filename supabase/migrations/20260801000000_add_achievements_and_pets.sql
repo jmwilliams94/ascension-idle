@@ -14,18 +14,23 @@ begin;
 -- ============================================================================
 -- character_monster_kills: per-character kill-count ladder, one row per
 -- (character, monster) once that character has ever killed it. Also carries
--- that character's own paid tier2_unlocked flag -- the DragonBall-paid
--- upgrade is scoped per-monster-per-character ("dedicated farming of one
--- monster"), not a single global unlock.
+-- that character's own unlocked_tier_index -- confirmed with the user
+-- (2026-08-01, supersedes the original single "pay 50 DragonBalls once" tier2
+-- gate): EVERY tier now costs something to unlock, escalating from cheap
+-- Meteors up to a DragonBall at the top, paid one tier at a time in order.
+-- 0 means no tier paid for yet; 6 means all six tiers unlocked. Scoped
+-- per-monster-per-character ("dedicated farming of one monster"), not a
+-- single global unlock.
 -- ============================================================================
 create table if not exists public.character_monster_kills (
   id uuid primary key default gen_random_uuid(),
   character_id uuid not null references public.characters (id) on delete cascade,
   monster_id text not null references public.enemy_types (id),
   kills integer not null default 0,
-  tier2_unlocked boolean not null default false,
+  unlocked_tier_index integer not null default 0,
   created_at timestamptz not null default now(),
   constraint character_monster_kills_kills_check check (kills >= 0),
+  constraint character_monster_kills_unlocked_tier_index_check check (unlocked_tier_index between 0 and 6),
   constraint character_monster_kills_unique unique (character_id, monster_id)
 );
 
@@ -40,7 +45,7 @@ end $$;
 
 -- No insert/update/delete grant at all -- every mutation happens through
 -- resolve-combat's service-role client (bypasses RLS as owner) or the
--- unlock_achievement_tier2 RPC below.
+-- unlock_next_achievement_tier RPC below.
 grant select on public.character_monster_kills to authenticated;
 
 -- ============================================================================
@@ -96,13 +101,26 @@ end $$;
 grant select on public.account_pets to authenticated;
 
 -- ============================================================================
--- unlock_achievement_tier2: spends a flat PLACEHOLDER DragonBall cost (see
--- src/game/achievements/achievementData.ts's ACHIEVEMENT_TIER2_COST -- keep
--- in sync) to unlock the 1000/5000/10000 tier set for one character's kill
--- count on one monster. Creates the character_monster_kills row at 0 kills
--- if the character's never fought this monster before paying for it.
+-- unlock_next_achievement_tier: unlocks the NEXT tier in sequence (1..6, in
+-- ACHIEVEMENT_TIERS order: 100/250/500/1000/5000/10000) for one character's
+-- kill count on one monster -- the caller never picks which tier, only
+-- "buy the next one," so tiers can't be unlocked out of order. Cost
+-- escalates per tier (confirmed with the user, 2026-08-01, replacing the
+-- original flat 50-DragonBall gate -- must match
+-- src/game/achievements/achievementData.ts's ACHIEVEMENT_TIER_COSTS):
+--   tier 1 (100 kills):    1 Meteor
+--   tier 2 (250 kills):    3 Meteors
+--   tier 3 (500 kills):    5 Meteors
+--   tier 4 (1000 kills):  10 Meteors
+--   tier 5 (5000 kills):  20 Meteors
+--   tier 6 (10000 kills):  1 DragonBall
+-- Creates the character_monster_kills row at 0 kills if the character's
+-- never fought this monster before paying for it. Unlocking a tier ahead of
+-- actually reaching its kill count is allowed (the reward simply won't be
+-- active until the kill count catches up) -- see resolve-combat's own
+-- currentAchievementGoldMultiplier.
 -- ============================================================================
-create or replace function public.unlock_achievement_tier2(character_id uuid, monster_id text)
+create or replace function public.unlock_next_achievement_tier(character_id uuid, monster_id text)
 returns jsonb
 language plpgsql
 security definer
@@ -110,12 +128,16 @@ set search_path = public
 as $$
 declare
   v_account_id uuid;
+  v_meteors integer;
   v_dragonballs integer;
-  v_cost integer := 50; -- PLACEHOLDER, unresolved per CLAUDE.md -- must match achievementData.ts
-  v_already_unlocked boolean;
+  v_current_index integer;
+  v_next_index integer;
+  v_currency text;
+  v_cost integer;
+  v_new_meteors integer;
   v_new_dragonballs integer;
 begin
-  select account_id, dragonball_count into v_account_id, v_dragonballs
+  select account_id, meteor_count, dragonball_count into v_account_id, v_meteors, v_dragonballs
   from public.characters
   where id = character_id
   for update;
@@ -124,32 +146,60 @@ begin
     return jsonb_build_object('ok', false, 'error', 'not_owner');
   end if;
 
-  select tier2_unlocked into v_already_unlocked
+  select unlocked_tier_index into v_current_index
   from public.character_monster_kills
-  where character_monster_kills.character_id = unlock_achievement_tier2.character_id
-    and character_monster_kills.monster_id = unlock_achievement_tier2.monster_id;
+  where character_monster_kills.character_id = unlock_next_achievement_tier.character_id
+    and character_monster_kills.monster_id = unlock_next_achievement_tier.monster_id;
 
-  if v_already_unlocked then
-    return jsonb_build_object('ok', false, 'error', 'already_unlocked');
+  v_current_index := coalesce(v_current_index, 0);
+  v_next_index := v_current_index + 1;
+
+  if v_next_index > 6 then
+    return jsonb_build_object('ok', false, 'error', 'already_maxed');
   end if;
 
-  if v_dragonballs < v_cost then
-    return jsonb_build_object('ok', false, 'error', 'not_enough_dragonballs', 'cost', v_cost, 'dragonballs', v_dragonballs);
+  case v_next_index
+    when 1 then v_currency := 'meteor'; v_cost := 1;
+    when 2 then v_currency := 'meteor'; v_cost := 3;
+    when 3 then v_currency := 'meteor'; v_cost := 5;
+    when 4 then v_currency := 'meteor'; v_cost := 10;
+    when 5 then v_currency := 'meteor'; v_cost := 20;
+    when 6 then v_currency := 'dragonball'; v_cost := 1;
+  end case;
+
+  if v_currency = 'meteor' then
+    if v_meteors < v_cost then
+      return jsonb_build_object('ok', false, 'error', 'not_enough_meteors', 'cost', v_cost, 'currency', v_currency, 'meteors', v_meteors);
+    end if;
+    update public.characters set meteor_count = meteor_count - v_cost where id = character_id
+    returning meteor_count into v_new_meteors;
+    v_new_dragonballs := v_dragonballs;
+  else
+    if v_dragonballs < v_cost then
+      return jsonb_build_object('ok', false, 'error', 'not_enough_dragonballs', 'cost', v_cost, 'currency', v_currency, 'dragonballs', v_dragonballs);
+    end if;
+    update public.characters set dragonball_count = dragonball_count - v_cost where id = character_id
+    returning dragonball_count into v_new_dragonballs;
+    v_new_meteors := v_meteors;
   end if;
 
-  update public.characters set dragonball_count = dragonball_count - v_cost where id = character_id
-  returning dragonball_count into v_new_dragonballs;
-
-  insert into public.character_monster_kills (character_id, monster_id, kills, tier2_unlocked)
-  values (character_id, monster_id, 0, true)
+  insert into public.character_monster_kills (character_id, monster_id, kills, unlocked_tier_index)
+  values (character_id, monster_id, 0, v_next_index)
   on conflict (character_id, monster_id)
-  do update set tier2_unlocked = true;
+  do update set unlocked_tier_index = v_next_index;
 
-  return jsonb_build_object('ok', true, 'dragonballs_spent', v_cost, 'dragonballs_remaining', v_new_dragonballs);
+  return jsonb_build_object(
+    'ok', true,
+    'unlocked_tier_index', v_next_index,
+    'currency', v_currency,
+    'cost', v_cost,
+    'meteors_remaining', v_new_meteors,
+    'dragonballs_remaining', v_new_dragonballs
+  );
 end;
 $$;
 
-revoke all on function public.unlock_achievement_tier2(uuid, text) from public;
-grant execute on function public.unlock_achievement_tier2(uuid, text) to authenticated;
+revoke all on function public.unlock_next_achievement_tier(uuid, text) from public;
+grant execute on function public.unlock_next_achievement_tier(uuid, text) to authenticated;
 
 commit;

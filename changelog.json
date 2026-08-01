@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.43.2",
+    "date": "2026-08-01",
+    "changes": [
+      "Achievement tier unlocks are much cheaper now — 1/3/5/10/20 Meteors for the first five tiers, 1 DragonBall for the last, instead of a flat 50 DragonBalls",
+      "The Achievements tab now has Character/Account tabs to switch which ladder you're viewing, instead of showing both at once"
+    ]
+  },
+  {
     "version": "1.43.1",
     "date": "2026-08-01",
     "changes": [
