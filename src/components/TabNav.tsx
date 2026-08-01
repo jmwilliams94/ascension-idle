@@ -15,17 +15,16 @@ export default function TabNav() {
   const setActiveTab = useTabStore((state) => state.setActiveTab)
 
   return (
-    // 3 columns (2 rows) below `lg`, unchanged single-row 6 columns at `lg`+ —
-    // a fixed 6-column grid squeezed every label (worst offenders: "Equipment"/
-    // "Warehouse") into a column too narrow to hold it, overflowing into the
-    // neighboring tab's column instead of wrapping or shrinking.
-    <div className="grid grid-cols-3 gap-2 lg:grid-cols-7">
+    // Desktop-only (2026-08-02, supersedes the earlier `grid-cols-3` mobile
+    // fallback) — mobile now has its own fixed bottom nav bar entirely
+    // (MobileBottomNav.tsx, `lg:hidden`), not a shrunk version of this one.
+    <div className="hidden grid-cols-7 gap-2 lg:grid">
       {TAB_ITEMS.map((item) => (
         <button
           key={item.id}
           type="button"
           onClick={() => setActiveTab(item.id)}
-          className={`rounded-xl border px-2 py-2 text-xs font-medium sm:px-3 sm:py-3 sm:text-sm ${
+          className={`rounded-xl border px-3 py-3 text-sm font-medium ${
             item.id === activeTab
               ? 'border-sky-500 bg-sky-500/10 text-sky-300'
               : 'border-slate-700 text-slate-300 hover:border-slate-500'

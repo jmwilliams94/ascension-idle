@@ -13,6 +13,7 @@ import ProgressionPanel from './ProgressionPanel'
 import SettingsModal from './SettingsModal'
 import ShopPanel from './ShopPanel'
 import TabNav from './TabNav'
+import MobileBottomNav from './MobileBottomNav'
 import WarehousePanel from './WarehousePanel'
 import AchievementsPanel from './AchievementsPanel'
 import { useAuthStore } from '../lib/useAuthStore'
@@ -186,7 +187,11 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <OfflineProgressModal />
       <CombatEngine />
 
-      <main className="mx-auto max-w-7xl space-y-4 px-6 py-6">
+      {/* pb-24 (was pb-6, matched by py-6 on lg): clearance for
+          MobileBottomNav's fixed bar below `lg` — without it, the bar covers
+          whatever's at the bottom of the page's content. Unchanged at `lg`+,
+          where the bottom nav doesn't render at all. */}
+      <main className="mx-auto max-w-7xl space-y-4 px-6 pb-24 pt-6 lg:pb-6">
         <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-[240px] flex-1">
             <ExpBar />
@@ -209,6 +214,8 @@ export default function GameShell({ characterId }: { characterId: string }) {
           {activeTab === 'achievements' && <AchievementsPanel characterId={characterId} />}
         </section>
       </main>
+
+      <MobileBottomNav />
     </div>
   )
 }

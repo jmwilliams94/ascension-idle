@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.44.0",
+    "date": "2026-08-02",
+    "changes": [
+      "Added a fixed bottom navigation bar on phones — Equipment/Forge/Market on the left, a big Fight/Idle button in the center, Shop/Warehouse/Achievements on the right — replacing the old cramped tab grid on mobile"
+    ]
+  },
+  {
     "version": "1.43.14",
     "date": "2026-08-01",
     "changes": [
