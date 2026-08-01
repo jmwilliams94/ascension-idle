@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.43.3",
+    "date": "2026-08-01",
+    "changes": [
+      "The Achievements tab is now split into four tabs — your character, Account, Unlocks, and Pets — instead of cramming progress and unlock buttons into every monster row"
+    ]
+  },
+  {
     "version": "1.43.2",
     "date": "2026-08-01",
     "changes": [
