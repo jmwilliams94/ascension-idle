@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.43.9",
+    "date": "2026-08-01",
+    "changes": [
+      "Redesigned the Achievements tab: progress bars now show a marker for every reward tier with a hover tooltip explaining its bonus, and Pets got a nicer icon-tile display instead of a plain list"
+    ]
+  },
+  {
     "version": "1.43.8",
     "date": "2026-08-01",
     "changes": [

@@ -28,24 +28,30 @@ body {
   background: #020617;
 }
 
-/* Super-quality-only glow for the Equipment paper-doll (PaperDollBody) — a slow,
-   subtle pulse rather than a static shadow, so it reads as a genuinely special
-   indicator instead of decoration every face/accent has. Uses filter: drop-shadow
-   rather than box-shadow because it's applied to individual SVG <polygon>/<line>
-   elements — drop-shadow hugs the shape's own silhouette, where box-shadow would
-   only apply to a (nonexistent, for SVG shape elements) rectangular box. */
-@keyframes super-quality-glow {
+/* Accent glow — a slow, subtle pulse (not a static shadow) flagging "this is
+   currently special/active," reused across features rather than one-off per
+   feature. Originally the Equipment paper-doll's Super-quality-only glow
+   (PaperDollBody, since removed along with the paper-doll's center placeholder
+   — see CLAUDE.md's Equipment/Hero page section); that component's the only
+   thing that ever used filter: drop-shadow here (SVG <polygon>/<line>
+   elements, where drop-shadow hugs the shape's own silhouette). Now reused via
+   box-shadow for plain rounded <div> tiles instead (an obtained Pet tile, an
+   active Achievements tier marker — see AchievementsPanel.tsx) — box-shadow
+   with `currentColor` lets one class serve every accent color, set via
+   whichever element's own `color` style, rather than a hardcoded color per
+   use site. */
+@keyframes accent-glow {
   0%,
   100% {
-    filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.45));
+    box-shadow: 0 0 3px currentColor;
   }
   50% {
-    filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.8));
+    box-shadow: 0 0 9px currentColor;
   }
 }
 
-.super-quality-glow {
-  animation: super-quality-glow 2.6s ease-in-out infinite;
+.accent-glow {
+  animation: accent-glow 2.6s ease-in-out infinite;
 }
 
 /* One-shot flash on a successful Forge upgrade (ForgePanel) — plays once, not
