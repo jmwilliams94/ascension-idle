@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.43.1",
+    "date": "2026-08-01",
+    "changes": [
+      "Fixed Settings toggle switches showing their white knob outside the pill instead of inside it"
+    ]
+  },
+  {
     "version": "1.43.0",
     "date": "2026-08-01",
     "changes": [
