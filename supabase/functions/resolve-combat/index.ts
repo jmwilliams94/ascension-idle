@@ -95,7 +95,29 @@ const DAMAGE_ROLL_MIN_RATIO = 0.5
 const DAMAGE_ROLL_MAX_RATIO = 1.5
 const METEOR_DROP_CHANCE = 1 / 500
 const DRAGONBALL_DROP_CHANCE = 1 / 20000
-const DROP_CHANCE = 0.1
+// Gear drop rate + per-drop quality odds (confirmed with the user,
+// 2026-08-01) — supersedes the earlier flat 10%-per-kill/always-Normal-
+// quality placeholder. A drop itself is now genuinely rare on its own; the
+// quality of that drop is then a separate, much rarer roll layered on top
+// (checked rarest-first, first hit wins, otherwise Normal) rather than every
+// drop defaulting to Normal — Quality Upgrade in the Forge is no longer the
+// only way to ever see a non-Normal item. Mirrored client-side in
+// useInventoryStore.ts's DROP_CHANCE (that copy is predictive-only — combat
+// log flavor text — so it doesn't need the quality roll, just the rate).
+const DROP_CHANCE = 1 / 150
+const QUALITY_DROP_CHANCES: [tier: string, chance: number][] = [
+  ['super', 1 / 15000],
+  ['elite', 1 / 5000],
+  ['unique', 1 / 2000],
+  ['refined', 1 / 500],
+]
+
+function rollDroppedQualityTier(): string {
+  for (const [tier, chance] of QUALITY_DROP_CHANCES) {
+    if (Math.random() < chance) return tier
+  }
+  return 'normal'
+}
 
 type LevelDiffColor = 'white' | 'green' | 'red' | 'black'
 
@@ -397,7 +419,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // Loot Holding is now exclusively for the offline/idle catch-up window
   // (surfaced in OfflineProgressModal, not a persistent Warehouse card).
   let inventoryFull = false
-  const droppedTemplates: { id: string; required_level: number }[] = []
+  const droppedTemplates: { id: string; required_level: number; qualityTier: string }[] = []
 
   // Inventory-full handling baseline — fetched BEFORE the loop now (used to
   // be after), so live mode can check fit live, kill by kill, as the window
@@ -488,15 +510,19 @@ async function handleResolveCombat(req: Request): Promise<Response> {
         if (Math.random() < DROP_CHANCE) {
           const dropped = pickDropTemplate()
           if (dropped) {
+            // Quality is rolled once, at drop time, and carried with the
+            // template through to whichever table (item_instances or
+            // loot_holding) ends up actually receiving it below.
+            const withQuality = { ...dropped, qualityTier: rollDroppedQualityTier() }
             if (mode === 'live') {
               if (projectedOccupied < INVENTORY_SLOT_CAP) {
-                droppedTemplates.push(dropped)
+                droppedTemplates.push(withQuality)
                 projectedOccupied += 1
               } else {
                 inventoryFull = true
               }
             } else {
-              droppedTemplates.push(dropped)
+              droppedTemplates.push(withQuality)
             }
           }
         }
@@ -568,38 +594,47 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const currencyHeld: { currency_type: 'meteor' | 'dragonball' }[] = []
 
   for (const template of droppedTemplates) {
-    if (occupied < INVENTORY_SLOT_CAP) {
-      // level starts at the template's own required_level (not the schema
-      // default of 1) so a freshly-granted item's displayed level honestly
-      // reflects which tier it actually is.
+    if (mode === 'live') {
+      // droppedTemplates only ever contains items already confirmed to fit
+      // at roll time for live mode (see above) — always goes straight into
+      // Inventory. level starts at the template's own required_level (not
+      // the schema default of 1) so a freshly-granted item's displayed level
+      // honestly reflects which tier it actually is.
       const { data: inserted } = await db
         .from('item_instances')
-        .insert({ template_id: template.id, owner_id: characterId, level: template.required_level })
+        .insert({ template_id: template.id, owner_id: characterId, level: template.required_level, quality_tier: template.qualityTier })
         .select('*')
         .single()
       occupied += 1
       if (inserted) itemsGranted.push(inserted)
-    } else if (mode === 'offline' && heldCount < LOOT_HOLDING_CAP) {
-      // Live mode never reaches this branch — droppedTemplates only ever
-      // contains items already confirmed to fit at roll time (see above).
-      await db.from('loot_holding').insert({ character_id: characterId, template_id: template.id })
+    } else if (heldCount < LOOT_HOLDING_CAP) {
+      // Offline/idle catch-up always routes to Loot Holding, never straight
+      // into Inventory, regardless of whether Inventory happened to have
+      // room (confirmed with the user, 2026-08-01 — supersedes the earlier
+      // "only overflows to Loot Holding once Inventory is full" behavior) —
+      // so an idle session never silently rearranges the player's bag while
+      // they're away; everything gets reviewed via Loot Holding on return.
+      await db
+        .from('loot_holding')
+        .insert({ character_id: characterId, template_id: template.id, quality_tier: template.qualityTier })
       heldCount += 1
       itemsHeld.push({ template_id: template.id })
     }
-    // else: genuinely lost — offline only, both Inventory and Loot Holding
-    // are full.
+    // else: genuinely lost — offline only, Loot Holding itself is full too.
   }
 
   // Meteors/DragonBalls are individual, non-stacking Inventory items — each
-  // gained unit competes for the same 40-slot cap as gear. Offline mode
-  // overflows into Loot Holding exactly like a full-inventory gear drop;
-  // live mode never reaches the overflow branch (see above).
+  // gained unit competes for the same 40-slot cap as gear. Live mode grants
+  // straight into the character's own count (already confirmed to fit at
+  // roll time — see the mirror-image reasoning above for gear); offline mode
+  // always routes to Loot Holding instead, same "never silently rearrange
+  // the bag while the player's away" rule the gear loop above now follows.
   let meteorsToGrant = 0
   for (let i = 0; i < meteorsGained; i += 1) {
-    if (occupied < INVENTORY_SLOT_CAP) {
+    if (mode === 'live') {
       meteorsToGrant += 1
       occupied += 1
-    } else if (mode === 'offline' && heldCount < LOOT_HOLDING_CAP) {
+    } else if (heldCount < LOOT_HOLDING_CAP) {
       await db.from('loot_holding').insert({ character_id: characterId, currency_type: 'meteor' })
       heldCount += 1
       currencyHeld.push({ currency_type: 'meteor' })
@@ -608,10 +643,10 @@ async function handleResolveCombat(req: Request): Promise<Response> {
 
   let dragonballsToGrant = 0
   for (let i = 0; i < dragonballsGained; i += 1) {
-    if (occupied < INVENTORY_SLOT_CAP) {
+    if (mode === 'live') {
       dragonballsToGrant += 1
       occupied += 1
-    } else if (mode === 'offline' && heldCount < LOOT_HOLDING_CAP) {
+    } else if (heldCount < LOOT_HOLDING_CAP) {
       await db.from('loot_holding').insert({ character_id: characterId, currency_type: 'dragonball' })
       heldCount += 1
       currencyHeld.push({ currency_type: 'dragonball' })

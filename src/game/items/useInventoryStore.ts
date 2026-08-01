@@ -28,8 +28,13 @@ export interface ItemInstance {
   created_at: string
 }
 
-// PLACEHOLDER drop chance — real drop rates are unresolved per CLAUDE.md.
-const DROP_CHANCE = 0.1
+// Mirrors supabase/functions/resolve-combat's own DROP_CHANCE (confirmed
+// with the user, 2026-08-01 — supersedes the earlier flat 10% placeholder).
+// This copy is predictive-only (drives the combat log's "You found: X" line
+// — see useCombatStore.ts — no real grant happens here), so it doesn't need
+// the server's quality-tier roll, just the rate, to keep the log honest
+// about how often something was actually found.
+const DROP_CHANCE = 1 / 150
 
 // Level-appropriate drop selection (confirmed with the user, 2026-07-30) —
 // supersedes the earlier "always the first template" placeholder. Picks a

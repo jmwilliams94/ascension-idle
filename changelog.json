@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.42.0",
+    "date": "2026-08-01",
+    "changes": [
+      "Loot Holding now supports selecting multiple items at once — Select All, Move to Inventory, and Sell Selected all work in bulk instead of one at a time"
+    ]
+  },
+  {
     "version": "1.41.3",
     "date": "2026-08-01",
     "changes": [
