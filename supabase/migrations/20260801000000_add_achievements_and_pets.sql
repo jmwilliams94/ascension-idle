@@ -220,8 +220,13 @@ begin
     v_new_meteors := v_meteors;
   end if;
 
+  -- Qualified against the function's own name (same fix already applied to
+  -- unbundle_currency_scroll's potion_stacks lookup) -- character_monster_kills
+  -- has its own character_id/monster_id columns, which would otherwise be
+  -- ambiguous against this function's identically-named parameters in the
+  -- VALUES list.
   insert into public.character_monster_kills (character_id, monster_id, kills, unlocked_tier_index)
-  values (character_id, monster_id, 0, v_next_index)
+  values (unlock_next_achievement_tier.character_id, unlock_next_achievement_tier.monster_id, 0, v_next_index)
   on conflict (character_id, monster_id)
   do update set unlocked_tier_index = v_next_index;
 
