@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.44.3",
+    "date": "2026-08-02",
+    "changes": [
+      "Mobile bottom nav now uses real icon art for Equipment (hat), Forge (anvil), and Shop (market stall)",
+      "The mobile Fight/Idle button now shows the weapon you actually have equipped instead of a fixed sword icon",
+      "Cleaned up an unused leftover icon file that was never actually shown anywhere in the game"
+    ]
+  },
+  {
     "version": "1.44.2",
     "date": "2026-08-02",
     "changes": [

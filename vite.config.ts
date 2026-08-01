@@ -18,7 +18,7 @@ export default defineConfig({
       // Installable + fast static-asset reloads only — no Supabase/API caching,
       // no offline gameplay. See CLAUDE.md's "PWA & Mobile" section.
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons.svg'],
+      includeAssets: ['favicon.svg'],
       manifest: {
         name: 'Ascension Idle',
         short_name: 'Ascension Idle',

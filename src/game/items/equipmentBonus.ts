@@ -156,6 +156,40 @@ export function getItemIcon(slotType: string | undefined): string {
   return (slotType && SLOT_ICONS[slotType]) || '🗡️'
 }
 
+// Keyed by item_templates.item_family (see useItemTemplatesStore.ts), not
+// slot_type — every weapon shares slot_type 'weapon', so this is the only way
+// to tell a Bow from a Sword for icon purposes. Covers the confirmed
+// class-weapon list from CLAUDE.md's Gear slots section, not just the two
+// families actually seeded today (bow/sword) — unmapped/future families fall
+// back to the generic weapon icon via getWeaponIcon below. Used by
+// MobileBottomNav's Fight button to show whatever's actually equipped.
+const WEAPON_FAMILY_ICONS: Record<string, string> = {
+  bow: '🏹',
+  'lucky-bow': '🏹',
+  sword: '🗡️',
+  backsword: '🗡️',
+  blade: '🗡️',
+  dagger: '🔪',
+  hook: '🪝',
+  whip: '➰',
+  axe: '🪓',
+  hammer: '🔨',
+  club: '🏏',
+  scepter: '🪄',
+  wand: '🪄',
+  glaive: '🔱',
+  poleaxe: '🪓',
+  spear: '🔱',
+  halberd: '🔱',
+}
+
+export function getWeaponIcon(itemFamily: string | null | undefined): string {
+  if (itemFamily && WEAPON_FAMILY_ICONS[itemFamily]) {
+    return WEAPON_FAMILY_ICONS[itemFamily]
+  }
+  return getItemIcon('weapon')
+}
+
 const QUALITY_ORDER = ['normal', 'refined', 'unique', 'elite', 'super']
 
 // Mirrors the quality_upgrade Postgres function's tier progression exactly (see

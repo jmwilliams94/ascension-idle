@@ -1,5 +1,11 @@
 import { useCombatStore } from '../game/combat/useCombatStore'
+import { useEquipmentStore } from '../game/items/useEquipmentStore'
+import { useInventoryStore } from '../game/items/useInventoryStore'
+import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
+import { getWeaponIcon } from '../game/items/equipmentBonus'
 import { useTabStore, type TabId } from '../game/hud/useTabStore'
+
+const BASE_URL = import.meta.env.BASE_URL
 
 // Fixed bottom nav bar, mobile-only (`lg:hidden` — desktop keeps TabNav.tsx
 // unchanged, now `hidden lg:grid`) — confirmed with the user, 2026-08-02, as
@@ -16,19 +22,32 @@ import { useTabStore, type TabId } from '../game/hud/useTabStore'
 // particular way) — kept in TabNav's own existing left-to-right order, split
 // around Combat: Equipment/Forge/Market before it, Shop/Warehouse/
 // Achievements after.
-const LEFT_ITEMS: { id: TabId; label: string; icon: string }[] = [
-  { id: 'equipment', label: 'Equip', icon: '🧍' },
-  { id: 'forge', label: 'Forge', icon: '🔥' },
-  { id: 'marketplace', label: 'Market', icon: '🤝' },
+//
+// Equipment/Forge/Shop use real icon art (public/nav-icons/, supplied
+// 2026-08-02); Market/Warehouse/Achievements stay emoji since no art exists
+// for those yet.
+type NavIcon = { kind: 'emoji'; value: string } | { kind: 'image'; src: string; alt: string }
+
+const LEFT_ITEMS: { id: TabId; label: string; icon: NavIcon }[] = [
+  { id: 'equipment', label: 'Equip', icon: { kind: 'image', src: `${BASE_URL}nav-icons/equipment.png`, alt: 'Equipment' } },
+  { id: 'forge', label: 'Forge', icon: { kind: 'image', src: `${BASE_URL}nav-icons/forge.png`, alt: 'Forge' } },
+  { id: 'marketplace', label: 'Market', icon: { kind: 'emoji', value: '🤝' } },
 ]
 
-const RIGHT_ITEMS: { id: TabId; label: string; icon: string }[] = [
-  { id: 'shop', label: 'Shop', icon: '🛒' },
-  { id: 'warehouse', label: 'Wareh.', icon: '📦' },
-  { id: 'achievements', label: 'Achiev.', icon: '🏆' },
+const RIGHT_ITEMS: { id: TabId; label: string; icon: NavIcon }[] = [
+  { id: 'shop', label: 'Shop', icon: { kind: 'image', src: `${BASE_URL}nav-icons/shop.png`, alt: 'Shop' } },
+  { id: 'warehouse', label: 'Wareh.', icon: { kind: 'emoji', value: '📦' } },
+  { id: 'achievements', label: 'Achiev.', icon: { kind: 'emoji', value: '🏆' } },
 ]
 
-function NavButton({ id, label, icon }: { id: TabId; label: string; icon: string }) {
+function NavIconGlyph({ icon }: { icon: NavIcon }) {
+  if (icon.kind === 'image') {
+    return <img src={icon.src} alt={icon.alt} className="h-6 w-6 object-contain" />
+  }
+  return <span className="text-lg">{icon.value}</span>
+}
+
+function NavButton({ id, label, icon }: { id: TabId; label: string; icon: NavIcon }) {
   const activeTab = useTabStore((state) => state.activeTab)
   const setActiveTab = useTabStore((state) => state.setActiveTab)
   const active = activeTab === id
@@ -41,10 +60,30 @@ function NavButton({ id, label, icon }: { id: TabId; label: string; icon: string
         active ? 'text-sky-300' : 'text-slate-400'
       }`}
     >
-      <span className="text-lg">{icon}</span>
+      <NavIconGlyph icon={icon} />
       <span className="truncate">{label}</span>
     </button>
   )
+}
+
+// Reflects whatever's actually equipped in the Main Hand slot (confirmed with
+// the user, 2026-08-02) rather than a fixed ⚔️ — resolves equippedIds.weapon
+// through the owned item's template to its item_family, then to an emoji via
+// getWeaponIcon (see equipmentBonus.ts; no per-weapon art exists yet, so this
+// is the pragmatic "dynamic" implementation). Falls back to the generic ⚔️
+// when no weapon is equipped at all (e.g. a fresh non-Hunter character).
+function useEquippedWeaponIcon(): string {
+  const weaponId = useEquipmentStore((state) => state.equippedIds.weapon)
+  const items = useInventoryStore((state) => state.items)
+  const templates = useItemTemplatesStore((state) => state.templates)
+
+  if (!weaponId) {
+    return '⚔️'
+  }
+
+  const item = items.find((candidate) => candidate.id === weaponId)
+  const template = item ? templates.find((candidate) => candidate.id === item.template_id) : undefined
+  return template ? getWeaponIcon(template.item_family) : '⚔️'
 }
 
 function FightNavButton() {
@@ -52,6 +91,7 @@ function FightNavButton() {
   const setActiveTab = useTabStore((state) => state.setActiveTab)
   const isFighting = useCombatStore((state) => state.isFighting)
   const active = activeTab === 'combat'
+  const weaponIcon = useEquippedWeaponIcon()
 
   return (
     <button
@@ -68,7 +108,7 @@ function FightNavButton() {
               : 'border-slate-600 bg-slate-800 text-slate-300 shadow-black/30'
         }`}
       >
-        ⚔️
+        {weaponIcon}
       </span>
       <span className={`text-[10px] font-semibold leading-tight ${isFighting ? 'text-emerald-300' : 'text-slate-400'}`}>
         {isFighting ? 'Fighting' : 'Idle'}
