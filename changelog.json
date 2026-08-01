@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.43.11",
+    "date": "2026-08-01",
+    "changes": [
+      "Achievements tier bars are back to one long bar, now internally divided into hoverable sections sized to each tier's own kill range",
+      "Account tab now has Zones/Quests/Unlocks sub-tabs (Unlocks moved here from its own top-level tab), all collapsible by zone"
+    ]
+  },
+  {
     "version": "1.43.10",
     "date": "2026-08-01",
     "changes": [

@@ -18,22 +18,17 @@ import {
 // mobile session). Grouped by zone (reusing ZONE_ORDER/ZONES the same way
 // CombatPage's picker does) since a flat 40-row list would be unwieldy.
 //
-// Four tabs (confirmed with the user, 2026-08-01 — supersedes the earlier
-// two-button Character/Account switcher, which mixed progress display and the
-// "pay to unlock" action into the same per-monster row):
-//   - {Character name}: this character's own kill-count ladder, pure
-//     progress display (kills, current reward). No unlock button here
-//     anymore — see Unlocks. Eventually also home to a broader set of
-//     character-level rewards ("currency, EXP, etc. based on certain
-//     criteria" — confirmed as an intent, not yet designed; nothing invented
-//     here for that).
-//   - Account: the account-wide ladder, same progress-only display.
-//   - Unlocks: every monster with a next tier available to buy for this
-//     character, in one place, instead of hunting through each monster's row
-//     on the character tab to find the buy button.
-//   - Pets: every monster's pet status (obtained/locked), pulled out of the
-//     inline per-row badge it used to be.
-type AchievementsTab = 'player' | 'account' | 'unlocks' | 'pets'
+// Three top-level tabs (confirmed with the user, 2026-08-01 — supersedes an
+// earlier four-tab version that had a standalone "Unlocks" tab):
+//   - {Character name}: this character's own achievements, split into its
+//     own Zones/Quests sub-tabs (see PlayerTabContent).
+//   - Account: the account-wide ladder, split into Zones/Quests/Unlocks
+//     sub-tabs (see AccountTabContent) — Unlocks moved here from its own
+//     top-level tab (it still spends a *character's* own Meteors/DragonBalls
+//     to unlock a *character* tier, see UnlockRow — only where it lives in
+//     the UI changed, not what it does).
+//   - Pets: every monster's pet status (obtained/locked).
+type AchievementsTab = 'player' | 'account' | 'pets'
 
 type TierVisualState = 'active' | 'partial' | 'locked'
 
@@ -56,15 +51,18 @@ function MonsterCard({ displayName, children }: { displayName: string; children:
   )
 }
 
-// Six separate pill-shaped segments, one per tier, each its own fill/hover
-// target — supersedes an earlier version (2026-08-01) that used one thin
-// continuous bar with tiny 2.5px dots overlaid on top, which read fine on
-// desktop but was too narrow a hover/long-press target on a phone. Each pill
-// fills independently based on progress within that tier's own kill range
-// (not a shared whole-ladder scale), and the *entire* pill is the hover/
-// long-press target now, not a small dot — much easier to hit on a
-// touchscreen. Hovering a pill shows that tier's own reward via the same
-// universal ItemTooltip every other tile in this game already uses.
+// One continuous pill-shaped bar spanning the whole ladder — confirmed with
+// the user (2026-08-01), replacing an earlier version that used 6 separate,
+// equal-width pill segments with gaps between them. This is a single rounded
+// bar, internally divided into 6 sections by thin dividers, whose *widths are
+// proportional to each tier's own kill-range size* (e.g. the 5000→10000 span
+// is naturally much wider than the 100→250 span) rather than equal slices —
+// early, tightly-packed tiers show as a small sliver, later ones stretch
+// wide, same shape the user sketched. Each section is still its own
+// independent hover target (mouseover) showing that tier's reward, and still
+// fills independently based on progress within its own range — only the
+// layout changed (one continuous bar with internal dividers, not separate
+// gapped pills), not the underlying state/tooltip logic.
 function TierLadderBar({
   kills,
   getState,
@@ -75,12 +73,14 @@ function TierLadderBar({
   getTooltipLines: (tierIndex: number, state: TierVisualState) => string[]
 }) {
   return (
-    <div className="flex gap-1.5">
+    <div className="flex h-4 w-full overflow-hidden rounded-full bg-slate-900">
       {ACHIEVEMENT_TIERS.map((threshold, index) => {
         const prevThreshold = index === 0 ? 0 : ACHIEVEMENT_TIERS[index - 1]
+        const rangeSize = threshold - prevThreshold
         const state = getState(index)
         const color = TIER_STATE_COLOR[state]
-        const fillPct = Math.max(0, Math.min(100, ((kills - prevThreshold) / (threshold - prevThreshold)) * 100))
+        const fillPct = Math.max(0, Math.min(100, ((kills - prevThreshold) / rangeSize) * 100))
+        const isLast = index === ACHIEVEMENT_TIERS.length - 1
 
         const tooltip = (
           <ItemTooltip
@@ -93,10 +93,10 @@ function TierLadderBar({
         return (
           <HoverTooltip key={threshold} content={tooltip}>
             <div
-              className={`h-3.5 flex-1 overflow-hidden rounded-full border-2 bg-slate-900 ${state === 'active' ? 'accent-glow' : ''}`}
-              style={{ borderColor: color, color }}
+              className={`relative h-full ${!isLast ? 'border-r-2 border-slate-950' : ''} ${state === 'active' ? 'accent-glow' : ''}`}
+              style={{ flexGrow: rangeSize, flexBasis: 0, minWidth: 0, color }}
             >
-              <div className="h-full rounded-full transition-[width]" style={{ width: `${fillPct}%`, backgroundColor: color }} />
+              <div className="h-full transition-[width]" style={{ width: `${fillPct}%`, backgroundColor: color }} />
             </div>
           </HoverTooltip>
         )
@@ -415,16 +415,12 @@ function PlayerTabContent() {
   )
 }
 
-// Shared "grouped by zone" shell — every tab renders the same zone structure,
-// just with a different per-monster row renderer. `layout="grid"` (Pets
-// only) renders a tile grid instead of a vertical list of rows.
-function ZoneGroups({
-  renderMonster,
-  layout = 'list',
-}: {
-  renderMonster: (monsterId: EnemyTypeId, displayName: string) => ReactNode
-  layout?: 'list' | 'grid'
-}) {
+// Grid-only zone shell for Pets — the one remaining always-expanded (not
+// collapsible) zone grouping, since every other zone-grouped view (Character
+// Zones, Account Zones, Account Unlocks) now collapses via
+// CollapsibleZoneGroups above. Pets doesn't need collapsing the same way —
+// its tile grid is compact enough per zone not to need hiding.
+function PetZoneGroups({ renderMonster }: { renderMonster: (monsterId: EnemyTypeId, displayName: string) => ReactNode }) {
   return (
     <>
       {ZONE_ORDER.map((zoneId) => {
@@ -444,7 +440,7 @@ function ZoneGroups({
         return (
           <div key={zoneId} className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
             <p className="text-sm font-medium text-slate-200">{zone.displayName}</p>
-            <div className={layout === 'grid' ? 'mt-3 grid grid-cols-4 gap-3 sm:grid-cols-6 lg:grid-cols-8' : 'mt-2 space-y-2'}>
+            <div className="mt-3 grid grid-cols-4 gap-3 sm:grid-cols-6 lg:grid-cols-8">
               {rows.map((entry) => (
                 <div key={entry.monsterId}>{entry.node}</div>
               ))}
@@ -456,10 +452,81 @@ function ZoneGroups({
   )
 }
 
+// The Account top-level tab's own sub-navigation (confirmed with the user,
+// 2026-08-01) — mirrors the Character tab's Zones/Quests split, plus a third
+// Unlocks sub-tab moved here from what used to be its own top-level tab
+// (unlocking a tier still spends a *character's* own Meteors/DragonBalls —
+// see UnlockRow — only where it lives in the UI changed). All three
+// zone-grouped sections here collapse per zone independently (their own
+// expanded-zone state each), matching the Character tab's Zones behavior.
+type AccountSubTab = 'zones' | 'quests' | 'unlocks'
+
+const ACCOUNT_SUB_TAB_DESCRIPTIONS: Record<AccountSubTab, string> = {
+  zones:
+    'Every character on this account contributes to the same account-wide ladder per monster — its own reward category is still being designed. Tap a zone to expand it.',
+  quests: 'Quests aren’t designed yet.',
+  unlocks:
+    'Spend Meteors/DragonBalls to unlock the next tier on a monster’s personal ladder. Unlocking ahead of your kill count is fine — the reward just won’t be active until you catch up.',
+}
+
+function AccountTabContent({ characterId }: { characterId: string }) {
+  const [subTab, setSubTab] = useState<AccountSubTab>('zones')
+  const [zonesExpandedZoneId, setZonesExpandedZoneId] = useState<ZoneId | null>(null)
+  const [unlocksExpandedZoneId, setUnlocksExpandedZoneId] = useState<ZoneId | null>(null)
+
+  const SUB_TABS: { id: AccountSubTab; label: string }[] = [
+    { id: 'zones', label: 'Zones' },
+    { id: 'quests', label: 'Quests' },
+    { id: 'unlocks', label: 'Unlocks' },
+  ]
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        {SUB_TABS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setSubTab(item.id)}
+            className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${
+              subTab === item.id ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-400 hover:border-slate-500'
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      <p className="text-xs text-slate-500">{ACCOUNT_SUB_TAB_DESCRIPTIONS[subTab]}</p>
+
+      {subTab === 'zones' && (
+        <CollapsibleZoneGroups
+          expandedZoneId={zonesExpandedZoneId}
+          onToggleZone={(zoneId) => setZonesExpandedZoneId((current) => (current === zoneId ? null : zoneId))}
+          renderMonster={(monsterId, displayName) => (
+            <MonsterCard displayName={displayName}>
+              <AccountProgress monsterId={monsterId} />
+            </MonsterCard>
+          )}
+        />
+      )}
+
+      {subTab === 'quests' && <PlaceholderCard title="Coming soon" description="Quests aren't designed yet." />}
+
+      {subTab === 'unlocks' && (
+        <CollapsibleZoneGroups
+          expandedZoneId={unlocksExpandedZoneId}
+          onToggleZone={(zoneId) => setUnlocksExpandedZoneId((current) => (current === zoneId ? null : zoneId))}
+          renderMonster={(monsterId, displayName) => <UnlockRow characterId={characterId} monsterId={monsterId} displayName={displayName} />}
+        />
+      )}
+    </div>
+  )
+}
+
 const TAB_DESCRIPTIONS: Record<AchievementsTab, string> = {
   player: 'This character’s own achievements, organized into sub-tabs below.',
-  account: 'Every character on this account contributes to the same account-wide ladder per monster — its own reward category is still being designed.',
-  unlocks: 'Spend Meteors/DragonBalls to unlock the next tier on a monster’s personal ladder. Unlocking ahead of your kill count is fine — the reward just won’t be active until you catch up.',
+  account: 'Progress shared across every character on this account, organized into sub-tabs below.',
   pets: `Every monster has a 1 in ${(1 / PET_DROP_CHANCE).toLocaleString()} chance per kill to drop its pet — account-wide, one per monster, forever.`,
 }
 
@@ -470,7 +537,6 @@ export default function AchievementsPanel({ characterId }: { characterId: string
   const TABS: { id: AchievementsTab; label: string }[] = [
     { id: 'player', label: characterName || 'Character' },
     { id: 'account', label: 'Account' },
-    { id: 'unlocks', label: 'Unlocks' },
     { id: 'pets', label: 'Pets' },
   ]
 
@@ -495,25 +561,9 @@ export default function AchievementsPanel({ characterId }: { characterId: string
 
       {tab === 'player' && <PlayerTabContent />}
 
-      {tab === 'account' && (
-        <ZoneGroups
-          renderMonster={(monsterId, displayName) => (
-            <MonsterCard displayName={displayName}>
-              <AccountProgress monsterId={monsterId} />
-            </MonsterCard>
-          )}
-        />
-      )}
+      {tab === 'account' && <AccountTabContent characterId={characterId} />}
 
-      {tab === 'unlocks' && (
-        <ZoneGroups
-          renderMonster={(monsterId, displayName) => <UnlockRow characterId={characterId} monsterId={monsterId} displayName={displayName} />}
-        />
-      )}
-
-      {tab === 'pets' && (
-        <ZoneGroups layout="grid" renderMonster={(monsterId, displayName) => <PetTile monsterId={monsterId} displayName={displayName} />} />
-      )}
+      {tab === 'pets' && <PetZoneGroups renderMonster={(monsterId, displayName) => <PetTile monsterId={monsterId} displayName={displayName} />} />}
     </div>
   )
 }
