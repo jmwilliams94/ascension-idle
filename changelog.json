@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.43.14",
+    "date": "2026-08-01",
+    "changes": [
+      "A failed Forge upgrade now leaves the item in the Upgrade Slot so you can try again immediately, instead of having to drag it back in",
+      "The failure/success message no longer covers the Quality/Level/Composition buttons while it's shown"
+    ]
+  },
+  {
     "version": "1.43.13",
     "date": "2026-08-01",
     "changes": [

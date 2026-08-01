@@ -118,8 +118,13 @@ export default function ForgePanel() {
   const fuelItemIds = fuelSlots.flatMap((entry) => (entry?.kind === 'item' ? [entry.id] : []))
   const fuelIds = fuelSlotIds.filter((id): id is string => id !== null)
 
-  // Auto-return to the empty Upgrade Slot after showing the result, per spec —
-  // Quality/Level only; Composition never sets attemptResult.
+  // Auto-dismiss the result banner. Only a SUCCESS returns the Upgrade Slot to
+  // empty afterward (matching the original "ready for the next item" spec) —
+  // a FAILURE now leaves the item (and the selected upgrade type) in place
+  // (confirmed with the user, 2026-08-01, supersedes the earlier "always
+  // returns to empty" behavior), since materials were already spent either
+  // way and a fresh attempt on the same item is the overwhelmingly common
+  // next action, not re-dragging it back in from the grid below.
   useEffect(() => {
     if (!attemptResult) {
       return undefined
@@ -127,8 +132,10 @@ export default function ForgePanel() {
 
     const timeout = setTimeout(() => {
       setAttemptResult(null)
-      setSelectedItemId(null)
-      setSelectedType(null)
+      if (attemptResult.success) {
+        setSelectedItemId(null)
+        setSelectedType(null)
+      }
     }, RESULT_DISPLAY_MS)
 
     return () => clearTimeout(timeout)
@@ -304,22 +311,32 @@ export default function ForgePanel() {
           <div className="w-full space-y-3 lg:w-60 lg:shrink-0">
             <p className="text-xs uppercase tracking-wide text-slate-500">Result Preview</p>
 
-            {attemptResult ? (
-              <div
-                className={`rounded-xl border p-3 text-center text-sm ${
-                  attemptResult.success
-                    ? 'forge-success-flash border-emerald-600 bg-emerald-500/10 text-emerald-300'
-                    : 'border-red-800 bg-red-500/10 text-red-300'
-                }`}
-              >
-                {attemptResult.message}
-              </div>
-            ) : !selectedItem ? (
+            {!selectedItem ? (
               <p className="rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-4 text-center text-[11px] text-slate-600">
                 Drag an item into the Upgrade Slot to preview an upgrade.
               </p>
             ) : (
               <>
+                {/* Shown alongside the buttons below, not instead of them
+                    (2026-08-01 — supersedes an earlier version where this
+                    banner fully replaced the button row, hiding Confirm
+                    Upgrade for the whole RESULT_DISPLAY_MS duration) — a
+                    failed attempt now leaves the item in the slot (see the
+                    effect above), so the player needs Confirm Upgrade to
+                    stay reachable to retry immediately, not just after the
+                    banner times out. */}
+                {attemptResult && (
+                  <div
+                    className={`rounded-xl border p-3 text-center text-sm ${
+                      attemptResult.success
+                        ? 'forge-success-flash border-emerald-600 bg-emerald-500/10 text-emerald-300'
+                        : 'border-red-800 bg-red-500/10 text-red-300'
+                    }`}
+                  >
+                    {attemptResult.message}
+                  </div>
+                )}
+
                 <div className="flex gap-1.5">
                   <button
                     type="button"
