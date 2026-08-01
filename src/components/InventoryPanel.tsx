@@ -13,6 +13,7 @@ import {
 import { EQUIP_SLOTS, useEquipmentStore, type EquipSlot } from '../game/items/useEquipmentStore'
 import {
   COMPOSITION_STONE_TIERS,
+  DRAGONBALL_ICON_SRC,
   METEOR_ICON_SRC,
   buildDragonballScrollTooltip,
   buildDragonballTooltip,
@@ -430,7 +431,7 @@ export default function InventoryPanel({
               slotId={dragId}
               filled
               sizeClassName={SLOT_SIZE_CLASS}
-              icon="🔮"
+              iconSrc={DRAGONBALL_ICON_SRC}
               label="DragonBall"
               tooltip={buildDragonballTooltip()}
               selected={selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId}
@@ -552,11 +553,11 @@ export default function InventoryPanel({
         <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg">
-              {selectedCurrencyType === 'meteor' ? (
-                <img src={METEOR_ICON_SRC} alt="" className="h-3/5 w-3/5 object-contain" />
-              ) : (
-                '🔮'
-              )}
+              <img
+                src={selectedCurrencyType === 'meteor' ? METEOR_ICON_SRC : DRAGONBALL_ICON_SRC}
+                alt=""
+                className="h-3/5 w-3/5 object-contain"
+              />
             </div>
             <div>
               <p className="text-sm font-medium text-slate-200">{selectedCurrencyType === 'meteor' ? 'Meteor' : 'DragonBall'}</p>

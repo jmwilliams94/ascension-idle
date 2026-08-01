@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.44.6",
+    "date": "2026-08-02",
+    "changes": [
+      "DragonBalls now show as a real icon instead of an emoji, everywhere they appear in your inventory and unclaimed rewards"
+    ]
+  },
+  {
     "version": "1.44.5",
     "date": "2026-08-02",
     "changes": [

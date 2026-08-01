@@ -136,11 +136,12 @@ export function dragonballDragId(index: number): string {
   return `dragonball:${index}`
 }
 
-// Real art (2026-08-02), supersedes the 🌠 emoji everywhere a Meteor tile
-// renders (InventoryPanel's grid + detail card, LootHoldingCard) — pass to
-// InventorySlot's iconSrc prop, which takes priority over its emoji icon
-// prop. DragonBall has no matching art yet, so it stays on its 🔮 emoji.
+// Real art (2026-08-02), supersedes the 🌠/🔮 emoji everywhere a Meteor/
+// DragonBall tile renders (InventoryPanel's grid + detail card,
+// LootHoldingCard) — pass to InventorySlot's iconSrc prop, which takes
+// priority over its emoji icon prop.
 export const METEOR_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/meteor.png`
+export const DRAGONBALL_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/dragonball.png`
 
 export function buildMeteorTooltip(): ItemTooltipData {
   return {
