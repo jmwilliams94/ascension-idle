@@ -275,8 +275,8 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       // of making rewards genuinely server-verified without adding real
       // per-attack network latency to the fighting itself.
       const { gold, exp } = killRewards(type, state.isRareInstance, useProgressionStore.getState().level)
-      // Feeds the visible Gold/EXP bars in real time (see ExpBar.tsx/
-      // ProgressionPanel.tsx) — previously only the log's text updated
+      // Feeds the visible Gold/EXP bar in real time (see ExpBar.tsx) —
+      // previously only the log's text updated
       // instantly, while the actual displayed numbers stayed frozen until the
       // next resolve-combat confirmation landed, feeling like a sudden lump-
       // sum jump. Reconciled (reset to 0) by applyServerCombatResult.

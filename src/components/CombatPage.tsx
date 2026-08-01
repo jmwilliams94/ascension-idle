@@ -235,8 +235,8 @@ export default function CombatPage() {
           always reachable, just not the first thing on screen); Inventory and
           Combat Log both collapsed by default so the initial view is short
           enough to not require scrolling on a phone. No Gold/EXP row here —
-          ProgressionPanel (GameShell's persistent top strip, shown above every
-          tab) already covers that, so repeating it here would just be more
+          ExpBar (GameShell's persistent top strip, shown above every tab)
+          already covers that, so repeating it here would just be more
           scroll for nothing. Desktop's layout (below) is untouched — this is
           entirely separate markup, not a responsive reflow of the same JSX, so
           nothing here can regress the desktop view. */}

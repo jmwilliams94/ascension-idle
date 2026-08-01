@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.44.1",
+    "date": "2026-08-02",
+    "changes": [
+      "Removed the redundant Progression card — Gold now shows right on the EXP bar, and the Level number is much bigger on desktop"
+    ]
+  },
+  {
     "version": "1.44.0",
     "date": "2026-08-02",
     "changes": [

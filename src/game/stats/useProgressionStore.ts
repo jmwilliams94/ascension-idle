@@ -54,7 +54,7 @@ interface ProgressionState {
   gold: number
   // Local-only running total from combat log predictions since the last
   // resolve-combat confirmation (see useCombatStore.runTick's kill branch) —
-  // added on top of gold/exp for display (ExpBar/ProgressionPanel) so the
+  // added on top of gold/exp for display (ExpBar) so the
   // visible counters move in real time with the log instead of sitting frozen
   // for ~15s and then jumping all at once. Reset to 0 whenever
   // applyServerCombatResult lands, since the confirmed totals already include

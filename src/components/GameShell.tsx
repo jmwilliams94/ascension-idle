@@ -9,7 +9,6 @@ import ForgePanel from './ForgePanel'
 import InventoryFullModal from './InventoryFullModal'
 import MarketplacePanel from './MarketplacePanel'
 import OfflineProgressModal from './OfflineProgressModal'
-import ProgressionPanel from './ProgressionPanel'
 import SettingsModal from './SettingsModal'
 import ShopPanel from './ShopPanel'
 import TabNav from './TabNav'
@@ -199,8 +198,6 @@ export default function GameShell({ characterId }: { characterId: string }) {
           <QuiverWarningHud />
           <InventoryFullWarningHud />
         </div>
-
-        <ProgressionPanel />
 
         <TabNav />
 
