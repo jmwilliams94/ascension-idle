@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.42.2",
+    "date": "2026-08-01",
+    "changes": [
+      "Mourning Dove now has real portrait art instead of a plain color square"
+    ]
+  },
+  {
     "version": "1.42.1",
     "date": "2026-08-01",
     "changes": [
