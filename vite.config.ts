@@ -23,8 +23,14 @@ export default defineConfig({
         name: 'Ascension Idle',
         short_name: 'Ascension Idle',
         description: 'A Melvor-idle-style idle RPG.',
-        theme_color: '#150821',
-        background_color: '#150821',
+        // Matches the new "A" logo's own background exactly (sampled from
+        // the source image, 2026-08-02) — was #150821 (dark purple, matching
+        // the old lightning-bolt favicon.svg mark), now #0b0f19 (near-black
+        // navy) so the splash screen/browser chrome tint doesn't clash with
+        // the new icon's own background showing through on maskable/adaptive
+        // icon shapes.
+        theme_color: '#0b0f19',
+        background_color: '#0b0f19',
         display: 'standalone',
         orientation: 'portrait-primary',
         start_url: '/ascension-idle/',

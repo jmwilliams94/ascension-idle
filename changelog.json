@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.44.2",
+    "date": "2026-08-02",
+    "changes": [
+      "New app icon for the installed PWA — a gold \"A\" mark on a dark background, replacing the placeholder icon"
+    ]
+  },
+  {
     "version": "1.44.1",
     "date": "2026-08-02",
     "changes": [
