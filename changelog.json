@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.41.2",
+    "date": "2026-08-01",
+    "changes": [
+      "Quailwing now has real portrait art instead of a plain color square"
+    ]
+  },
+  {
     "version": "1.41.1",
     "date": "2026-08-01",
     "changes": [

@@ -222,11 +222,20 @@ export default function CombatPage() {
           <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
             <div className="flex items-center gap-4">
               <div className="relative h-16 w-16 shrink-0">
-                <div
-                  key={monsterInstanceKey}
-                  className={`h-16 w-16 rounded-2xl border-2 border-slate-700 ${isRareInstance ? 'super-quality-glow' : ''}`}
-                  style={{ backgroundColor: hexColor(activeType.color) }}
-                />
+                {activeType.portraitUrl ? (
+                  <img
+                    key={monsterInstanceKey}
+                    src={activeType.portraitUrl}
+                    alt={activeType.displayName}
+                    className={`h-16 w-16 rounded-2xl border-2 border-slate-700 object-cover ${isRareInstance ? 'super-quality-glow' : ''}`}
+                  />
+                ) : (
+                  <div
+                    key={monsterInstanceKey}
+                    className={`h-16 w-16 rounded-2xl border-2 border-slate-700 ${isRareInstance ? 'super-quality-glow' : ''}`}
+                    style={{ backgroundColor: hexColor(activeType.color) }}
+                  />
+                )}
                 <AnimatePresence>
                   {floatingNumbers.map((entry) => (
                     <motion.div
@@ -559,11 +568,20 @@ export default function CombatPage() {
           <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
             <div className="flex items-center gap-4">
               <div className="relative h-20 w-20 shrink-0">
-                <div
-                  key={monsterInstanceKey}
-                  className={`h-20 w-20 rounded-2xl border-2 border-slate-700 ${isRareInstance ? 'super-quality-glow' : ''}`}
-                  style={{ backgroundColor: hexColor(activeType.color) }}
-                />
+                {activeType.portraitUrl ? (
+                  <img
+                    key={monsterInstanceKey}
+                    src={activeType.portraitUrl}
+                    alt={activeType.displayName}
+                    className={`h-20 w-20 rounded-2xl border-2 border-slate-700 object-cover ${isRareInstance ? 'super-quality-glow' : ''}`}
+                  />
+                ) : (
+                  <div
+                    key={monsterInstanceKey}
+                    className={`h-20 w-20 rounded-2xl border-2 border-slate-700 ${isRareInstance ? 'super-quality-glow' : ''}`}
+                    style={{ backgroundColor: hexColor(activeType.color) }}
+                  />
+                )}
                 <AnimatePresence>
                   {floatingNumbers.map((entry) => (
                     <motion.div

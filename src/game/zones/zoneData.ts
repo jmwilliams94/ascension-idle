@@ -84,11 +84,28 @@ export interface EnemyTypeDef {
   // 0xRRGGBB — a Phaser-era convention kept for the placeholder portrait swatch
   // (see CombatPage's hexColor helper).
   color: number
+  // Real portrait art, first used for Quailwing (2026-08-01) — a static PNG in
+  // public/monsters/, referenced via import.meta.env.BASE_URL (same pattern
+  // useAuthStore.ts already uses) so it resolves correctly under the
+  // '/ascension-idle/' GitHub Pages base path, not just local dev. Optional —
+  // every other monster still falls back to the plain color swatch (see
+  // CombatPage's portrait rendering) until it gets its own art.
+  portraitUrl?: string
 }
 
 export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDef> = {
   // --- Windhollow ---
-  'quailwing': { id: 'quailwing', displayName: 'Quailwing', level: 1, maxHp: 24, goldReward: 2, expReward: 5, attackDamage: 4, color: 0x93c5fd },
+  'quailwing': {
+    id: 'quailwing',
+    displayName: 'Quailwing',
+    level: 1,
+    maxHp: 24,
+    goldReward: 2,
+    expReward: 5,
+    attackDamage: 4,
+    color: 0x93c5fd,
+    portraitUrl: `${import.meta.env.BASE_URL}monsters/quailwing.png`,
+  },
   'mourning-dove': { id: 'mourning-dove', displayName: 'Mourning Dove', level: 7, maxHp: 48, goldReward: 3, expReward: 7, attackDamage: 7, color: 0xd6d3d1 },
   'redbreast': { id: 'redbreast', displayName: 'Redbreast', level: 12, maxHp: 72, goldReward: 4, expReward: 9, attackDamage: 11, color: 0xdc2626 },
   'warshade': { id: 'warshade', displayName: 'Warshade', level: 20, maxHp: 104, goldReward: 5, expReward: 13, attackDamage: 16, color: 0x94a3b8 },
