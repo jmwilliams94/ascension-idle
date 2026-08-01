@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.41.3",
+    "date": "2026-08-01",
+    "changes": [
+      "Monster portraits now have breathing room inside their frame instead of filling it edge-to-edge"
+    ]
+  },
+  {
     "version": "1.41.2",
     "date": "2026-08-01",
     "changes": [

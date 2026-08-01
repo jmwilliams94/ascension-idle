@@ -227,7 +227,7 @@ export default function CombatPage() {
                     key={monsterInstanceKey}
                     src={activeType.portraitUrl}
                     alt={activeType.displayName}
-                    className={`h-16 w-16 rounded-2xl border-2 border-slate-700 object-cover ${isRareInstance ? 'super-quality-glow' : ''}`}
+                    className={`h-16 w-16 rounded-2xl border-2 border-slate-700 object-contain p-[15%] ${isRareInstance ? 'super-quality-glow' : ''}`}
                   />
                 ) : (
                   <div
@@ -573,7 +573,7 @@ export default function CombatPage() {
                     key={monsterInstanceKey}
                     src={activeType.portraitUrl}
                     alt={activeType.displayName}
-                    className={`h-20 w-20 rounded-2xl border-2 border-slate-700 object-cover ${isRareInstance ? 'super-quality-glow' : ''}`}
+                    className={`h-20 w-20 rounded-2xl border-2 border-slate-700 object-contain p-[15%] ${isRareInstance ? 'super-quality-glow' : ''}`}
                   />
                 ) : (
                   <div
