@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.43.8",
+    "date": "2026-08-01",
+    "changes": [
+      "Fixed the achievement tier-unlock migration failing to actually apply its own parameter rename, which was the real cause of the \"function not found\" error"
+    ]
+  },
+  {
     "version": "1.43.7",
     "date": "2026-08-01",
     "changes": [

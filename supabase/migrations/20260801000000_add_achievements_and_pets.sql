@@ -167,6 +167,15 @@ grant select on public.account_pets to authenticated;
 -- rather than relying on qualification syntax. The RPC is called with named
 -- arguments from the client (see useAchievementsStore.ts's unlockNextTier),
 -- so that call was updated to match: p_character_id/p_monster_id.
+--
+-- CREATE OR REPLACE cannot rename an existing function's parameters on its
+-- own (Postgres error 42P13: "cannot change name of input parameter... Use
+-- DROP FUNCTION first") -- it silently failed to apply the rename below,
+-- which is why the client's call with the new argument names then couldn't
+-- find any matching function at all. Dropping the old-parameter-named
+-- version first (same (uuid, text) signature either way) is required.
+drop function if exists public.unlock_next_achievement_tier(uuid, text);
+
 create or replace function public.unlock_next_achievement_tier(p_character_id uuid, p_monster_id text)
 returns jsonb
 language plpgsql
