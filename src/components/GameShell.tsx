@@ -14,6 +14,7 @@ import SettingsModal from './SettingsModal'
 import ShopPanel from './ShopPanel'
 import TabNav from './TabNav'
 import WarehousePanel from './WarehousePanel'
+import AchievementsPanel from './AchievementsPanel'
 import { useAuthStore } from '../lib/useAuthStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
@@ -22,6 +23,7 @@ import { useInventoryStore } from '../game/items/useInventoryStore'
 import { usePotionStore } from '../game/items/usePotionStore'
 import { useWarehouseStore } from '../game/items/useWarehouseStore'
 import { useLootHoldingStore } from '../game/items/useLootHoldingStore'
+import { useAchievementsStore } from '../game/achievements/useAchievementsStore'
 import { useTabStore } from '../game/hud/useTabStore'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
@@ -47,7 +49,9 @@ export default function GameShell({ characterId }: { characterId: string }) {
   const loadPotionStacks = usePotionStore((state) => state.loadStacks)
   const loadWarehouseItems = useWarehouseStore((state) => state.loadWarehouseItems)
   const loadLootHolding = useLootHoldingStore((state) => state.loadLootHolding)
+  const loadAchievements = useAchievementsStore((state) => state.loadAchievements)
   const activeTab = useTabStore((state) => state.activeTab)
+  const accountId = session?.user.id
 
   useEffect(() => {
     let cancelled = false
@@ -59,6 +63,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
         loadPotionStacks(characterId),
         loadWarehouseItems(characterId),
         loadLootHolding(characterId),
+        ...(accountId ? [loadAchievements(characterId, accountId)] : []),
       ])
 
       if (cancelled) {
@@ -93,7 +98,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
     return () => {
       cancelled = true
     }
-  }, [characterId, loadCharacterRecord, loadInventory, loadPotionStacks, loadWarehouseItems, loadLootHolding])
+  }, [characterId, loadCharacterRecord, loadInventory, loadPotionStacks, loadWarehouseItems, loadLootHolding, loadAchievements, accountId])
 
   usePersistGameState(characterId, loaded)
 
@@ -172,6 +177,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
           {activeTab === 'marketplace' && <MarketplacePanel />}
           {activeTab === 'shop' && <ShopPanel />}
           {activeTab === 'warehouse' && <WarehousePanel characterId={characterId} />}
+          {activeTab === 'achievements' && <AchievementsPanel characterId={characterId} />}
         </section>
       </main>
     </div>

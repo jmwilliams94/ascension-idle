@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.43.0",
+    "date": "2026-08-01",
+    "changes": [
+      "Added a new Achievements tab — kill a monster enough times to climb its personal and account-wide kill-count ladders and earn a gold bonus while fighting it (values are placeholders for now)",
+      "Added Pets — every monster has a small chance per kill to drop its pet, shared across your whole account"
+    ]
+  },
+  {
     "version": "1.42.2",
     "date": "2026-08-01",
     "changes": [

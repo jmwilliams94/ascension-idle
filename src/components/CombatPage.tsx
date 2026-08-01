@@ -65,6 +65,7 @@ function logLineClass(kind: CombatLogEntry['kind']): string {
     case 'kill':
       return 'text-emerald-400'
     case 'rare-kill':
+    case 'pet':
       return 'text-amber-300 font-semibold'
     case 'item':
     case 'currency':

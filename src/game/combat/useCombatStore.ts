@@ -33,6 +33,7 @@ export type CombatLogKind =
   | 'no-quiver'
   | 'knockout'
   | 'inventory-full'
+  | 'pet'
 
 export interface CombatLogEntry {
   id: string
@@ -101,6 +102,10 @@ interface CombatState {
   // inventory should stop combat," Loot Holding is for idle/offline overflow
   // only now — see CLAUDE.md's Loot section).
   stopForInventoryFull: () => void
+  // Called by resolveCombat.ts when a response reports petObtained —
+  // Achievements & Pets, Stage 1 (see CLAUDE.md). Just a log line, no other
+  // state change — the pet unlock itself already happened server-side.
+  logPetObtained: (monsterName: string) => void
 }
 
 export const useCombatStore = create<CombatState>((set, get) => ({
@@ -339,6 +344,14 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       log: appendLog(state.log, {
         kind: 'inventory-full',
         message: 'Inventory is full — combat stopped. Clear some space to keep fighting.',
+      }),
+    })),
+
+  logPetObtained: (monsterName) =>
+    set((state) => ({
+      log: appendLog(state.log, {
+        kind: 'pet',
+        message: `You obtained the ${monsterName} pet!`,
       }),
     })),
 }))

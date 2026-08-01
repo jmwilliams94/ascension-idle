@@ -4,6 +4,8 @@ import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { useInventoryStore, type ItemInstance } from '../items/useInventoryStore'
 import { useInventoryFullWarningStore } from '../items/useInventoryFullWarningStore'
 import { useLootHoldingStore } from '../items/useLootHoldingStore'
+import { useAchievementsStore } from '../achievements/useAchievementsStore'
+import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
 import { useCombatStore } from './useCombatStore'
 
 // The single client-side entry point into the resolve-combat Edge Function —
@@ -35,6 +37,14 @@ export interface ResolveCombatResult {
   // window. Never set for an offline-mode call (that window always overflows
   // to Loot Holding instead, unchanged from before this mode split existed).
   inventoryFull?: boolean
+  // Achievements & Pets, Stage 1 (see CLAUDE.md) — this monster's updated
+  // kill totals (both ladders) and whether its pet was newly obtained this
+  // call. Absent when there's no selected monster (see the early-return
+  // response in resolve-combat/index.ts).
+  monsterId?: string | null
+  characterKillCount?: number
+  accountKillCount?: number
+  petObtained?: string | null
 }
 
 export async function resolveCombat(characterId: string, mode: ResolveCombatMode): Promise<ResolveCombatResult | null> {
@@ -70,6 +80,17 @@ export async function resolveCombat(characterId: string, mode: ResolveCombatMode
   if (result.inventoryFull) {
     useCombatStore.getState().stopForInventoryFull()
     useInventoryFullWarningStore.getState().trigger()
+  }
+
+  if (result.monsterId && typeof result.characterKillCount === 'number' && typeof result.accountKillCount === 'number') {
+    useAchievementsStore
+      .getState()
+      .applyResolveResult(result.monsterId, result.characterKillCount, result.accountKillCount, result.petObtained ?? null)
+  }
+
+  if (result.petObtained) {
+    const type = ENEMY_TYPES[result.petObtained as EnemyTypeId]
+    useCombatStore.getState().logPetObtained(type?.displayName ?? 'monster')
   }
 
   return result

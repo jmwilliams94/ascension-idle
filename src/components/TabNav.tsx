@@ -7,6 +7,7 @@ const TAB_ITEMS: { id: TabId; label: string }[] = [
   { id: 'marketplace', label: 'Market' },
   { id: 'shop', label: 'Shop' },
   { id: 'warehouse', label: 'Warehouse' },
+  { id: 'achievements', label: 'Achievements' },
 ]
 
 export default function TabNav() {
@@ -18,7 +19,7 @@ export default function TabNav() {
     // a fixed 6-column grid squeezed every label (worst offenders: "Equipment"/
     // "Warehouse") into a column too narrow to hold it, overflowing into the
     // neighboring tab's column instead of wrapping or shrinking.
-    <div className="grid grid-cols-3 gap-2 lg:grid-cols-6">
+    <div className="grid grid-cols-3 gap-2 lg:grid-cols-7">
       {TAB_ITEMS.map((item) => (
         <button
           key={item.id}

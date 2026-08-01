@@ -119,6 +119,40 @@ function rollDroppedQualityTier(): string {
   return 'normal'
 }
 
+// Achievements & Pets, Stage 1 (confirmed shape, see CLAUDE.md — the tracking
+// mechanism is real, the reward VALUES below are a deliberate uniform
+// placeholder until real per-monster tier content is designed; do not treat
+// these numbers as final). Mirrors src/game/achievements/achievementData.ts —
+// keep in sync.
+const ACHIEVEMENT_TIERS = [100, 250, 500, 1000, 5000, 10000]
+// PLACEHOLDER gold multiplier per tier, uniform across every monster — highest
+// tier reached wins, not cumulative/stacking.
+const ACHIEVEMENT_GOLD_MULTIPLIER: Record<number, number> = {
+  100: 1.05,
+  250: 1.1,
+  500: 1.2,
+  1000: 1.35,
+  5000: 1.5,
+  10000: 2,
+}
+// Confirmed, not a placeholder — 1/5000 chance per kill, independent of every
+// other roll this function makes.
+const PET_DROP_CHANCE = 1 / 5000
+
+// Tiers 1000/5000/10000 only count once tier2_unlocked is true for this
+// character+monster (see unlock_achievement_tier2) — the free ladder tops out
+// at 500 until that paid upgrade is bought.
+function currentAchievementGoldMultiplier(kills: number, tier2Unlocked: boolean): number {
+  const eligibleTiers = tier2Unlocked ? ACHIEVEMENT_TIERS : ACHIEVEMENT_TIERS.filter((tier) => tier <= 500)
+  let multiplier = 1
+  for (const tier of eligibleTiers) {
+    if (kills >= tier) {
+      multiplier = ACHIEVEMENT_GOLD_MULTIPLIER[tier]
+    }
+  }
+  return multiplier
+}
+
 type LevelDiffColor = 'white' | 'green' | 'red' | 'black'
 
 function getLevelDiffColor(characterLevel: number, monsterLevel: number): LevelDiffColor {
@@ -341,6 +375,10 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       itemsHeld: [],
       currencyHeld: [],
       inventoryFull: false,
+      monsterId: null,
+      characterKillCount: 0,
+      accountKillCount: 0,
+      petObtained: null,
     })
   }
 
@@ -425,12 +463,49 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // be after), so live mode can check fit live, kill by kill, as the window
   // is simulated. Functionally identical for offline mode either way, since
   // nothing else in this function touches these tables mid-request.
-  const [{ count: gearCount }, { data: composition }, { count: holdingCount }, { count: potionCount }] = await Promise.all([
+  const [
+    { count: gearCount },
+    { data: composition },
+    { count: holdingCount },
+    { count: potionCount },
+    { data: characterKillsRow },
+    { data: accountKillsRow },
+    { data: petRow },
+  ] = await Promise.all([
     db.from('item_instances').select('id', { count: 'exact', head: true }).eq('owner_id', characterId),
     db.from('characters').select('composition_stones').eq('id', characterId).maybeSingle(),
     db.from('loot_holding').select('id', { count: 'exact', head: true }).eq('character_id', characterId),
     db.from('potion_stacks').select('id', { count: 'exact', head: true }).eq('character_id', characterId).gt('count', 0),
+    // Achievements & Pets, Stage 1 — this monster's existing kill-count rows
+    // (both ladders) and whether its pet is already obtained account-wide.
+    // Fetched here, alongside the other per-request baselines, rather than a
+    // separate round-trip.
+    db
+      .from('character_monster_kills')
+      .select('kills, tier2_unlocked')
+      .eq('character_id', characterId)
+      .eq('monster_id', character.selected_monster_id)
+      .maybeSingle(),
+    db
+      .from('account_monster_kills')
+      .select('kills')
+      .eq('account_id', character.account_id)
+      .eq('monster_id', character.selected_monster_id)
+      .maybeSingle(),
+    db.from('account_pets').select('id').eq('account_id', character.account_id).eq('monster_id', character.selected_monster_id).maybeSingle(),
   ])
+
+  // Gold multiplier is fixed for the whole simulated window, computed from the
+  // tier reached BEFORE this window's kills — same simplification already
+  // established for the level-diff EXP multiplier in the offline simulator,
+  // not a claim of new precision.
+  const characterKillsBefore = characterKillsRow?.kills ?? 0
+  const tier2Unlocked = characterKillsRow?.tier2_unlocked ?? false
+  const accountKillsBefore = accountKillsRow?.kills ?? 0
+  const petAlreadyUnlocked = Boolean(petRow)
+  const achievementGoldMultiplier = currentAchievementGoldMultiplier(characterKillsBefore, tier2Unlocked)
+  let killsThisWindow = 0
+  let petObtained = false
 
   const stoneSlotCount = Object.values((composition?.composition_stones as Record<string, number>) ?? {}).reduce(
     (sum, v) => sum + (typeof v === 'number' ? v : 0),
@@ -503,6 +578,15 @@ async function handleResolveCombat(req: Request): Promise<Response> {
         kills += 1
         if (isRare) rareKills += 1
 
+        // Achievements & Pets, Stage 1 — mode-agnostic (kill counts accrue
+        // identically in live and offline, same as kills/goldGained already
+        // do). Pet roll stops as soon as it hits once per window, matching
+        // "once obtained, no character can ever roll it again."
+        killsThisWindow += 1
+        if (!petAlreadyUnlocked && !petObtained && Math.random() < PET_DROP_CHANCE) {
+          petObtained = true
+        }
+
         const rewards = killRewards(monster, isRare, character.level)
         goldGained += rewards.gold
         expGained += rewards.exp
@@ -574,6 +658,35 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   while (level < MAX_CHARACTER_LEVEL && exp >= requiredExpForLevel(level)) {
     exp -= requiredExpForLevel(level)
     level += 1
+  }
+
+  // Achievements & Pets, Stage 1 — the gold multiplier is a constant for the
+  // whole window (computed above from the pre-window kill count), so applying
+  // it once to the total is mathematically identical to applying it per kill.
+  goldGained = Math.round(goldGained * achievementGoldMultiplier)
+
+  const characterKillCount = characterKillsBefore + killsThisWindow
+  const accountKillCount = accountKillsBefore + killsThisWindow
+
+  if (killsThisWindow > 0) {
+    await Promise.all([
+      db
+        .from('character_monster_kills')
+        .upsert(
+          { character_id: characterId, monster_id: character.selected_monster_id, kills: characterKillCount, tier2_unlocked: tier2Unlocked },
+          { onConflict: 'character_id,monster_id' },
+        ),
+      db
+        .from('account_monster_kills')
+        .upsert(
+          { account_id: character.account_id, monster_id: character.selected_monster_id, kills: accountKillCount },
+          { onConflict: 'account_id,monster_id' },
+        ),
+    ])
+  }
+
+  if (petObtained) {
+    await db.from('account_pets').insert({ account_id: character.account_id, monster_id: character.selected_monster_id })
   }
 
   interface GrantedItemRow {
@@ -691,5 +804,12 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     itemsHeld,
     currencyHeld,
     inventoryFull,
+    // Achievements & Pets, Stage 1 — this monster's updated kill totals (so
+    // the client can reflect them without a refetch, same pattern as gold/
+    // exp/meteors), and the monster id if a pet was newly obtained this call.
+    monsterId: character.selected_monster_id,
+    characterKillCount,
+    accountKillCount,
+    petObtained: petObtained ? character.selected_monster_id : null,
   })
 }
