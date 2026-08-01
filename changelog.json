@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.43.5",
+    "date": "2026-08-01",
+    "changes": [
+      "Fixed the achievement tier-unlock migration so it can be safely re-run — an earlier version left the database with a mismatched table/function from before the per-tier cost rework, which is what was causing \"function not found\" errors when unlocking a tier"
+    ]
+  },
+  {
     "version": "1.43.4",
     "date": "2026-08-01",
     "changes": [

@@ -12,6 +12,32 @@
 begin;
 
 -- ============================================================================
+-- Repair block: this file was edited in place (tier-cost redesign, 2026-08-01)
+-- after an earlier version had already been run manually via the SQL editor
+-- -- the live DB ended up with the OLD shape (tier2_unlocked boolean,
+-- unlock_achievement_tier2) while this file's CREATE TABLE IF NOT EXISTS
+-- below silently no-ops against an already-existing table, and CREATE OR
+-- REPLACE FUNCTION creates unlock_next_achievement_tier as a *new* function
+-- alongside the old one rather than replacing it -- which is exactly what
+-- produced the "function not found in schema cache" PGRST202 error the user
+-- hit (the client calls the new name, but the table was still missing the
+-- new column). This block makes the file safe to re-run regardless of
+-- whether the DB is fresh, partially migrated, or already fully migrated.
+-- No real data is at stake -- this feature was never actually reachable
+-- before now, so there's nothing meaningful in tier2_unlocked to preserve.
+-- ============================================================================
+do $$ begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'character_monster_kills' and column_name = 'tier2_unlocked'
+  ) then
+    alter table public.character_monster_kills drop column tier2_unlocked;
+  end if;
+end $$;
+
+drop function if exists public.unlock_achievement_tier2(uuid, text);
+
+-- ============================================================================
 -- character_monster_kills: per-character kill-count ladder, one row per
 -- (character, monster) once that character has ever killed it. Also carries
 -- that character's own unlocked_tier_index -- confirmed with the user
@@ -33,6 +59,17 @@ create table if not exists public.character_monster_kills (
   constraint character_monster_kills_unlocked_tier_index_check check (unlocked_tier_index between 0 and 6),
   constraint character_monster_kills_unique unique (character_id, monster_id)
 );
+
+-- Belt-and-braces for a table that already existed pre-redesign (see the
+-- repair block above) -- a no-op on a freshly created table, since it
+-- already has this column from the CREATE TABLE above.
+alter table public.character_monster_kills add column if not exists unlocked_tier_index integer not null default 0;
+
+do $$ begin
+  alter table public.character_monster_kills
+    add constraint character_monster_kills_unlocked_tier_index_check check (unlocked_tier_index between 0 and 6);
+exception when duplicate_object then null;
+end $$;
 
 alter table public.character_monster_kills enable row level security;
 
