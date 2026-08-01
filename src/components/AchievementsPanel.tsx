@@ -132,7 +132,11 @@ function UnlockRow({ characterId, monsterId, displayName }: { characterId: strin
             ? "You don't have enough DragonBalls."
             : result.error === 'already_maxed'
               ? 'All tiers already unlocked.'
-              : 'Something went wrong.',
+              : result.error === 'not_owner'
+                ? "Couldn't verify this character owns that — try reloading the page."
+                : result.error === 'rpc_failed'
+                  ? `Request failed: ${result.message ?? 'unknown error'}`
+                  : 'Something went wrong (no error detail returned).',
       )
     }
   }

@@ -18,7 +18,16 @@ export interface CharacterKillEntry {
 
 interface UnlockNextTierResult {
   ok: boolean
-  error?: 'not_owner' | 'already_maxed' | 'not_enough_meteors' | 'not_enough_dragonballs'
+  // 'rpc_failed' — new (2026-08-02) — the RPC call itself errored (network,
+  // permission, or the function/migration not existing live yet), as opposed
+  // to the function running successfully and returning a business-logic
+  // rejection. Previously this case set no `error` at all, so the UI could
+  // only ever show a generic "Something went wrong" with no way to tell
+  // which of these two very different situations it actually was.
+  error?: 'not_owner' | 'already_maxed' | 'not_enough_meteors' | 'not_enough_dragonballs' | 'rpc_failed'
+  // Only set for 'rpc_failed' — the raw Supabase/Postgres error message, so
+  // it can actually be shown instead of silently living in console.error.
+  message?: string
   cost?: number
   currency?: 'meteor' | 'dragonball'
   meteors?: number
@@ -93,7 +102,7 @@ export const useAchievementsStore = create<AchievementsState>((set, get) => ({
 
     if (error) {
       console.error('Unlock next achievement tier call failed', error)
-      return { ok: false }
+      return { ok: false, error: 'rpc_failed', message: error.message }
     }
 
     const result = data as UnlockNextTierResult
