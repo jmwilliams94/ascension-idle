@@ -21,6 +21,10 @@ interface InventorySlotProps {
   filled: boolean
   qualityColor?: string
   icon?: string
+  // Real art, when supplied, renders instead of the emoji `icon` above (see
+  // forgeCosts.ts's METEOR_ICON_SRC for the established pattern of exposing
+  // one of these as a shared constant per item).
+  iconSrc?: string
   // Plain accessibility label (aria-label). Also used as the native `title` popup,
   // but only when `tooltip` is omitted — otherwise the two would show at once.
   label?: string
@@ -70,6 +74,7 @@ export default function InventorySlot({
   filled,
   qualityColor,
   icon,
+  iconSrc,
   label,
   tooltip,
   badge,
@@ -132,7 +137,7 @@ export default function InventorySlot({
       } ${draggable ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${dragging ? 'opacity-40' : ''}`}
       style={{ borderColor: qualityColor, backgroundColor: qualityColor ? `${qualityColor}22` : undefined }}
     >
-      {icon}
+      {iconSrc ? <img src={iconSrc} alt="" className="h-3/5 w-3/5 object-contain" /> : icon}
       {badge && <span className="absolute bottom-0.5 right-1 text-[9px] font-semibold text-slate-200">{badge}</span>}
     </button>
   )

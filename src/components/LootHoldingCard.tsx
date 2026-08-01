@@ -3,6 +3,7 @@ import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import { LOOT_HOLDING_CAP, useLootHoldingStore } from '../game/items/useLootHoldingStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { formatItemDisplayName, getItemIcon, getQualityColor, previewSellPrice } from '../game/items/equipmentBonus'
+import { METEOR_ICON_SRC } from '../game/items/forgeCosts'
 
 // Loot Holding (confirmed with the user, 2026-07-30): where a server-resolved
 // kill's item drop lands when Inventory is full — see useLootHoldingStore and
@@ -247,7 +248,8 @@ export default function LootHoldingCard() {
               : template && entry.quality_tier
                 ? formatItemDisplayName(template.name, entry.quality_tier)
                 : 'Unknown item'
-            const icon = isCurrency ? (entry.currency_type === 'meteor' ? '🌠' : '🔮') : getItemIcon(template?.slot_type)
+            const icon = isCurrency ? (entry.currency_type === 'meteor' ? undefined : '🔮') : getItemIcon(template?.slot_type)
+            const iconSrc = isCurrency && entry.currency_type === 'meteor' ? METEOR_ICON_SRC : undefined
 
             const slot = (
               <InventorySlot
@@ -256,6 +258,7 @@ export default function LootHoldingCard() {
                 filled
                 sizeClassName={SLOT_SIZE_CLASS}
                 icon={icon}
+                iconSrc={iconSrc}
                 label={label}
                 qualityColor={!isCurrency ? getQualityColor(entry.quality_tier ?? 'normal') : undefined}
                 selected={selectedId === entry.id}
