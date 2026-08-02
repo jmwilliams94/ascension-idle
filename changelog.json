@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.54.1",
+    "date": "2026-08-03",
+    "changes": [
+      "Fixed a database error that was blocking the new Lucky ticket-draw feature from working"
+    ]
+  },
+  {
     "version": "1.54.0",
     "date": "2026-08-03",
     "changes": [

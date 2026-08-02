@@ -61,7 +61,7 @@ begin
       ('dragonball', 1, 0.7::numeric),
       ('meteor_scroll', 1, 0.25::numeric),
       ('dragonball_scroll', 1, 0.05::numeric)
-    ) as t(kind text, amount integer, weight numeric)
+    ) as t(kind, amount, weight)
   loop
     v_cumulative := v_cumulative + v_row.weight;
     if v_roll < v_cumulative then
