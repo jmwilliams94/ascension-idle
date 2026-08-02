@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.49.7",
+    "date": "2026-08-02",
+    "changes": [
+      "Normal quality now shows no Item Effects preview at all",
+      "Added two extra Ascended examples for comparison — a brighter \"vibrant core\" glow, and a variant where embers radiate outward from the center instead of rising"
+    ]
+  },
+  {
     "version": "1.49.6",
     "date": "2026-08-02",
     "changes": [

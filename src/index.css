@@ -94,3 +94,43 @@ body {
 .effect-ember {
   animation: effect-ember-rise 3.2s ease-in infinite;
 }
+
+/* Variant (2026-08-02): embers launching from the tile's center out toward
+   the edge, rather than rising from the bottom — --ember-dx/--ember-dy are
+   the per-particle target offset (a random angle/radius computed once in
+   JS), composed with the element's own centering translate(-50%,-50%) in
+   the same transform value (multiple translate() calls in one `transform`
+   compose additively). */
+@keyframes effect-ember-radiate {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--ember-dx, 0), var(--ember-dy, 0)) scale(0.5);
+    opacity: 0;
+  }
+}
+.effect-ember-radiate {
+  animation: effect-ember-radiate 2.2s ease-out infinite;
+}
+
+/* A brighter, breathing core glow for a more "extravagant" tier preview —
+   distinct from the plain static ambient tint every tier already gets. */
+@keyframes effect-core-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+.effect-core-pulse {
+  animation: effect-core-pulse 2.2s ease-in-out infinite;
+}
