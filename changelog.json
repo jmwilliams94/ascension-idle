@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.49.11",
+    "date": "2026-08-02",
+    "changes": [
+      "Confirmed Ascended's vibrant-core-glow look as the real Item Effects example; Tempered now shows 4 embers, Ascended 15",
+      "Added a pure-curiosity \"Radiating (Extreme)\" example — 100 embers bursting outward all the way to the tile's edge"
+    ]
+  },
+  {
     "version": "1.49.10",
     "date": "2026-08-02",
     "changes": [

@@ -9,11 +9,12 @@ import type { CSSProperties, ReactNode } from 'react'
 // Normal deliberately gets no effect at all (per the user's "that one
 // shouldn't have any" — kept as a labeled baseline tile so the escalation
 // from nothing to Ascended's full flurry is visible side by side, not
-// dropped from the gallery entirely). Ascended gets three variants for
-// comparison: the plain rising-ember version every other tier uses, a more
-// "extravagant" version with a brighter breathing core glow, and a version
-// where embers launch outward from the center instead of rising from the
-// bottom.
+// dropped from the gallery entirely). Confirmed with the user: Ascended
+// uses the "vibrant core" glow variant (brighter, breathing radial glow) as
+// its real look, not the plain flat glow every other tier gets. One extra
+// tile at the end (Radiating (Extreme)) is a pure curiosity, not a tier
+// decision — the same center-outward idea pushed to 100 embers reaching the
+// tile's edge, not meant to represent any real tier.
 
 // Tiny deterministic PRNG (mulberry32) so every tile's ember positions/
 // timing are organically varied but stable across renders — no layout
@@ -94,12 +95,15 @@ interface RadiateEmberConfig {
 }
 
 // Each ember launches from the tile's own center outward at a random angle/
-// distance, rather than rising from the bottom.
-function buildRadiateEmbers(count: number, seed: number, radius = 34): RadiateEmberConfig[] {
+// distance, rather than rising from the bottom. `radius` defaults to
+// roughly the tile's own half-width (h-24/w-24 = 96px), so embers travel
+// out to (and a little past, into the flat edges and corners) the visible
+// boundary rather than stopping short in the middle.
+function buildRadiateEmbers(count: number, seed: number, radius = 48): RadiateEmberConfig[] {
   const rand = mulberry32(seed)
   return Array.from({ length: count }, () => {
     const angle = rand() * Math.PI * 2
-    const distance = radius * (0.55 + rand() * 0.55)
+    const distance = radius * (0.75 + rand() * 0.5)
     return {
       size: 2 + Math.round(rand() * 2),
       delay: `${(rand() * 2.2).toFixed(2)}s`,
@@ -172,12 +176,12 @@ const EXAMPLES: Example[] = [
   },
   {
     label: 'Tempered',
-    caption: '5 embers',
+    caption: '4 embers',
     color: '#4FC3F7',
     layer: (
       <>
         <CoreGlow color="#4FC3F7" />
-        <RisingEmberLayer embers={buildRiseEmbers(5, 137)} color="#4FC3F7" />
+        <RisingEmberLayer embers={buildRiseEmbers(4, 137)} color="#4FC3F7" />
       </>
     ),
   },
@@ -204,35 +208,29 @@ const EXAMPLES: Example[] = [
     ),
   },
   {
+    // Decided: the vivid/breathing core glow is the real Ascended look now
+    // (the earlier plain-glow variant was dropped).
     label: 'Ascended',
-    caption: '14 embers',
-    color: '#EF4444',
-    layer: (
-      <>
-        <CoreGlow color="#EF4444" />
-        <RisingEmberLayer embers={buildRiseEmbers(14, 248)} color="#EF4444" />
-      </>
-    ),
-  },
-  {
-    label: 'Ascended (Vibrant Core)',
-    caption: 'Same 14 embers, brighter breathing core glow',
+    caption: '15 embers, vibrant core glow',
     color: '#EF4444',
     layer: (
       <>
         <CoreGlow color="#EF4444" vivid />
-        <RisingEmberLayer embers={buildRiseEmbers(14, 248)} color="#EF4444" />
+        <RisingEmberLayer embers={buildRiseEmbers(15, 248)} color="#EF4444" />
       </>
     ),
   },
   {
-    label: 'Ascended (Radiating)',
-    caption: 'Embers launch outward from the center instead of rising',
+    // Pure curiosity, not a tier decision — same radiating-from-center idea,
+    // pushed to an extreme (100 embers, reaching all the way to the tile's
+    // edge instead of stopping partway) just to see what it looks like.
+    label: 'Radiating (Extreme)',
+    caption: '100 embers, reaching the tile edge',
     color: '#EF4444',
     layer: (
       <>
         <CoreGlow color="#EF4444" vivid />
-        <RadiatingEmberLayer embers={buildRadiateEmbers(16, 285)} color="#EF4444" />
+        <RadiatingEmberLayer embers={buildRadiateEmbers(100, 285)} color="#EF4444" />
       </>
     ),
   },
@@ -260,9 +258,8 @@ export default function ItemEffectGallery() {
       <p className="text-xs text-slate-500">
         Exploratory only — not wired into any real Inventory/Equipment/Forge tile yet. Rising Embers per quality tier, colored
         to match (same hex values as the real quality-tier borders elsewhere in the game) and denser at higher tiers. Normal
-        gets no effect at all. Three Ascended variants at the end for comparison — the plain version, a brighter "vibrant core"
-        version, and a version where embers radiate outward from the center. Every tile is actually animated; a screenshot
-        won't show the motion.
+        gets no effect at all; Ascended uses the vibrant breathing core glow as its confirmed look. The last tile is just a
+        curiosity, not a tier decision. Every tile is actually animated; a screenshot won't show the motion.
       </p>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
