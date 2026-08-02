@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.48.3",
+    "date": "2026-08-02",
+    "changes": [
+      "Forge's Upgrade/Material/Preview squares now line up at the same height instead of the two-line label pushing one down",
+      "Doubled the spacing between the Upgrade/Material/Preview squares"
+    ]
+  },
+  {
     "version": "1.48.2",
     "date": "2026-08-02",
     "changes": [

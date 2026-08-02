@@ -23,6 +23,16 @@ export const SLOT_SIZE_CLASS = 'h-14 w-14 lg:h-16 lg:w-16'
 // wrap instead.
 export const SLOT_WIDTH_CLASS = 'w-14 lg:w-16'
 
+// Fixed height for the label sitting above a Forge column (Upgrade Slot/
+// Material/Preview) — "Upgrade Slot" wraps to two lines within
+// SLOT_WIDTH_CLASS while "Material"/"Preview" fit on one, so without a
+// reserved height the squares below end up at different vertical positions
+// (the two-line label pushes its square down further than its neighbors').
+// Reserving this much room for every label, then centering the actual text
+// inside it, keeps every square's top edge level regardless of how many
+// lines its own label wraps to.
+export const SLOT_LABEL_HEIGHT_CLASS = 'h-7'
+
 interface InventorySlotProps {
   // Stable id for this cell (an item's/arrow stack's id for filled slots, a
   // synthetic key for empty ones) — kept as an explicit prop/data attribute, not

@@ -6,7 +6,7 @@ import ForgeSocketsPanel from './ForgeSocketsPanel'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import { DragDropProvider } from './dragDrop'
 import InventoryPanel from './InventoryPanel'
-import InventorySlot, { SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
+import InventorySlot, { SLOT_LABEL_HEIGHT_CLASS, SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { formatItemDisplayName, formatQualityAndLevel, getItemIcon, getQualityColor, nextQualityTier } from '../game/items/equipmentBonus'
 import {
@@ -171,7 +171,9 @@ function PreviewSquare({
 
   return (
     <div className={`flex flex-col items-center gap-2 ${SLOT_WIDTH_CLASS}`}>
-      <p className="text-center text-[10px] uppercase leading-tight tracking-wide text-slate-500">Preview</p>
+      <div className={`flex ${SLOT_LABEL_HEIGHT_CLASS} items-center justify-center`}>
+        <p className="text-center text-[10px] uppercase leading-tight tracking-wide text-slate-500">Preview</p>
+      </div>
 
       <div className={SLOT_SIZE_CLASS}>
         {filled && selectedItem ? (
@@ -453,12 +455,12 @@ export default function ForgePanel() {
           same way (see InventoryPanel's own drop-zone wrapper). */}
       <div className="flex flex-col items-center gap-6">
         <div className="flex flex-col items-center gap-3">
-          <div className="flex items-start justify-center gap-3">
+          <div className="flex items-start justify-center gap-6">
             {/* Upgrade + Material paired so the composition load bar (below)
                 can stretch to exactly their combined width, per the "load bar
                 stretching underneath the upgrade and material slots" ask. */}
             <div className="flex flex-col items-center gap-2">
-              <div className="flex gap-3">
+              <div className="flex gap-6">
                 <ForgeUpgradeSlot item={selectedItem} template={selectedTemplate} onRemove={handleRemove} />
                 <ForgeMaterialSlot entries={materialEntries} templates={templates} onRemoveEntry={handleRemoveMaterial} />
               </div>
