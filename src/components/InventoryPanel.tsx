@@ -95,7 +95,12 @@ export default function InventoryPanel({
   const sellItem = useInventoryStore((state) => state.sellItem)
   const templates = useItemTemplatesStore((state) => state.templates)
   const setEquippedItem = useEquipmentStore((state) => state.setEquippedItem)
-  const isEquipped = useEquipmentStore((state) => state.isEquipped)
+  // Subscribe to equippedIds itself, not the isEquipped function — isEquipped's
+  // reference never changes (it's set once at store creation), so selecting it
+  // directly never re-renders this component when equipment actually changes,
+  // only whenever something else forces a re-render (e.g. selecting a tile).
+  const equippedIds = useEquipmentStore((state) => state.equippedIds)
+  const isEquipped = (itemId: string) => Object.values(equippedIds).includes(itemId)
   const characterLevel = useProgressionStore((state) => state.level)
 
   const stones = useCompositionStore((state) => state.stones)
