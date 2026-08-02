@@ -11,11 +11,19 @@ import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 // on it at all).
 export type ListingStatus = 'active' | 'sold' | 'cancelled' | 'expired'
 export type ListingCurrency = 'gold' | 'ascension_points'
+// The 4 currency "items" that can be listed alongside gear (2026-08-03) —
+// each listing is always exactly 1 unit, same as gear is always exactly 1
+// unique item. See 20260803010000_marketplace_currency_listings.sql.
+export type ListableCurrencyType = 'meteor' | 'dragonball' | 'meteor_scroll' | 'dragonball_scroll'
+// Exactly one of item_id/currency_type is set per row (DB check constraint)
+// — a listing lists either a real gear item or one of the currency types.
+export type ListingTarget = { kind: 'item'; itemId: string } | { kind: 'currency'; currencyType: ListableCurrencyType }
 
 export interface MarketplaceListing {
   id: string
   seller_character_id: string
-  item_id: string
+  item_id: string | null
+  currency_type: ListableCurrencyType | null
   price_currency: ListingCurrency
   price_amount: number
   fee_amount: number
@@ -29,7 +37,9 @@ export interface MarketplaceListing {
   // id" convention — see useAchievementsStore). Absent for a 'sold' entry in
   // My Listings history: once ownership moves to the buyer, the seller's own
   // item_instances RLS no longer matches it (it's not actively listed
-  // anymore either) — a known, disclosed display-only gap, not a bug.
+  // anymore either) — a known, disclosed display-only gap, not a bug. Also
+  // absent (deliberately, never fetched) for a currency-type listing —
+  // there's no item_instances row to hydrate.
   item?: ItemInstance
 }
 
@@ -56,7 +66,10 @@ interface EndListingResult {
 }
 
 async function hydrateItems(listings: MarketplaceListing[]): Promise<MarketplaceListing[]> {
-  const itemIds = [...new Set(listings.map((listing) => listing.item_id))]
+  // Currency-type listings have a null item_id — filtered out here rather
+  // than passed into `.in('id', ...)`, which a null entry wouldn't match
+  // anyway but is worth being explicit about.
+  const itemIds = [...new Set(listings.map((listing) => listing.item_id).filter((id): id is string => id !== null))]
   if (itemIds.length === 0) {
     return listings
   }
@@ -86,7 +99,7 @@ interface MarketplaceState {
   isListed: (itemId: string) => boolean
   createListing: (
     characterId: string,
-    itemId: string,
+    target: ListingTarget,
     priceCurrency: ListingCurrency,
     priceAmount: number,
     durationHours: number,
@@ -143,11 +156,12 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
 
   isListed: (itemId) => get().myListings.some((listing) => listing.status === 'active' && listing.item_id === itemId),
 
-  createListing: async (characterId, itemId, priceCurrency, priceAmount, durationHours) => {
+  createListing: async (characterId, target, priceCurrency, priceAmount, durationHours) => {
     set({ busy: true })
     const { data, error } = await supabase.rpc('create_marketplace_listing', {
       p_character_id: characterId,
-      p_item_id: itemId,
+      p_item_id: target.kind === 'item' ? target.itemId : null,
+      p_currency_type: target.kind === 'currency' ? target.currencyType : null,
       p_price_currency: priceCurrency,
       p_price_amount: priceAmount,
       p_duration_hours: durationHours,

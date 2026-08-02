@@ -1,17 +1,25 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import InventoryPanel from './InventoryPanel'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
-import MarketplaceListingSlot from './MarketplaceListingSlot'
+import MarketplaceListingSlot, { type ListingDraftTarget } from './MarketplaceListingSlot'
 import { DragDropProvider } from './dragDrop'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemTemplatesStore'
-import { useMarketplaceStore, type MarketplaceListing, type ListingCurrency } from '../game/marketplace/useMarketplaceStore'
+import {
+  useMarketplaceStore,
+  type ListableCurrencyType,
+  type ListingTarget,
+  type MarketplaceListing,
+  type ListingCurrency,
+} from '../game/marketplace/useMarketplaceStore'
 import { useMailStore, type MailEntry } from '../game/marketplace/useMailStore'
+import { listableCurrencyLabel, listableCurrencyVisual } from '../game/marketplace/listableCurrency'
 import { LISTING_DURATION_OPTIONS, previewListingFee } from '../game/marketplace/marketplaceCosts'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { buildGearTooltip, formatItemDisplayName, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
+import { isDragonballDragId, isDragonballScrollDragId, isMeteorDragId, isMeteorScrollDragId } from '../game/items/forgeCosts'
 
 // Marketplace (see CLAUDE.md's Gear system / Marketplace section) — three
 // page-local sub-tabs, same "sub-navigation inside one top-level tab"
@@ -41,6 +49,10 @@ function describeCreateError(error?: string): string {
       return "You don't have enough Gold for the fee."
     case 'not_enough_ascension_points':
       return "You don't have enough Ascension Points for the fee."
+    case 'not_enough_currency':
+      return "You don't have one of those to list."
+    case 'too_many_listings':
+      return 'Your account already has 20 active listings — the max.'
     default:
       return 'Something went wrong.'
   }
@@ -62,11 +74,37 @@ function describeBuyError(error?: string): string {
   }
 }
 
-function ListingTile({ listing, templates }: { listing: MarketplaceListing; templates: ItemTemplate[] }) {
+// A listing's own label — a real gear name, or one of the 4 listable
+// currency type labels, or a placeholder for a since-claimed/unavailable
+// gear item (see MarketplaceListing.item's own doc comment).
+function listingLabel(listing: MarketplaceListing, templates: ItemTemplate[]): string {
+  if (listing.currency_type) {
+    return listableCurrencyLabel(listing.currency_type)
+  }
   const template = listing.item ? templates.find((t) => t.id === listing.item!.template_id) : undefined
-  const label = listing.item
+  return listing.item
     ? formatItemDisplayName(template?.name ?? 'Unknown item', listing.item.quality_tier, listing.item.composition_level)
     : 'Item unavailable'
+}
+
+function ListingTile({ listing, templates }: { listing: MarketplaceListing; templates: ItemTemplate[] }) {
+  if (listing.currency_type) {
+    const visual = listableCurrencyVisual(listing.currency_type)
+    return (
+      <InventorySlot
+        slotId={listing.id}
+        filled
+        sizeClassName={SLOT_SIZE_CLASS}
+        icon={visual.icon}
+        iconSrc={visual.iconSrc}
+        qualityColor={visual.qualityColor}
+        label={listableCurrencyLabel(listing.currency_type)}
+      />
+    )
+  }
+
+  const template = listing.item ? templates.find((t) => t.id === listing.item!.template_id) : undefined
+  const label = listingLabel(listing, templates)
   const icon = getItemIcon(template?.slot_type)
 
   return (
@@ -83,10 +121,7 @@ function ListingTile({ listing, templates }: { listing: MarketplaceListing; temp
 }
 
 function ListingRow({ listing, templates, action }: { listing: MarketplaceListing; templates: ItemTemplate[]; action: ReactNode }) {
-  const template = listing.item ? templates.find((t) => t.id === listing.item!.template_id) : undefined
-  const label = listing.item
-    ? formatItemDisplayName(template?.name ?? 'Unknown item', listing.item.quality_tier, listing.item.composition_level)
-    : 'Item unavailable'
+  const label = listingLabel(listing, templates)
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
@@ -197,6 +232,14 @@ function BrowseTab({ characterId, templates }: { characterId: string; templates:
   )
 }
 
+// What's staged in the drop slot before confirming — either a real gear
+// item (by id, resolved live against the Inventory store so it stays in
+// sync if that item changes) or one of the 4 listable currency types
+// (2026-08-03). dragId is only needed to pass through as this tile's
+// reservedItemIds entry, hiding it from the Inventory grid below while
+// staged, the same way a staged gear item already is.
+type ListingDraft = { kind: 'item'; itemId: string } | { kind: 'currency'; dragId: string; currencyType: ListableCurrencyType }
+
 function ListAnItemForm({ characterId }: { characterId: string }) {
   const items = useInventoryStore((state) => state.items)
   const templates = useItemTemplatesStore((state) => state.templates)
@@ -205,14 +248,20 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
   const busy = useMarketplaceStore((state) => state.busy)
   const createListing = useMarketplaceStore((state) => state.createListing)
 
-  const [itemId, setItemId] = useState<string | null>(null)
+  const [draft, setDraft] = useState<ListingDraft | null>(null)
   const [priceCurrency, setPriceCurrency] = useState<ListingCurrency>('gold')
   const [priceAmount, setPriceAmount] = useState('')
   const [durationHours, setDurationHours] = useState(LISTING_DURATION_OPTIONS[2]?.hours ?? 24)
   const [error, setError] = useState<string | null>(null)
 
-  const selectedItem = itemId ? (items.find((item) => item.id === itemId) ?? null) : null
+  const selectedItem = draft?.kind === 'item' ? (items.find((item) => item.id === draft.itemId) ?? null) : null
   const selectedTemplate = selectedItem ? (templates.find((t) => t.id === selectedItem.template_id) ?? null) : null
+  const listingTarget: ListingDraftTarget | null =
+    draft?.kind === 'item' && selectedItem
+      ? { kind: 'item', item: selectedItem, template: selectedTemplate }
+      : draft?.kind === 'currency'
+        ? { kind: 'currency', currencyType: draft.currencyType }
+        : null
 
   const parsedPrice = Number(priceAmount)
   const priceValid = Number.isFinite(parsedPrice) && parsedPrice > 0
@@ -220,28 +269,49 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
   const balance = priceCurrency === 'gold' ? gold : ascensionPoints
   const canAffordFee = fee > 0 && balance >= fee
 
-  const handleDropItemId = (dropId: string) => {
-    if (!items.some((item) => item.id === dropId)) {
+  const handleDropTarget = (dragId: string) => {
+    if (isMeteorDragId(dragId)) {
+      setDraft({ kind: 'currency', dragId, currencyType: 'meteor' })
+      setError(null)
       return
     }
-    setItemId(dropId)
-    setError(null)
+    if (isDragonballDragId(dragId)) {
+      setDraft({ kind: 'currency', dragId, currencyType: 'dragonball' })
+      setError(null)
+      return
+    }
+    if (isMeteorScrollDragId(dragId)) {
+      setDraft({ kind: 'currency', dragId, currencyType: 'meteor_scroll' })
+      setError(null)
+      return
+    }
+    if (isDragonballScrollDragId(dragId)) {
+      setDraft({ kind: 'currency', dragId, currencyType: 'dragonball_scroll' })
+      setError(null)
+      return
+    }
+    if (items.some((item) => item.id === dragId)) {
+      setDraft({ kind: 'item', itemId: dragId })
+      setError(null)
+    }
   }
 
   const handleTileDrop = (overTarget: string, id: string) => {
     if (overTarget === 'marketplace-listing') {
-      handleDropItemId(id)
+      handleDropTarget(id)
     }
   }
 
   const handleList = async () => {
-    if (!selectedItem || !priceValid) {
+    if (!draft || !priceValid) {
       return
     }
     setError(null)
-    const result = await createListing(characterId, selectedItem.id, priceCurrency, Math.round(parsedPrice), durationHours)
+    const target: ListingTarget =
+      draft.kind === 'item' ? { kind: 'item', itemId: draft.itemId } : { kind: 'currency', currencyType: draft.currencyType }
+    const result = await createListing(characterId, target, priceCurrency, Math.round(parsedPrice), durationHours)
     if (result.ok) {
-      setItemId(null)
+      setDraft(null)
       setPriceAmount('')
     } else {
       setError(describeCreateError(result.error))
@@ -254,7 +324,7 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
         <p className="text-sm font-semibold text-slate-200">List an Item</p>
 
         <div className="flex flex-col items-start gap-4 sm:flex-row">
-          <MarketplaceListingSlot item={selectedItem} template={selectedTemplate} onRemove={() => setItemId(null)} />
+          <MarketplaceListingSlot target={listingTarget} onRemove={() => setDraft(null)} />
 
           <div className="flex-1 space-y-2">
             <div className="flex gap-2">
@@ -315,7 +385,7 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
 
             <button
               type="button"
-              disabled={busy || !selectedItem || !priceValid || !canAffordFee}
+              disabled={busy || !draft || !priceValid || !canAffordFee}
               onClick={() => void handleList()}
               className="rounded-lg border border-emerald-600 bg-emerald-500/10 px-4 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -325,7 +395,11 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
           </div>
         </div>
 
-        <InventoryPanel columns={5} reservedItemIds={itemId ? [itemId] : []} onTileDrop={handleTileDrop} />
+        <InventoryPanel
+          columns={5}
+          reservedItemIds={draft ? [draft.kind === 'item' ? draft.itemId : draft.dragId] : []}
+          onTileDrop={handleTileDrop}
+        />
       </div>
     </DragDropProvider>
   )
@@ -417,9 +491,11 @@ function MailTab({ characterId, templates }: { characterId: string; templates: I
   const selectedEntry = entries.find((entry) => entry.id === selectedId) ?? null
   const selectedTemplate = selectedEntry?.item ? (templates.find((t) => t.id === selectedEntry.item!.template_id) ?? null) : null
   const selectedLabel = selectedEntry
-    ? selectedEntry.item
-      ? formatItemDisplayName(selectedTemplate?.name ?? 'Unknown item', selectedEntry.item.quality_tier, selectedEntry.item.composition_level)
-      : 'Item unavailable'
+    ? selectedEntry.currency_type
+      ? listableCurrencyLabel(selectedEntry.currency_type)
+      : selectedEntry.item
+        ? formatItemDisplayName(selectedTemplate?.name ?? 'Unknown item', selectedEntry.item.quality_tier, selectedEntry.item.composition_level)
+        : 'Item unavailable'
     : ''
 
   const handleClaim = async () => {
@@ -464,6 +540,27 @@ function MailTab({ characterId, templates }: { characterId: string; templates: I
       <div className="overflow-x-auto">
         <div className="grid grid-cols-[repeat(8,3.5rem)] gap-1.5 lg:grid-cols-[repeat(8,4rem)]">
           {entries.map((entry) => {
+            if (entry.currency_type) {
+              const visual = listableCurrencyVisual(entry.currency_type)
+              return (
+                <InventorySlot
+                  key={entry.id}
+                  slotId={entry.id}
+                  filled
+                  sizeClassName={SLOT_SIZE_CLASS}
+                  icon={visual.icon}
+                  iconSrc={visual.iconSrc}
+                  qualityColor={visual.qualityColor}
+                  label={listableCurrencyLabel(entry.currency_type)}
+                  selected={selectedId === entry.id}
+                  onClick={() => {
+                    setSelectedId((current) => (current === entry.id ? null : entry.id))
+                    setError(null)
+                  }}
+                />
+              )
+            }
+
             const template = entry.item ? templates.find((t) => t.id === entry.item!.template_id) : undefined
             const label = entry.item
               ? formatItemDisplayName(template?.name ?? 'Unknown item', entry.item.quality_tier, entry.item.composition_level)

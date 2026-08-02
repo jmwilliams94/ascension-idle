@@ -505,33 +505,75 @@ export default function InventoryPanel({
             )
           })}
 
-          {meteorScrollTiles.map(({ dragId }) => (
-            <InventorySlot
-              key={dragId}
-              slotId={dragId}
-              filled
-              sizeClassName={SLOT_SIZE_CLASS}
-              icon="📜"
-              label="Meteor Scroll"
-              tooltip={buildMeteorScrollTooltip()}
-              selected={selectedSlot?.kind === 'scroll' && selectedSlot.dragId === dragId}
-              onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'meteor' })}
-            />
-          ))}
+          {meteorScrollTiles.map(({ dragId }) => {
+            if (reservedItemIds.includes(dragId)) {
+              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+            }
 
-          {dragonballScrollTiles.map(({ dragId }) => (
-            <InventorySlot
-              key={dragId}
-              slotId={dragId}
-              filled
-              sizeClassName={SLOT_SIZE_CLASS}
-              icon="📜"
-              label="DragonBall Scroll"
-              tooltip={buildDragonballScrollTooltip()}
-              selected={selectedSlot?.kind === 'scroll' && selectedSlot.dragId === dragId}
-              onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'dragonball' })}
-            />
-          ))}
+            const commonProps = {
+              slotId: dragId,
+              filled: true as const,
+              sizeClassName: SLOT_SIZE_CLASS,
+              icon: '📜',
+              label: 'Meteor Scroll',
+              tooltip: buildMeteorScrollTooltip(),
+              selected: selectedSlot?.kind === 'scroll' && selectedSlot.dragId === dragId,
+            }
+
+            if (onTileDrop) {
+              return (
+                <DraggableInventorySlot
+                  key={dragId}
+                  {...commonProps}
+                  dragEnabled
+                  dragPayload={{ id: dragId, icon: '📜' }}
+                  onDrop={handleTileDrop}
+                  onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'meteor' })}
+                />
+              )
+            }
+
+            return (
+              <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'meteor' })} />
+            )
+          })}
+
+          {dragonballScrollTiles.map(({ dragId }) => {
+            if (reservedItemIds.includes(dragId)) {
+              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+            }
+
+            const commonProps = {
+              slotId: dragId,
+              filled: true as const,
+              sizeClassName: SLOT_SIZE_CLASS,
+              icon: '📜',
+              label: 'DragonBall Scroll',
+              tooltip: buildDragonballScrollTooltip(),
+              selected: selectedSlot?.kind === 'scroll' && selectedSlot.dragId === dragId,
+            }
+
+            if (onTileDrop) {
+              return (
+                <DraggableInventorySlot
+                  key={dragId}
+                  {...commonProps}
+                  dragEnabled
+                  dragPayload={{ id: dragId, icon: '📜' }}
+                  onDrop={handleTileDrop}
+                  onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'dragonball' })}
+                />
+              )
+            }
+
+            return (
+              <InventorySlot
+                key={dragId}
+                {...commonProps}
+                onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'dragonball' })}
+              />
+            )
+          })}
 
           {visibleItems.map((item) => {
             if (reservedItemIds.includes(item.id)) {

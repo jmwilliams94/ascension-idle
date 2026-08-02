@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.52.0",
+    "date": "2026-08-03",
+    "changes": [
+      "Meteors, DragonBalls, and their Scrolls can now be listed on the Marketplace, drag-and-drop, just like gear — always 1 unit per listing",
+      "Accounts are now capped at 20 active Marketplace listings total, across every character"
+    ]
+  },
+  {
     "version": "1.51.3",
     "date": "2026-08-03",
     "changes": [

@@ -198,12 +198,26 @@ export function buildDragonballTooltip(): ItemTooltipData {
 // non-stacking Inventory item. Same synthetic-id convention as the units
 // themselves (no per-unit DB row, just a running count —
 // characters.meteor_scroll_count/dragonball_scroll_count).
+const METEOR_SCROLL_DRAG_ID_PREFIX = 'meteor-scroll:'
+const DRAGONBALL_SCROLL_DRAG_ID_PREFIX = 'dragonball-scroll:'
+
 export function meteorScrollDragId(index: number): string {
-  return `meteor-scroll:${index}`
+  return `${METEOR_SCROLL_DRAG_ID_PREFIX}${index}`
 }
 
 export function dragonballScrollDragId(index: number): string {
-  return `dragonball-scroll:${index}`
+  return `${DRAGONBALL_SCROLL_DRAG_ID_PREFIX}${index}`
+}
+
+// Same purpose as isMeteorDragId/isDragonballDragId above — used by the
+// Marketplace's "List an Item" drop zone to tell a dragged Scroll tile apart
+// from a loose unit or gear item.
+export function isMeteorScrollDragId(id: string): boolean {
+  return id.startsWith(METEOR_SCROLL_DRAG_ID_PREFIX)
+}
+
+export function isDragonballScrollDragId(id: string): boolean {
+  return id.startsWith(DRAGONBALL_SCROLL_DRAG_ID_PREFIX)
 }
 
 export function buildMeteorScrollTooltip(): ItemTooltipData {
