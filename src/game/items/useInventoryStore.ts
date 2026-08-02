@@ -9,12 +9,18 @@ import { useItemTemplatesStore, type ItemTemplate } from './useItemTemplatesStor
 import { useProgressionStore } from '../stats/useProgressionStore'
 import { useCharacterStore } from '../stats/useCharacterStore'
 
-// Mirrors the item_instances table. sockets/enchant are unused this step — they
-// exist so a later step doesn't need a schema rework. quality_tier/level/
-// composition_level/composition_points are only ever changed server-side via the
-// quality_upgrade/level_upgrade/composition_feed Postgres functions (see
-// useForgeStore) — never write them via a normal update(). owner_id references
-// characters.id (a specific character), not the account.
+// Mirrors the item_instances table. enchant is still unused/inert — sockets
+// is now real (2026-08-02, see unlock_weapon_socket/quality_upgrade/
+// level_upgrade in supabase/migrations/20260802010000_add_gear_sockets.sql
+// and CLAUDE.md's Sockets section): an unlocked-but-empty socket is a plain
+// jsonb `null` array element (one socket = [null], two = [null, null]) —
+// inserting a gem would later replace that null, but gems aren't
+// implemented as items yet so every socket just shows Empty for now.
+// quality_tier/level/composition_level/composition_points/sockets are only
+// ever changed server-side via the quality_upgrade/level_upgrade/
+// composition_feed/unlock_weapon_socket Postgres functions (see
+// useForgeStore) — never write them via a normal update(). owner_id
+// references characters.id (a specific character), not the account.
 export interface ItemInstance {
   id: string
   template_id: string
@@ -23,7 +29,7 @@ export interface ItemInstance {
   level: number
   composition_level: number
   composition_points: number
-  sockets: unknown[]
+  sockets: (null | Record<string, unknown>)[]
   enchant: unknown | null
   created_at: string
 }
@@ -134,7 +140,9 @@ interface InventoryState {
   // this just keeps the client's copy in sync without a full refetch.
   patchItem: (
     itemId: string,
-    patch: Partial<Pick<ItemInstance, 'quality_tier' | 'level' | 'composition_level' | 'composition_points' | 'template_id'>>,
+    patch: Partial<
+      Pick<ItemInstance, 'quality_tier' | 'level' | 'composition_level' | 'composition_points' | 'template_id' | 'sockets'>
+    >,
   ) => void
   // Resolves a pendingFullDrop: pass an existing gear item or potion stack to
   // discard (freeing its slot) and grant the new drop in its place, or null to

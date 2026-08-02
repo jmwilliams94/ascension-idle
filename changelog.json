@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.45.0",
+    "date": "2026-08-02",
+    "changes": [
+      "Added Gear Sockets — weapons can unlock sockets by paying DragonBalls in the Forge, and armor has a small chance to gain one whenever you Quality or Level Upgrade it. A new Sockets tab in the Forge shows them",
+      "Fixed Archer Coats missing their Magic Defense stat entirely — it now shows up on Coats' tooltips and the Stats panel"
+    ]
+  },
+  {
     "version": "1.44.9",
     "date": "2026-08-02",
     "changes": [

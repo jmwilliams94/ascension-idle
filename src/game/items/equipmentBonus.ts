@@ -55,7 +55,13 @@ export function computeEquipmentBonus(
   items: ItemInstance[],
   templates: ItemTemplate[],
 ): EquipmentBonus {
-  const bonus: Required<EquipmentBonus> = { physicalAttack: 0, magicAttack: 0, physicalDefense: 0, dodge: 0 }
+  const bonus: Required<EquipmentBonus> = {
+    physicalAttack: 0,
+    magicAttack: 0,
+    physicalDefense: 0,
+    magicDefense: 0,
+    dodge: 0,
+  }
 
   for (const slot of EQUIP_SLOTS) {
     const itemId = equippedIds[slot]
@@ -68,6 +74,7 @@ export function computeEquipmentBonus(
     bonus.physicalAttack += scaledStat(template.base_stats, 'physical_attack', item.quality_tier) ?? 0
     bonus.magicAttack += scaledStat(template.base_stats, 'magic_attack', item.quality_tier) ?? 0
     bonus.physicalDefense += scaledStat(template.base_stats, 'physical_defense', item.quality_tier) ?? 0
+    bonus.magicDefense += scaledStat(template.base_stats, 'magic_defense', item.quality_tier) ?? 0
     bonus.dodge += scaledStat(template.base_stats, 'dodge', item.quality_tier) ?? 0
   }
 
@@ -240,12 +247,19 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
       ? `Class: ${CLASS_DEFINITIONS[template.required_class as ClassId].displayName}`
       : null
 
+  // Only shown when the item actually has a socket (2026-08-02 — see
+  // CLAUDE.md's Sockets section) — an item with none gets no extra lines at
+  // all, matching "sockets should definitely be displayed if the item
+  // actually has them" and not otherwise. Every socket currently shows
+  // "Empty" since gems aren't implemented as items yet to fill one.
+  const socketLines = item.sockets.length > 0 ? ['Sockets', ...item.sockets.map(() => 'Empty')] : []
+
   return {
     title: template
       ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level)
       : 'Unknown item',
     titleColor: getQualityColor(item.quality_tier),
-    lines: [formatQualityAndLevel(item.quality_tier, item.level), ...(classLine ? [classLine] : [])],
+    lines: [formatQualityAndLevel(item.quality_tier, item.level), ...(classLine ? [classLine] : []), ...socketLines],
     stats: template ? formatBaseStats(template.base_stats, item.quality_tier).split(', ').filter(Boolean) : [],
   }
 }

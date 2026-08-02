@@ -106,6 +106,10 @@ export default function StatsPanel() {
                 <dd>{derived.physicalDefense}</dd>
               </div>
               <div className="flex justify-between">
+                <dt className="text-slate-400">Magic Defense</dt>
+                <dd>{derived.magicDefense}</dd>
+              </div>
+              <div className="flex justify-between">
                 <dt className="text-slate-400">Dodge</dt>
                 <dd>{derived.dodge}</dd>
               </div>

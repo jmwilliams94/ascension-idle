@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import ForgeCompositionPanel from './ForgeCompositionPanel'
+import ForgeSocketsPanel from './ForgeSocketsPanel'
 import type { FuelEntry } from './ForgeFuelSlots'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import { DragDropProvider } from './dragDrop'
@@ -20,7 +21,7 @@ const RESULT_DISPLAY_MS = 2600
 // see ForgeFuelSlots.
 const FUEL_SLOT_COUNT = 2
 
-type UpgradeType = 'quality' | 'level' | 'composition'
+type UpgradeType = 'quality' | 'level' | 'composition' | 'sockets'
 
 interface AttemptResult {
   success: boolean
@@ -382,6 +383,19 @@ export default function ForgePanel() {
                   >
                     Composition
                   </button>
+
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => handleSelectType('sockets')}
+                    className={`flex-1 rounded-lg border px-1.5 py-2 text-[10px] font-medium leading-tight disabled:cursor-not-allowed disabled:opacity-50 ${
+                      selectedType === 'sockets'
+                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-300'
+                        : 'border-slate-700 text-slate-300 hover:border-slate-500'
+                    }`}
+                  >
+                    Sockets
+                  </button>
                 </div>
 
                 {selectedType === 'composition' ? (
@@ -394,6 +408,8 @@ export default function ForgePanel() {
                     onFeed={() => void handleFeed()}
                     feedError={feedError}
                   />
+                ) : selectedType === 'sockets' ? (
+                  <ForgeSocketsPanel item={selectedItem} template={selectedTemplate} />
                 ) : (
                   <>
                     {selectedType && (qualityDisabledReason || levelDisabledReason) && (

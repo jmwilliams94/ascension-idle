@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { supabase } from '../../lib/supabaseClient'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { useCompositionStore, type CompositionStones } from './useCompositionStore'
-import { useInventoryStore } from './useInventoryStore'
+import { useInventoryStore, type ItemInstance } from './useInventoryStore'
 
 // Shape returned by the quality_upgrade/level_upgrade Postgres functions (see
 // migration 20260727050000). Both currency deduction and the item write happen
@@ -16,6 +16,11 @@ interface QualityUpgradeResult {
   dragonballs?: number
   dragonballs_spent?: number
   dragonballs_remaining?: number
+  // Armor-only RNG side effect (see 20260802010000_add_gear_sockets.sql) — the
+  // item's full sockets array (unchanged if socket_gained is false) and
+  // whether this particular attempt happened to roll a new one.
+  sockets?: ItemInstance['sockets']
+  socket_gained?: boolean
 }
 
 interface LevelUpgradeResult {
@@ -31,6 +36,22 @@ interface LevelUpgradeResult {
   meteors?: number
   meteors_spent?: number
   meteors_remaining?: number
+  // Same armor-only RNG socket side effect as Quality Upgrade above.
+  sockets?: ItemInstance['sockets']
+  socket_gained?: boolean
+}
+
+// Shape returned by unlock_weapon_socket (guaranteed, player-paid — weapons
+// only, see CLAUDE.md's Sockets section for why this is asymmetric with
+// armor's RNG-on-upgrade path above).
+interface UnlockWeaponSocketResult {
+  ok: boolean
+  error?: 'item_not_found' | 'not_owner' | 'not_a_weapon' | 'max_sockets' | 'not_enough_dragonballs'
+  sockets?: ItemInstance['sockets']
+  cost?: number
+  dragonballs?: number
+  dragonballs_spent?: number
+  dragonballs_remaining?: number
 }
 
 // Shape returned by composition_feed (see migration 20260728000000). No RNG and no
@@ -64,6 +85,10 @@ interface ForgeState {
     stoneAmounts: Record<string, number>,
     fuelItemIds: string[],
   ) => Promise<CompositionFeedResult>
+  // Weapons only — guaranteed, player-paid socket unlock (see CLAUDE.md's
+  // Sockets section). Armor gets sockets as a side effect of qualityUpgrade/
+  // levelUpgrade above instead, not through this action.
+  unlockWeaponSocket: (itemId: string) => Promise<UnlockWeaponSocketResult>
 }
 
 export const useForgeStore = create<ForgeState>((set) => ({
@@ -85,6 +110,9 @@ export const useForgeStore = create<ForgeState>((set) => ({
 
     if (result.ok && result.quality_tier) {
       useInventoryStore.getState().patchItem(itemId, { quality_tier: result.quality_tier })
+    }
+    if (result.ok && result.sockets) {
+      useInventoryStore.getState().patchItem(itemId, { sockets: result.sockets })
     }
     if (result.ok && typeof result.dragonballs_remaining === 'number') {
       useCurrencyStore.getState().setDragonballs(result.dragonballs_remaining)
@@ -112,6 +140,9 @@ export const useForgeStore = create<ForgeState>((set) => ({
         level: result.level,
         ...(result.template_id ? { template_id: result.template_id } : {}),
       })
+    }
+    if (result.ok && result.sockets) {
+      useInventoryStore.getState().patchItem(itemId, { sockets: result.sockets })
     }
     if (result.ok && typeof result.meteors_remaining === 'number') {
       useCurrencyStore.getState().setMeteors(result.meteors_remaining)
@@ -150,6 +181,30 @@ export const useForgeStore = create<ForgeState>((set) => ({
       if (fuelItemIds.length > 0) {
         useInventoryStore.getState().removeItems(fuelItemIds)
       }
+    }
+
+    return result
+  },
+
+  unlockWeaponSocket: async (itemId) => {
+    set({ busy: true })
+
+    const { data, error } = await supabase.rpc('unlock_weapon_socket', { item_id: itemId })
+
+    set({ busy: false })
+
+    if (error) {
+      console.error('Unlock weapon socket call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as UnlockWeaponSocketResult
+
+    if (result.ok && result.sockets) {
+      useInventoryStore.getState().patchItem(itemId, { sockets: result.sockets })
+    }
+    if (result.ok && typeof result.dragonballs_remaining === 'number') {
+      useCurrencyStore.getState().setDragonballs(result.dragonballs_remaining)
     }
 
     return result

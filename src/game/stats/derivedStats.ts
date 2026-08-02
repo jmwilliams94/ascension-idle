@@ -25,6 +25,13 @@ export interface DerivedStats {
   // resolvePhysicalDamage) — gear-only for now (necklace/hat/coat), closing a
   // previously-documented gap now that armor slots are actually functional.
   physicalDefense: number
+  // Gear-only (Coats specifically, 2026-08-02 — see CLAUDE.md's Gear system
+  // note on the reference-data audit that caught this stat being dropped
+  // entirely from the original catalog). Inert like magicAttack: no monster
+  // deals magic damage yet, so this has no combat effect — it exists ahead
+  // of that mechanic, same "data exists ahead of the mechanic" precedent as
+  // sockets/enchant/dodge before their own mechanics landed.
+  magicDefense: number
   // Chance to fully avoid an incoming monster attack (see combatResolver.ts's
   // rollIsHit) — confirmed design direction (Agility governs dodge), newly
   // wired up alongside boots' own dodge stat. PLACEHOLDER weighting, like
@@ -38,6 +45,7 @@ export interface EquipmentBonus {
   physicalAttack?: number
   magicAttack?: number
   physicalDefense?: number
+  magicDefense?: number
   dodge?: number
 }
 
@@ -49,6 +57,7 @@ export function computeDerivedStats(attributes: Attributes, equipmentBonus: Equi
   const physicalAttack = strength * PHYSICAL_ATTACK_PER_STRENGTH + (equipmentBonus.physicalAttack ?? 0)
   const magicAttack = spirit * MAGIC_ATTACK_PER_SPIRIT + (equipmentBonus.magicAttack ?? 0)
   const physicalDefense = equipmentBonus.physicalDefense ?? 0
+  const magicDefense = equipmentBonus.magicDefense ?? 0
   // PLACEHOLDER: 1 dodge per Agility point, plus boots' own dodge stat — the
   // first time Agility actually feeds into anything, per the confirmed
   // "Agility governs accuracy/dodge" design that had nothing wired to it yet.
@@ -61,6 +70,7 @@ export function computeDerivedStats(attributes: Attributes, equipmentBonus: Equi
     magicAttack,
     attackSpeed: BASE_ATTACK_SPEED,
     physicalDefense,
+    magicDefense,
     dodge,
   }
 }
