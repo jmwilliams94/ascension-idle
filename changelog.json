@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.53.0",
+    "date": "2026-08-03",
+    "changes": [
+      "Redesigned the mobile bottom navigation — Market, Bank, Shop, and Forge now live behind a new \"Town\" button that rolls them up instead of each taking their own slot",
+      "Added a new Lucky tab (placeholder for now) — a ticket-draw feature is coming soon"
+    ]
+  },
+  {
     "version": "1.52.3",
     "date": "2026-08-03",
     "changes": [

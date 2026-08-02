@@ -3,6 +3,7 @@ import { useTabStore, type TabId } from '../game/hud/useTabStore'
 const TAB_ITEMS: { id: TabId; label: string }[] = [
   { id: 'combat', label: 'Combat' },
   { id: 'equipment', label: 'Equipment' },
+  { id: 'lucky', label: 'Lucky' },
   { id: 'forge', label: 'Forge' },
   { id: 'marketplace', label: 'Market' },
   { id: 'shop', label: 'Shop' },
@@ -18,7 +19,7 @@ export default function TabNav() {
     // Desktop-only (2026-08-02, supersedes the earlier `grid-cols-3` mobile
     // fallback) — mobile now has its own fixed bottom nav bar entirely
     // (MobileBottomNav.tsx, `lg:hidden`), not a shrunk version of this one.
-    <div className="hidden grid-cols-7 gap-2 lg:grid">
+    <div className="hidden grid-cols-8 gap-2 lg:grid">
       {TAB_ITEMS.map((item) => (
         <button
           key={item.id}

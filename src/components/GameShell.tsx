@@ -15,6 +15,7 @@ import TabNav from './TabNav'
 import MobileBottomNav from './MobileBottomNav'
 import WarehousePanel from './WarehousePanel'
 import AchievementsPanel from './AchievementsPanel'
+import LuckyPanel from './LuckyPanel'
 import { useAuthStore } from '../lib/useAuthStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
@@ -272,6 +273,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
           {activeTab === 'shop' && <ShopPanel />}
           {activeTab === 'warehouse' && <WarehousePanel characterId={characterId} />}
           {activeTab === 'achievements' && <AchievementsPanel characterId={characterId} />}
+          {activeTab === 'lucky' && <LuckyPanel />}
         </section>
       </main>
 

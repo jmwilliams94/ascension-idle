@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useCombatStore } from '../game/combat/useCombatStore'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
@@ -8,35 +10,42 @@ import { useTabStore, type TabId } from '../game/hud/useTabStore'
 const BASE_URL = import.meta.env.BASE_URL
 
 // Fixed bottom nav bar, mobile-only (`lg:hidden` — desktop keeps TabNav.tsx
-// unchanged, now `hidden lg:grid`) — confirmed with the user, 2026-08-02, as
-// a full replacement for TabNav's own mobile rendering, not a variant of it.
-// 7 buttons, one per tab (confirmed: all existing tabs stay a single tap
-// away, nothing tucked behind a "More" menu), Combat centered as "Fight"/
-// "Idle" — confirmed navigation-only, same as every other button here; it
-// does NOT itself start/stop combat (that's still Combat's own Fight/Stop
-// button, already built for mobile — see CombatPage.tsx). The label just
-// reflects `isFighting` so the bar itself hints at your current state
-// without requiring a trip to the Combat page to check.
+// unchanged, now `hidden lg:grid`). Combat is centered as "Fight"/"Idle" —
+// confirmed navigation-only, same as every other button here; it does NOT
+// itself start/stop combat (that's still Combat's own Fight/Stop button,
+// already built for mobile — see CombatPage.tsx). The label just reflects
+// `isFighting` so the bar itself hints at your current state without
+// requiring a trip to the Combat page to check.
 //
-// Grouping either side of center is arbitrary (no design reason to split any
-// particular way) — kept in TabNav's own existing left-to-right order, split
-// around Combat: Equipment/Forge/Market before it, Shop/Bank/
-// Achievements after.
-//
-// Equipment/Forge/Shop/Bank/Achievements all use real icon art now
-// (public/nav-icons/, supplied 2026-08-02); Market stays emoji since no art
-// exists for it yet.
+// Restructured (2026-08-03, confirmed with the user) — supersedes the
+// original flat 7-button layout (Equipment/Forge/Market | Fight | Shop/Bank/
+// Achievements). Now 5 always-visible slots — Equip, Lucky (new tab, see
+// LuckyPanel), Fighting, Town, Achieve — with Market/Bank/Shop/Forge moved
+// off the bar entirely into a "Town" rollup (TownNavButton below) rather
+// than each getting its own permanent slot. Desktop's TabNav.tsx is
+// unaffected by this — it just shows all 8 tabs flat (room isn't scarce
+// there the way it is on a phone-width bottom bar), Town is a mobile-only
+// grouping concept, not a real tab of its own.
 type NavIcon = { kind: 'emoji'; value: string } | { kind: 'image'; src: string; alt: string }
 
 const LEFT_ITEMS: { id: TabId; label: string; icon: NavIcon }[] = [
   { id: 'equipment', label: 'Equip', icon: { kind: 'image', src: `${BASE_URL}nav-icons/equipment.png`, alt: 'Equipment' } },
-  { id: 'forge', label: 'Forge', icon: { kind: 'image', src: `${BASE_URL}nav-icons/forge.png`, alt: 'Forge' } },
+  { id: 'lucky', label: 'Lucky', icon: { kind: 'emoji', value: '🍀' } },
+]
+
+// TownNavButton's own rollup contents — everything that used to have its own
+// permanent bottom-nav slot except Equipment/Achievements (which stayed put)
+// and Combat (always centered). No art exists for Market yet, same
+// established "mixed icon language until more art arrives" precedent as
+// before this restructure.
+const TOWN_ITEMS: { id: TabId; label: string; icon: NavIcon }[] = [
   { id: 'marketplace', label: 'Market', icon: { kind: 'emoji', value: '🤝' } },
+  { id: 'warehouse', label: 'Bank', icon: { kind: 'image', src: `${BASE_URL}nav-icons/bank.png`, alt: 'Bank' } },
+  { id: 'shop', label: 'Shop', icon: { kind: 'image', src: `${BASE_URL}nav-icons/shop.png`, alt: 'Shop' } },
+  { id: 'forge', label: 'Forge', icon: { kind: 'image', src: `${BASE_URL}nav-icons/forge.png`, alt: 'Forge' } },
 ]
 
 const RIGHT_ITEMS: { id: TabId; label: string; icon: NavIcon }[] = [
-  { id: 'shop', label: 'Shop', icon: { kind: 'image', src: `${BASE_URL}nav-icons/shop.png`, alt: 'Shop' } },
-  { id: 'warehouse', label: 'Bank', icon: { kind: 'image', src: `${BASE_URL}nav-icons/bank.png`, alt: 'Bank' } },
   { id: 'achievements', label: 'Achiev.', icon: { kind: 'image', src: `${BASE_URL}nav-icons/achievements.png`, alt: 'Achievements' } },
 ]
 
@@ -117,6 +126,77 @@ function FightNavButton() {
   )
 }
 
+// Speed-dial style: tapping Town toggles a small stack of buttons rising up
+// from directly above it (Market/Bank/Shop/Forge, see TOWN_ITEMS) rather than
+// navigating anywhere itself — "rolls the buttons upward," per the user's own
+// framing. Picking one of the rolled-out items navigates and collapses the
+// stack in one motion; tapping Town again while open collapses it without
+// navigating; tapping anywhere else on the page also collapses it (the same
+// outside-pointerdown-dismiss pattern GearEquipPopover already established in
+// this codebase), so it doesn't linger open over an unrelated tab.
+function TownNavButton() {
+  const activeTab = useTabStore((state) => state.activeTab)
+  const setActiveTab = useTabStore((state) => state.setActiveTab)
+  const [expanded, setExpanded] = useState(false)
+  const active = TOWN_ITEMS.some((item) => item.id === activeTab)
+
+  useEffect(() => {
+    if (!expanded) return undefined
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement
+      if (!target.closest('[data-town-rollup]')) {
+        setExpanded(false)
+      }
+    }
+    window.addEventListener('pointerdown', handlePointerDown, { capture: true })
+    return () => window.removeEventListener('pointerdown', handlePointerDown, { capture: true })
+  }, [expanded])
+
+  return (
+    <div data-town-rollup className="relative flex flex-1 flex-col items-center justify-center">
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 14 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="absolute bottom-full mb-2 flex flex-col items-stretch gap-1 rounded-xl border border-slate-800 bg-slate-950/95 p-1.5 shadow-xl shadow-black/60"
+          >
+            {TOWN_ITEMS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  setActiveTab(item.id)
+                  setExpanded(false)
+                }}
+                className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-left text-xs font-medium ${
+                  activeTab === item.id ? 'bg-sky-500/10 text-sky-300' : 'text-slate-300 hover:bg-slate-800'
+                }`}
+              >
+                <NavIconGlyph icon={item.icon} />
+                {item.label}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <button
+        type="button"
+        onClick={() => setExpanded((current) => !current)}
+        className={`flex flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-medium leading-tight ${
+          active || expanded ? 'text-sky-300' : 'text-slate-400'
+        }`}
+      >
+        <span className="text-lg">🏘️</span>
+        <span className="truncate">Town</span>
+      </button>
+    </div>
+  )
+}
+
 export default function MobileBottomNav() {
   return (
     <nav
@@ -128,6 +208,7 @@ export default function MobileBottomNav() {
           <NavButton key={item.id} {...item} />
         ))}
         <FightNavButton />
+        <TownNavButton />
         {RIGHT_ITEMS.map((item) => (
           <NavButton key={item.id} {...item} />
         ))}
