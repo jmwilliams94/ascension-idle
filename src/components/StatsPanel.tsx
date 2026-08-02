@@ -51,9 +51,6 @@ export default function StatsPanel() {
             <p className="mt-1 text-sm text-slate-300">
               {selectedClass.displayName} — {selectedClass.realGameName}
             </p>
-            {selectedClass.placeholder && (
-              <p className="mt-1 text-xs text-slate-500">Starting attributes are a placeholder, unresolved.</p>
-            )}
           </div>
 
           <div>

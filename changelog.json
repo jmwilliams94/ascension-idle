@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.46.0",
+    "date": "2026-08-02",
+    "changes": [
+      "Characters now actually gain Strength, Agility, Vitality, and Spirit as they level up, based on real reference data — leveling finally makes you stronger, not just a bigger EXP bar",
+      "Archer's starting attributes are now confirmed real numbers instead of a guess"
+    ]
+  },
+  {
     "version": "1.45.1",
     "date": "2026-08-02",
     "changes": [

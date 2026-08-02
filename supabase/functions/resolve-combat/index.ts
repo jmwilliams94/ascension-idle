@@ -35,9 +35,15 @@ const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY')!
 
 // ---------------------------------------------------------------------------
-// Mirrors src/game/stats/classes.ts's CLASS_DEFINITIONS[...].baseAttributes —
-// attributes are a pure function of class (no per-character point allocation
-// exists yet), so the server can derive them straight from characters.class.
+// Mirrors src/game/stats/classes.ts's ATTRIBUTE_ANCHORS/getAttributesForLevel
+// — attributes are a pure function of (class, level) via auto-allotment
+// (confirmed with the user, 2026-08-02), not a flat per-class constant
+// anymore. See classes.ts for the full sourcing writeup/caveats. Computed
+// once per resolve call from the character's level as of the start of the
+// window (same "fixed for the whole window" simplification already used for
+// the level-diff EXP multiplier and the achievement gold multiplier below —
+// a level-up mid-window doesn't retroactively boost that window's own
+// attack output).
 // ---------------------------------------------------------------------------
 interface Attributes {
   strength: number
@@ -46,11 +52,78 @@ interface Attributes {
   spirit: number
 }
 
-const BASE_ATTRIBUTES_BY_CLASS: Record<string, Attributes> = {
-  juggernaut: { strength: 5, agility: 2, vitality: 3, spirit: 0 },
-  'twin-soul': { strength: 5, agility: 2, vitality: 3, spirit: 0 },
-  wuxia: { strength: 0, agility: 2, vitality: 3, spirit: 5 },
-  hunter: { strength: 3, agility: 5, vitality: 2, spirit: 0 },
+type AttributeAnchor = [level: number, attrs: Attributes]
+
+const WARRIOR_TROJAN_SHARED_ANCHORS: AttributeAnchor[] = [
+  [1, { strength: 5, agility: 2, vitality: 3, spirit: 0 }],
+  [15, { strength: 28, agility: 10, vitality: 14, spirit: 0 }],
+]
+
+const ATTRIBUTE_ANCHORS: Record<string, AttributeAnchor[]> = {
+  juggernaut: [
+    ...WARRIOR_TROJAN_SHARED_ANCHORS,
+    [40, { strength: 80, agility: 25, vitality: 22, spirit: 0 }],
+    [70, { strength: 140, agility: 45, vitality: 32, spirit: 0 }],
+    [100, { strength: 205, agility: 60, vitality: 42, spirit: 0 }],
+    [110, { strength: 225, agility: 65, vitality: 47, spirit: 0 }],
+    [120, { strength: 245, agility: 70, vitality: 52, spirit: 0 }],
+    [130, { strength: 265, agility: 75, vitality: 57, spirit: 0 }],
+  ],
+  'twin-soul': [
+    ...WARRIOR_TROJAN_SHARED_ANCHORS,
+    [40, { strength: 60, agility: 25, vitality: 25, spirit: 0 }],
+    [70, { strength: 110, agility: 42, vitality: 45, spirit: 0 }],
+    [100, { strength: 155, agility: 60, vitality: 92, spirit: 0 }],
+    [110, { strength: 170, agility: 65, vitality: 100, spirit: 0 }],
+    [120, { strength: 185, agility: 70, vitality: 108, spirit: 0 }],
+    [130, { strength: 200, agility: 75, vitality: 116, spirit: 0 }],
+  ],
+  wuxia: [
+    [1, { strength: 0, agility: 2, vitality: 3, spirit: 5 }],
+    [15, { strength: 0, agility: 10, vitality: 17, spirit: 25 }],
+    [40, { strength: 0, agility: 25, vitality: 22, spirit: 80 }],
+    [70, { strength: 0, agility: 45, vitality: 32, spirit: 140 }],
+    [100, { strength: 0, agility: 60, vitality: 42, spirit: 205 }],
+    [110, { strength: 0, agility: 65, vitality: 47, spirit: 225 }],
+    [120, { strength: 0, agility: 70, vitality: 52, spirit: 245 }],
+    [130, { strength: 0, agility: 75, vitality: 57, spirit: 265 }],
+  ],
+  hunter: [
+    [1, { strength: 3, agility: 5, vitality: 2, spirit: 0 }],
+    [15, { strength: 12, agility: 35, vitality: 5, spirit: 0 }],
+    [40, { strength: 25, agility: 90, vitality: 12, spirit: 0 }],
+    [70, { strength: 45, agility: 150, vitality: 22, spirit: 0 }],
+    [100, { strength: 60, agility: 215, vitality: 32, spirit: 0 }],
+    [110, { strength: 68, agility: 235, vitality: 34, spirit: 0 }],
+    [120, { strength: 76, agility: 255, vitality: 36, spirit: 0 }],
+    [130, { strength: 84, agility: 275, vitality: 38, spirit: 0 }],
+  ],
+}
+
+function getAttributesForLevel(classId: string, level: number): Attributes {
+  const anchors = ATTRIBUTE_ANCHORS[classId] ?? ATTRIBUTE_ANCHORS.hunter
+  const clampedLevel = Math.min(Math.max(level, anchors[0][0]), anchors[anchors.length - 1][0])
+
+  for (let i = 0; i < anchors.length; i += 1) {
+    const [anchorLevel, anchorAttrs] = anchors[i]
+
+    if (clampedLevel === anchorLevel) {
+      return { ...anchorAttrs }
+    }
+
+    if (clampedLevel < anchorLevel) {
+      const [prevLevel, prevAttrs] = anchors[i - 1]
+      const t = (clampedLevel - prevLevel) / (anchorLevel - prevLevel)
+      return {
+        strength: Math.round(prevAttrs.strength + (anchorAttrs.strength - prevAttrs.strength) * t),
+        agility: Math.round(prevAttrs.agility + (anchorAttrs.agility - prevAttrs.agility) * t),
+        vitality: Math.round(prevAttrs.vitality + (anchorAttrs.vitality - prevAttrs.vitality) * t),
+        spirit: Math.round(prevAttrs.spirit + (anchorAttrs.spirit - prevAttrs.spirit) * t),
+      }
+    }
+  }
+
+  return { ...anchors[anchors.length - 1][1] }
 }
 
 // Mirrors src/game/stats/derivedStats.ts
@@ -394,14 +467,15 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   }
 
   // Character combat stats — derived server-side, never trusted from the
-  // request. Attributes are a pure function of class (see classes.ts); gear
-  // bonus sums physical_attack/magic_attack across every equipped slot (Ring/
-  // Necklace/Boots/Hat/Coat are now functional too, not just Main Hand — see
-  // useEquipmentStore.ts/computeEquipmentBonus's client-side mirror). Only
-  // physicalAttack/magicAttack matter here — physicalDefense/dodge feed
-  // incoming-damage mitigation, which isn't simulated server-side (player
-  // HP/knockout only ever lived in useCombatStore.runTick).
-  const attributes = BASE_ATTRIBUTES_BY_CLASS[character.class ?? 'hunter'] ?? BASE_ATTRIBUTES_BY_CLASS.hunter
+  // request. Attributes are a pure function of (class, level) via
+  // auto-allotment (see classes.ts); gear bonus sums physical_attack/
+  // magic_attack across every equipped slot (Ring/Necklace/Boots/Hat/Coat
+  // are now functional too, not just Main Hand — see useEquipmentStore.ts/
+  // computeEquipmentBonus's client-side mirror). Only physicalAttack/
+  // magicAttack matter here — physicalDefense/dodge feed incoming-damage
+  // mitigation, which isn't simulated server-side (player HP/knockout only
+  // ever lived in useCombatStore.runTick).
+  const attributes = getAttributesForLevel(character.class ?? 'hunter', character.level)
   const equipmentBonus: { physicalAttack: number; magicAttack: number } = { physicalAttack: 0, magicAttack: 0 }
 
   const equippedItemIds = [
