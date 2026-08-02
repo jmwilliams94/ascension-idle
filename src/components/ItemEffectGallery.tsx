@@ -7,19 +7,168 @@ import type { ReactNode } from 'react'
 // any real tile yet (InventorySlot, ForgeUpgradeSlot, EquipmentSlot, etc.) —
 // this is purely a side-by-side preview so a favorite (or combination) can
 // be picked before spending effort on the real integration.
-interface EffectExample {
-  title: string
-  description: string
-  border: string
-  layer: ReactNode
+
+// --- Procedural jagged lightning bolts -------------------------------------
+// The first pass at this gallery used smooth Perlin-noise "veins" and clean
+// straight connector lines for the web-style examples — the user's own
+// reference screenshot made clear neither reads as actual lightning: real
+// bolts are jagged/fractal with branching forks, not smooth or straight.
+// This is the standard "midpoint displacement" technique for a fractal bolt:
+// recursively bend the midpoint of a segment sideways by a shrinking random
+// amount. A tiny seeded PRNG (mulberry32) keeps every bolt's jaggedness
+// deterministic across renders (no re-layout jitter) while still looking
+// organically irregular from bolt to bolt.
+function mulberry32(seed: number): () => number {
+  let a = seed
+  return () => {
+    a |= 0
+    a = (a + 0x6d2b79f5) | 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
 }
 
-// One shared sample icon per tile so every example is judged on the same
-// footing — a plain emoji stand-in, not tied to any real item art.
+interface Point {
+  x: number
+  y: number
+}
+
+function jaggedSegment(a: Point, b: Point, rand: () => number, depth: number, displace: number, out: Point[]): void {
+  if (depth <= 0) {
+    out.push(b)
+    return
+  }
+  const mx = (a.x + b.x) / 2
+  const my = (a.y + b.y) / 2
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const len = Math.hypot(dx, dy) || 1
+  // Perpendicular to the segment, so the displacement bends the bolt
+  // sideways rather than along its own length.
+  const nx = -dy / len
+  const ny = dx / len
+  const offset = (rand() - 0.5) * 2 * displace
+  const mid: Point = { x: mx + nx * offset, y: my + ny * offset }
+  jaggedSegment(a, mid, rand, depth - 1, displace * 0.55, out)
+  jaggedSegment(mid, b, rand, depth - 1, displace * 0.55, out)
+}
+
+// Returns an SVG path `d` string for a jagged fractal bolt from a to b.
+function lightningPath(a: Point, b: Point, seed: number, depth = 4, displace = 13): string {
+  const rand = mulberry32(seed)
+  const points: Point[] = [a]
+  jaggedSegment(a, b, rand, depth, displace, points)
+  return points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
+}
+
+interface Bolt {
+  d: string
+  width: number
+}
+
+// Staggered, fast, irregular opacity keyframes (not a slow smooth fade) —
+// real electrical arcs strobe, they don't breathe. Cycled across bolts with
+// different durations/start delays so a multi-bolt web never looks
+// synchronized.
+const FLICKERS = [
+  '0.15;0.9;0.3;1;0.1;0.8;0.15',
+  '0.8;0.2;1;0.15;0.7;0.25;0.8',
+  '0.3;1;0.15;0.85;0.2;1;0.3',
+  '1;0.2;0.9;0.1;1;0.3;1',
+  '0.5;0.95;0.1;0.7;0.4;1;0.5',
+  '0.9;0.15;0.6;1;0.05;0.8;0.9',
+]
+
+// Renders a set of bolts, optionally with a blurred "glow" pass behind the
+// crisp core stroke — the classic neon-sign trick (wide blurred duplicate +
+// thin sharp duplicate on top) that's what actually sells "electric" rather
+// than just "a thin line."
+function BoltLayer({
+  bolts,
+  color,
+  glowFilterId,
+  coreOpacity = 1,
+  glowOpacity = 0.6,
+  flickerOffset = 0,
+}: {
+  bolts: Bolt[]
+  color: string
+  glowFilterId?: string
+  coreOpacity?: number
+  glowOpacity?: number
+  flickerOffset?: number
+}) {
+  return (
+    <>
+      {glowFilterId && (
+        <g stroke={color} fill="none" strokeLinecap="round" filter={`url(#${glowFilterId})`}>
+          {bolts.map((bolt, i) => (
+            <path key={`glow-${i}`} d={bolt.d} strokeWidth={bolt.width * 3} opacity={glowOpacity}>
+              <animate
+                attributeName="opacity"
+                values={FLICKERS[(i + flickerOffset) % FLICKERS.length]}
+                dur={`${0.6 + i * 0.13}s`}
+                begin={`${i * 0.11}s`}
+                repeatCount="indefinite"
+              />
+            </path>
+          ))}
+        </g>
+      )}
+      <g stroke={color} fill="none" strokeLinecap="round">
+        {bolts.map((bolt, i) => (
+          <path key={`core-${i}`} d={bolt.d} strokeWidth={bolt.width} opacity={coreOpacity}>
+            <animate
+              attributeName="opacity"
+              values={FLICKERS[(i + flickerOffset) % FLICKERS.length]}
+              dur={`${0.6 + i * 0.13}s`}
+              begin={`${i * 0.11}s`}
+              repeatCount="indefinite"
+            />
+          </path>
+        ))}
+      </g>
+    </>
+  )
+}
+
+// A primary criss-crossing web — 4 bolts each running corner-to-corner-ish,
+// so they all pass near the tile's center and visibly interconnect rather
+// than reading as separate unrelated lines.
+const WEB_BOLTS: Bolt[] = [
+  { d: lightningPath({ x: 4, y: 6 }, { x: 94, y: 90 }, 11, 4, 12), width: 0.9 },
+  { d: lightningPath({ x: 92, y: 8 }, { x: 6, y: 84 }, 27, 4, 12), width: 0.8 },
+  { d: lightningPath({ x: 50, y: 3 }, { x: 44, y: 97 }, 53, 3, 9), width: 0.7 },
+  { d: lightningPath({ x: 3, y: 50 }, { x: 97, y: 46 }, 71, 3, 9), width: 0.7 },
+]
+
+// A denser web (6 main bolts) plus 3 short branch forks stemming from
+// midpoints of the main bolts — actual lightning branches off its own path,
+// which none of the first-pass examples had at all.
+const DENSE_BOLTS: Bolt[] = [
+  ...WEB_BOLTS,
+  { d: lightningPath({ x: 10, y: 92 }, { x: 88, y: 10 }, 5, 4, 11), width: 0.7 },
+  { d: lightningPath({ x: 90, y: 92 }, { x: 12, y: 12 }, 19, 4, 11), width: 0.6 },
+]
+const BRANCH_BOLTS: Bolt[] = [
+  { d: lightningPath({ x: 49, y: 45 }, { x: 78, y: 58 }, 101, 2, 8), width: 0.5 },
+  { d: lightningPath({ x: 46, y: 50 }, { x: 22, y: 68 }, 202, 2, 8), width: 0.5 },
+  { d: lightningPath({ x: 55, y: 42 }, { x: 65, y: 18 }, 303, 2, 7), width: 0.5 },
+]
+
+// A dimmer, smaller-scale, more blurred set for the back layer of the
+// "Layered" example — WEB_BOLTS reused as the crisp front layer on top of it,
+// giving the actual "a few layered on top of each other" depth requested.
+const BACK_BOLTS: Bolt[] = [
+  { d: lightningPath({ x: 20, y: 15 }, { x: 80, y: 88 }, 401, 3, 8), width: 0.6 },
+  { d: lightningPath({ x: 84, y: 22 }, { x: 16, y: 82 }, 512, 3, 8), width: 0.6 },
+]
+
 function SampleTile({ border, layer }: { border: string; layer: ReactNode }) {
   return (
     <div
-      className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border-2 bg-slate-900 text-xl"
+      className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border-2 bg-slate-900 text-xl"
       style={{ borderColor: border }}
     >
       {layer}
@@ -28,85 +177,90 @@ function SampleTile({ border, layer }: { border: string; layer: ReactNode }) {
   )
 }
 
+interface EffectExample {
+  title: string
+  description: string
+  border: string
+  layer: ReactNode
+}
+
 const EFFECTS: EffectExample[] = [
   {
-    title: '1. Fractal Web',
-    description: 'A single layer of animated Perlin noise, filtered down to thin glowing veins — a slow, drifting cobweb of light.',
+    title: '1. Lightning Web',
+    description: 'Actual jagged fractal bolts (midpoint-displacement, not smooth noise) crossing near the center, each strobing independently, with a soft glow behind the crisp line.',
     border: '#4FC3F7',
     layer: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full opacity-70 mix-blend-screen">
+      <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
         <defs>
-          <filter id="fw1" x="-20%" y="-20%" width="140%" height="140%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.03 0.09" numOctaves={2} seed={4} result="n">
-              <animate attributeName="baseFrequency" dur="16s" values="0.03 0.09;0.05 0.05;0.03 0.09" repeatCount="indefinite" />
-            </feTurbulence>
-            <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.55  0 0 0 0 0.85  0 0 0 0 1  0 0 0 10 -4.2" />
+          <filter id="glow1" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="1.3" />
           </filter>
         </defs>
-        <rect width="100" height="100" filter="url(#fw1)" />
+        <BoltLayer bolts={WEB_BOLTS} color="#a5f3fc" glowFilterId="glow1" />
       </svg>
     ),
   },
   {
     title: '2. Layered Web (Depth)',
     description:
-      'Two independent noise layers — one slow/coarse, one fast/fine, both screen-blended — stacked for exactly the "a few layered on top of each other" depth you described.',
+      'Two full bolt layers stacked — a dim, blurred, smaller-scale set behind, a crisp bright set in front — exactly the "a few layered on top of each other" depth from your reference.',
     border: '#A855F7',
     layer: (
       <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
         <defs>
-          <filter id="fw2a" x="-20%" y="-20%" width="140%" height="140%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.025 0.07" numOctaves={2} seed={1} result="n">
-              <animate attributeName="baseFrequency" dur="22s" values="0.025 0.07;0.04 0.04;0.025 0.07" repeatCount="indefinite" />
-            </feTurbulence>
-            <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.6  0 0 0 0 0.4  0 0 0 0 1  0 0 0 9 -3.6" />
+          <filter id="glow2back" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="2.2" />
           </filter>
-          <filter id="fw2b" x="-20%" y="-20%" width="140%" height="140%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.09 0.18" numOctaves={2} seed={9} result="n2">
-              <animate attributeName="baseFrequency" dur="9s" values="0.09 0.18;0.15 0.1;0.09 0.18" repeatCount="indefinite" />
-            </feTurbulence>
-            <feColorMatrix in="n2" type="matrix" values="0 0 0 0 0.8  0 0 0 0 0.9  0 0 0 0 1  0 0 0 11 -4.6" />
+          <filter id="glow2front" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="1" />
           </filter>
         </defs>
-        <rect width="100" height="100" filter="url(#fw2a)" opacity={0.55} className="mix-blend-screen" />
-        <rect width="100" height="100" filter="url(#fw2b)" opacity={0.35} className="mix-blend-screen" />
+        <BoltLayer bolts={BACK_BOLTS} color="#c4b5fd" glowFilterId="glow2back" coreOpacity={0.35} glowOpacity={0.3} flickerOffset={2} />
+        <BoltLayer bolts={WEB_BOLTS} color="#e0f2fe" glowFilterId="glow2front" coreOpacity={1} glowOpacity={0.6} />
       </svg>
     ),
   },
   {
-    title: '3. Crackling Web Lines',
-    description:
-      'Hand-drawn jagged connections between a handful of points, each segment flickering on its own independent timer — the most literal "web/lightning" reading.',
+    title: '3. Dense Branching Web',
+    description: '6 main bolts plus small forking branches stemming off them mid-path — a busier, more chaotic net, closer to a real lightning strike\'s side-branches.',
     border: '#EF4444',
     layer: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full opacity-90">
-        <g stroke="#7dd3fc" strokeWidth={0.7} fill="none" strokeLinecap="round">
-          <path d="M10,15 L35,30 L60,12 L88,25">
-            <animate attributeName="opacity" values="0.15;0.9;0.2;0.7;0.15" dur="3.4s" repeatCount="indefinite" />
-          </path>
-          <path d="M15,55 L40,42 L65,60 L85,48">
-            <animate attributeName="opacity" values="0.8;0.2;0.9;0.15;0.8" dur="2.7s" begin="0.4s" repeatCount="indefinite" />
-          </path>
-          <path d="M35,30 L40,42">
-            <animate attributeName="opacity" values="0.9;0.1;0.9" dur="1.6s" begin="0.9s" repeatCount="indefinite" />
-          </path>
-          <path d="M60,12 L65,60">
-            <animate attributeName="opacity" values="0.2;0.9;0.2" dur="2.1s" begin="0.2s" repeatCount="indefinite" />
-          </path>
-          <path d="M10,15 L15,55">
-            <animate attributeName="opacity" values="0.6;0.1;0.7;0.2" dur="3.9s" begin="1.1s" repeatCount="indefinite" />
-          </path>
-          <path d="M88,25 L85,48">
-            <animate attributeName="opacity" values="0.3;0.85;0.25" dur="2.4s" begin="0.6s" repeatCount="indefinite" />
-          </path>
-        </g>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
+        <defs>
+          <filter id="glow3" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="1.1" />
+          </filter>
+        </defs>
+        <BoltLayer bolts={DENSE_BOLTS} color="#fca5a5" glowFilterId="glow3" glowOpacity={0.5} />
+        <BoltLayer bolts={BRANCH_BOLTS} color="#fecaca" coreOpacity={0.8} flickerOffset={3} />
       </svg>
     ),
   },
   {
-    title: '4. Rotating Energy Sweep',
-    description: 'Two conic-gradient beams counter-rotating at different speeds, masked to a soft circle — reads as circling electric current, no SVG needed.',
+    title: '4. Web + Pulsing Core',
+    description: 'A soft pulsing radial glow at the center combined with a faint static lightning web overlay — two different techniques literally layered on top of each other.',
     border: '#2E5EAA',
+    layer: (
+      <>
+        <div
+          className="effect-blob-1 absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sky-400/35 blur-lg mix-blend-screen"
+          style={{ animationDuration: '2.4s' }}
+        />
+        <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full opacity-80">
+          <defs>
+            <filter id="glow4" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="1" />
+            </filter>
+          </defs>
+          <BoltLayer bolts={WEB_BOLTS} color="#bae6fd" glowFilterId="glow4" coreOpacity={0.75} glowOpacity={0.4} />
+        </svg>
+      </>
+    ),
+  },
+  {
+    title: '5. Rotating Energy Sweep',
+    description: 'Two conic-gradient beams counter-rotating at different speeds, masked to a soft circle — reads as circling electric current, no SVG lines at all.',
+    border: '#FFFFFF',
     layer: (
       <div className="absolute inset-0">
         <div
@@ -129,9 +283,9 @@ const EFFECTS: EffectExample[] = [
     ),
   },
   {
-    title: '5. Scrolling Hatch Grid',
+    title: '6. Scrolling Hatch Grid',
     description: 'Two diagonal hairline grids sliding in opposite directions — a cheap, very performant "energy netting" look, no SVG or blur.',
-    border: '#FFFFFF',
+    border: '#4FC3F7',
     layer: (
       <div className="absolute inset-0 opacity-60">
         <div
@@ -152,8 +306,8 @@ const EFFECTS: EffectExample[] = [
     ),
   },
   {
-    title: '6. Aurora Depth Blobs',
-    description: 'Three blurred glow blobs drifting independently, blur amount varying per blob to fake near/far depth — softer and less literal, more "magic aura."',
+    title: '7. Aurora Depth Blobs',
+    description: 'Three blurred glow blobs drifting independently, blur amount varying per blob to fake near/far depth — softer and less literal, more "magic aura" than lightning.',
     border: '#A855F7',
     layer: (
       <div className="absolute inset-0 overflow-hidden">
@@ -163,51 +317,16 @@ const EFFECTS: EffectExample[] = [
       </div>
     ),
   },
-  {
-    title: '7. Neural Web Nodes',
-    description: 'Fixed node points connected by lines, each connection pulsing independently — closer to a literal spiderweb/circuit than free-flowing noise.',
-    border: '#4FC3F7',
-    layer: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full opacity-90">
-        <circle cx={20} cy={20} r={2} fill="#67e8f9" />
-        <circle cx={55} cy={15} r={2} fill="#67e8f9" />
-        <circle cx={80} cy={35} r={2} fill="#67e8f9" />
-        <circle cx={30} cy={55} r={2} fill="#67e8f9" />
-        <circle cx={65} cy={65} r={2} fill="#67e8f9" />
-        <circle cx={15} cy={80} r={2} fill="#67e8f9" />
-        <circle cx={85} cy={80} r={2} fill="#67e8f9" />
-        <line x1={20} y1={20} x2={55} y2={15} stroke="#67e8f9" strokeWidth={0.6}>
-          <animate attributeName="opacity" values="0.1;0.8;0.1" dur="2.2s" repeatCount="indefinite" />
-        </line>
-        <line x1={55} y1={15} x2={80} y2={35} stroke="#67e8f9" strokeWidth={0.6}>
-          <animate attributeName="opacity" values="0.7;0.1;0.7" dur="3.1s" begin="0.3s" repeatCount="indefinite" />
-        </line>
-        <line x1={20} y1={20} x2={30} y2={55} stroke="#67e8f9" strokeWidth={0.6}>
-          <animate attributeName="opacity" values="0.2;0.9;0.2" dur="2.6s" begin="0.7s" repeatCount="indefinite" />
-        </line>
-        <line x1={30} y1={55} x2={65} y2={65} stroke="#67e8f9" strokeWidth={0.6}>
-          <animate attributeName="opacity" values="0.85;0.15;0.85" dur="1.9s" begin="0.2s" repeatCount="indefinite" />
-        </line>
-        <line x1={65} y1={65} x2={80} y2={35} stroke="#67e8f9" strokeWidth={0.6}>
-          <animate attributeName="opacity" values="0.15;0.75;0.15" dur="3.4s" begin="1.1s" repeatCount="indefinite" />
-        </line>
-        <line x1={30} y1={55} x2={15} y2={80} stroke="#67e8f9" strokeWidth={0.6}>
-          <animate attributeName="opacity" values="0.6;0.1;0.6" dur="2.4s" begin="0.5s" repeatCount="indefinite" />
-        </line>
-        <line x1={65} y1={65} x2={85} y2={80} stroke="#67e8f9" strokeWidth={0.6}>
-          <animate attributeName="opacity" values="0.3;0.85;0.3" dur="2.8s" begin="0.9s" repeatCount="indefinite" />
-        </line>
-      </svg>
-    ),
-  },
 ]
 
 export default function ItemEffectGallery() {
   return (
     <div className="space-y-4">
       <p className="text-xs text-slate-500">
-        Exploratory only — none of these are wired into real Inventory/Equipment/Forge tiles yet. Pick a favorite (or ask for a
-        combination of two) and it can be built into the real gear slots next, likely tinted per quality tier.
+        Exploratory only — none of these are wired into real Inventory/Equipment/Forge tiles yet. Effects 1-4 are all built from
+        the same procedural jagged-lightning-bolt generator (proper fractal midpoint-displacement, not smooth noise), just
+        combined differently. Pick a favorite (or ask for a combination) and it can be built into the real gear slots next,
+        likely tinted per quality tier.
       </p>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">

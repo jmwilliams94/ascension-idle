@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.49.1",
+    "date": "2026-08-02",
+    "changes": [
+      "Reworked the Item Effects gallery's web-style examples to use actual jagged, branching lightning bolts (proper fractal generation) instead of smooth noise or straight lines, and added a true layered-depth version and a branching version"
+    ]
+  },
+  {
     "version": "1.49.0",
     "date": "2026-08-02",
     "changes": [
