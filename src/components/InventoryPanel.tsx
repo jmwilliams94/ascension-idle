@@ -13,7 +13,9 @@ import {
 import { EQUIP_SLOTS, useEquipmentStore, type EquipSlot } from '../game/items/useEquipmentStore'
 import {
   COMPOSITION_STONE_TIERS,
+  DRAGONBALL_COLOR,
   DRAGONBALL_ICON_SRC,
+  METEOR_COLOR,
   METEOR_ICON_SRC,
   buildDragonballScrollTooltip,
   buildDragonballTooltip,
@@ -418,6 +420,7 @@ export default function InventoryPanel({
               filled
               sizeClassName={SLOT_SIZE_CLASS}
               iconSrc={METEOR_ICON_SRC}
+              qualityColor={METEOR_COLOR}
               label="Meteor"
               tooltip={buildMeteorTooltip()}
               selected={selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId}
@@ -432,6 +435,7 @@ export default function InventoryPanel({
               filled
               sizeClassName={SLOT_SIZE_CLASS}
               iconSrc={DRAGONBALL_ICON_SRC}
+              qualityColor={DRAGONBALL_COLOR}
               label="DragonBall"
               tooltip={buildDragonballTooltip()}
               selected={selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId}
@@ -552,7 +556,13 @@ export default function InventoryPanel({
       {selectedCurrencyType && (
         <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg">
+            <div
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg"
+              style={{
+                borderColor: selectedCurrencyType === 'meteor' ? METEOR_COLOR : DRAGONBALL_COLOR,
+                backgroundColor: `${selectedCurrencyType === 'meteor' ? METEOR_COLOR : DRAGONBALL_COLOR}22`,
+              }}
+            >
               <img
                 src={selectedCurrencyType === 'meteor' ? METEOR_ICON_SRC : DRAGONBALL_ICON_SRC}
                 alt=""

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.44.8",
+    "date": "2026-08-02",
+    "changes": [
+      "Meteors and DragonBalls now have their own colored border/glow in your inventory instead of a plain gray one"
+    ]
+  },
+  {
     "version": "1.44.7",
     "date": "2026-08-02",
     "changes": [

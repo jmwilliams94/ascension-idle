@@ -143,6 +143,17 @@ export function dragonballDragId(index: number): string {
 export const METEOR_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/meteor.png`
 export const DRAGONBALL_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/dragonball.png`
 
+// Own distinct border/glow colors (2026-08-02), same InventorySlot
+// qualityColor mechanism gear uses for its tier tint — materials previously
+// rendered with the same plain slate border as an empty/generic tile, giving
+// them no visual identity of their own. DragonBall reuses the old (pre-
+// recalibration) Ascended orange the user specifically asked for; Meteor
+// gets its own green, deliberately not reusing any color already claimed by
+// QUALITY_COLORS (white/light-blue/dark-blue/purple/red) or by DragonBall,
+// so a material's color can never be mistaken for a gear quality signal.
+export const METEOR_COLOR = '#4ADE80'
+export const DRAGONBALL_COLOR = '#F0B87A'
+
 export function buildMeteorTooltip(): ItemTooltipData {
   return {
     title: 'Meteor',

@@ -3,7 +3,7 @@ import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import { LOOT_HOLDING_CAP, useLootHoldingStore } from '../game/items/useLootHoldingStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { formatItemDisplayName, getItemIcon, getQualityColor, previewSellPrice } from '../game/items/equipmentBonus'
-import { DRAGONBALL_ICON_SRC, METEOR_ICON_SRC } from '../game/items/forgeCosts'
+import { DRAGONBALL_COLOR, DRAGONBALL_ICON_SRC, METEOR_COLOR, METEOR_ICON_SRC } from '../game/items/forgeCosts'
 
 // Loot Holding (confirmed with the user, 2026-07-30): where a server-resolved
 // kill's item drop lands when Inventory is full — see useLootHoldingStore and
@@ -260,7 +260,13 @@ export default function LootHoldingCard() {
                 icon={icon}
                 iconSrc={iconSrc}
                 label={label}
-                qualityColor={!isCurrency ? getQualityColor(entry.quality_tier ?? 'normal') : undefined}
+                qualityColor={
+                  isCurrency
+                    ? entry.currency_type === 'meteor'
+                      ? METEOR_COLOR
+                      : DRAGONBALL_COLOR
+                    : getQualityColor(entry.quality_tier ?? 'normal')
+                }
                 selected={selectedId === entry.id}
                 onClick={() => {
                   setSelectedId((current) => (current === entry.id ? null : entry.id))
