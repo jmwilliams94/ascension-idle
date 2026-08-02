@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.49.9",
+    "date": "2026-08-02",
+    "changes": [
+      "Fixed embers appearing as solid, unmoving dots sitting at the bottom right when the Item Effects tab opens, before their staggered start delay finished"
+    ]
+  },
+  {
     "version": "1.49.8",
     "date": "2026-08-02",
     "changes": [

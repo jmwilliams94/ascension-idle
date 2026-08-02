@@ -99,8 +99,19 @@ body {
    already fading out. That's exactly the "all the embers in a line at the
    bottom" report. `linear` moves it steadily across the whole visible
    window instead. */
+/* Bug fix (2026-08-02): each ember has a random animation-delay (staggered
+   starts, so they don't all move in lockstep) — but by default, CSS does
+   NOT apply the keyframes' 0% styles during that delay window, it renders
+   the element's plain undecorated state instead. These spans have no base
+   opacity/transform of their own, so "undecorated" means fully opaque and
+   untransformed — sitting solid at the bottom until its delay elapses. Since
+   this gallery remounts fresh every time the Settings tab is opened (it's
+   not kept alive in the background), that's a real, repeatable "several
+   embers just sitting there, not animating yet" moment, not a one-off.
+   `backwards` fill-mode makes the delay window use the 0% keyframe's
+   styles (invisible) instead, closing the gap. */
 .effect-ember {
-  animation: effect-ember-rise 3.2s linear infinite;
+  animation: effect-ember-rise 3.2s linear infinite backwards;
 }
 
 /* Variant (2026-08-02): embers launching from the tile's center out toward
@@ -130,7 +141,7 @@ body {
   }
 }
 .effect-ember-radiate {
-  animation: effect-ember-radiate 2.2s ease-out infinite;
+  animation: effect-ember-radiate 2.2s ease-out infinite backwards;
 }
 
 /* A brighter, breathing core glow for a more "extravagant" tier preview —
