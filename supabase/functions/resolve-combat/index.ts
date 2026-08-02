@@ -223,20 +223,35 @@ const PET_DROP_CHANCE = 1 / 5000
 
 // Every tier now costs something to unlock (confirmed with the user,
 // 2026-08-01 — supersedes the original "first 3 free, pay once for the rest"
-// design), paid one at a time in order via unlock_next_achievement_tier — a
-// tier only counts toward the multiplier once BOTH its kill count is reached
-// AND it's been paid for (unlockedTierIndex counts how many of the 6 tiers,
-// in order, have been unlocked so far).
-function currentAchievementGoldMultiplier(kills: number, unlockedTierIndex: number): number {
+// design), paid one at a time in order via unlock_next_achievement_tier.
+// Corrected (2026-08-03, confirmed with the user) — kill-count progress and
+// paying to unlock are now two fully independent reward tracks, not one
+// track gated on both: reaching a kill-count tier grants its multiplier for
+// free regardless of unlock status, and unlocking a tier grants its own
+// multiplier immediately regardless of kill count — they stack
+// multiplicatively. Mirrors src/game/achievements/achievementData.ts's own
+// killCountGoldMultiplier/unlockGoldMultiplier/totalAchievementGoldMultiplier
+// split — keep in sync.
+function killCountGoldMultiplier(kills: number): number {
   let multiplier = 1
-  for (let i = 0; i < ACHIEVEMENT_TIERS.length; i += 1) {
-    if (i >= unlockedTierIndex) break
-    const tier = ACHIEVEMENT_TIERS[i]
+  for (const tier of ACHIEVEMENT_TIERS) {
     if (kills >= tier) {
       multiplier = ACHIEVEMENT_GOLD_MULTIPLIER[tier]
     }
   }
   return multiplier
+}
+
+function unlockGoldMultiplier(unlockedTierIndex: number): number {
+  let multiplier = 1
+  for (let i = 0; i < unlockedTierIndex; i += 1) {
+    multiplier = ACHIEVEMENT_GOLD_MULTIPLIER[ACHIEVEMENT_TIERS[i]]
+  }
+  return multiplier
+}
+
+function currentAchievementGoldMultiplier(kills: number, unlockedTierIndex: number): number {
+  return killCountGoldMultiplier(kills) * unlockGoldMultiplier(unlockedTierIndex)
 }
 
 type LevelDiffColor = 'white' | 'green' | 'red' | 'black'

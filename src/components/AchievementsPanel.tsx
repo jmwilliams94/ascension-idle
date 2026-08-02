@@ -10,7 +10,8 @@ import {
   ACHIEVEMENT_GOLD_MULTIPLIER,
   ACHIEVEMENT_TIERS,
   PET_DROP_CHANCE,
-  currentAchievementTier,
+  currentKillCountTier,
+  currentUnlockTier,
   nextTierToUnlock,
 } from '../game/achievements/achievementData'
 
@@ -119,44 +120,82 @@ function TierLadderBar({
   )
 }
 
-// Shared by CharacterProgress and UnlockRow — both show the same
-// character-owned ladder (kills + unlockedTierIndex), just in different
-// contexts (pure progress display vs. the row that also has a Buy button).
-function characterTierState(kills: number, unlockedTierIndex: number, tierIndex: number): TierVisualState {
-  const threshold = ACHIEVEMENT_TIERS[tierIndex]
-  if (kills < threshold) return 'locked'
-  return tierIndex < unlockedTierIndex ? 'active' : 'partial'
+// Two fully independent tracks (confirmed with the user, 2026-08-03 —
+// supersedes the earlier single "reached AND unlocked" gated track, see
+// achievementData.ts's own note). Kill Count is free and only ever
+// active/locked based on kills; Unlock is paid and only ever active/locked
+// based on unlockedTierIndex — neither gates the other anymore, so there's
+// no more 'partial' state for either (still used by AccountProgress below,
+// which is unrelated to this split).
+function killCountTierState(kills: number, tierIndex: number): TierVisualState {
+  return kills >= ACHIEVEMENT_TIERS[tierIndex] ? 'active' : 'locked'
 }
 
-function characterTierTooltipLines(tierIndex: number, state: TierVisualState, kills: number): string[] {
+function killCountTierTooltipLines(tierIndex: number, state: TierVisualState, kills: number): string[] {
   const threshold = ACHIEVEMENT_TIERS[tierIndex]
   const rewardPct = Math.round((ACHIEVEMENT_GOLD_MULTIPLIER[threshold] - 1) * 100)
-  const rewardLine = `Reward: +${rewardPct}% gold`
-  if (state === 'active') return [rewardLine, 'Active now']
-  if (state === 'partial') return [rewardLine, 'Reached — unlock this tier in Unlocks to activate']
-  return [rewardLine, `${(threshold - kills).toLocaleString()} kills to go`]
+  const rewardLine = `Reward: +${rewardPct}% gold (free)`
+  return [rewardLine, state === 'active' ? 'Active now' : `${(threshold - kills).toLocaleString()} kills to go`]
 }
 
-// Pure progress display — no unlock button here anymore, see UnlockRow.
+function unlockTierState(unlockedTierIndex: number, tierIndex: number): TierVisualState {
+  return tierIndex < unlockedTierIndex ? 'active' : 'locked'
+}
+
+function unlockTierTooltipLines(tierIndex: number, state: TierVisualState): string[] {
+  const threshold = ACHIEVEMENT_TIERS[tierIndex]
+  const rewardPct = Math.round((ACHIEVEMENT_GOLD_MULTIPLIER[threshold] - 1) * 100)
+  const rewardLine = `Reward: +${rewardPct}% gold (paid, stacks with the free reward)`
+  return [rewardLine, state === 'active' ? 'Active now' : 'Not unlocked yet — see Unlocks']
+}
+
+// Pure progress display — no unlock button here anymore, see UnlockRow. Now
+// shows both tracks stacked, since they're independent — the top ladder
+// tracks kills (free), the bottom tracks paid unlocks, each with its own
+// active-reward readout.
 function CharacterProgress({ monsterId }: { monsterId: EnemyTypeId }) {
   const characterEntry = useAchievementsStore((state) => state.characterKills[monsterId])
   const kills = characterEntry?.kills ?? 0
   const unlockedTierIndex = characterEntry?.unlockedTierIndex ?? 0
 
-  const tier = currentAchievementTier(kills, unlockedTierIndex)
-  const activePct = tier ? Math.round((ACHIEVEMENT_GOLD_MULTIPLIER[tier] - 1) * 100) : 0
-
-  const getState = (tierIndex: number) => characterTierState(kills, unlockedTierIndex, tierIndex)
-  const getTooltipLines = (tierIndex: number, state: TierVisualState) => characterTierTooltipLines(tierIndex, state, kills)
+  const killTier = currentKillCountTier(kills)
+  const killPct = killTier ? Math.round((ACHIEVEMENT_GOLD_MULTIPLIER[killTier] - 1) * 100) : 0
+  const unlockTier = currentUnlockTier(unlockedTierIndex)
+  const unlockPct = unlockTier ? Math.round((ACHIEVEMENT_GOLD_MULTIPLIER[unlockTier] - 1) * 100) : 0
 
   return (
-    <div>
-      <div className="flex items-center justify-between text-[11px] text-slate-500">
-        <span>{kills.toLocaleString()} kills</span>
-        <span className={tier ? 'text-emerald-400' : ''}>{tier ? `+${activePct}% gold active` : 'No tier active yet'}</span>
+    <div className="space-y-3">
+      <div>
+        <div className="flex items-center justify-between text-[11px] text-slate-500">
+          <span>Kill Count Reward (free) · {kills.toLocaleString()} kills</span>
+          <span className={killTier ? 'text-emerald-400' : ''}>{killTier ? `+${killPct}% gold active` : 'No tier active yet'}</span>
+        </div>
+        <div className="mt-1.5">
+          <TierLadderBar
+            kills={kills}
+            getState={(tierIndex) => killCountTierState(kills, tierIndex)}
+            getTooltipLines={(tierIndex, state) => killCountTierTooltipLines(tierIndex, state, kills)}
+          />
+        </div>
       </div>
-      <div className="mt-1.5">
-        <TierLadderBar kills={kills} getState={getState} getTooltipLines={getTooltipLines} />
+      <div>
+        <div className="flex items-center justify-between text-[11px] text-slate-500">
+          <span>
+            Unlock Reward (paid) · tier {unlockedTierIndex} of {ACHIEVEMENT_TIERS.length}
+          </span>
+          <span className={unlockTier ? 'text-emerald-400' : ''}>{unlockTier ? `+${unlockPct}% gold active` : 'No tier active yet'}</span>
+        </div>
+        <div className="mt-1.5">
+          {/* Feeds the unlocked tier's own threshold as "kills" purely to
+              drive the bar's fill percentage — TierLadderBar only ever
+              measures its kills prop against the tier thresholds, it has no
+              real opinion on what that number represents. */}
+          <TierLadderBar
+            kills={unlockedTierIndex > 0 ? ACHIEVEMENT_TIERS[unlockedTierIndex - 1] : 0}
+            getState={(tierIndex) => unlockTierState(unlockedTierIndex, tierIndex)}
+            getTooltipLines={(tierIndex, state) => unlockTierTooltipLines(tierIndex, state)}
+          />
+        </div>
       </div>
     </div>
   )
@@ -226,8 +265,8 @@ function UnlockRow({ characterId, monsterId, displayName }: { characterId: strin
     return null
   }
 
-  const getState = (tierIndex: number) => characterTierState(kills, unlockedTierIndex, tierIndex)
-  const getTooltipLines = (tierIndex: number, state: TierVisualState) => characterTierTooltipLines(tierIndex, state, kills)
+  const getState = (tierIndex: number) => unlockTierState(unlockedTierIndex, tierIndex)
+  const getTooltipLines = (tierIndex: number, state: TierVisualState) => unlockTierTooltipLines(tierIndex, state)
 
   const handleUnlock = async () => {
     setError(null)
@@ -270,7 +309,14 @@ function UnlockRow({ characterId, monsterId, displayName }: { characterId: strin
         </div>
       </div>
       <div className="mt-2">
-        <TierLadderBar kills={kills} getState={getState} getTooltipLines={getTooltipLines} />
+        {/* Fill is driven by unlockedTierIndex, not raw kills, since this
+            ladder is showing paid-unlock progress specifically — see
+            CharacterProgress's own identical trick. */}
+        <TierLadderBar
+          kills={unlockedTierIndex > 0 ? ACHIEVEMENT_TIERS[unlockedTierIndex - 1] : 0}
+          getState={getState}
+          getTooltipLines={getTooltipLines}
+        />
       </div>
     </div>
   )
@@ -487,7 +533,7 @@ const ACCOUNT_SUB_TAB_DESCRIPTIONS: Record<AccountSubTab, string> = {
     'Every character on this account contributes to the same account-wide ladder per monster — its own reward category is still being designed. Tap a zone to expand it.',
   quests: 'Quests aren’t designed yet.',
   unlocks:
-    'Spend Meteors/DragonBalls to unlock the next tier on a monster’s personal ladder. Unlocking ahead of your kill count is fine — the reward just won’t be active until you catch up.',
+    'Spend Meteors/DragonBalls to unlock the next tier on a monster’s personal ladder — a paid gold bonus that activates immediately and stacks on top of the free reward you already earn from kills alone.',
 }
 
 function AccountTabContent({ characterId }: { characterId: string }) {

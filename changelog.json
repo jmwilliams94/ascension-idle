@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.52.2",
+    "date": "2026-08-03",
+    "changes": [
+      "Achievement kill-count rewards and paid Unlock rewards are now separate — reaching a kill milestone grants its gold bonus for free, and unlocking a tier grants its own bonus immediately instead of waiting on your kill count"
+    ]
+  },
+  {
     "version": "1.52.1",
     "date": "2026-08-03",
     "changes": [
