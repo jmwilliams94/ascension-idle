@@ -1,6 +1,6 @@
 import InventorySlot, { SLOT_LABEL_HEIGHT_CLASS, SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
 import { useDraggableTile } from './dragDropContext'
-import { buildGearTooltip, formatItemDisplayName, formatItemLevel, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
+import { buildGearTooltip, formatItemDisplayName, formatItemLevel, getGearIconSrc, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
 import { listableCurrencyLabel, listableCurrencyVisual } from '../game/marketplace/listableCurrency'
 import type { ListableCurrencyType } from '../game/marketplace/useMarketplaceStore'
 import type { ItemInstance } from '../game/items/useInventoryStore'
@@ -30,6 +30,7 @@ export default function MarketplaceListingSlot({ target, onRemove }: Marketplace
   const item = target?.kind === 'item' ? target.item : null
   const template = target?.kind === 'item' ? target.template : null
   const icon = item ? getItemIcon(template?.slot_type) : undefined
+  const iconSrc = item ? getGearIconSrc(template?.name) : undefined
   const currencyVisual = target?.kind === 'currency' ? listableCurrencyVisual(target.currencyType) : null
 
   const label = !target
@@ -48,7 +49,7 @@ export default function MarketplaceListingSlot({ target, onRemove }: Marketplace
     payload: !target
       ? null
       : target.kind === 'item'
-        ? { id: target.item.id, icon: icon ?? '', qualityColor: getQualityColor(target.item.quality_tier) }
+        ? { id: target.item.id, icon: icon ?? '', iconSrc, qualityColor: getQualityColor(target.item.quality_tier) }
         : {
             id: `staged-${target.currencyType}`,
             icon: currencyVisual?.icon ?? '',
@@ -72,7 +73,7 @@ export default function MarketplaceListingSlot({ target, onRemove }: Marketplace
           emptyHint="Drop item here"
           qualityColor={item ? getQualityColor(item.quality_tier) : currencyVisual?.qualityColor}
           icon={item ? icon : currencyVisual?.icon}
-          iconSrc={currencyVisual?.iconSrc}
+          iconSrc={item ? iconSrc : currencyVisual?.iconSrc}
           label={label}
           tooltip={item ? buildGearTooltip(item, template ?? undefined) : undefined}
           draggable={drag.draggable}

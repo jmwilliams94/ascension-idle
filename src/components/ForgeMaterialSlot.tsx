@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import InventorySlot, { SLOT_LABEL_HEIGHT_CLASS, SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
-import { buildGearTooltip, formatItemDisplayName, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
+import { buildGearTooltip, formatItemDisplayName, getGearIconSrc, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
 import {
   DRAGONBALL_COLOR,
   DRAGONBALL_ICON_SRC,
@@ -101,6 +101,7 @@ export default function ForgeMaterialSlot({ entries, templates, onRemoveEntry }:
                 filled
                 sizeClassName={SLOT_SIZE_CLASS}
                 icon={getItemIcon(template?.slot_type)}
+                iconSrc={getGearIconSrc(template?.name)}
                 qualityColor={getQualityColor(entry.item.quality_tier)}
                 badge={`${compositionPointValue(entry.item.composition_level)}`}
                 label={template ? formatItemDisplayName(template.name, entry.item.quality_tier, entry.item.composition_level) : 'Unknown item'}

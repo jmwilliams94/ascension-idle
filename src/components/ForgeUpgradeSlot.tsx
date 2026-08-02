@@ -1,6 +1,6 @@
 import InventorySlot, { SLOT_LABEL_HEIGHT_CLASS, SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
 import { useDraggableTile } from './dragDropContext'
-import { buildGearTooltip, formatItemDisplayName, formatItemLevel, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
+import { buildGearTooltip, formatItemDisplayName, formatItemLevel, getGearIconSrc, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
 import type { ItemInstance } from '../game/items/useInventoryStore'
 import type { ItemTemplate } from '../game/items/useItemTemplatesStore'
 
@@ -21,9 +21,10 @@ interface ForgeUpgradeSlotProps {
 // hover tooltip works here too.
 export default function ForgeUpgradeSlot({ item, template, onRemove }: ForgeUpgradeSlotProps) {
   const icon = getItemIcon(template?.slot_type)
+  const iconSrc = getGearIconSrc(template?.name)
   const drag = useDraggableTile({
     enabled: Boolean(item),
-    payload: item ? { id: item.id, icon, qualityColor: getQualityColor(item.quality_tier) } : null,
+    payload: item ? { id: item.id, icon, iconSrc, qualityColor: getQualityColor(item.quality_tier) } : null,
     onDrop: () => onRemove(),
   })
 
@@ -41,6 +42,7 @@ export default function ForgeUpgradeSlot({ item, template, onRemove }: ForgeUpgr
           emptyHint="Drop item here"
           qualityColor={item ? getQualityColor(item.quality_tier) : undefined}
           icon={item ? icon : undefined}
+          iconSrc={item ? iconSrc : undefined}
           label={item ? (template ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level) : 'Unknown item') : undefined}
           tooltip={item ? buildGearTooltip(item, template ?? undefined) : undefined}
           draggable={drag.draggable}

@@ -8,7 +8,7 @@ import { useInventoryStore, type ItemInstance } from '../game/items/useInventory
 import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemTemplatesStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { POTION_TYPES, HP_POTION_ORDER, MP_POTION_ORDER, type PotionTypeId } from '../game/items/potionTypes'
-import { buildGearTooltip, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
+import { buildGearTooltip, getGearIconSrc, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
 
 // A Shop template isn't an owned ItemInstance yet, but buildGearTooltip (the
@@ -78,6 +78,7 @@ function GearRow({ template }: { template: ItemTemplate }) {
           filled
           sizeClassName={SLOT_SIZE_CLASS}
           icon={getItemIcon(template.slot_type)}
+          iconSrc={getGearIconSrc(template.name)}
           qualityColor={getQualityColor('normal')}
           label={template.name}
           tooltip={buildGearTooltip(previewInstance(template), template)}

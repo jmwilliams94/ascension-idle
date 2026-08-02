@@ -7,6 +7,7 @@ import {
   formatBaseStats,
   formatItemDisplayName,
   formatItemLevel,
+  getGearIconSrc,
   getItemIcon,
   getQualityColor,
   previewSellPrice,
@@ -617,6 +618,7 @@ export default function InventoryPanel({
             const label = template ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level) : 'Unknown item'
             const qualityColor = getQualityColor(item.quality_tier)
             const icon = getItemIcon(template?.slot_type)
+            const iconSrc = getGearIconSrc(template?.name)
 
             const commonProps = {
               slotId: item.id,
@@ -624,6 +626,7 @@ export default function InventoryPanel({
               sizeClassName: SLOT_SIZE_CLASS,
               qualityColor,
               icon,
+              iconSrc,
               label,
               // Omitted when equipPopoverEnabled — that mode's whole point is
               // "press is the only trigger now," so the plain hover/long-press
@@ -640,7 +643,7 @@ export default function InventoryPanel({
                   key={item.id}
                   {...commonProps}
                   dragEnabled
-                  dragPayload={{ id: item.id, icon, qualityColor }}
+                  dragPayload={{ id: item.id, icon, iconSrc, qualityColor }}
                   onDrop={handleTileDrop}
                   onClick={() => toggleSlot({ kind: 'item', id: item.id })}
                 />
@@ -847,7 +850,11 @@ export default function InventoryPanel({
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-lg"
               style={{ borderColor: getQualityColor(selectedItem.quality_tier) }}
             >
-              {getItemIcon(selectedTemplate?.slot_type)}
+              {getGearIconSrc(selectedTemplate?.name) ? (
+                <img src={getGearIconSrc(selectedTemplate?.name)} alt="" className="h-3/5 w-3/5 object-contain" />
+              ) : (
+                getItemIcon(selectedTemplate?.slot_type)
+              )}
             </div>
             <div>
               <p className="text-sm font-medium text-slate-200">

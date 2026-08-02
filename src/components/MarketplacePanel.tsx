@@ -18,7 +18,7 @@ import { listableCurrencyLabel, listableCurrencyVisual } from '../game/marketpla
 import { LISTING_DURATION_OPTIONS, previewListingFee } from '../game/marketplace/marketplaceCosts'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
-import { buildGearTooltip, formatItemDisplayName, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
+import { buildGearTooltip, formatItemDisplayName, getGearIconSrc, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
 import { isDragonballDragId, isDragonballScrollDragId, isMeteorDragId, isMeteorScrollDragId } from '../game/items/forgeCosts'
 
 // Marketplace (see CLAUDE.md's Gear system / Marketplace section) — three
@@ -106,6 +106,7 @@ function ListingTile({ listing, templates }: { listing: MarketplaceListing; temp
   const template = listing.item ? templates.find((t) => t.id === listing.item!.template_id) : undefined
   const label = listingLabel(listing, templates)
   const icon = getItemIcon(template?.slot_type)
+  const iconSrc = getGearIconSrc(template?.name)
 
   return (
     <InventorySlot
@@ -113,6 +114,7 @@ function ListingTile({ listing, templates }: { listing: MarketplaceListing; temp
       filled={Boolean(listing.item)}
       sizeClassName={SLOT_SIZE_CLASS}
       icon={listing.item ? icon : undefined}
+      iconSrc={listing.item ? iconSrc : undefined}
       qualityColor={listing.item ? getQualityColor(listing.item.quality_tier) : undefined}
       label={label}
       tooltip={listing.item ? buildGearTooltip(listing.item, template) : undefined}
@@ -573,6 +575,7 @@ function MailTab({ characterId, templates }: { characterId: string; templates: I
                 filled={Boolean(entry.item)}
                 sizeClassName={SLOT_SIZE_CLASS}
                 icon={entry.item ? getItemIcon(template?.slot_type) : undefined}
+                iconSrc={entry.item ? getGearIconSrc(template?.name) : undefined}
                 qualityColor={entry.item ? getQualityColor(entry.item.quality_tier) : undefined}
                 label={label}
                 tooltip={entry.item ? buildGearTooltip(entry.item, template) : undefined}

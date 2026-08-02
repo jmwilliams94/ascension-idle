@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.54.2",
+    "date": "2026-08-03",
+    "changes": [
+      "Added the first real weapon icon — the Sapling Bow now shows its own art everywhere it appears (Inventory, Forge, Bank, Shop, Marketplace)"
+    ]
+  },
+  {
     "version": "1.54.1",
     "date": "2026-08-03",
     "changes": [

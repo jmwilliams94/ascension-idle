@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import { DraggableInventorySlot } from './dragDrop'
-import { getItemIcon } from '../game/items/equipmentBonus'
+import { getGearIconSrc, getItemIcon } from '../game/items/equipmentBonus'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
 import { COMPOSITION_STONE_TIERS, compositionPointValue } from '../game/items/forgeCosts'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
@@ -84,12 +84,14 @@ export default function WarehouseGrid({ characterId, onTileDrop }: WarehouseGrid
               lines: [`x${entry.count} in Storage`, 'Choose a tier to withdraw at'],
             }
             const icon = getItemIcon(template?.slot_type)
+            const iconSrc = getGearIconSrc(template?.name)
 
             const commonProps = {
               slotId: entry.id,
               filled: true as const,
               sizeClassName: SLOT_SIZE_CLASS,
               icon,
+              iconSrc,
               label,
               tooltip,
               badge: `x${entry.count}`,
@@ -102,7 +104,7 @@ export default function WarehouseGrid({ characterId, onTileDrop }: WarehouseGrid
                   key={entry.id}
                   {...commonProps}
                   dragEnabled
-                  dragPayload={{ id: entry.template_id, icon, badge: `x${entry.count}` }}
+                  dragPayload={{ id: entry.template_id, icon, iconSrc, badge: `x${entry.count}` }}
                   onDrop={handleTileDrop}
                   onClick={() => selectEntry(entry.id)}
                 />
@@ -132,7 +134,11 @@ export default function WarehouseGrid({ characterId, onTileDrop }: WarehouseGrid
         <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg">
-              {getItemIcon(selectedTemplate?.slot_type)}
+              {getGearIconSrc(selectedTemplate?.name) ? (
+                <img src={getGearIconSrc(selectedTemplate?.name)} alt="" className="h-3/5 w-3/5 object-contain" />
+              ) : (
+                getItemIcon(selectedTemplate?.slot_type)
+              )}
             </div>
             <div>
               <p className="text-sm font-medium text-slate-200">{selectedTemplate ? selectedTemplate.name : 'Unknown item'}</p>

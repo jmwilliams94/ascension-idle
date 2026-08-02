@@ -5,6 +5,7 @@ import {
   formatBaseStats,
   formatItemDisplayName,
   formatItemLevel,
+  getGearIconSrc,
   getItemIcon,
   getQualityColor,
 } from '../game/items/equipmentBonus'
@@ -89,6 +90,7 @@ export default function EquipmentPanel() {
                     : `${label} — empty`
                 }
                 icon={equipped ? getItemIcon(equipped.template.slot_type) : icon}
+                iconSrc={equipped ? getGearIconSrc(equipped.template.name) : undefined}
                 filled={Boolean(equipped)}
                 qualityColor={equipped ? getQualityColor(equipped.item.quality_tier) : undefined}
                 selected={selectedSlot === slot}
@@ -114,7 +116,11 @@ export default function EquipmentPanel() {
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-lg"
               style={{ borderColor: getQualityColor(selected.item.quality_tier) }}
             >
-              {getItemIcon(selected.template.slot_type)}
+              {getGearIconSrc(selected.template.name) ? (
+                <img src={getGearIconSrc(selected.template.name)} alt="" className="h-3/5 w-3/5 object-contain" />
+              ) : (
+                getItemIcon(selected.template.slot_type)
+              )}
             </div>
             <div>
               <p className="text-sm font-medium text-slate-200">

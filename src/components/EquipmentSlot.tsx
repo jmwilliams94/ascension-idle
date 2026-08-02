@@ -7,6 +7,10 @@ import { emberCountForColor, seedFromId } from '../game/items/tierEffectsData'
 interface EquipmentSlotProps {
   label: string
   icon?: string
+  // Real art, when supplied, renders instead of the emoji `icon` above — same
+  // iconSrc-over-icon priority InventorySlot already established (see
+  // getGearIconSrc in equipmentBonus.ts).
+  iconSrc?: string
   // Non-interactive placeholder for a gear type that doesn't exist yet — shows a
   // faint icon hinting at the slot type, never clickable.
   locked?: boolean
@@ -29,6 +33,7 @@ interface EquipmentSlotProps {
 export default function EquipmentSlot({
   label,
   icon,
+  iconSrc,
   locked,
   filled,
   qualityColor,
@@ -74,7 +79,7 @@ export default function EquipmentSlot({
       style={filled ? { borderColor: qualityColor, backgroundColor: qualityColor ? `${qualityColor}22` : undefined } : undefined}
     >
       {emberCount > 0 && <TierEmberEffect color={qualityColor as string} count={emberCount} seed={seedFromId(label)} />}
-      <span className="relative z-10">{icon}</span>
+      {iconSrc ? <img src={iconSrc} alt="" className="relative z-10 h-3/5 w-3/5 object-contain" /> : <span className="relative z-10">{icon}</span>}
     </button>
   )
 

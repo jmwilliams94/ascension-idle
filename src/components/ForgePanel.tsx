@@ -8,7 +8,7 @@ import { DragDropProvider } from './dragDrop'
 import InventoryPanel from './InventoryPanel'
 import InventorySlot, { SLOT_LABEL_HEIGHT_CLASS, SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
-import { buildGearTooltip, formatItemDisplayName, getItemIcon, getQualityColor, nextQualityTier } from '../game/items/equipmentBonus'
+import { buildGearTooltip, formatItemDisplayName, getGearIconSrc, getItemIcon, getQualityColor, nextQualityTier } from '../game/items/equipmentBonus'
 import {
   type CompositionSimulation,
   compositionPointValue,
@@ -173,6 +173,7 @@ function PreviewSquare({
             filled
             sizeClassName={SLOT_SIZE_CLASS}
             icon={getItemIcon(previewTemplate?.slot_type)}
+            iconSrc={getGearIconSrc(previewTemplate?.name)}
             qualityColor={getQualityColor(previewItem.quality_tier)}
             label={
               previewTemplate

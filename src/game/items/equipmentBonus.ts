@@ -173,6 +173,29 @@ export function getItemIcon(slotType: string | undefined): string {
   return (slotType && SLOT_ICONS[slotType]) || '🗡️'
 }
 
+// Real per-item art, started one weapon at a time (2026-08-03) — same
+// incremental-rollout precedent as the Zones section's monster portraits
+// (public/monsters/, EnemyTypeDef.portraitUrl). Keyed by item_templates.name
+// rather than a DB column: unlike monsters (a static ENEMY_TYPES array in
+// zoneData.ts that already had room for a portraitUrl field), gear has no
+// static per-template TS definition to extend — item_templates is entirely
+// DB-driven — so adding a nullable icon_url column would mean a schema
+// migration (and another manual SQL-editor step) for what's purely cosmetic.
+// A plain client-side name lookup avoids that entirely. Every call site that
+// already computes `icon: getItemIcon(template?.slot_type)` should also
+// compute `iconSrc: getGearIconSrc(template?.name)` alongside it — InventorySlot
+// (and anywhere else that mirrors its `iconSrc`-over-`icon` priority) already
+// falls back to the emoji `icon` whenever this returns undefined, so adding a
+// new mapping entry here is the only step needed to roll out the next piece
+// of art — no other file needs touching.
+const ITEM_ICON_OVERRIDES: Record<string, string> = {
+  'Sapling Bow': `${import.meta.env.BASE_URL}item-icons/sapling-bow.png`,
+}
+
+export function getGearIconSrc(templateName: string | undefined): string | undefined {
+  return templateName ? ITEM_ICON_OVERRIDES[templateName] : undefined
+}
+
 // Keyed by item_templates.item_family (see useItemTemplatesStore.ts), not
 // slot_type — every weapon shares slot_type 'weapon', so this is the only way
 // to tell a Bow from a Sword for icon purposes. Covers the confirmed
