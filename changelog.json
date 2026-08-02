@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.47.0",
+    "date": "2026-08-02",
+    "changes": [
+      "Monsters can now dodge your attacks too, not just the other way around — better gear (especially Ascended tier) now lands hits more often, not just harder",
+      "Renamed the Dodge stat to Dexterity everywhere it's shown, since it now governs both your evasion and your own accuracy"
+    ]
+  },
+  {
     "version": "1.46.0",
     "date": "2026-08-02",
     "changes": [

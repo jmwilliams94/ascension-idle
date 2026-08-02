@@ -147,15 +147,45 @@ export function resolvePhysicalDamage(attack: number, defense: number): number {
 // player can now fully avoid an incoming monster attack, using boots' own
 // dodge stat plus Agility (see derivedStats.ts). PLACEHOLDER capped-linear
 // curve — 0.5% dodge chance per point, capped at 50% — unresolved/unsourced
-// like the rest of this combat math, tune later. One-directional: monsters
-// have no dodge stat of their own, so the player's own outgoing attacks
-// always land, unaffected by this. Client-only (see useCombatStore.runTick's
-// monster-attack-back block) — not mirrored in resolve-combat, since incoming
-// damage/player HP was never simulated server-side to begin with.
+// like the rest of this combat math, tune later. Client-only (see
+// useCombatStore.runTick's monster-attack-back block) — not mirrored in
+// resolve-combat, since incoming damage/player HP was never simulated
+// server-side to begin with.
 const DODGE_CHANCE_PER_POINT = 0.005
 const MAX_DODGE_CHANCE = 0.5
 
 export function rollIsHit(dodge: number): boolean {
   const dodgeChance = Math.min(dodge * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
   return Math.random() >= dodgeChance
+}
+
+// Monster Dodge — new (2026-08-02, confirmed design), closes the previous
+// "one-directional dodge" gap: the player's own outgoing attacks could never
+// miss, only incoming ones could be avoided. Formula-derived from level, same
+// "not stored on EnemyTypeDef, not sourced" convention as monsterDefense
+// above — informed by real Conquer monster Dodge data
+// (reference/conquer-items/monsters.md, roughly 36→1000+ across levels
+// 1-120) purely for *pacing feel*, not copied directly, since that data
+// assumes a completely different player power scale than this game's own
+// attribute curve (see classes.ts's ATTRIBUTE_ANCHORS). Calibrated instead
+// against this game's own Agility growth so it's a meaningful-but-not-
+// overwhelming threat for low-Agility melee classes (Warrior/Trojan/Taoist
+// top out around 75 Agility at level 130), while naturally becoming a
+// non-factor for a well-built Hunter (Agility specialist, tops out at 275) —
+// that class asymmetry is intentional flavor, not an oversight.
+export function monsterDodge(type: EnemyTypeDef): number {
+  return Math.round(type.level * 0.8)
+}
+
+// The reverse of rollIsHit above — the player's own accuracy (reusing
+// `derived.dodge` directly rather than a separate stat, see the Stats
+// section note on Agility/Dex serving double duty for both evasion and
+// accuracy) reduces the monster's effective Dodge before the same
+// per-point/cap curve applies. Confirmed design intent: this is what makes
+// Ascended gear (which scales the same dodge stat via QUALITY_STAT_
+// MULTIPLIERS) feel meaningfully better than Normal gear beyond just raw
+// damage — it also lands more often, not just hits harder.
+export function rollAttackLands(playerAccuracy: number, monsterDodgeValue: number): boolean {
+  const missChance = Math.min(Math.max(0, monsterDodgeValue - playerAccuracy) * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
+  return Math.random() >= missChance
 }

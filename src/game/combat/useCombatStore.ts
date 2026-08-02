@@ -13,7 +13,9 @@ import {
   killRewards,
   monsterAttackDamage,
   monsterDefense,
+  monsterDodge,
   resolvePhysicalDamage,
+  rollAttackLands,
   rollBonusCurrencyDrops,
   rollDamageInRange,
   rollIsHit,
@@ -26,6 +28,7 @@ export type CombatLogKind =
   | 'damage'
   | 'player-damage'
   | 'dodge'
+  | 'miss'
   | 'kill'
   | 'rare-kill'
   | 'item'
@@ -248,6 +251,21 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       set((s) => ({
         lastAttackAt: nowMs,
         log: appendLog(s.log, { kind: 'no-quiver', message: 'No quiver equipped!' }),
+      }))
+      return
+    }
+
+    // Outgoing hit-chance roll (2026-08-02, confirmed design) — the reverse of
+    // the incoming dodge check below: monsters now have a real Dodge stat
+    // (see combatResolver.ts's monsterDodge), so the player's own attacks can
+    // miss too. Reuses derived.dodge as the player's own accuracy input — the
+    // same Agility/gear pool that already governs incoming dodge — so gear
+    // that boosts dodge now also makes attacks land more often, not just
+    // survive better.
+    if (!rollAttackLands(derived.dodge, monsterDodge(type))) {
+      set((s) => ({
+        lastAttackAt: nowMs,
+        log: appendLog(s.log, { kind: 'miss', message: `Your attack misses ${type.displayName}!` }),
       }))
       return
     }

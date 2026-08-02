@@ -106,15 +106,31 @@ export function previewSellPrice(price: number, qualityTier: string): number {
 // ranged and keep showing a flat "+N".
 const RANGED_STAT_KEYS = ['physical_attack', 'magic_attack']
 
+// Display-only relabeling for keys whose stored name doesn't read well
+// verbatim. `dodge` specifically (2026-08-02) — the underlying base_stats
+// key/derived stat is unchanged (still `dodge`, still feeds
+// computeEquipmentBonus/derived.dodge the same way), this only changes what
+// the tooltip calls it. "Dexterity" matches how the reference data itself
+// names this stat on gear, and now that it drives the player's own outgoing
+// accuracy too (see combatResolver.ts's rollAttackLands), "Dodge" alone
+// undersold what it actually does.
+const STAT_LABEL_OVERRIDES: Record<string, string> = {
+  dodge: 'Dexterity',
+}
+
+function statLabel(key: string): string {
+  return STAT_LABEL_OVERRIDES[key] ?? key.replace(/_/g, ' ')
+}
+
 export function formatBaseStats(baseStats: Record<string, number>, qualityTier: string): string {
   return Object.entries(baseStats)
     .map(([key]) => {
       const value = scaledStat(baseStats, key, qualityTier)
       if (RANGED_STAT_KEYS.includes(key)) {
         const { min, max } = damageRangeFromMidpoint(value ?? 0)
-        return `${min}-${max} ${key.replace(/_/g, ' ')}`
+        return `${min}-${max} ${statLabel(key)}`
       }
-      return `+${value} ${key.replace(/_/g, ' ')}`
+      return `+${value} ${statLabel(key)}`
     })
     .join(', ')
 }
