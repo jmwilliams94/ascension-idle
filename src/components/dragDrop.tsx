@@ -47,8 +47,10 @@ export function DragDropProvider({ children }: { children: ReactNode }) {
               left: activeDrag.x,
               top: activeDrag.y,
               // Offset above the pointer so a finger doesn't hide the ghost —
-              // drop-target detection always uses the real pointer position, not
-              // this visual offset, so the offset can't throw off a drop.
+              // resolveDropTarget (dragDropContext.ts) knows this exact offset
+              // and checks the ghost's own visual position for a drop target
+              // too, not just the raw pointer, so releasing wherever the icon
+              // visibly sits counts as a drop.
               transform: 'translate(-50%, calc(-50% - 56px))',
               borderColor: activeDrag.qualityColor,
             }}

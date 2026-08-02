@@ -19,6 +19,23 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 
 const DRAG_THRESHOLD_PX = 6
 
+// The floating drag ghost (see dragDrop.tsx's DragDropProvider) renders
+// visually offset above the raw pointer position — `translate(-50%,
+// calc(-50% - 56px))` — so a finger/cursor doesn't hide the very tile it's
+// dragging. Bug fix (2026-08-03): drop-target resolution used to check only
+// the raw pointer position, on the theory that the offset "can't throw off
+// a drop" — but it can and did: releasing while the *ghost icon* visually
+// overlapped a drop zone could still miss, because the real pointer
+// position (hidden beneath the ghost, which is the entire reason for the
+// offset) was just outside that zone's bounds. Now checks the ghost's own
+// visual center first, falling back to the raw pointer position, so
+// dropping wherever the icon visibly sits — not just wherever the finger
+// happens to be — counts.
+const GHOST_VERTICAL_OFFSET_PX = 56
+const GHOST_HALF_HEIGHT_MOBILE_PX = 28 // SLOT_SIZE_CLASS's h-14 (56px) / 2
+const GHOST_HALF_HEIGHT_DESKTOP_PX = 32 // SLOT_SIZE_CLASS's lg:h-16 (64px) / 2
+const DESKTOP_BREAKPOINT_PX = 1024 // Tailwind's `lg`
+
 export interface DragPayload {
   id: string
   icon: string
@@ -51,10 +68,17 @@ export interface DragDropContextValue {
 
 export const DragDropContext = createContext<DragDropContextValue | null>(null)
 
-export function resolveDropTarget(x: number, y: number): string | null {
+function hitTestDropZone(x: number, y: number): string | null {
   const element = document.elementFromPoint(x, y)
   const target = element?.closest<HTMLElement>('[data-drop-zone]')
   return target?.dataset.dropZone ?? null
+}
+
+export function resolveDropTarget(x: number, y: number): string | null {
+  const halfHeight = window.innerWidth >= DESKTOP_BREAKPOINT_PX ? GHOST_HALF_HEIGHT_DESKTOP_PX : GHOST_HALF_HEIGHT_MOBILE_PX
+  const ghostY = y - GHOST_VERTICAL_OFFSET_PX - halfHeight
+
+  return hitTestDropZone(x, ghostY) ?? hitTestDropZone(x, y)
 }
 
 function useDragDropContext(): DragDropContextValue {

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.51.3",
+    "date": "2026-08-03",
+    "changes": [
+      "Fixed dropping a dragged item just outside a drop zone's exact boundary — it now also counts if the floating icon itself visibly overlaps the zone, not just your actual finger/cursor position underneath it"
+    ]
+  },
+  {
     "version": "1.51.2",
     "date": "2026-08-03",
     "changes": [
