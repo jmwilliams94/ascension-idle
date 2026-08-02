@@ -134,20 +134,52 @@ export default function GameShell({ characterId }: { characterId: string }) {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#1e293b,_#020617_70%)] text-slate-100">
       <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-y-2 px-6 py-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Ascension Idle</p>
-            <h1 className="text-xl font-semibold text-white">Idle Combat</h1>
+        {/* Single row at every viewport size — no flex-wrap. "Idle Combat"
+            removed entirely (it was redundant with the tab the player is
+            already on); the eyebrow+h1 pair is replaced with one prettier
+            lockup (a small gradient "A" mark echoing the PWA app icon, plus a
+            gradient-text wordmark) that stays compact enough to share the row
+            with the action buttons on mobile. */}
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-300 to-amber-600 text-base font-bold text-slate-950 shadow-lg shadow-amber-900/30">
+              A
+            </span>
+            <h1 className="bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 bg-clip-text text-lg font-bold tracking-wide text-transparent sm:text-xl">
+              Ascension Idle
+            </h1>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            {session?.user.email && <span className="hidden text-sm text-slate-400 sm:inline">{session.user.email}</span>}
+          {/* Icon-only below `lg` (labels hidden via `hidden lg:inline`,
+              buttons shrink to a square `p-2` to match Settings' existing
+              icon-button shape) — text labels return at `lg`+ alongside
+              wider padding. Same row as the heading at every size, right-
+              aligned via the parent's justify-between. */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {session?.user.email && <span className="hidden text-sm text-slate-400 lg:inline">{session.user.email}</span>}
             <button
               type="button"
               onClick={() => setActiveCharacterId(null)}
-              className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:border-slate-500"
+              aria-label="Switch Character"
+              title="Switch Character"
+              className="flex items-center gap-1.5 rounded-lg border border-slate-700 p-2 text-slate-300 hover:border-slate-500 lg:px-3 lg:py-1.5"
             >
-              Switch Character
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4 shrink-0"
+              >
+                <path d="m17 2 4 4-4 4" />
+                <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+                <path d="m7 22-4-4 4-4" />
+                <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+              </svg>
+              <span className="hidden text-sm lg:inline">Switch Character</span>
             </button>
             <button
               type="button"
@@ -173,9 +205,25 @@ export default function GameShell({ characterId }: { characterId: string }) {
             <button
               type="button"
               onClick={() => signOut()}
-              className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:border-slate-500"
+              aria-label="Sign out"
+              title="Sign out"
+              className="flex items-center gap-1.5 rounded-lg border border-slate-700 p-2 text-slate-300 hover:border-slate-500 lg:px-3 lg:py-1.5"
             >
-              Sign out
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4 shrink-0"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              <span className="hidden text-sm lg:inline">Sign out</span>
             </button>
           </div>
         </div>

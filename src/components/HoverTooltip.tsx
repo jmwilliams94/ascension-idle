@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 // Matches ItemTooltip's own w-52 (208px) — used only for horizontal clamping math
@@ -22,6 +22,16 @@ const FLIP_BELOW_THRESHOLD = 160
 const LONG_PRESS_MS = 450
 const LONG_PRESS_MOVE_CANCEL_PX = 10
 
+// Safety net against the tooltip getting permanently stuck (reported: a
+// long-press tooltip sometimes stayed pinned mid-screen instead of closing).
+// `rect` is a one-time snapshot taken when the tooltip opens, so it goes
+// stale the instant the page scrolls, and if the pointerup/pointercancel
+// meant to close it never reaches this element (e.g. a drag gesture starting
+// elsewhere steals the event), nothing else would ever clear it. This is a
+// "peek" tooltip, not persistent UI, so it's safe to force-close it well
+// before a real user would still want it open.
+const AUTO_DISMISS_MS = 4000
+
 interface HoverTooltipProps {
   content: ReactNode
   children: ReactNode
@@ -44,6 +54,28 @@ export default function HoverTooltip({ content, children }: HoverTooltipProps) {
   // toggle) — same "swallow the click that follows a real gesture" pattern
   // dragDropContext.ts uses for drag-and-drop.
   const longPressFiredRef = useRef(false)
+
+  useEffect(() => {
+    if (!rect) {
+      return undefined
+    }
+
+    const dismiss = () => setRect(null)
+
+    // capture:true so this fires even if something else on the page stops
+    // propagation, and so a fresh pointerdown dismisses the *old* tooltip
+    // before whatever new gesture it's starting (e.g. another long-press)
+    // runs its own bubble-phase handlers.
+    window.addEventListener('scroll', dismiss, { capture: true, passive: true })
+    window.addEventListener('pointerdown', dismiss, { capture: true })
+    const autoDismissTimer = window.setTimeout(dismiss, AUTO_DISMISS_MS)
+
+    return () => {
+      window.removeEventListener('scroll', dismiss, { capture: true })
+      window.removeEventListener('pointerdown', dismiss, { capture: true })
+      window.clearTimeout(autoDismissTimer)
+    }
+  }, [rect])
 
   const handleEnter = () => {
     setRect(triggerRef.current?.getBoundingClientRect() ?? null)

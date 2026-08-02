@@ -22,6 +22,15 @@ const DRAG_THRESHOLD_PX = 6
 export interface DragPayload {
   id: string
   icon: string
+  // Real art, when supplied, renders in the floating drag ghost instead of the
+  // emoji `icon` above — same "iconSrc wins when both are supplied" pattern as
+  // InventorySlot's own icon/iconSrc props (see forgeCosts.ts's
+  // METEOR_ICON_SRC/DRAGONBALL_ICON_SRC). Without this, Meteor/DragonBall
+  // tiles (the only draggable tiles with real art instead of an emoji) had to
+  // fall back to a plain emoji ghost mid-drag, which read as "an older image"
+  // even though the tile itself, before and after dragging, showed the real
+  // art correctly.
+  iconSrc?: string
   qualityColor?: string
   badge?: string
 }

@@ -67,9 +67,15 @@ export default function WarehouseGrid({ characterId, onTileDrop }: WarehouseGrid
             `lg`, unchanged 4rem at `lg`+) — the previous fixed 4rem-per-column
             grid was the same overflow bug InventoryPanel had before it was
             fixed, just never caught here since this grid didn't exist yet at
-            the time. overflow-x-auto is the same defensive backstop. */}
+            the time. overflow-x-auto is the same defensive backstop.
+            5 columns (not 8) — matches Forge/Combat's own InventoryPanel
+            `columns={5}` convention below it on this same page; 8 columns of
+            even the smaller 3.5rem tracks still ran wider than a phone
+            viewport, which is what actually caused the "doesn't fit mobile"
+            report (overflow-x-auto masked it as a horizontal scroll instead
+            of an outright fix). */}
         <div data-drop-zone="warehouse-storage" className="mt-2 overflow-x-auto">
-        <div className="grid grid-cols-[repeat(8,3.5rem)] gap-1.5 lg:grid-cols-[repeat(8,4rem)]">
+        <div className="grid grid-cols-[repeat(5,3.5rem)] gap-1.5 lg:grid-cols-[repeat(5,4rem)]">
           {items.map((entry) => {
             const template = templates.find((t) => t.id === entry.template_id)
             const label = template ? template.name : 'Unknown item'

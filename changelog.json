@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.48.5",
+    "date": "2026-08-02",
+    "changes": [
+      "Fixed the Meteor/DragonBall drag ghost showing an old placeholder icon instead of the real art while dragging",
+      "Dragging a Meteor or DragonBall into Bank Storage now deposits it into the Bank instead of doing nothing",
+      "Fixed a hover tooltip that could occasionally get stuck on screen instead of closing",
+      "Fixed the Bank's Storage and Inventory grids overflowing on mobile screens",
+      "Renamed \"Items\" to \"Inventory\" wherever the Inventory grid is labeled",
+      "Redesigned the top header — removed the redundant \"Idle Combat\" text, gave the \"Ascension Idle\" title a nicer look, and the account buttons are now icon-only on mobile, sitting on the same row as the title"
+    ]
+  },
+  {
     "version": "1.48.4",
     "date": "2026-08-02",
     "changes": [

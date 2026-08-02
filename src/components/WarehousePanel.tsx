@@ -10,6 +10,8 @@ import {
   GEAR_SLOT_TYPES,
   compositionPointValue,
   formatGearSlotLabel,
+  isDragonballDragId,
+  isMeteorDragId,
   parseStoneDragId,
   type GearSlotType,
 } from '../game/items/forgeCosts'
@@ -487,11 +489,16 @@ export default function WarehousePanel({ characterId }: { characterId: string })
   const depositItem = useWarehouseStore((state) => state.depositItem)
   const depositItemAsComposition = useWarehouseStore((state) => state.depositItemAsComposition)
   const depositStone = useWarehouseStore((state) => state.depositStone)
+  const depositCurrency = useWarehouseStore((state) => state.depositCurrency)
   const items = useWarehouseStore((state) => state.items)
 
   // Routes a dragged tile to whichever side it landed on, identified by that
   // side's data-drop-zone key (see dragDrop.tsx) — "warehouse-storage" means a
-  // grid or stone tile was dragged in from Inventory to deposit; "inventory"
+  // grid, stone, or Meteor/DragonBall tile was dragged in from Inventory to
+  // deposit (a currency tile doesn't become a warehouse_items token — it
+  // deposits 1 unit straight into the account Bank via the same
+  // depositCurrency the Banked card's own CurrencyRow uses, since that's
+  // where Meteors/DragonBalls actually live, not the Storage grid); "inventory"
   // means a Warehouse tile was dragged out to withdraw it at the free Normal
   // tier (a shortcut for the common case — the click-to-select detail card in
   // WarehouseGrid still handles choosing a paid composition tier);
@@ -505,9 +512,17 @@ export default function WarehousePanel({ characterId }: { characterId: string })
       const stoneTier = parseStoneDragId(id)
       if (stoneTier !== null) {
         void depositStone(characterId, stoneTier, 1)
-      } else {
-        void depositItem(characterId, id)
+        return
       }
+      if (isMeteorDragId(id)) {
+        void depositCurrency(characterId, 'meteors', 1)
+        return
+      }
+      if (isDragonballDragId(id)) {
+        void depositCurrency(characterId, 'dragonballs', 1)
+        return
+      }
+      void depositItem(characterId, id)
       return
     }
 
@@ -536,7 +551,7 @@ export default function WarehousePanel({ characterId }: { characterId: string })
           <div className="min-w-0 space-y-4">
             <WarehouseGrid characterId={characterId} onTileDrop={handleTileDrop} />
             <CompositionDropZone />
-            <InventoryPanel onTileDrop={handleTileDrop} />
+            <InventoryPanel columns={5} onTileDrop={handleTileDrop} />
           </div>
 
           <div className="min-w-0 space-y-4">

@@ -325,7 +325,7 @@ export default function InventoryPanel({
       <div>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs uppercase tracking-wide text-slate-500">
-            Items ({occupiedCount}/{INVENTORY_SLOT_CAP})
+            Inventory ({occupiedCount}/{INVENTORY_SLOT_CAP})
           </p>
 
           {enableSelling && (
@@ -438,7 +438,7 @@ export default function InventoryPanel({
                   key={dragId}
                   {...commonProps}
                   dragEnabled
-                  dragPayload={{ id: dragId, icon: '☄️', qualityColor: MATERIAL_COLOR }}
+                  dragPayload={{ id: dragId, icon: '☄️', iconSrc: METEOR_ICON_SRC, qualityColor: MATERIAL_COLOR }}
                   onDrop={handleTileDrop}
                   onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'meteor' })}
                 />
@@ -472,7 +472,7 @@ export default function InventoryPanel({
                   key={dragId}
                   {...commonProps}
                   dragEnabled
-                  dragPayload={{ id: dragId, icon: '🔮', qualityColor: DRAGONBALL_COLOR }}
+                  dragPayload={{ id: dragId, icon: '🔮', iconSrc: DRAGONBALL_ICON_SRC, qualityColor: DRAGONBALL_COLOR }}
                   onDrop={handleTileDrop}
                   onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'dragonball' })}
                 />
