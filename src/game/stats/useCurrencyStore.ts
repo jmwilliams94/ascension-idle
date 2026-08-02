@@ -35,11 +35,30 @@ interface CurrencyState {
   dragonballs: number
   meteorScrolls: number
   dragonballScrolls: number
-  hydrate: (saved: { meteors: number; dragonballs: number; meteorScrolls: number; dragonballScrolls: number }) => void
+  // Ascension Points (2026-08-02) — funds Marketplace purchases/listing fees.
+  // Same server-authoritative trust model as meteors/dragonballs: earned only
+  // via sell_item/sell_loot_holding's ap_gained, spent only via the
+  // Marketplace RPCs — the client never writes this except to reflect a
+  // call's response.
+  ascensionPoints: number
+  hydrate: (saved: {
+    meteors: number
+    dragonballs: number
+    meteorScrolls: number
+    dragonballScrolls: number
+    ascensionPoints: number
+  }) => void
   setMeteors: (value: number) => void
   setDragonballs: (value: number) => void
   setMeteorScrolls: (value: number) => void
   setDragonballScrolls: (value: number) => void
+  setAscensionPoints: (value: number) => void
+  // Incremental, not absolute — used specifically for sell_item/
+  // sell_loot_holding's ap_gained, since Shop's bulk-sell fires many sell
+  // calls in parallel (Promise.all); an absolute set from each response could
+  // let an out-of-order-arriving response clobber a later one, the same race
+  // gold's own addRewards already avoids by being incremental too.
+  addAscensionPoints: (amount: number) => void
   // Bundles 10 loose units into 1 Scroll — one fixed-size transaction per
   // call (mirrors buyArrows/buyPotions always purchasing one full stack),
   // not a variable amount.
@@ -55,6 +74,7 @@ export const useCurrencyStore = create<CurrencyState>((set) => ({
   dragonballs: 0,
   meteorScrolls: 0,
   dragonballScrolls: 0,
+  ascensionPoints: 0,
 
   hydrate: (saved) =>
     set({
@@ -62,11 +82,14 @@ export const useCurrencyStore = create<CurrencyState>((set) => ({
       dragonballs: saved.dragonballs,
       meteorScrolls: saved.meteorScrolls,
       dragonballScrolls: saved.dragonballScrolls,
+      ascensionPoints: saved.ascensionPoints,
     }),
   setMeteors: (value) => set({ meteors: value }),
   setDragonballs: (value) => set({ dragonballs: value }),
   setMeteorScrolls: (value) => set({ meteorScrolls: value }),
   setDragonballScrolls: (value) => set({ dragonballScrolls: value }),
+  setAscensionPoints: (value) => set({ ascensionPoints: value }),
+  addAscensionPoints: (amount) => set((state) => ({ ascensionPoints: state.ascensionPoints + amount })),
 
   bundleScroll: async (characterId, currencyType) => {
     const { data, error } = await supabase.rpc('bundle_currency_scroll', {

@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.51.0",
+    "date": "2026-08-03",
+    "changes": [
+      "Added the Marketplace — list a gear item for sale in Gold or the new Ascension Points, for a chosen time window, and other players can browse and buy it",
+      "Added Ascension Points, a new currency earned by selling Tempered, Infused, Radiant, or Ascended gear (Normal gear doesn't earn any)",
+      "Added Mail — bought items and unsold/cancelled listings are delivered here to claim into your Inventory",
+      "Listing an item costs a 5% fee up front, which is kept whether or not the item actually sells"
+    ]
+  },
+  {
     "version": "1.50.0",
     "date": "2026-08-02",
     "changes": [

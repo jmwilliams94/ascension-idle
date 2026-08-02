@@ -42,6 +42,8 @@ interface SellResult {
   error?: 'not_found' | 'not_owner' | 'not_sellable'
   gold_gained?: number
   gold?: number
+  ap_gained?: number
+  ascension_points?: number
 }
 
 interface LootHoldingState {
@@ -130,6 +132,9 @@ export const useLootHoldingStore = create<LootHoldingState>((set) => ({
       // gold-only — addRewards(gold, 0) adds gold without touching EXP/level,
       // same convention useInventoryStore.sellItem already uses.
       useProgressionStore.getState().addRewards(result.gold_gained, 0)
+      if (typeof result.ap_gained === 'number' && result.ap_gained > 0) {
+        useCurrencyStore.getState().addAscensionPoints(result.ap_gained)
+      }
       set((state) => ({ entries: state.entries.filter((entry) => entry.id !== holdingId) }))
     }
 

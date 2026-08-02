@@ -24,6 +24,8 @@ import { usePotionStore } from '../game/items/usePotionStore'
 import { useWarehouseStore } from '../game/items/useWarehouseStore'
 import { useLootHoldingStore } from '../game/items/useLootHoldingStore'
 import { useAchievementsStore } from '../game/achievements/useAchievementsStore'
+import { useMarketplaceStore } from '../game/marketplace/useMarketplaceStore'
+import { useMailStore } from '../game/marketplace/useMailStore'
 import { useTabStore } from '../game/hud/useTabStore'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
@@ -50,6 +52,8 @@ export default function GameShell({ characterId }: { characterId: string }) {
   const loadWarehouseItems = useWarehouseStore((state) => state.loadWarehouseItems)
   const loadLootHolding = useLootHoldingStore((state) => state.loadLootHolding)
   const loadAchievements = useAchievementsStore((state) => state.loadAchievements)
+  const loadMyListings = useMarketplaceStore((state) => state.loadMyListings)
+  const loadMail = useMailStore((state) => state.loadMail)
   const activeTab = useTabStore((state) => state.activeTab)
   const accountId = session?.user.id
 
@@ -63,6 +67,8 @@ export default function GameShell({ characterId }: { characterId: string }) {
         loadPotionStacks(characterId),
         loadWarehouseItems(characterId),
         loadLootHolding(characterId),
+        loadMyListings(characterId),
+        loadMail(characterId),
         ...(accountId ? [loadAchievements(characterId, accountId)] : []),
       ])
 
@@ -98,7 +104,18 @@ export default function GameShell({ characterId }: { characterId: string }) {
     return () => {
       cancelled = true
     }
-  }, [characterId, loadCharacterRecord, loadInventory, loadPotionStacks, loadWarehouseItems, loadLootHolding, loadAchievements, accountId])
+  }, [
+    characterId,
+    loadCharacterRecord,
+    loadInventory,
+    loadPotionStacks,
+    loadWarehouseItems,
+    loadLootHolding,
+    loadAchievements,
+    loadMyListings,
+    loadMail,
+    accountId,
+  ])
 
   // Re-run the offline-progress check whenever the app comes back to the
   // foreground, not just once at mount — fixes a bug where minimizing/

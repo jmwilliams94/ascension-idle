@@ -158,7 +158,7 @@ interface InventoryState {
   // Sells a gear item for gold from the Shop tab (see sell_item — item_instances
   // has no client-side delete grant, so this has to go through a SECURITY
   // DEFINER function even though gold itself is otherwise client-authoritative).
-  sellItem: (itemId: string) => Promise<{ ok: boolean; error?: string; goldGained?: number }>
+  sellItem: (itemId: string) => Promise<{ ok: boolean; error?: string; goldGained?: number; apGained?: number }>
 }
 
 export const useInventoryStore = create<InventoryState>((set, get) => ({
@@ -288,8 +288,14 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     set((state) => ({ items: state.items.filter((item) => !itemIds.includes(item.id)) }))
   },
 
+  // Idempotent by id — matters for claim_mail's "returned listing" case
+  // (useMailStore.claim): a reclaimed item's owner_id never actually left
+  // the seller, so it's already present in items from the initial load, just
+  // hidden by the isListed/hasUnclaimedMail filter. A purchase claim, by
+  // contrast, genuinely adds an item the buyer never had locally before —
+  // both paths call this same action, so it has to handle either case.
   addItem: (item) => {
-    set((state) => ({ items: [...state.items, item] }))
+    set((state) => (state.items.some((existing) => existing.id === item.id) ? state : { items: [...state.items, item] }))
   },
 
   sellItem: async (itemId) => {
@@ -300,14 +306,24 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       return { ok: false }
     }
 
-    const result = data as { ok: boolean; error?: string; gold_gained?: number; gold?: number }
+    const result = data as {
+      ok: boolean
+      error?: string
+      gold_gained?: number
+      gold?: number
+      ap_gained?: number
+      ascension_points?: number
+    }
 
     if (result.ok && typeof result.gold_gained === 'number') {
       get().removeItems([itemId])
       // gold-only — addRewards(gold, 0) adds gold without touching EXP/level.
       useProgressionStore.getState().addRewards(result.gold_gained, 0)
+      if (typeof result.ap_gained === 'number' && result.ap_gained > 0) {
+        useCurrencyStore.getState().addAscensionPoints(result.ap_gained)
+      }
     }
 
-    return { ok: result.ok, error: result.error, goldGained: result.gold_gained }
+    return { ok: result.ok, error: result.error, goldGained: result.gold_gained, apGained: result.ap_gained }
   },
 }))

@@ -36,6 +36,8 @@ import { INVENTORY_SLOT_CAP, useInventoryStore, type ItemInstance } from '../gam
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { usePotionStore } from '../game/items/usePotionStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
+import { useMarketplaceStore } from '../game/marketplace/useMarketplaceStore'
+import { useMailStore } from '../game/marketplace/useMailStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
@@ -115,6 +117,13 @@ export default function InventoryPanel({
   const handlePotionUse = usePotionStore((state) => state.usePotion)
   const currentPlayerHp = useCombatStore((state) => state.currentPlayerHp)
   const maxPlayerHp = useCombatStore((state) => state.maxPlayerHp)
+  // Same "subscribe to the reactive data, not a stable selector-function
+  // reference" fix as equippedIds above — myListings/mail entries, not
+  // isListed/hasUnclaimedMail themselves.
+  const myListings = useMarketplaceStore((state) => state.myListings)
+  const isListed = (itemId: string) => myListings.some((listing) => listing.status === 'active' && listing.item_id === itemId)
+  const mailEntries = useMailStore((state) => state.entries)
+  const hasUnclaimedMail = (itemId: string) => mailEntries.some((entry) => entry.item_id === itemId)
 
   const [selectedSlot, setSelectedSlot] = useState<SelectedSlot>(null)
   const [sellBusy, setSellBusy] = useState(false)
@@ -133,7 +142,10 @@ export default function InventoryPanel({
   // shown only in the Equipment tab's paper doll (confirmed, 2026-07-30), and
   // frees its Inventory slot (see occupiedSlotCount in useInventoryStore).
   // Un-equipping brings it straight back since this filter just stops matching.
-  const visibleItems = items.filter((item) => !isEquipped(item.id))
+  // Same hide-via-filter treatment (2026-08-02) for an actively-listed
+  // Marketplace item and an item sitting in unclaimed Mail — see
+  // useMarketplaceStore.isListed/useMailStore.hasUnclaimedMail.
+  const visibleItems = items.filter((item) => !isEquipped(item.id) && !isListed(item.id) && !hasUnclaimedMail(item.id))
 
   // Stones don't stack — each one is its own tile, not combined into one tile with
   // a count badge. Since there's no acquisition-time cap check for stones yet (no
