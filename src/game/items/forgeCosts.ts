@@ -147,12 +147,20 @@ export const DRAGONBALL_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/dragon
 // qualityColor mechanism gear uses for its tier tint — materials previously
 // rendered with the same plain slate border as an empty/generic tile, giving
 // them no visual identity of their own. DragonBall reuses the old (pre-
-// recalibration) Ascended orange the user specifically asked for; Meteor
-// gets its own green, deliberately not reusing any color already claimed by
-// QUALITY_COLORS (white/light-blue/dark-blue/purple/red) or by DragonBall,
-// so a material's color can never be mistaken for a gear quality signal.
-export const METEOR_COLOR = '#4ADE80'
+// recalibration) Ascended orange at the user's request.
 export const DRAGONBALL_COLOR = '#F0B87A'
+
+// Revised same day, per the user: Meteor's own green was reassigned to
+// Consumables instead (a broader category the user wants visually unified as
+// green), and "all other materials" — Meteor, Composition Stones, and
+// (once built) Gems — now share one color instead of each getting its own:
+// the old (pre-recalibration) Infused Silver, the user's specific pick from
+// that retired palette. Distinct from DRAGONBALL_COLOR (still its own
+// orange, not folded into this) and from every QUALITY_COLORS value.
+export const MATERIAL_COLOR = '#C8D0DC'
+
+// Potions (HP/Mana) — see potionTypes.ts/InventoryPanel.tsx's potion tiles.
+export const CONSUMABLE_COLOR = '#4ADE80'
 
 export function buildMeteorTooltip(): ItemTooltipData {
   return {

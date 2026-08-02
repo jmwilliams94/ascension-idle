@@ -13,9 +13,10 @@ import {
 import { EQUIP_SLOTS, useEquipmentStore, type EquipSlot } from '../game/items/useEquipmentStore'
 import {
   COMPOSITION_STONE_TIERS,
+  CONSUMABLE_COLOR,
   DRAGONBALL_COLOR,
   DRAGONBALL_ICON_SRC,
-  METEOR_COLOR,
+  MATERIAL_COLOR,
   METEOR_ICON_SRC,
   buildDragonballScrollTooltip,
   buildDragonballTooltip,
@@ -373,6 +374,7 @@ export default function InventoryPanel({
                 filled
                 sizeClassName={SLOT_SIZE_CLASS}
                 icon={type.kind === 'hp' ? '🧪' : '💧'}
+                qualityColor={CONSUMABLE_COLOR}
                 label={`${type.displayName} (${stack.count}/${type.stackSize})`}
                 tooltip={potionTooltip}
                 badge={`${stack.count}/${type.stackSize}`}
@@ -392,6 +394,7 @@ export default function InventoryPanel({
               filled: true as const,
               sizeClassName: SLOT_SIZE_CLASS,
               icon: '🔷',
+              qualityColor: MATERIAL_COLOR,
               label: `+${tier} Stone — ${compositionPointValue(tier)} pts`,
               tooltip: buildStoneTooltip(tier),
               selected: selectedSlot?.kind === 'stone' && selectedSlot.dragId === dragId,
@@ -420,7 +423,7 @@ export default function InventoryPanel({
               filled
               sizeClassName={SLOT_SIZE_CLASS}
               iconSrc={METEOR_ICON_SRC}
-              qualityColor={METEOR_COLOR}
+              qualityColor={MATERIAL_COLOR}
               label="Meteor"
               tooltip={buildMeteorTooltip()}
               selected={selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId}
@@ -540,7 +543,10 @@ export default function InventoryPanel({
       {selectedStoneTier !== undefined && (
         <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg">
+            <div
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg"
+              style={{ borderColor: MATERIAL_COLOR, backgroundColor: `${MATERIAL_COLOR}22` }}
+            >
               🔷
             </div>
             <div>
@@ -559,8 +565,8 @@ export default function InventoryPanel({
             <div
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg"
               style={{
-                borderColor: selectedCurrencyType === 'meteor' ? METEOR_COLOR : DRAGONBALL_COLOR,
-                backgroundColor: `${selectedCurrencyType === 'meteor' ? METEOR_COLOR : DRAGONBALL_COLOR}22`,
+                borderColor: selectedCurrencyType === 'meteor' ? MATERIAL_COLOR : DRAGONBALL_COLOR,
+                backgroundColor: `${selectedCurrencyType === 'meteor' ? MATERIAL_COLOR : DRAGONBALL_COLOR}22`,
               }}
             >
               <img
@@ -632,7 +638,10 @@ export default function InventoryPanel({
       {selectedPotionStack && (
         <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg">
+            <div
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg"
+              style={{ borderColor: CONSUMABLE_COLOR, backgroundColor: `${CONSUMABLE_COLOR}22` }}
+            >
               {POTION_TYPES[selectedPotionStack.potionType].kind === 'hp' ? '🧪' : '💧'}
             </div>
             <div>
