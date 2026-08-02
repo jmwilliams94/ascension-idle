@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.51.2",
+    "date": "2026-08-03",
+    "changes": [
+      "Fixed the quality-tier ember glow not showing up on the Equipment tab's paper doll — it's a separate tile component from Inventory/Forge/Bank's and was missed when the effect first went live everywhere else"
+    ]
+  },
+  {
     "version": "1.51.1",
     "date": "2026-08-03",
     "changes": [

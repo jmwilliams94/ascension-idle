@@ -1,6 +1,8 @@
 import HoverTooltip from './HoverTooltip'
 import ItemTooltip from './ItemTooltip'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
+import { TierEmberEffect } from '../game/items/tierEffects'
+import { emberCountForColor, seedFromId } from '../game/items/tierEffectsData'
 
 interface EquipmentSlotProps {
   label: string
@@ -50,6 +52,15 @@ export default function EquipmentSlot({
     )
   }
 
+  // Same tier-effect wiring InventorySlot.tsx does — this tile is a separate,
+  // bespoke component (not built on InventorySlot, see its own tooltip note
+  // above), so it was missed entirely when the effect first went live
+  // game-wide, even though every *other* gear tile (Inventory, Forge,
+  // Warehouse) already had it. seedFromId(label) rather than an item id
+  // (not available here) — fine since only one tile per slot is ever shown
+  // at once, unlike the Inventory grid's many-at-a-time case.
+  const emberCount = filled ? emberCountForColor(qualityColor) : 0
+
   const button = (
     <button
       type="button"
@@ -57,12 +68,13 @@ export default function EquipmentSlot({
       title={tooltip ? undefined : label}
       aria-label={label}
       disabled={!onClick}
-      className={`flex items-center justify-center rounded-lg border-2 text-lg ${sizeClassName} ${
+      className={`relative flex items-center justify-center overflow-hidden rounded-lg border-2 text-lg ${sizeClassName} ${
         filled ? 'bg-slate-800' : 'border-dashed border-slate-700 bg-slate-950/40'
       } ${selected ? 'ring-2 ring-sky-400' : ''} ${!onClick ? 'cursor-default' : ''}`}
       style={filled ? { borderColor: qualityColor, backgroundColor: qualityColor ? `${qualityColor}22` : undefined } : undefined}
     >
-      {icon}
+      {emberCount > 0 && <TierEmberEffect color={qualityColor as string} count={emberCount} seed={seedFromId(label)} />}
+      <span className="relative z-10">{icon}</span>
     </button>
   )
 
