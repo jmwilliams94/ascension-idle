@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.49.15",
+    "date": "2026-08-02",
+    "changes": [
+      "Fixed Achievement kill counts (both the character and account ladders) never being recorded, in either live or AFK play — a missing database permission was silently blocking every kill from being saved"
+    ]
+  },
+  {
     "version": "1.49.14",
     "date": "2026-08-02",
     "changes": [
