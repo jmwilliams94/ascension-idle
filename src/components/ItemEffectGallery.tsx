@@ -133,36 +133,51 @@ function BoltLayer({
   )
 }
 
-// A primary criss-crossing web — 4 bolts each running corner-to-corner-ish,
-// so they all pass near the tile's center and visibly interconnect rather
-// than reading as separate unrelated lines.
-const WEB_BOLTS: Bolt[] = [
+// RADIAL_BOLTS: a single-strike burst — every bolt passes near the tile's
+// center, radiating outward like a bolt hit the item dead-on. A legitimate
+// lightning look on its own, but structurally it's a "starburst," not a
+// "web" — every line shares one hub point. Kept as its own distinct example
+// (1) rather than the base every other example reuses, since reusing it
+// everywhere is exactly what made 1/2/3/4 all look nearly identical last
+// round (same shape, only color/blur/pulse differed — invisible in a static
+// screenshot).
+const RADIAL_BOLTS: Bolt[] = [
   { d: lightningPath({ x: 4, y: 6 }, { x: 94, y: 90 }, 11, 4, 12), width: 0.9 },
   { d: lightningPath({ x: 92, y: 8 }, { x: 6, y: 84 }, 27, 4, 12), width: 0.8 },
   { d: lightningPath({ x: 50, y: 3 }, { x: 44, y: 97 }, 53, 3, 9), width: 0.7 },
   { d: lightningPath({ x: 3, y: 50 }, { x: 97, y: 46 }, 71, 3, 9), width: 0.7 },
 ]
 
-// A denser web (6 main bolts) plus 3 short branch forks stemming from
-// midpoints of the main bolts — actual lightning branches off its own path,
-// which none of the first-pass examples had at all.
-const DENSE_BOLTS: Bolt[] = [
-  ...WEB_BOLTS,
-  { d: lightningPath({ x: 10, y: 92 }, { x: 88, y: 10 }, 5, 4, 11), width: 0.7 },
-  { d: lightningPath({ x: 90, y: 92 }, { x: 12, y: 12 }, 19, 4, 11), width: 0.6 },
-]
-const BRANCH_BOLTS: Bolt[] = [
-  { d: lightningPath({ x: 49, y: 45 }, { x: 78, y: 58 }, 101, 2, 8), width: 0.5 },
-  { d: lightningPath({ x: 46, y: 50 }, { x: 22, y: 68 }, 202, 2, 8), width: 0.5 },
-  { d: lightningPath({ x: 55, y: 42 }, { x: 65, y: 18 }, 303, 2, 7), width: 0.5 },
+// MESH_BOLTS: the actual fix for "doesn't look like a web" — 7 scattered
+// node points connected pairwise, so the bolts cross at several different
+// points spread across the tile instead of all converging on one center hub.
+// This is what a real spiderweb/net structurally is that RADIAL_BOLTS above
+// isn't.
+const MESH_NODES = {
+  a: { x: 15, y: 20 },
+  b: { x: 58, y: 8 },
+  c: { x: 88, y: 18 },
+  d: { x: 78, y: 32 },
+  e: { x: 28, y: 68 },
+  f: { x: 18, y: 88 },
+  g: { x: 62, y: 92 },
+}
+const MESH_BOLTS: Bolt[] = [
+  { d: lightningPath(MESH_NODES.a, MESH_NODES.d, 601, 3, 9), width: 0.7 },
+  { d: lightningPath(MESH_NODES.b, MESH_NODES.e, 602, 3, 9), width: 0.7 },
+  { d: lightningPath(MESH_NODES.c, MESH_NODES.f, 603, 4, 10), width: 0.7 },
+  { d: lightningPath(MESH_NODES.d, MESH_NODES.g, 604, 3, 8), width: 0.6 },
+  { d: lightningPath(MESH_NODES.e, MESH_NODES.f, 605, 2, 7), width: 0.6 },
+  { d: lightningPath(MESH_NODES.b, MESH_NODES.d, 606, 2, 6), width: 0.6 },
+  { d: lightningPath(MESH_NODES.a, MESH_NODES.e, 607, 2, 7), width: 0.6 },
 ]
 
-// A dimmer, smaller-scale, more blurred set for the back layer of the
-// "Layered" example — WEB_BOLTS reused as the crisp front layer on top of it,
-// giving the actual "a few layered on top of each other" depth requested.
-const BACK_BOLTS: Bolt[] = [
-  { d: lightningPath({ x: 20, y: 15 }, { x: 80, y: 88 }, 401, 3, 8), width: 0.6 },
-  { d: lightningPath({ x: 84, y: 22 }, { x: 16, y: 82 }, 512, 3, 8), width: 0.6 },
+// Small forks stemming off two of the mesh's own nodes — real lightning
+// branches off its own path, which nothing in the first pass had at all.
+const BRANCH_BOLTS: Bolt[] = [
+  { d: lightningPath(MESH_NODES.d, { x: 95, y: 55 }, 701, 2, 7), width: 0.45 },
+  { d: lightningPath(MESH_NODES.e, { x: 8, y: 45 }, 702, 2, 7), width: 0.45 },
+  { d: lightningPath(MESH_NODES.b, { x: 40, y: 2 }, 703, 2, 6), width: 0.45 },
 ]
 
 function SampleTile({ border, layer }: { border: string; layer: ReactNode }) {
@@ -186,8 +201,9 @@ interface EffectExample {
 
 const EFFECTS: EffectExample[] = [
   {
-    title: '1. Lightning Web',
-    description: 'Actual jagged fractal bolts (midpoint-displacement, not smooth noise) crossing near the center, each strobing independently, with a soft glow behind the crisp line.',
+    title: '1. Radial Strike',
+    description:
+      'A single-strike burst — every bolt radiates outward from near the center. Reads as lightning, but structurally it\'s a "starburst" (one shared hub), not a web.',
     border: '#4FC3F7',
     layer: (
       <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
@@ -196,69 +212,87 @@ const EFFECTS: EffectExample[] = [
             <feGaussianBlur stdDeviation="1.3" />
           </filter>
         </defs>
-        <BoltLayer bolts={WEB_BOLTS} color="#a5f3fc" glowFilterId="glow1" />
+        <BoltLayer bolts={RADIAL_BOLTS} color="#a5f3fc" glowFilterId="glow1" />
       </svg>
     ),
   },
   {
-    title: '2. Layered Web (Depth)',
+    title: '2. Mesh Web',
     description:
-      'Two full bolt layers stacked — a dim, blurred, smaller-scale set behind, a crisp bright set in front — exactly the "a few layered on top of each other" depth from your reference.',
+      'The actual structural fix for "web" — 7 scattered points connected pairwise, crossing at several different spots instead of one center. This is what a real net looks like, not a burst.',
     border: '#A855F7',
     layer: (
       <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
         <defs>
-          <filter id="glow2back" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="2.2" />
-          </filter>
-          <filter id="glow2front" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="1" />
+          <filter id="glow2" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="1.2" />
           </filter>
         </defs>
-        <BoltLayer bolts={BACK_BOLTS} color="#c4b5fd" glowFilterId="glow2back" coreOpacity={0.35} glowOpacity={0.3} flickerOffset={2} />
-        <BoltLayer bolts={WEB_BOLTS} color="#e0f2fe" glowFilterId="glow2front" coreOpacity={1} glowOpacity={0.6} />
+        <BoltLayer bolts={MESH_BOLTS} color="#e9d5ff" glowFilterId="glow2" />
       </svg>
     ),
   },
   {
-    title: '3. Dense Branching Web',
-    description: '6 main bolts plus small forking branches stemming off them mid-path — a busier, more chaotic net, closer to a real lightning strike\'s side-branches.',
+    title: '3. Layered Web (Depth)',
+    description:
+      'Two genuinely different patterns overlapping — a dim, blurred Radial Strike rotated behind a crisp Mesh Web in front — real depth from two distinct shapes, not the same shape twice.',
     border: '#EF4444',
     layer: (
       <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
         <defs>
-          <filter id="glow3" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="1.1" />
+          <filter id="glow3back" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="2.4" />
+          </filter>
+          <filter id="glow3front" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="1" />
           </filter>
         </defs>
-        <BoltLayer bolts={DENSE_BOLTS} color="#fca5a5" glowFilterId="glow3" glowOpacity={0.5} />
-        <BoltLayer bolts={BRANCH_BOLTS} color="#fecaca" coreOpacity={0.8} flickerOffset={3} />
+        <g transform="rotate(22 50 50)">
+          <BoltLayer bolts={RADIAL_BOLTS} color="#fca5a5" glowFilterId="glow3back" coreOpacity={0.3} glowOpacity={0.25} flickerOffset={2} />
+        </g>
+        <BoltLayer bolts={MESH_BOLTS} color="#fee2e2" glowFilterId="glow3front" coreOpacity={1} glowOpacity={0.6} />
       </svg>
     ),
   },
   {
-    title: '4. Web + Pulsing Core',
-    description: 'A soft pulsing radial glow at the center combined with a faint static lightning web overlay — two different techniques literally layered on top of each other.',
+    title: '4. Dense Branching Mesh',
+    description: 'The Mesh Web plus small forks stemming off two of its own nodes — a busier, more chaotic net, closer to a real lightning strike\'s side-branches.',
     border: '#2E5EAA',
+    layer: (
+      <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
+        <defs>
+          <filter id="glow4" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="1.1" />
+          </filter>
+        </defs>
+        <BoltLayer bolts={MESH_BOLTS} color="#bae6fd" glowFilterId="glow4" glowOpacity={0.5} />
+        <BoltLayer bolts={BRANCH_BOLTS} color="#dbeafe" coreOpacity={0.8} flickerOffset={3} />
+      </svg>
+    ),
+  },
+  {
+    title: '5. Web + Pulsing Core',
+    description: 'A soft pulsing radial glow at the center combined with the faint Mesh Web — two different techniques literally layered on top of each other.',
+    border: '#FFFFFF',
     layer: (
       <>
         <div
-          className="effect-blob-1 absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sky-400/35 blur-lg mix-blend-screen"
+          className="effect-blob-1 absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sky-400/45 blur-lg mix-blend-screen"
           style={{ animationDuration: '2.4s' }}
         />
         <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full opacity-80">
           <defs>
-            <filter id="glow4" x="-50%" y="-50%" width="200%" height="200%">
+            <filter id="glow5" x="-50%" y="-50%" width="200%" height="200%">
               <feGaussianBlur stdDeviation="1" />
             </filter>
           </defs>
-          <BoltLayer bolts={WEB_BOLTS} color="#bae6fd" glowFilterId="glow4" coreOpacity={0.75} glowOpacity={0.4} />
+          <BoltLayer bolts={MESH_BOLTS} color="#bae6fd" glowFilterId="glow5" coreOpacity={0.75} glowOpacity={0.4} />
         </svg>
       </>
     ),
   },
   {
-    title: '5. Rotating Energy Sweep',
+    title: '6. Rotating Energy Sweep',
     description: 'Two conic-gradient beams counter-rotating at different speeds, masked to a soft circle — reads as circling electric current, no SVG lines at all.',
     border: '#FFFFFF',
     layer: (
@@ -283,7 +317,7 @@ const EFFECTS: EffectExample[] = [
     ),
   },
   {
-    title: '6. Scrolling Hatch Grid',
+    title: '7. Scrolling Hatch Grid',
     description: 'Two diagonal hairline grids sliding in opposite directions — a cheap, very performant "energy netting" look, no SVG or blur.',
     border: '#4FC3F7',
     layer: (
@@ -306,7 +340,7 @@ const EFFECTS: EffectExample[] = [
     ),
   },
   {
-    title: '7. Aurora Depth Blobs',
+    title: '8. Aurora Depth Blobs',
     description: 'Three blurred glow blobs drifting independently, blur amount varying per blob to fake near/far depth — softer and less literal, more "magic aura" than lightning.',
     border: '#A855F7',
     layer: (
@@ -323,10 +357,11 @@ export default function ItemEffectGallery() {
   return (
     <div className="space-y-4">
       <p className="text-xs text-slate-500">
-        Exploratory only — none of these are wired into real Inventory/Equipment/Forge tiles yet. Effects 1-4 are all built from
-        the same procedural jagged-lightning-bolt generator (proper fractal midpoint-displacement, not smooth noise), just
-        combined differently. Pick a favorite (or ask for a combination) and it can be built into the real gear slots next,
-        likely tinted per quality tier.
+        Exploratory only — none of these are wired into real Inventory/Equipment/Forge tiles yet. Effects 1-5 share the same
+        jagged-bolt generator but are now built from two structurally different base shapes — Radial Strike (1, every bolt
+        shares one center hub) and Mesh Web (2, scattered crossing points, no hub) — combined differently, so they should
+        actually look distinct now instead of just recolored. Pick a favorite (or ask for a combination) and it can be built
+        into the real gear slots next, likely tinted per quality tier.
       </p>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">

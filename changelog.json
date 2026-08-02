@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.49.2",
+    "date": "2026-08-02",
+    "changes": [
+      "Fixed the Item Effects gallery's lightning examples all looking nearly identical — they shared one \"every bolt through the center\" shape; added a genuinely different scattered-node mesh web structure and rebuilt the layered/branching/pulsing examples on top of the two distinct shapes"
+    ]
+  },
+  {
     "version": "1.49.1",
     "date": "2026-08-02",
     "changes": [
