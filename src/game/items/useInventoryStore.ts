@@ -5,6 +5,7 @@ import { useCompositionStore } from './useCompositionStore'
 import { usePotionStore } from './usePotionStore'
 import { useEquipmentStore } from './useEquipmentStore'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
+import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 import { useItemTemplatesStore, type ItemTemplate } from './useItemTemplatesStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
 import { useCharacterStore } from '../stats/useCharacterStore'
@@ -320,7 +321,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       // gold-only — addRewards(gold, 0) adds gold without touching EXP/level.
       useProgressionStore.getState().addRewards(result.gold_gained, 0)
       if (typeof result.ap_gained === 'number' && result.ap_gained > 0) {
-        useCurrencyStore.getState().addAscensionPoints(result.ap_gained)
+        usePlayerRecordStore.getState().addAscensionPoints(result.ap_gained)
       }
     }
 

@@ -14,10 +14,12 @@ import type { GearCompositionPoints } from '../game/items/forgeCosts'
 // Loads/saves the active character's row (characters table) — class, level, gold,
 // exp, zone, equipped items (including the Quiver, for Hunters). Replaces what
 // usePlayerRecordStore used to do before the character-slots restructure; that
-// store is now account-level only. meteors/dragonballs/ascension_points/
-// composition_stones are intentionally excluded from both load-hydration-
-// triggers-save and saveNow — see useCurrencyStore for why (server-
-// authoritative via the forge/Marketplace RPCs). The
+// store is now account-level only. meteors/dragonballs/composition_stones are
+// intentionally excluded from both load-hydration-triggers-save and saveNow —
+// see useCurrencyStore for why (server-authoritative via the forge RPCs).
+// Ascension Points live on the account (players table, see
+// usePlayerRecordStore) rather than here — a premium currency, account-wide
+// by design, not per-character. The
 // Quiver is just an equipped item like any other slot (equipped_quiver_id) —
 // having it equipped is the entire Hunter attack gate now, no ammo economy.
 interface CharacterRow {
@@ -38,7 +40,6 @@ interface CharacterRow {
   dragonball_count: number
   meteor_scroll_count: number
   dragonball_scroll_count: number
-  ascension_points: number
   composition_stones: CompositionStones
   warehouse_points: number
   gear_composition_points: GearCompositionPoints
@@ -75,7 +76,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     const { data, error } = await supabase
       .from('characters')
       .select(
-        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, meteor_count, dragonball_count, meteor_scroll_count, dragonball_scroll_count, ascension_points, composition_stones, warehouse_points, gear_composition_points, selected_monster_id, last_active_at',
+        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, meteor_count, dragonball_count, meteor_scroll_count, dragonball_scroll_count, composition_stones, warehouse_points, gear_composition_points, selected_monster_id, last_active_at',
       )
       .eq('id', characterId)
       .maybeSingle<CharacterRow>()
@@ -108,7 +109,6 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
       dragonballs: data.dragonball_count,
       meteorScrolls: data.meteor_scroll_count,
       dragonballScrolls: data.dragonball_scroll_count,
-      ascensionPoints: data.ascension_points,
     })
     useCompositionStore.getState().hydrate(data.composition_stones)
     useWarehouseStore.getState().hydratePoints(data.warehouse_points)

@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabaseClient'
 import { useInventoryStore, occupiedSlotCount, INVENTORY_SLOT_CAP, type ItemInstance } from './useInventoryStore'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
+import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 
 // Loot Holding (confirmed with the user, 2026-07-30): where a server-resolved
 // kill's item drop lands when Inventory is full — replaces the old interactive
@@ -133,7 +134,7 @@ export const useLootHoldingStore = create<LootHoldingState>((set) => ({
       // same convention useInventoryStore.sellItem already uses.
       useProgressionStore.getState().addRewards(result.gold_gained, 0)
       if (typeof result.ap_gained === 'number' && result.ap_gained > 0) {
-        useCurrencyStore.getState().addAscensionPoints(result.ap_gained)
+        usePlayerRecordStore.getState().addAscensionPoints(result.ap_gained)
       }
       set((state) => ({ entries: state.entries.filter((entry) => entry.id !== holdingId) }))
     }

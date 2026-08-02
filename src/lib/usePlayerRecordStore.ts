@@ -14,6 +14,7 @@ interface PlayerRow {
   bank_meteors: number
   bank_dragonballs: number
   unlocked_classes: string[]
+  ascension_points: number
 }
 
 interface PlayerRecordState {
@@ -31,11 +32,26 @@ interface PlayerRecordState {
   // Account-wide class-unlock milestones (e.g. a Hunter reaching max level), not
   // per-character. Only 'hunter' by default until a real unlock mechanic exists.
   unlockedClasses: string[]
+  // Ascension Points (2026-08-03) — a premium currency, account-wide by design
+  // (confirmed with the user, corrects an earlier per-character version):
+  // earned only via sell_item/sell_loot_holding's ap_gained, spent only via
+  // the Marketplace RPCs. Unlike bank_gold/bank_meteors/bank_dragonballs
+  // there's no separate per-character wallet for this at all — one shared
+  // balance, same shape as unlockedClasses above rather than a wallet/bank
+  // pair. Server-authoritative — never written except to reflect an RPC's
+  // response.
+  ascensionPoints: number
   loadPlayerRecord: (userId: string) => Promise<void>
   dismissWhatsNew: (userId: string) => Promise<void>
   // Reflects a successful transfer_currency RPC result in the local cache —
   // mirrors useCurrencyStore's setMeteors/setDragonballs pattern.
   setBankBalances: (patch: Partial<{ bankGold: number; bankMeteors: number; bankDragonballs: number }>) => void
+  setAscensionPoints: (value: number) => void
+  // Incremental, not absolute — used specifically for sell_item/
+  // sell_loot_holding's ap_gained, since Shop's bulk-sell fires many sell
+  // calls in parallel (Promise.all); an absolute set from each response could
+  // let an out-of-order-arriving response clobber a later one.
+  addAscensionPoints: (amount: number) => void
 }
 
 export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
@@ -45,11 +61,12 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
   bankMeteors: 0,
   bankDragonballs: 0,
   unlockedClasses: ['hunter'],
+  ascensionPoints: 0,
 
   loadPlayerRecord: async (userId) => {
     const { data, error } = await supabase
       .from('players')
-      .select('last_seen_version, bank_gold, bank_meteors, bank_dragonballs, unlocked_classes')
+      .select('last_seen_version, bank_gold, bank_meteors, bank_dragonballs, unlocked_classes, ascension_points')
       .eq('id', userId)
       .maybeSingle<PlayerRow>()
 
@@ -76,6 +93,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
         bankMeteors: 0,
         bankDragonballs: 0,
         unlockedClasses: ['hunter'],
+        ascensionPoints: 0,
       })
       return
     }
@@ -85,6 +103,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
       bankMeteors: data.bank_meteors,
       bankDragonballs: data.bank_dragonballs,
       unlockedClasses: data.unlocked_classes,
+      ascensionPoints: data.ascension_points,
     })
 
     if (!data.last_seen_version) {
@@ -111,4 +130,6 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
   },
 
   setBankBalances: (patch) => set(patch),
+  setAscensionPoints: (value) => set({ ascensionPoints: value }),
+  addAscensionPoints: (amount) => set((state) => ({ ascensionPoints: state.ascensionPoints + amount })),
 }))

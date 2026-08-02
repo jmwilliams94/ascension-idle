@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import { supabase } from '../../lib/supabaseClient'
 import type { ItemInstance } from '../items/useInventoryStore'
-import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
+import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 
 // Marketplace (see CLAUDE.md's Gear system / Marketplace section and
 // supabase/migrations/20260802050000_add_marketplace.sql). Every mutation
@@ -166,7 +166,7 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
         useProgressionStore.getState().setGold(result.gold)
       }
       if (typeof result.ascension_points === 'number') {
-        useCurrencyStore.getState().setAscensionPoints(result.ascension_points)
+        usePlayerRecordStore.getState().setAscensionPoints(result.ascension_points)
       }
       await get().loadMyListings(characterId)
     }
@@ -194,7 +194,7 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
         useProgressionStore.getState().setGold(result.gold)
       }
       if (typeof result.ascension_points === 'number') {
-        useCurrencyStore.getState().setAscensionPoints(result.ascension_points)
+        usePlayerRecordStore.getState().setAscensionPoints(result.ascension_points)
       }
       set((state) => ({ browseListings: state.browseListings.filter((listing) => listing.id !== listingId) }))
     }

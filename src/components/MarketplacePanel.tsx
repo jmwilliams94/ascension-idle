@@ -9,7 +9,7 @@ import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemT
 import { useMarketplaceStore, type MarketplaceListing, type ListingCurrency } from '../game/marketplace/useMarketplaceStore'
 import { useMailStore, type MailEntry } from '../game/marketplace/useMailStore'
 import { LISTING_DURATION_OPTIONS, previewListingFee } from '../game/marketplace/marketplaceCosts'
-import { useCurrencyStore } from '../game/stats/useCurrencyStore'
+import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { buildGearTooltip, formatItemDisplayName, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
 
@@ -201,7 +201,7 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
   const items = useInventoryStore((state) => state.items)
   const templates = useItemTemplatesStore((state) => state.templates)
   const gold = useProgressionStore((state) => state.gold)
-  const ascensionPoints = useCurrencyStore((state) => state.ascensionPoints)
+  const ascensionPoints = usePlayerRecordStore((state) => state.ascensionPoints)
   const busy = useMarketplaceStore((state) => state.busy)
   const createListing = useMarketplaceStore((state) => state.createListing)
 

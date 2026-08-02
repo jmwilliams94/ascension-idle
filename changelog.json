@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.51.1",
+    "date": "2026-08-03",
+    "changes": [
+      "Ascension Points are now shared account-wide instead of separate per character, matching how a premium currency should work"
+    ]
+  },
+  {
     "version": "1.51.0",
     "date": "2026-08-03",
     "changes": [
