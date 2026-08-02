@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.48.6",
+    "date": "2026-08-02",
+    "changes": [
+      "Replaced the gradient badge/wordmark heading with a cleaner, larger version of the original uppercase-tracking style"
+    ]
+  },
+  {
     "version": "1.48.5",
     "date": "2026-08-02",
     "changes": [

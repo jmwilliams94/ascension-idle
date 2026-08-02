@@ -136,19 +136,17 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur">
         {/* Single row at every viewport size — no flex-wrap. "Idle Combat"
             removed entirely (it was redundant with the tab the player is
-            already on); the eyebrow+h1 pair is replaced with one prettier
-            lockup (a small gradient "A" mark echoing the PWA app icon, plus a
-            gradient-text wordmark) that stays compact enough to share the row
-            with the action buttons on mobile. */}
+            already on). Revised (2026-08-02, per the user's direct feedback
+            that a gradient badge + gradient-text wordmark read as "cheap"):
+            no badge, no multi-stop gradient — just the same uppercase-
+            tracking eyebrow style the old two-line header already used,
+            scaled up into the sole heading, with the game's one established
+            accent color (the amber already used for Gold/the PWA icon)
+            restrained to "IDLE" rather than painted across the whole thing. */}
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-300 to-amber-600 text-base font-bold text-slate-950 shadow-lg shadow-amber-900/30">
-              A
-            </span>
-            <h1 className="bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 bg-clip-text text-lg font-bold tracking-wide text-transparent sm:text-xl">
-              Ascension Idle
-            </h1>
-          </div>
+          <h1 className="text-xl font-bold tracking-[0.15em] text-slate-100 sm:text-2xl">
+            ASCENSION <span className="text-amber-400">IDLE</span>
+          </h1>
 
           {/* Icon-only below `lg` (labels hidden via `hidden lg:inline`,
               buttons shrink to a square `p-2` to match Settings' existing
