@@ -69,105 +69,12 @@ body {
   animation: forge-success-flash 900ms ease-out;
 }
 
-/* Item Effects gallery (Settings tab, see ItemEffectGallery.tsx) — exploratory
-   background-effect examples for gear tile squares, previewed side by side so
-   the user can pick a favorite before any of them get wired into the real
-   Inventory/Equipment/Forge tiles. Kept here rather than inline styles since
-   @keyframes/animation shorthand isn't expressible via Tailwind utilities
-   alone — the SVG-filter-based examples in that file animate via SMIL
-   <animate> instead and need no CSS at all. */
-@keyframes effect-rotate-cw {
-  to {
-    transform: rotate(360deg);
-  }
-}
-@keyframes effect-rotate-ccw {
-  to {
-    transform: rotate(-360deg);
-  }
-}
-.effect-sweep-a {
-  animation: effect-rotate-cw 6s linear infinite;
-}
-.effect-sweep-b {
-  animation: effect-rotate-ccw 9s linear infinite;
-}
-
-@keyframes effect-hatch-a {
-  to {
-    background-position: 40px 40px;
-  }
-}
-@keyframes effect-hatch-b {
-  to {
-    background-position: -40px 40px;
-  }
-}
-.effect-hatch-a {
-  animation: effect-hatch-a 5s linear infinite;
-}
-.effect-hatch-b {
-  animation: effect-hatch-b 7s linear infinite;
-}
-
-@keyframes effect-blob-drift-1 {
-  0%,
-  100% {
-    transform: translate(-10%, -10%) scale(1);
-  }
-  50% {
-    transform: translate(15%, 10%) scale(1.15);
-  }
-}
-@keyframes effect-blob-drift-2 {
-  0%,
-  100% {
-    transform: translate(10%, 15%) scale(1);
-  }
-  50% {
-    transform: translate(-15%, -5%) scale(1.2);
-  }
-}
-@keyframes effect-blob-drift-3 {
-  0%,
-  100% {
-    transform: translate(0%, 0%) scale(0.9);
-  }
-  50% {
-    transform: translate(-10%, 15%) scale(1.1);
-  }
-}
-.effect-blob-1 {
-  animation: effect-blob-drift-1 7s ease-in-out infinite;
-}
-.effect-blob-2 {
-  animation: effect-blob-drift-2 9s ease-in-out infinite;
-}
-.effect-blob-3 {
-  animation: effect-blob-drift-3 11s ease-in-out infinite;
-}
-
-/* "Premium" alternatives (2026-08-02) — after several rounds of procedural
-   web/lightning attempts still reading as sketchy rather than polished, the
-   user asked to see other directions. These lean on techniques real loot/
-   gacha-game UIs actually use for high-rarity item frames: a periodic foil-
-   card light sweep, and small embers rising and fading — both simpler than
-   a "web," which is itself often why they read as more premium (restraint
-   over busyness). */
-@keyframes effect-shimmer-sweep {
-  0%,
-  15% {
-    transform: translateX(-140%) rotate(20deg);
-  }
-  45%,
-  100% {
-    transform: translateX(240%) rotate(20deg);
-  }
-}
-.effect-shimmer {
-  animation: effect-shimmer-sweep 3.4s ease-in-out infinite;
-}
-
+/* Item Effects gallery (Settings tab, see ItemEffectGallery.tsx) — a
+   per-quality-tier preview of the Rising Embers effect (several earlier
+   directions — web/lightning line-art, ember clouds, a foil sweep, a
+   pulsing glow — were tried and dropped; see git history if worth
+   revisiting). Kept here rather than inline styles since @keyframes/
+   animation shorthand isn't expressible via Tailwind utilities alone. */
 @keyframes effect-ember-rise {
   0% {
     transform: translateY(0) translateX(0);

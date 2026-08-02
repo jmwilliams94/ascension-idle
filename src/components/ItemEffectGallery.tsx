@@ -1,4 +1,12 @@
-import type { CSSProperties, ReactNode } from 'react'
+import type { CSSProperties } from 'react'
+
+// Item Effects preview — after several rounds of other directions (web/
+// lightning line-art, ember clouds, foil sweeps, pulsing glows — see git
+// history if any of those are worth resurrecting), the user picked Rising
+// Embers as the winner and asked to see it once per quality tier instead of
+// as one entry among many unrelated alternatives: colored per tier, and
+// denser at higher tiers. Still exploratory — not wired into any real
+// Inventory/Equipment/Forge tile yet.
 
 // EmberLayer's per-particle style sets a CSS custom property (--ember-drift)
 // alongside normal properties — CSSProperties doesn't type arbitrary custom
@@ -7,24 +15,9 @@ interface EmberStyle extends CSSProperties {
   '--ember-drift': string
 }
 
-// Exploratory gallery — a "heap of examples" of animated background effects
-// for a gear tile square, requested to compare candidates for the faint
-// moving web-like lightning pattern behind Conquer Online's own item icons
-// (their version reads as a few layers stacked for depth). NOT wired into
-// any real tile yet (InventorySlot, ForgeUpgradeSlot, EquipmentSlot, etc.) —
-// this is purely a side-by-side preview so a favorite (or combination) can
-// be picked before spending effort on the real integration.
-
-// --- Procedural jagged lightning bolts -------------------------------------
-// The first pass at this gallery used smooth Perlin-noise "veins" and clean
-// straight connector lines for the web-style examples — the user's own
-// reference screenshot made clear neither reads as actual lightning: real
-// bolts are jagged/fractal with branching forks, not smooth or straight.
-// This is the standard "midpoint displacement" technique for a fractal bolt:
-// recursively bend the midpoint of a segment sideways by a shrinking random
-// amount. A tiny seeded PRNG (mulberry32) keeps every bolt's jaggedness
-// deterministic across renders (no re-layout jitter) while still looking
-// organically irregular from bolt to bolt.
+// Tiny deterministic PRNG (mulberry32) so each tier's ember positions/timing
+// are organically varied but stable across renders — no layout jitter from
+// re-randomizing every render, but also not hand-typed one by one.
 function mulberry32(seed: number): () => number {
   let a = seed
   return () => {
@@ -36,555 +29,105 @@ function mulberry32(seed: number): () => number {
   }
 }
 
-interface Point {
-  x: number
-  y: number
+interface EmberConfig {
+  left: string
+  size: number
+  delay: string
+  duration: string
+  drift: string
 }
 
-function jaggedSegment(a: Point, b: Point, rand: () => number, depth: number, displace: number, out: Point[]): void {
-  if (depth <= 0) {
-    out.push(b)
-    return
-  }
-  const mx = (a.x + b.x) / 2
-  const my = (a.y + b.y) / 2
-  const dx = b.x - a.x
-  const dy = b.y - a.y
-  const len = Math.hypot(dx, dy) || 1
-  // Perpendicular to the segment, so the displacement bends the bolt
-  // sideways rather than along its own length.
-  const nx = -dy / len
-  const ny = dx / len
-  const offset = (rand() - 0.5) * 2 * displace
-  const mid: Point = { x: mx + nx * offset, y: my + ny * offset }
-  jaggedSegment(a, mid, rand, depth - 1, displace * 0.55, out)
-  jaggedSegment(mid, b, rand, depth - 1, displace * 0.55, out)
-}
-
-// Returns an SVG path `d` string for a jagged fractal bolt from a to b.
-function lightningPath(a: Point, b: Point, seed: number, depth = 4, displace = 13): string {
+// count is the tier's density — higher tiers get more embers (per the
+// user's "reduce/increase as the tiers go up" ask). seed just keeps each
+// tier's layout looking distinct rather than a shared pattern repeated at
+// different counts.
+function buildEmbers(count: number, seed: number): EmberConfig[] {
   const rand = mulberry32(seed)
-  const points: Point[] = [a]
-  jaggedSegment(a, b, rand, depth, displace, points)
-  return points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
+  return Array.from({ length: count }, () => ({
+    left: `${(8 + rand() * 84).toFixed(1)}%`,
+    size: 2 + Math.round(rand() * 2),
+    delay: `${(rand() * 2.6).toFixed(2)}s`,
+    duration: `${(2.6 + rand() * 1.3).toFixed(2)}s`,
+    drift: `${Math.round((rand() - 0.5) * 22)}px`,
+  }))
 }
-
-interface Bolt {
-  d: string
-  width: number
-}
-
-// Staggered, fast, irregular opacity keyframes (not a slow smooth fade) —
-// real electrical arcs strobe, they don't breathe. Cycled across bolts with
-// different durations/start delays so a multi-bolt web never looks
-// synchronized.
-const FLICKERS = [
-  '0.15;0.9;0.3;1;0.1;0.8;0.15',
-  '0.8;0.2;1;0.15;0.7;0.25;0.8',
-  '0.3;1;0.15;0.85;0.2;1;0.3',
-  '1;0.2;0.9;0.1;1;0.3;1',
-  '0.5;0.95;0.1;0.7;0.4;1;0.5',
-  '0.9;0.15;0.6;1;0.05;0.8;0.9',
-]
-
-// Renders a set of bolts, optionally with a blurred "glow" pass behind the
-// crisp core stroke — the classic neon-sign trick (wide blurred duplicate +
-// thin sharp duplicate on top) that's what actually sells "electric" rather
-// than just "a thin line."
-function BoltLayer({
-  bolts,
-  color,
-  glowFilterId,
-  coreOpacity = 1,
-  glowOpacity = 0.6,
-  flickerOffset = 0,
-}: {
-  bolts: Bolt[]
-  color: string
-  glowFilterId?: string
-  coreOpacity?: number
-  glowOpacity?: number
-  flickerOffset?: number
-}) {
-  return (
-    <>
-      {glowFilterId && (
-        <g stroke={color} fill="none" strokeLinecap="round" filter={`url(#${glowFilterId})`}>
-          {bolts.map((bolt, i) => (
-            <path key={`glow-${i}`} d={bolt.d} strokeWidth={bolt.width * 3} opacity={glowOpacity}>
-              <animate
-                attributeName="opacity"
-                values={FLICKERS[(i + flickerOffset) % FLICKERS.length]}
-                dur={`${0.6 + i * 0.13}s`}
-                begin={`${i * 0.11}s`}
-                repeatCount="indefinite"
-              />
-            </path>
-          ))}
-        </g>
-      )}
-      <g stroke={color} fill="none" strokeLinecap="round">
-        {bolts.map((bolt, i) => (
-          <path key={`core-${i}`} d={bolt.d} strokeWidth={bolt.width} opacity={coreOpacity}>
-            <animate
-              attributeName="opacity"
-              values={FLICKERS[(i + flickerOffset) % FLICKERS.length]}
-              dur={`${0.6 + i * 0.13}s`}
-              begin={`${i * 0.11}s`}
-              repeatCount="indefinite"
-            />
-          </path>
-        ))}
-      </g>
-    </>
-  )
-}
-
-// RADIAL_BOLTS: a single-strike burst — every bolt passes near the tile's
-// center, radiating outward like a bolt hit the item dead-on. A legitimate
-// lightning look on its own, but structurally it's a "starburst," not a
-// "web" — every line shares one hub point. Kept as its own distinct example
-// (1) rather than the base every other example reuses, since reusing it
-// everywhere is exactly what made 1/2/3/4 all look nearly identical last
-// round (same shape, only color/blur/pulse differed — invisible in a static
-// screenshot).
-const RADIAL_BOLTS: Bolt[] = [
-  { d: lightningPath({ x: 4, y: 6 }, { x: 94, y: 90 }, 11, 4, 12), width: 0.9 },
-  { d: lightningPath({ x: 92, y: 8 }, { x: 6, y: 84 }, 27, 4, 12), width: 0.8 },
-  { d: lightningPath({ x: 50, y: 3 }, { x: 44, y: 97 }, 53, 3, 9), width: 0.7 },
-  { d: lightningPath({ x: 3, y: 50 }, { x: 97, y: 46 }, 71, 3, 9), width: 0.7 },
-]
-
-// MESH_BOLTS: the actual fix for "doesn't look like a web" — 7 scattered
-// node points connected pairwise, so the bolts cross at several different
-// points spread across the tile instead of all converging on one center hub.
-// This is what a real spiderweb/net structurally is that RADIAL_BOLTS above
-// isn't.
-const MESH_NODES = {
-  a: { x: 15, y: 20 },
-  b: { x: 58, y: 8 },
-  c: { x: 88, y: 18 },
-  d: { x: 78, y: 32 },
-  e: { x: 28, y: 68 },
-  f: { x: 18, y: 88 },
-  g: { x: 62, y: 92 },
-}
-const MESH_BOLTS: Bolt[] = [
-  { d: lightningPath(MESH_NODES.a, MESH_NODES.d, 601, 3, 9), width: 0.7 },
-  { d: lightningPath(MESH_NODES.b, MESH_NODES.e, 602, 3, 9), width: 0.7 },
-  { d: lightningPath(MESH_NODES.c, MESH_NODES.f, 603, 4, 10), width: 0.7 },
-  { d: lightningPath(MESH_NODES.d, MESH_NODES.g, 604, 3, 8), width: 0.6 },
-  { d: lightningPath(MESH_NODES.e, MESH_NODES.f, 605, 2, 7), width: 0.6 },
-  { d: lightningPath(MESH_NODES.b, MESH_NODES.d, 606, 2, 6), width: 0.6 },
-  { d: lightningPath(MESH_NODES.a, MESH_NODES.e, 607, 2, 7), width: 0.6 },
-]
-
-// Small forks stemming off two of the mesh's own nodes — real lightning
-// branches off its own path, which nothing in the first pass had at all.
-const BRANCH_BOLTS: Bolt[] = [
-  { d: lightningPath(MESH_NODES.d, { x: 95, y: 55 }, 701, 2, 7), width: 0.45 },
-  { d: lightningPath(MESH_NODES.e, { x: 8, y: 45 }, 702, 2, 7), width: 0.45 },
-  { d: lightningPath(MESH_NODES.b, { x: 40, y: 2 }, 703, 2, 6), width: 0.45 },
-]
-
-// CRACK_BOLTS: the same jagged fractal generator, but sparse (2-3 lines)
-// with no glow filter and a slow shimmer instead of a fast strobe.
-//
-// Bug fix: the first version of this stroked the cracks near-black,
-// reasoning "dark fissures, not neon" from how the reference screenshots
-// read on their own *medium-toned* background. Our actual tile background
-// is near-black (bg-slate-900, matching the real game's own dark tiles) —
-// a near-black line on a near-black tile is simply invisible, which is
-// exactly what happened (confirmed by the user's screenshot: both examples
-// rendered as solid black squares). Against a dark canvas, a "crack" has to
-// be a thin catch of *light*, not a dark subtractive line — same fix
-// direction as CloudLayer's blend mode below.
-const CRACK_BOLTS: Bolt[] = [
-  { d: lightningPath({ x: 8, y: 8 }, { x: 68, y: 62 }, 801, 3, 8), width: 0.6 },
-  { d: lightningPath({ x: 55, y: 4 }, { x: 28, y: 92 }, 802, 3, 8), width: 0.5 },
-  { d: lightningPath({ x: 92, y: 22 }, { x: 38, y: 78 }, 803, 2, 7), width: 0.45 },
-]
-
-function CrackLayer({ opacity = 0.75 }: { opacity?: number }) {
-  return (
-    <g stroke="#fde4c0" strokeWidth={1} fill="none" strokeLinecap="round" opacity={opacity}>
-      {CRACK_BOLTS.map((bolt, i) => (
-        <path key={i} d={bolt.d} strokeWidth={bolt.width}>
-          {/* A slow, subtle shimmer — real stone/glass cracks don't strobe
-              like electricity, they just catch the light unevenly. */}
-          <animate attributeName="opacity" values="0.35;0.85;0.45;0.7;0.35" dur={`${5 + i}s`} begin={`${i * 0.7}s`} repeatCount="indefinite" />
-        </path>
-      ))}
-    </g>
-  )
-}
-
-// A mottled, blobby color-cloud texture — several small blurred blobs in
-// muted tones layered together.
-//
-// Bug fix: the first version used mix-blend-multiply, reasoning it'd read as
-// a "painted texture" rather than a glow — but multiply only lightens/mutes
-// correctly against a *light* canvas (it's the "combine two photo negatives"
-// blend). Against our near-black tile background, multiplying any color
-// against near-black crushes the result straight back to near-black,
-// exactly what the user's screenshot showed (both examples nearly solid
-// black). `screen` is the dark-canvas equivalent — it lightens instead of
-// darkening — which is what every other blob-based example in this gallery
-// (Aurora Depth Blobs) already correctly used.
-function CloudLayer({ tones, blend = 'screen' }: { tones: string[]; blend?: 'screen' | 'normal' }) {
-  const blendClass = blend === 'screen' ? 'mix-blend-screen' : ''
-  return (
-    <div className="absolute inset-0 overflow-hidden">
-      <div className={`effect-blob-1 absolute left-[8%] top-[12%] h-16 w-16 rounded-full ${tones[0]} blur-lg ${blendClass}`} />
-      <div
-        className={`effect-blob-2 absolute right-[6%] top-[8%] h-14 w-14 rounded-full ${tones[1]} blur-md ${blendClass}`}
-        style={{ animationDelay: '-2.4s' }}
-      />
-      <div
-        className={`effect-blob-3 absolute left-[18%] bottom-[8%] h-14 w-14 rounded-full ${tones[2]} blur-lg ${blendClass}`}
-        style={{ animationDelay: '-4.8s' }}
-      />
-      <div
-        className={`effect-blob-1 absolute right-[12%] bottom-[12%] h-12 w-12 rounded-full ${tones[3] ?? tones[0]} blur-md ${blendClass}`}
-        style={{ animationDelay: '-1.2s' }}
-      />
-    </div>
-  )
-}
-
-// --- "Premium" alternatives -------------------------------------------------
-// After several rounds, the procedural web/lightning line-art kept reading as
-// sketchy/hand-drawn rather than polished, no matter the blend/color fixes —
-// and a static screenshot can't show the (real, existing) shimmer animation
-// on the crack examples anyway. These lean on techniques actual loot/gacha
-// game UIs use for their highest-rarity item frames — simpler than a "web,"
-// which is often exactly why they read as premium (restraint over
-// busyness): a periodic foil-card light sweep, and embers rising and fading.
-
-// A diagonal bright band sweeping across the tile every few seconds, like a
-// trading-card foil catching the light — see effect-shimmer-sweep in
-// index.css.
-function ShimmerLayer({ tint }: { tint: string }) {
-  return (
-    <div className="absolute inset-0 overflow-hidden">
-      <div className={`absolute inset-0 ${tint}`} />
-      <div
-        className="effect-shimmer absolute -top-1/2 left-0 h-[200%] w-10"
-        style={{
-          background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.55) 45%, rgba(255,255,255,0.9) 50%, rgba(255,255,255,0.55) 55%, transparent 100%)',
-        }}
-      />
-    </div>
-  )
-}
-
-const EMBERS: { left: string; size: number; delay: string; duration: string; drift: string }[] = [
-  { left: '12%', size: 3, delay: '0s', duration: '3.2s', drift: '8px' },
-  { left: '28%', size: 2, delay: '0.6s', duration: '2.8s', drift: '-6px' },
-  { left: '46%', size: 3, delay: '1.1s', duration: '3.6s', drift: '4px' },
-  { left: '58%', size: 2, delay: '0.3s', duration: '3s', drift: '-8px' },
-  { left: '70%', size: 3, delay: '1.6s', duration: '3.4s', drift: '6px' },
-  { left: '84%', size: 2, delay: '0.9s', duration: '2.9s', drift: '-4px' },
-  { left: '38%', size: 2, delay: '2s', duration: '3.1s', drift: '10px' },
-]
 
 // Small glowing particles rising and fading — see effect-ember-rise in
-// index.css. `--ember-drift` is a per-particle CSS custom property the
-// keyframe reads for its horizontal wobble, so one shared animation class
-// still gives each particle its own slightly different path.
-function EmberLayer({ color }: { color: string }) {
+// index.css. Color is applied via inline style (not a Tailwind class)
+// since it's an arbitrary per-tier hex value, not one of a fixed set of
+// utility classes Tailwind's build-time scanner could pick up.
+function EmberLayer({ embers, color }: { embers: EmberConfig[]; color: string }) {
   return (
     <div className="absolute inset-0 overflow-hidden">
-      {EMBERS.map((ember, i) => {
-        // Assigned to a separately-typed variable (not inlined) so the CSS
-        // custom property in EmberStyle doesn't trip an excess-property
-        // check against style=`'s plain CSSProperties expectation.
+      {embers.map((ember, i) => {
         const style: EmberStyle = {
           left: ember.left,
           width: `${ember.size}px`,
           height: `${ember.size}px`,
+          backgroundColor: color,
+          boxShadow: `0 0 ${ember.size + 3}px ${Math.max(1, ember.size - 1)}px ${color}cc`,
           animationDelay: ember.delay,
           animationDuration: ember.duration,
           '--ember-drift': ember.drift,
         }
-        return <span key={i} className={`effect-ember absolute bottom-1 rounded-full ${color}`} style={style} />
+        return <span key={i} className="effect-ember absolute bottom-1 rounded-full" style={style} />
       })}
     </div>
   )
 }
 
-function SampleTile({ border, layer }: { border: string; layer: ReactNode }) {
+// Mirrors QUALITY_COLORS/QUALITY_LABELS in equipmentBonus.ts — not imported
+// directly since this gallery is meant to stay a standalone, disposable
+// preview, but these must stay in sync with that file if either changes.
+interface TierExample {
+  label: string
+  color: string
+  count: number
+}
+
+const TIERS: TierExample[] = [
+  { label: 'Normal', color: '#FFFFFF', count: 3 },
+  { label: 'Tempered', color: '#4FC3F7', count: 5 },
+  { label: 'Infused', color: '#2E5EAA', count: 7 },
+  { label: 'Radiant', color: '#A855F7', count: 10 },
+  { label: 'Ascended', color: '#EF4444', count: 14 },
+]
+
+function TierTile({ tier, index }: { tier: TierExample; index: number }) {
+  const embers = buildEmbers(tier.count, 100 + index * 37)
+
   return (
-    <div
-      className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border-2 bg-slate-900 text-xl"
-      style={{ borderColor: border }}
-    >
-      {layer}
-      <span className="relative z-10 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">🗡️</span>
+    <div className="flex flex-col items-center gap-2 text-center">
+      <div
+        className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border-2 bg-slate-900 text-xl"
+        style={{ borderColor: tier.color }}
+      >
+        {/* A faint ambient tint behind the embers, tied to the same tier
+            color — consistent with how equipped gear's own border already
+            tints per quality tier elsewhere in the game. */}
+        <div className="absolute inset-0" style={{ background: `radial-gradient(circle, ${tier.color}22, transparent 70%)` }} />
+        <EmberLayer embers={embers} color={tier.color} />
+        <span className="relative z-10 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">🗡️</span>
+      </div>
+      <p className="text-[11px] font-medium text-slate-300">{tier.label}</p>
+      <p className="text-[10px] leading-snug text-slate-500">{tier.count} embers</p>
     </div>
   )
 }
-
-interface EffectExample {
-  title: string
-  description: string
-  border: string
-  layer: ReactNode
-}
-
-const EFFECTS: EffectExample[] = [
-  {
-    title: '1. Radial Strike',
-    description:
-      'A single-strike burst — every bolt radiates outward from near the center. Reads as lightning, but structurally it\'s a "starburst" (one shared hub), not a web.',
-    border: '#4FC3F7',
-    layer: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
-        <defs>
-          <filter id="glow1" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="1.3" />
-          </filter>
-        </defs>
-        <BoltLayer bolts={RADIAL_BOLTS} color="#a5f3fc" glowFilterId="glow1" />
-      </svg>
-    ),
-  },
-  {
-    title: '2. Mesh Web',
-    description:
-      'The actual structural fix for "web" — 7 scattered points connected pairwise, crossing at several different spots instead of one center. This is what a real net looks like, not a burst.',
-    border: '#A855F7',
-    layer: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
-        <defs>
-          <filter id="glow2" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="1.2" />
-          </filter>
-        </defs>
-        <BoltLayer bolts={MESH_BOLTS} color="#e9d5ff" glowFilterId="glow2" />
-      </svg>
-    ),
-  },
-  {
-    title: '3. Layered Web (Depth)',
-    description:
-      'Two genuinely different patterns overlapping — a dim, blurred Radial Strike rotated behind a crisp Mesh Web in front — real depth from two distinct shapes, not the same shape twice.',
-    border: '#EF4444',
-    layer: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
-        <defs>
-          <filter id="glow3back" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="2.4" />
-          </filter>
-          <filter id="glow3front" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="1" />
-          </filter>
-        </defs>
-        <g transform="rotate(22 50 50)">
-          <BoltLayer bolts={RADIAL_BOLTS} color="#fca5a5" glowFilterId="glow3back" coreOpacity={0.3} glowOpacity={0.25} flickerOffset={2} />
-        </g>
-        <BoltLayer bolts={MESH_BOLTS} color="#fee2e2" glowFilterId="glow3front" coreOpacity={1} glowOpacity={0.6} />
-      </svg>
-    ),
-  },
-  {
-    title: '4. Dense Branching Mesh',
-    description: 'The Mesh Web plus small forks stemming off two of its own nodes — a busier, more chaotic net, closer to a real lightning strike\'s side-branches.',
-    border: '#2E5EAA',
-    layer: (
-      <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
-        <defs>
-          <filter id="glow4" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="1.1" />
-          </filter>
-        </defs>
-        <BoltLayer bolts={MESH_BOLTS} color="#bae6fd" glowFilterId="glow4" glowOpacity={0.5} />
-        <BoltLayer bolts={BRANCH_BOLTS} color="#dbeafe" coreOpacity={0.8} flickerOffset={3} />
-      </svg>
-    ),
-  },
-  {
-    title: '5. Web + Pulsing Core',
-    description: 'A soft pulsing radial glow at the center combined with the faint Mesh Web — two different techniques literally layered on top of each other.',
-    border: '#FFFFFF',
-    layer: (
-      <>
-        <div
-          className="effect-blob-1 absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sky-400/45 blur-lg mix-blend-screen"
-          style={{ animationDuration: '2.4s' }}
-        />
-        <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full opacity-80">
-          <defs>
-            <filter id="glow5" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="1" />
-            </filter>
-          </defs>
-          <BoltLayer bolts={MESH_BOLTS} color="#bae6fd" glowFilterId="glow5" coreOpacity={0.75} glowOpacity={0.4} />
-        </svg>
-      </>
-    ),
-  },
-  {
-    title: '6. Rotating Energy Sweep',
-    description: 'Two conic-gradient beams counter-rotating at different speeds, masked to a soft circle — reads as circling electric current, no SVG lines at all.',
-    border: '#FFFFFF',
-    layer: (
-      <div className="absolute inset-0">
-        <div
-          className="effect-sweep-a absolute -inset-4"
-          style={{
-            background: 'conic-gradient(from 0deg, transparent 0deg, rgba(125,211,252,0.6) 20deg, transparent 60deg, transparent 360deg)',
-            maskImage: 'radial-gradient(circle, black 55%, transparent 80%)',
-            WebkitMaskImage: 'radial-gradient(circle, black 55%, transparent 80%)',
-          }}
-        />
-        <div
-          className="effect-sweep-b absolute -inset-4"
-          style={{
-            background: 'conic-gradient(from 180deg, transparent 0deg, rgba(196,181,253,0.45) 25deg, transparent 70deg, transparent 360deg)',
-            maskImage: 'radial-gradient(circle, black 55%, transparent 80%)',
-            WebkitMaskImage: 'radial-gradient(circle, black 55%, transparent 80%)',
-          }}
-        />
-      </div>
-    ),
-  },
-  {
-    title: '7. Scrolling Hatch Grid',
-    description: 'Two diagonal hairline grids sliding in opposite directions — a cheap, very performant "energy netting" look, no SVG or blur.',
-    border: '#4FC3F7',
-    layer: (
-      <div className="absolute inset-0 opacity-60">
-        <div
-          className="effect-hatch-a absolute inset-0"
-          style={{
-            backgroundImage:
-              'repeating-linear-gradient(45deg, rgba(56,189,248,0.4) 0px, rgba(56,189,248,0.4) 1px, transparent 1px, transparent 10px)',
-          }}
-        />
-        <div
-          className="effect-hatch-b absolute inset-0 mix-blend-screen"
-          style={{
-            backgroundImage:
-              'repeating-linear-gradient(-45deg, rgba(167,139,250,0.35) 0px, rgba(167,139,250,0.35) 1px, transparent 1px, transparent 10px)',
-          }}
-        />
-      </div>
-    ),
-  },
-  {
-    title: '8. Aurora Depth Blobs',
-    description: 'Three blurred glow blobs drifting independently, blur amount varying per blob to fake near/far depth — softer and less literal, more "magic aura" than lightning.',
-    border: '#A855F7',
-    layer: (
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="effect-blob-1 absolute left-1/4 top-1/4 h-14 w-14 rounded-full bg-sky-400/40 blur-md mix-blend-screen" />
-        <div className="effect-blob-2 absolute right-1/4 top-1/3 h-12 w-12 rounded-full bg-purple-400/35 blur-lg mix-blend-screen" />
-        <div className="effect-blob-3 absolute bottom-2 left-1/3 h-10 w-10 rounded-full bg-amber-300/30 blur-sm mix-blend-screen" />
-      </div>
-    ),
-  },
-  {
-    title: '9. Ember Cloud + Crack Web',
-    description:
-      "Matches your close-up reference: a mottled rust/ember colored cloud texture (not a plain dark background) with a few thin dark crack lines overlaid — cracked stone, not neon.",
-    border: '#EF4444',
-    layer: (
-      <>
-        <CloudLayer tones={['bg-orange-600/60', 'bg-red-600/55', 'bg-amber-500/50', 'bg-orange-800/55']} />
-        <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
-          <CrackLayer />
-        </svg>
-      </>
-    ),
-  },
-  {
-    title: '10. Layered Ember Clouds (Depth)',
-    description:
-      'Two cloud layers — a slower/dimmer set behind, a faster/brighter set in front — plus the crack overlay on top, for the same reference look with actual depth.',
-    border: '#2E5EAA',
-    layer: (
-      <>
-        <div className="absolute inset-0 opacity-50">
-          <CloudLayer tones={['bg-sky-700/50', 'bg-blue-600/45', 'bg-slate-400/35', 'bg-indigo-700/45']} />
-        </div>
-        <CloudLayer tones={['bg-orange-600/55', 'bg-red-600/50', 'bg-amber-500/45', 'bg-orange-800/50']} />
-        <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
-          <CrackLayer />
-        </svg>
-      </>
-    ),
-  },
-  {
-    title: '11. Foil Shimmer Sweep',
-    description:
-      'A periodic diagonal light sweep across a softly tinted tile — like a trading-card foil catching the light. Simple and clean; reads as premium through restraint rather than dense linework.',
-    border: '#EF4444',
-    layer: <ShimmerLayer tint="bg-gradient-to-br from-red-600/25 via-orange-500/10 to-transparent" />,
-  },
-  {
-    title: '12. Rising Embers',
-    description:
-      'Small glowing particles drifting upward and fading, each on its own path/timing — the classic high-rarity "legendary aura" look from mobile RPGs and gacha games.',
-    border: '#2E5EAA',
-    layer: (
-      <>
-        <div className="absolute inset-0 bg-gradient-to-t from-orange-950/40 to-transparent" />
-        <EmberLayer color="bg-amber-300 shadow-[0_0_5px_1.5px_rgba(251,191,36,0.85)]" />
-      </>
-    ),
-  },
-  {
-    title: '13. Breathing Glow + Corner Accents',
-    description:
-      'One soft pulsing glow at the center plus four faint animated corner flares — minimal, no linework at all. Closer to how many real premium item frames actually look up close.',
-    border: '#A855F7',
-    layer: (
-      <>
-        <div
-          className="effect-blob-1 absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-400/35 blur-xl mix-blend-screen"
-          style={{ animationDuration: '3.5s' }}
-        />
-        <span
-          className="accent-glow absolute left-1.5 top-1.5 h-4 w-0.5 rounded-full bg-purple-200/70"
-          style={{ color: '#e9d5ff', transform: 'rotate(45deg)' }}
-        />
-        <span
-          className="accent-glow absolute right-1.5 top-1.5 h-4 w-0.5 rounded-full bg-purple-200/70"
-          style={{ color: '#e9d5ff', transform: 'rotate(-45deg)', animationDelay: '0.6s' }}
-        />
-        <span
-          className="accent-glow absolute bottom-1.5 left-1.5 h-4 w-0.5 rounded-full bg-purple-200/70"
-          style={{ color: '#e9d5ff', transform: 'rotate(-45deg)', animationDelay: '1.2s' }}
-        />
-        <span
-          className="accent-glow absolute bottom-1.5 right-1.5 h-4 w-0.5 rounded-full bg-purple-200/70"
-          style={{ color: '#e9d5ff', transform: 'rotate(45deg)', animationDelay: '1.8s' }}
-        />
-      </>
-    ),
-  },
-]
 
 export default function ItemEffectGallery() {
   return (
     <div className="space-y-4">
       <p className="text-xs text-slate-500">
-        Exploratory only — none of these are wired into real Inventory/Equipment/Forge tiles yet, and every effect here is
-        actually animated (a static screenshot just can't show it — view it live to judge motion). Effects 1-5 are bright
-        "neon bolt" web/lightning takes; 9-10 are a mottled cloud-texture read of your reference screenshots. Effects 11-13 are
-        a different direction entirely — simpler, restrained techniques (a foil-card light sweep, rising embers, a soft pulsing
-        glow) closer to how real premium loot-game item frames actually look, rather than dense procedural linework. Pick a
-        favorite (or ask for a combination) and it can be built into the real gear slots next, likely tinted per quality tier.
+        Exploratory only — not wired into any real Inventory/Equipment/Forge tile yet. Rising Embers, once per quality tier:
+        colored to match that tier (same hex values as the real quality-tier borders elsewhere in the game), and denser at
+        higher tiers — Normal gets a faint trickle, Ascended gets a real flurry. Every tile is actually animated; a screenshot
+        won't show the motion.
       </p>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        {EFFECTS.map((effect) => (
-          <div key={effect.title} className="flex flex-col items-center gap-2 text-center">
-            <SampleTile border={effect.border} layer={effect.layer} />
-            <p className="text-[11px] font-medium text-slate-300">{effect.title}</p>
-            <p className="text-[10px] leading-snug text-slate-500">{effect.description}</p>
-          </div>
+        {TIERS.map((tier, index) => (
+          <TierTile key={tier.label} tier={tier} index={index} />
         ))}
       </div>
     </div>

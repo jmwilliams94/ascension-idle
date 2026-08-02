@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.49.6",
+    "date": "2026-08-02",
+    "changes": [
+      "Item Effects now shows Rising Embers once per quality tier (Normal through Ascended), colored to match each tier and getting denser at higher tiers, replacing the earlier grab-bag of unrelated example effects"
+    ]
+  },
+  {
     "version": "1.49.5",
     "date": "2026-08-02",
     "changes": [
