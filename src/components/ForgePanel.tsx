@@ -6,6 +6,7 @@ import ForgeSocketsPanel from './ForgeSocketsPanel'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import { DragDropProvider } from './dragDrop'
 import InventoryPanel from './InventoryPanel'
+import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { formatItemDisplayName, formatQualityAndLevel, getItemIcon, getQualityColor, nextQualityTier } from '../game/items/equipmentBonus'
 import {
@@ -123,7 +124,7 @@ function CompositionLoadBar({
   const tiersGained = preview ? preview.level - item.composition_level : 0
 
   return (
-    <div>
+    <div className="w-full">
       <div className="flex items-center justify-between text-[10px] text-slate-500">
         <span>
           {formatCompositionTier(item.composition_level)} composition
@@ -139,6 +140,52 @@ function CompositionLoadBar({
           animate={{ width: `${afterPercent}%` }}
           transition={{ duration: 0.3 }}
         />
+      </div>
+    </div>
+  )
+}
+
+interface PreviewData {
+  name: string
+  qualityAndLevel: string
+  color: string
+}
+
+// The third square in the Upgrade/Material/Preview row — same fixed tile size
+// as the other two (see SLOT_SIZE_CLASS), just showing a glimpse of the
+// result rather than being draggable. The actual name/cost/Confirm button
+// live in the details area below the row (see ForgePanel), so this stays a
+// plain icon tile, matching Upgrade/Material's own square footprint.
+function PreviewSquare({
+  selectedItem,
+  selectedTemplate,
+  materialMode,
+  previewData,
+}: {
+  selectedItem: ItemInstance | null
+  selectedTemplate: { slot_type: string } | null
+  materialMode: MaterialMode | null
+  previewData: PreviewData | null
+}) {
+  const filled = Boolean(selectedItem && materialMode && (materialMode === 'composition' || previewData))
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <p className="text-xs uppercase tracking-wide text-slate-500">Preview</p>
+
+      <div className={SLOT_SIZE_CLASS}>
+        {filled && selectedItem ? (
+          <InventorySlot
+            slotId="forge-preview"
+            filled
+            sizeClassName={SLOT_SIZE_CLASS}
+            icon={getItemIcon(selectedTemplate?.slot_type)}
+            qualityColor={materialMode === 'composition' ? getQualityColor(selectedItem.quality_tier) : previewData?.color}
+            label={materialMode === 'composition' ? 'Composition preview' : previewData?.name}
+          />
+        ) : (
+          <InventorySlot slotId="forge-preview-empty" filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+        )}
       </div>
     </div>
   )
@@ -399,93 +446,91 @@ export default function ForgePanel() {
 
   return (
     <DragDropProvider>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="space-y-3">
-          {/* Three columns at every viewport size — Upgrade/Material size to
-              their tile, Preview takes the rest. Spans to a second row only
-              when the composition load bar needs room underneath the first
-              two columns (see CompositionLoadBar below). */}
-          <div className="grid grid-cols-[auto_auto_1fr] items-start gap-3">
-            <ForgeUpgradeSlot item={selectedItem} template={selectedTemplate} onRemove={handleRemove} />
+      {/* Single centered column at every viewport size — the row of three
+          equal squares (Upgrade/Material/Preview) is centered as a group via
+          justify-center, which naturally puts the middle (Material) square
+          at the center of the row; the Inventory grid below is centered the
+          same way (see InventoryPanel's own drop-zone wrapper). */}
+      <div className="flex flex-col items-center gap-6">
+        <div className="flex flex-col items-center gap-3">
+          <div className="flex items-start justify-center gap-3">
+            {/* Upgrade + Material paired so the composition load bar (below)
+                can stretch to exactly their combined width, per the "load bar
+                stretching underneath the upgrade and material slots" ask. */}
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex gap-3">
+                <ForgeUpgradeSlot item={selectedItem} template={selectedTemplate} onRemove={handleRemove} />
+                <ForgeMaterialSlot entries={materialEntries} templates={templates} onRemoveEntry={handleRemoveMaterial} />
+              </div>
 
-            <ForgeMaterialSlot entries={materialEntries} templates={templates} onRemoveEntry={handleRemoveMaterial} />
-
-            <div className={`space-y-2 ${showCompositionBar ? 'row-span-2' : ''}`}>
-              <p className="text-xs uppercase tracking-wide text-slate-500">Preview</p>
-
-              {!selectedItem ? (
-                <p className="rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-3 text-center text-[11px] text-slate-600">
-                  Drag an item into the Upgrade Slot.
-                </p>
-              ) : !materialMode ? (
-                <p className="rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-3 text-center text-[11px] text-slate-600">
-                  Drag a Meteor, DragonBall, Stone, or gear item into the Material slot.
-                </p>
-              ) : materialMode === 'composition' ? (
-                <ForgeCompositionPanel
-                  item={selectedItem}
-                  entries={materialEntries}
-                  busy={busy}
-                  onFeed={() => void handleFeed()}
-                  feedError={feedError}
-                />
-              ) : (
-                <>
-                  {attemptResult && (
-                    <div
-                      className={`rounded-xl border p-3 text-center text-sm ${
-                        attemptResult.success
-                          ? 'forge-success-flash border-emerald-600 bg-emerald-500/10 text-emerald-300'
-                          : 'border-red-800 bg-red-500/10 text-red-300'
-                      }`}
-                    >
-                      {attemptResult.message}
-                    </div>
-                  )}
-
-                  {previewData ? (
-                    <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
-                      <p className="text-[10px] uppercase tracking-wide text-slate-600">After upgrade</p>
-                      <div className="mt-1 flex items-center gap-2">
-                        <div
-                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-base"
-                          style={{ borderColor: previewData.color }}
-                        >
-                          {getItemIcon(selectedTemplate?.slot_type)}
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-slate-200">{previewData.name}</p>
-                          <p className="text-[10px] text-slate-500">{previewData.qualityAndLevel}</p>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => void handleConfirm()}
-                        className="mt-3 w-full rounded-lg border border-emerald-600 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {busy ? 'Working…' : 'Confirm Upgrade'}
-                      </button>
-                    </div>
-                  ) : (
-                    <p className="rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-3 text-center text-[11px] text-slate-600">
-                      {materialMode === 'quality' ? qualityDisabledReason : levelDisabledReason}
-                    </p>
-                  )}
-                </>
+              {showCompositionBar && selectedItem && (
+                <CompositionLoadBar item={selectedItem} addedPoints={compositionAddedPoints} preview={compositionPreview} />
               )}
             </div>
 
-            {showCompositionBar && selectedItem && (
-              <div className="col-span-2">
-                <CompositionLoadBar item={selectedItem} addedPoints={compositionAddedPoints} preview={compositionPreview} />
-              </div>
+            <PreviewSquare
+              selectedItem={selectedItem}
+              selectedTemplate={selectedTemplate}
+              materialMode={materialMode}
+              previewData={previewData}
+            />
+          </div>
+
+          <div className="w-full max-w-xs space-y-2">
+            {!selectedItem ? (
+              <p className="text-center text-[11px] text-slate-600">Drag an item into the Upgrade Slot.</p>
+            ) : !materialMode ? (
+              <p className="text-center text-[11px] text-slate-600">
+                Drag a Meteor, DragonBall, Stone, or gear item into the Material slot.
+              </p>
+            ) : materialMode === 'composition' ? (
+              <ForgeCompositionPanel
+                item={selectedItem}
+                entries={materialEntries}
+                busy={busy}
+                onFeed={() => void handleFeed()}
+                feedError={feedError}
+              />
+            ) : (
+              <>
+                {attemptResult && (
+                  <div
+                    className={`rounded-xl border p-3 text-center text-sm ${
+                      attemptResult.success
+                        ? 'forge-success-flash border-emerald-600 bg-emerald-500/10 text-emerald-300'
+                        : 'border-red-800 bg-red-500/10 text-red-300'
+                    }`}
+                  >
+                    {attemptResult.message}
+                  </div>
+                )}
+
+                {previewData ? (
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3 text-center">
+                    <p className="text-[10px] uppercase tracking-wide text-slate-600">After upgrade</p>
+                    <p className="mt-1 text-xs font-medium text-slate-200">{previewData.name}</p>
+                    <p className="text-[10px] text-slate-500">{previewData.qualityAndLevel}</p>
+
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void handleConfirm()}
+                      className="mt-3 w-full rounded-lg border border-emerald-600 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {busy ? 'Working…' : 'Confirm Upgrade'}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-3 text-center text-[11px] text-slate-600">
+                    {materialMode === 'quality' ? qualityDisabledReason : levelDisabledReason}
+                  </p>
+                )}
+              </>
             )}
           </div>
 
           {selectedItem && (
-            <div>
+            <div className="text-center">
               <button
                 type="button"
                 onClick={() => setSocketsOpen((open) => !open)}
@@ -495,7 +540,7 @@ export default function ForgePanel() {
               </button>
 
               {socketsOpen && (
-                <div className="mt-2 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                <div className="mt-2 w-full max-w-xs rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-left">
                   <ForgeSocketsPanel item={selectedItem} template={selectedTemplate} />
                 </div>
               )}

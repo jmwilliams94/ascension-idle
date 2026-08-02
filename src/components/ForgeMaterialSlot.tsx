@@ -50,12 +50,7 @@ export default function ForgeMaterialSlot({ entries, templates, onRemoveEntry }:
       <div data-drop-zone="material" className="flex flex-col items-center gap-1.5">
         {entries.length === 0 && (
           <div className={SLOT_SIZE_CLASS}>
-            <InventorySlot
-              slotId="forge-material-empty"
-              filled={false}
-              sizeClassName={SLOT_SIZE_CLASS}
-              emptyHint="Drop Meteor, DragonBall, Stone, or gear"
-            />
+            <InventorySlot slotId="forge-material-empty" filled={false} sizeClassName={SLOT_SIZE_CLASS} emptyHint="Drop item here" />
           </div>
         )}
 

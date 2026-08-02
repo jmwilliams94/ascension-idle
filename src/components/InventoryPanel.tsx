@@ -357,7 +357,7 @@ export default function InventoryPanel({
             doesn't (e.g. a future higher column count). data-drop-zone is
             inert unless a DragDropProvider ancestor is actively tracking a
             drag (see dragDropContext.ts) — harmless on every other page. */}
-        <div data-drop-zone="inventory" className="mt-2 overflow-x-auto">
+        <div data-drop-zone="inventory" className="mt-2 flex justify-center overflow-x-auto">
         <div className={`grid ${gridColsClass} gap-1.5`}>
           {visiblePotionStacks.map((stack) => {
             const type = POTION_TYPES[stack.potionType]

@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.48.1",
+    "date": "2026-08-02",
+    "changes": [
+      "Forge's Upgrade, Material, and Preview slots are now three equal-sized squares, centered on the page",
+      "The Material slot shows a 'Drop item here' hint just like the Upgrade slot",
+      "The Inventory grid is now centered too"
+    ]
+  },
+  {
     "version": "1.48.0",
     "date": "2026-08-02",
     "changes": [
