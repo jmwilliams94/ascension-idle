@@ -65,7 +65,7 @@ interface InventoryPanelProps {
   reservedItemIds?: string[]
   // Present when rendered inside Forge or Warehouse — makes gear and stone
   // tiles draggable (see dragDrop.tsx), calling back with whichever
-  // data-drop-zone target (Forge: ForgeUpgradeSlot/ForgeFuelSlots; Warehouse:
+  // data-drop-zone target (Forge: ForgeUpgradeSlot/ForgeMaterialSlot; Warehouse:
   // WarehouseGrid's own storage grid) the tile was released over, and the
   // dragged id (a real item id, or a synthetic stoneDragId for a stone). Not
   // called if the tile was dropped somewhere with no valid target. Stones
@@ -416,35 +416,77 @@ export default function InventoryPanel({
             return <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'stone', dragId, tier })} />
           })}
 
-          {meteorTiles.map(({ dragId }) => (
-            <InventorySlot
-              key={dragId}
-              slotId={dragId}
-              filled
-              sizeClassName={SLOT_SIZE_CLASS}
-              iconSrc={METEOR_ICON_SRC}
-              qualityColor={MATERIAL_COLOR}
-              label="Meteor"
-              tooltip={buildMeteorTooltip()}
-              selected={selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId}
-              onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'meteor' })}
-            />
-          ))}
+          {meteorTiles.map(({ dragId }) => {
+            if (reservedItemIds.includes(dragId)) {
+              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+            }
 
-          {dragonballTiles.map(({ dragId }) => (
-            <InventorySlot
-              key={dragId}
-              slotId={dragId}
-              filled
-              sizeClassName={SLOT_SIZE_CLASS}
-              iconSrc={DRAGONBALL_ICON_SRC}
-              qualityColor={DRAGONBALL_COLOR}
-              label="DragonBall"
-              tooltip={buildDragonballTooltip()}
-              selected={selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId}
-              onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'dragonball' })}
-            />
-          ))}
+            const commonProps = {
+              slotId: dragId,
+              filled: true as const,
+              sizeClassName: SLOT_SIZE_CLASS,
+              iconSrc: METEOR_ICON_SRC,
+              qualityColor: MATERIAL_COLOR,
+              label: 'Meteor',
+              tooltip: buildMeteorTooltip(),
+              selected: selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId,
+            }
+
+            if (onTileDrop) {
+              return (
+                <DraggableInventorySlot
+                  key={dragId}
+                  {...commonProps}
+                  dragEnabled
+                  dragPayload={{ id: dragId, icon: '☄️', qualityColor: MATERIAL_COLOR }}
+                  onDrop={handleTileDrop}
+                  onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'meteor' })}
+                />
+              )
+            }
+
+            return (
+              <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'meteor' })} />
+            )
+          })}
+
+          {dragonballTiles.map(({ dragId }) => {
+            if (reservedItemIds.includes(dragId)) {
+              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+            }
+
+            const commonProps = {
+              slotId: dragId,
+              filled: true as const,
+              sizeClassName: SLOT_SIZE_CLASS,
+              iconSrc: DRAGONBALL_ICON_SRC,
+              qualityColor: DRAGONBALL_COLOR,
+              label: 'DragonBall',
+              tooltip: buildDragonballTooltip(),
+              selected: selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId,
+            }
+
+            if (onTileDrop) {
+              return (
+                <DraggableInventorySlot
+                  key={dragId}
+                  {...commonProps}
+                  dragEnabled
+                  dragPayload={{ id: dragId, icon: '🔮', qualityColor: DRAGONBALL_COLOR }}
+                  onDrop={handleTileDrop}
+                  onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'dragonball' })}
+                />
+              )
+            }
+
+            return (
+              <InventorySlot
+                key={dragId}
+                {...commonProps}
+                onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'dragonball' })}
+              />
+            )
+          })}
 
           {meteorScrollTiles.map(({ dragId }) => (
             <InventorySlot

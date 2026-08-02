@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.48.0",
+    "date": "2026-08-02",
+    "changes": [
+      "Redesigned the Forge into three drag-and-drop slots — Upgrade, Material, and Preview — the same layout on phone and desktop now",
+      "Drop a Meteor, DragonBall, or Composition Stone/gear straight into the Material slot to trigger Level Upgrade, Quality Upgrade, or Composition — no more picking a type from buttons first",
+      "Composition now shows a live loading bar under the Upgrade and Material slots as you stage stones or gear to feed",
+      "Weapon Socket unlocking moved to its own small toggle, separate from the new Material slot"
+    ]
+  },
+  {
     "version": "1.47.2",
     "date": "2026-08-02",
     "changes": [

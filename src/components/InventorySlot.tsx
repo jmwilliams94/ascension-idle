@@ -59,12 +59,12 @@ interface InventorySlotProps {
   onPointerUp?: (event: PointerEvent<HTMLButtonElement>) => void
   onPointerCancel?: (event: PointerEvent<HTMLButtonElement>) => void
   // Overrides the grid's implicit `aspect-square` sizing for standalone (non-grid)
-  // contexts like ForgeUpgradeSlot/ForgeFuelSlots, e.g. "h-20 w-20". Omit when the
+  // contexts like ForgeUpgradeSlot/ForgeMaterialSlot, e.g. "h-20 w-20". Omit when the
   // tile lives inside a grid cell that already constrains its width.
   sizeClassName?: string
   // Optional placeholder text for an empty slot — omitted (renders a plain dimmed
   // box) in the main 40-cell grid, where showing "empty" 40 times would be noisy,
-  // but used by standalone drop targets like ForgeUpgradeSlot/ForgeFuelSlots to
+  // but used by standalone drop targets like ForgeUpgradeSlot/ForgeMaterialSlot to
   // hint what goes there.
   emptyHint?: string
 }

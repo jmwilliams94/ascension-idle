@@ -237,7 +237,7 @@ export function formatItemDisplayName(templateName: string, qualityTier: string,
 
 // Universal Diablo/PoE-style tooltip content for a gear item — the single source
 // of truth for what a gear tooltip shows, reused everywhere a gear tile renders
-// (InventoryPanel, ForgeUpgradeSlot, ForgeFuelSlots, EquipmentSlot's Main Hand)
+// (InventoryPanel, ForgeUpgradeSlot, ForgeMaterialSlot, EquipmentSlot's Main Hand)
 // via InventorySlot's `tooltip` prop, so hovering any of them looks the same.
 export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | undefined): ItemTooltipData {
   // "Class: ___" is display-only for now — just the plain class name (e.g.

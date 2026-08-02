@@ -1,19 +1,16 @@
-import ForgeFuelSlots, { type FuelEntry } from './ForgeFuelSlots'
+import type { MaterialEntry } from './ForgeMaterialSlot'
 import { compositionPointValue, compositionPointsRequired, formatCompositionTier, simulateCompositionFeed } from '../game/items/forgeCosts'
 import type { ItemInstance } from '../game/items/useInventoryStore'
-import type { ItemTemplate } from '../game/items/useItemTemplatesStore'
 
 interface ForgeCompositionPanelProps {
   item: ItemInstance
-  fuelSlots: (FuelEntry | null)[]
-  templates: ItemTemplate[]
-  onRemoveFuelSlot: (slotIndex: number) => void
+  entries: MaterialEntry[]
   busy: boolean
   onFeed: () => void
   feedError: string | null
 }
 
-function ProgressBar({ level, points, required }: { level: number; points: number; required: number }) {
+export function ProgressBar({ level, points, required }: { level: number; points: number; required: number }) {
   const percent = required > 0 ? Math.min(100, (points / required) * 100) : 100
 
   return (
@@ -31,31 +28,28 @@ function ProgressBar({ level, points, required }: { level: number; points: numbe
   )
 }
 
-// Composition tab content — no RNG, no success/fail state (see ForgePanel): the
-// player drags up to two stones and/or gear items into the two fixed Fuel slots
-// (same drag-and-drop as the main Upgrade Slot — stones are items here, not a
-// typed-in currency amount), sees exactly what feeding them would do (including
-// crossing one or more tiers at once), and commits with "Feed", which always
-// applies the full point value.
-export default function ForgeCompositionPanel({
-  item,
-  fuelSlots,
-  templates,
-  onRemoveFuelSlot,
-  busy,
-  onFeed,
-  feedError,
-}: ForgeCompositionPanelProps) {
+// Composition preview (shown in Forge's Preview column once the Material slot
+// holds a stone/gear entry — see ForgePanel's materialMode inference) — no
+// RNG, no success/fail state: the player drags up to two stones and/or gear
+// items into the Material slot (see ForgeMaterialSlot, rendered separately
+// now — this component only shows the resulting progress + Feed button), sees
+// exactly what feeding them would do (including crossing one or more tiers at
+// once), and commits with "Feed", which always applies the full point value.
+// The live composition "loading bar" spanning the Upgrade+Material columns
+// (ForgePanel's CompositionLoadBar) duplicates the "after feed" bar below for
+// visibility at a glance — this panel is still the source of the Feed action
+// itself.
+export default function ForgeCompositionPanel({ item, entries, busy, onFeed, feedError }: ForgeCompositionPanelProps) {
   const required = compositionPointsRequired(item.composition_level)
 
-  const addedPoints = fuelSlots.reduce((sum, entry) => {
-    if (!entry) {
-      return sum
-    }
+  const addedPoints = entries.reduce((sum, entry) => {
     if (entry.kind === 'stone') {
       return sum + compositionPointValue(entry.tier)
     }
-    return sum + compositionPointValue(entry.item.composition_level)
+    if (entry.kind === 'item') {
+      return sum + compositionPointValue(entry.item.composition_level)
+    }
+    return sum
   }, 0)
 
   const preview = addedPoints > 0 ? simulateCompositionFeed(item.composition_level, item.composition_points, addedPoints) : null
@@ -76,8 +70,6 @@ export default function ForgeCompositionPanel({
           <ProgressBar level={preview.level} points={preview.points} required={preview.required} />
         </div>
       )}
-
-      <ForgeFuelSlots slots={fuelSlots} templates={templates} onRemoveSlot={onRemoveFuelSlot} />
 
       {feedError && <p className="text-center text-[10px] text-red-400">{feedError}</p>}
 

@@ -128,12 +128,27 @@ export function buildStoneTooltip(tier: number): ItemTooltipData {
 // gets a synthetic id combining the currency with a render-time index, purely for
 // a stable React key — same-currency units are fully fungible, the index has no
 // other meaning.
+const METEOR_DRAG_ID_PREFIX = 'meteor:'
+const DRAGONBALL_DRAG_ID_PREFIX = 'dragonball:'
+
 export function meteorDragId(index: number): string {
-  return `meteor:${index}`
+  return `${METEOR_DRAG_ID_PREFIX}${index}`
 }
 
 export function dragonballDragId(index: number): string {
-  return `dragonball:${index}`
+  return `${DRAGONBALL_DRAG_ID_PREFIX}${index}`
+}
+
+// Used by Forge's Material slot (ForgePanel.tsx) to tell a dragged Meteor/
+// DragonBall tile apart from a stone/gear fuel tile — the prefix check is
+// safe against the Scroll ids below (e.g. "dragonball-scroll:0") since those
+// have "-scroll" right after the currency name, not a colon.
+export function isMeteorDragId(id: string): boolean {
+  return id.startsWith(METEOR_DRAG_ID_PREFIX)
+}
+
+export function isDragonballDragId(id: string): boolean {
+  return id.startsWith(DRAGONBALL_DRAG_ID_PREFIX)
 }
 
 // Real art (2026-08-02), supersedes the 🌠/🔮 emoji everywhere a Meteor/
