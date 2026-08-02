@@ -125,12 +125,20 @@ const QUALITY_LABELS: Record<string, string> = {
   super: 'Ascended',
 }
 
+// Recalibrated (2026-08-02, supersedes the earlier White/Warm-bronze/Silver/
+// Baby-blue/Orange set) — the user found that set too washed-out/pastel to
+// read as a clear escalating ladder against this game's dark UI. Back to a
+// punchier light blue → dark blue → purple → red progression (closer to the
+// original pre-White/bronze/silver/baby-blue/orange placeholder gradient
+// mentioned in CLAUDE.md's Gear system section). Normal stays plain white —
+// nobody flagged that one, only the four upgrade tiers above it needed to
+// stand out more.
 export const QUALITY_COLORS: Record<string, string> = {
   normal: '#FFFFFF',
-  refined: '#E8C99B',
-  unique: '#C8D0DC',
-  elite: '#A8D8F0',
-  super: '#F0B87A',
+  refined: '#4FC3F7',
+  unique: '#2E5EAA',
+  elite: '#A855F7',
+  super: '#EF4444',
 }
 
 export function getQualityColor(qualityTier: string): string {

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.44.7",
+    "date": "2026-08-02",
+    "changes": [
+      "Gear quality colors are more vivid now — light blue, dark blue, purple, and red for Tempered/Infused/Radiant/Ascended so they stand out more clearly"
+    ]
+  },
+  {
     "version": "1.44.6",
     "date": "2026-08-02",
     "changes": [
