@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.49.3",
+    "date": "2026-08-02",
+    "changes": [
+      "Added two new Item Effects examples matching the user's actual close-up reference screenshots — a mottled ember-cloud texture with a few thin dark cracks overlaid, instead of glowing neon lines"
+    ]
+  },
+  {
     "version": "1.49.2",
     "date": "2026-08-02",
     "changes": [

@@ -180,6 +180,57 @@ const BRANCH_BOLTS: Bolt[] = [
   { d: lightningPath(MESH_NODES.b, { x: 40, y: 2 }, 703, 2, 6), width: 0.45 },
 ]
 
+// CRACK_BOLTS: the same jagged fractal generator, but styled as dark
+// fissures instead of bright neon — sparse (2-3 lines), no glow filter, low
+// opacity, a near-black stroke. Matches the reference screenshots' actual
+// look much better than the earlier bright "electric" bolts did: those
+// close-up reference tiles don't show glowing lines at all, they show a
+// mottled colored cloud texture with a few thin dark cracks over it.
+const CRACK_BOLTS: Bolt[] = [
+  { d: lightningPath({ x: 8, y: 8 }, { x: 68, y: 62 }, 801, 3, 8), width: 0.6 },
+  { d: lightningPath({ x: 55, y: 4 }, { x: 28, y: 92 }, 802, 3, 8), width: 0.5 },
+  { d: lightningPath({ x: 92, y: 22 }, { x: 38, y: 78 }, 803, 2, 7), width: 0.45 },
+]
+
+function CrackLayer({ opacity = 0.6 }: { opacity?: number }) {
+  return (
+    <g stroke="#170f0a" strokeWidth={1} fill="none" strokeLinecap="round" opacity={opacity}>
+      {CRACK_BOLTS.map((bolt, i) => (
+        <path key={i} d={bolt.d} strokeWidth={bolt.width}>
+          {/* A slow, subtle shimmer — real stone/glass cracks don't strobe
+              like electricity, they just catch the light unevenly. */}
+          <animate attributeName="opacity" values="0.45;0.8;0.5;0.7;0.45" dur={`${5 + i}s`} begin={`${i * 0.7}s`} repeatCount="indefinite" />
+        </path>
+      ))}
+    </g>
+  )
+}
+
+// A mottled, blobby color-cloud texture — several small blurred blobs in
+// muted tones layered together (normal/multiply blend, not screen, so it
+// reads as a painted texture rather than a glow) — this is the actual base
+// layer visible in the reference screenshots, not a plain dark background.
+function CloudLayer({ tones, blend = 'normal' }: { tones: string[]; blend?: 'normal' | 'multiply' }) {
+  const blendClass = blend === 'multiply' ? 'mix-blend-multiply' : ''
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      <div className={`effect-blob-1 absolute left-[8%] top-[12%] h-16 w-16 rounded-full ${tones[0]} blur-lg ${blendClass}`} />
+      <div
+        className={`effect-blob-2 absolute right-[6%] top-[8%] h-14 w-14 rounded-full ${tones[1]} blur-md ${blendClass}`}
+        style={{ animationDelay: '-2.4s' }}
+      />
+      <div
+        className={`effect-blob-3 absolute left-[18%] bottom-[8%] h-14 w-14 rounded-full ${tones[2]} blur-lg ${blendClass}`}
+        style={{ animationDelay: '-4.8s' }}
+      />
+      <div
+        className={`effect-blob-1 absolute right-[12%] bottom-[12%] h-12 w-12 rounded-full ${tones[3] ?? tones[0]} blur-md ${blendClass}`}
+        style={{ animationDelay: '-1.2s' }}
+      />
+    </div>
+  )
+}
+
 function SampleTile({ border, layer }: { border: string; layer: ReactNode }) {
   return (
     <div
@@ -351,17 +402,48 @@ const EFFECTS: EffectExample[] = [
       </div>
     ),
   },
+  {
+    title: '9. Ember Cloud + Crack Web',
+    description:
+      "Matches your close-up reference: a mottled rust/ember colored cloud texture (not a plain dark background) with a few thin dark crack lines overlaid — cracked stone, not neon.",
+    border: '#EF4444',
+    layer: (
+      <>
+        <CloudLayer tones={['bg-orange-700/45', 'bg-red-800/40', 'bg-amber-700/35', 'bg-red-900/45']} blend="multiply" />
+        <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
+          <CrackLayer />
+        </svg>
+      </>
+    ),
+  },
+  {
+    title: '10. Layered Ember Clouds (Depth)',
+    description:
+      'Two cloud layers — a slower/dimmer set behind, a faster/brighter set in front — plus the crack overlay on top, for the same reference look with actual depth.',
+    border: '#2E5EAA',
+    layer: (
+      <>
+        <div className="absolute inset-0 opacity-50">
+          <CloudLayer tones={['bg-slate-500/40', 'bg-blue-900/40', 'bg-slate-600/35', 'bg-blue-950/40']} blend="multiply" />
+        </div>
+        <CloudLayer tones={['bg-orange-700/40', 'bg-red-800/35', 'bg-amber-600/30', 'bg-red-900/40']} blend="multiply" />
+        <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
+          <CrackLayer />
+        </svg>
+      </>
+    ),
+  },
 ]
 
 export default function ItemEffectGallery() {
   return (
     <div className="space-y-4">
       <p className="text-xs text-slate-500">
-        Exploratory only — none of these are wired into real Inventory/Equipment/Forge tiles yet. Effects 1-5 share the same
-        jagged-bolt generator but are now built from two structurally different base shapes — Radial Strike (1, every bolt
-        shares one center hub) and Mesh Web (2, scattered crossing points, no hub) — combined differently, so they should
-        actually look distinct now instead of just recolored. Pick a favorite (or ask for a combination) and it can be built
-        into the real gear slots next, likely tinted per quality tier.
+        Exploratory only — none of these are wired into real Inventory/Equipment/Forge tiles yet. Effects 1-5 are all bright
+        "neon bolt" takes, built from two structurally different base shapes (Radial Strike vs. Mesh Web). Effects 9-10 are a
+        different, closer read of your reference screenshots — a mottled color-cloud texture with a few thin dark cracks over
+        it, not glowing lines at all. Pick a favorite (or ask for a combination) and it can be built into the real gear slots
+        next, likely tinted per quality tier.
       </p>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
