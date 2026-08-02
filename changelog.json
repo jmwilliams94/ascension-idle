@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.47.2",
+    "date": "2026-08-02",
+    "changes": [
+      "Corrected Archer's level 15 Agility auto-allotment value based on real reference data"
+    ]
+  },
+  {
     "version": "1.47.1",
     "date": "2026-08-02",
     "changes": [

@@ -90,7 +90,7 @@ const ATTRIBUTE_ANCHORS: Record<string, AttributeAnchor[]> = {
   ],
   hunter: [
     [1, { strength: 3, agility: 5, vitality: 2, spirit: 0 }],
-    [15, { strength: 12, agility: 35, vitality: 5, spirit: 0 }],
+    [15, { strength: 12, agility: 30, vitality: 5, spirit: 0 }],
     [40, { strength: 25, agility: 90, vitality: 12, spirit: 0 }],
     [70, { strength: 45, agility: 150, vitality: 22, spirit: 0 }],
     [100, { strength: 60, agility: 215, vitality: 32, spirit: 0 }],
