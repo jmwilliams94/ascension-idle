@@ -429,7 +429,7 @@ export default function CombatPage() {
 
           {inventoryExpanded && (
             <div className="mt-3">
-              <InventoryPanel columns={5} />
+              <InventoryPanel columns={5} equipPopoverEnabled />
             </div>
           )}
         </div>
@@ -702,7 +702,7 @@ export default function CombatPage() {
         </div>
 
         <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-          <InventoryPanel columns={5} />
+          <InventoryPanel columns={5} equipPopoverEnabled />
         </div>
       </div>
       </div>

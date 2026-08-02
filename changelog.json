@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.52.3",
+    "date": "2026-08-03",
+    "changes": [
+      "Tapping a gear item in your Inventory now opens Equip/Compare directly on the item instead of a separate details card",
+      "Compare shows the item you're about to equip side by side with whatever's currently in that slot"
+    ]
+  },
+  {
     "version": "1.52.2",
     "date": "2026-08-03",
     "changes": [

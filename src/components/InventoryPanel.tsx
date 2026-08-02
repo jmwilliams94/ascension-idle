@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import { DraggableInventorySlot } from './dragDrop'
+import GearEquipPopover from './GearEquipPopover'
 import {
   buildGearTooltip,
   formatBaseStats,
@@ -85,6 +86,17 @@ interface InventoryPanelProps {
   // Grid width in columns — defaults to 8 (5 rows) for a wide layout; the Combat
   // page's narrower column passes 5 (8 rows) instead. Always 40 cells total either way.
   columns?: number
+  // Inventory-grid-only (confirmed with the user, 2026-08-03) — swaps a gear
+  // tile's click behavior from "select it, show a detail card below the
+  // grid" to "open GearEquipPopover right at the tile," which folds the old
+  // card's Equip button plus a new Compare-against-currently-equipped view
+  // directly into the same hover-tooltip-styled card, and drops the plain
+  // hover/long-press peek for these tiles (press is now the only trigger).
+  // Only CombatPage's two InventoryPanel instances pass this — Forge/
+  // Warehouse/Shop/Marketplace's own embeddings are unaffected, since their
+  // click already means something else there (drag source, sell selection,
+  // listing source) that this popover isn't designed around.
+  equipPopoverEnabled?: boolean
 }
 
 export default function InventoryPanel({
@@ -92,6 +104,7 @@ export default function InventoryPanel({
   onTileDrop,
   enableSelling = false,
   columns = 8,
+  equipPopoverEnabled = false,
 }: InventoryPanelProps) {
   const items = useInventoryStore((state) => state.items)
   const sellItem = useInventoryStore((state) => state.sellItem)
@@ -126,6 +139,10 @@ export default function InventoryPanel({
   const hasUnclaimedMail = (itemId: string) => mailEntries.some((entry) => entry.item_id === itemId)
 
   const [selectedSlot, setSelectedSlot] = useState<SelectedSlot>(null)
+  // GearEquipPopover-only (equipPopoverEnabled) — the clicked tile's own
+  // bounding rect, captured at click time so the popover can anchor itself
+  // there via a portal. Unused/always null when equipPopoverEnabled is off.
+  const [popoverAnchorRect, setPopoverAnchorRect] = useState<DOMRect | null>(null)
   const [sellBusy, setSellBusy] = useState(false)
   const [sellError, setSellError] = useState<string | null>(null)
   // Bulk-sell checkbox selection (Shop only, see enableSelling) — independent
@@ -216,6 +233,15 @@ export default function InventoryPanel({
   // a level 130 item. Client-side only, same trust model as equipping itself
   // (there's no server-side equip check at all, gated or not).
   const meetsLevelRequirement = Boolean(selectedTemplate && characterLevel >= selectedTemplate.required_level)
+  // GearEquipPopover-only (equipPopoverEnabled) — whatever's currently worn
+  // in the same slot_type as the selected item, for the Compare view. null
+  // when the slot is empty (first-time equip), in which case the popover
+  // simply doesn't offer Compare at all (confirmed with the user).
+  const equippedItemIdForSlot = selectedTemplate ? equippedIds[selectedTemplate.slot_type as EquipSlot] : null
+  const equippedItemForSlot = equippedItemIdForSlot ? items.find((entry) => entry.id === equippedItemIdForSlot) : undefined
+  const equippedTemplateForSlot = equippedItemForSlot && templates.find((entry) => entry.id === equippedItemForSlot.template_id)
+  const compareTooltip =
+    equippedItemForSlot && equippedTemplateForSlot ? buildGearTooltip(equippedItemForSlot, equippedTemplateForSlot) : null
   const selectedStoneTier = selectedSlot?.kind === 'stone' ? selectedSlot.tier : undefined
   const selectedPotionStack =
     selectedSlot?.kind === 'potion' ? visiblePotionStacks.find((stack) => stack.id === selectedSlot.id) : undefined
@@ -239,6 +265,13 @@ export default function InventoryPanel({
 
   const toggleSlot = (slot: NonNullable<SelectedSlot>) => {
     setSelectedSlot((current) => (current && slotKey(current) === slotKey(slot) ? null : slot))
+  }
+
+  // GearEquipPopover-only — dismiss action, also used after a successful
+  // Equip from inside the popover.
+  const closeGearPopover = () => {
+    setSelectedSlot(null)
+    setPopoverAnchorRect(null)
   }
 
   const handleTileDrop = (overTarget: string | null, id: string) => {
@@ -592,7 +625,12 @@ export default function InventoryPanel({
               qualityColor,
               icon,
               label,
-              tooltip: buildGearTooltip(item, template),
+              // Omitted when equipPopoverEnabled — that mode's whole point is
+              // "press is the only trigger now," so the plain hover/long-press
+              // peek this prop drives is dropped for these tiles specifically
+              // (native `title` still works as a bare-bones desktop fallback,
+              // same as any other tile with no tooltip).
+              tooltip: equipPopoverEnabled ? undefined : buildGearTooltip(item, template),
               selected: selectedSlot?.kind === 'item' && selectedSlot.id === item.id,
             }
 
@@ -610,6 +648,28 @@ export default function InventoryPanel({
             }
 
             const slot = <InventorySlot key={item.id} {...commonProps} onClick={() => toggleSlot({ kind: 'item', id: item.id })} />
+
+            // GearEquipPopover (Inventory grid only, see equipPopoverEnabled's
+            // own doc comment) — wraps the tile so its click also captures the
+            // tile's own bounding rect for the popover to anchor against.
+            // data-gear-popover-anchor is what tells GearEquipPopover's
+            // outside-click listener this click was on a gear tile (any of
+            // them, not just the open one) rather than genuinely "outside,"
+            // see that component for why. Mirrors the enableSelling wrapper
+            // pattern immediately below — this codebase's established way to
+            // add an opt-in overlay/behavior to a tile without touching
+            // InventorySlot itself.
+            if (equipPopoverEnabled) {
+              return (
+                <div
+                  key={item.id}
+                  data-gear-popover-anchor
+                  onClick={(event) => setPopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
+                >
+                  {slot}
+                </div>
+              )
+            }
 
             // Bulk-sell checkbox (Shop only, confirmed with the user, 2026-07-31) —
             // an overlay on top of the tile rather than a change to InventorySlot
@@ -780,7 +840,7 @@ export default function InventoryPanel({
         </div>
       )}
 
-      {selectedItem && (
+      {selectedItem && !equipPopoverEnabled && (
         <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
           <div className="flex items-center gap-3">
             <div
@@ -849,6 +909,31 @@ export default function InventoryPanel({
           )}
           {sellError && <p className="mt-2 text-xs text-amber-400">{sellError}</p>}
         </div>
+      )}
+
+      {equipPopoverEnabled && selectedItem && popoverAnchorRect && (
+        <GearEquipPopover
+          anchorRect={popoverAnchorRect}
+          tooltip={buildGearTooltip(selectedItem, selectedTemplate)}
+          compareTooltip={compareTooltip}
+          alreadyEquipped={isEquipped(selectedItem.id)}
+          canEquip={!isEquipped(selectedItem.id) && isEquippableSlot && meetsLevelRequirement}
+          equipLabel={
+            isEquipped(selectedItem.id)
+              ? 'Equipped'
+              : !isEquippableSlot
+                ? 'Not wearable yet'
+                : !meetsLevelRequirement
+                  ? `Requires level ${selectedTemplate?.required_level}`
+                  : 'Equip'
+          }
+          onEquip={() => {
+            if (selectedTemplate && meetsLevelRequirement) {
+              setEquippedItem(selectedTemplate.slot_type as EquipSlot, selectedItem.id)
+            }
+          }}
+          onClose={closeGearPopover}
+        />
       )}
     </div>
   )
