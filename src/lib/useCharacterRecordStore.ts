@@ -10,6 +10,7 @@ import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useCompositionStore, type CompositionStones } from '../game/items/useCompositionStore'
 import { useWarehouseStore } from '../game/items/useWarehouseStore'
 import type { GearCompositionPoints } from '../game/items/forgeCosts'
+import { useLuckyStore } from '../game/lucky/useLuckyStore'
 
 // Loads/saves the active character's row (characters table) — class, level, gold,
 // exp, zone, equipped items (including the Quiver, for Hunters). Replaces what
@@ -45,6 +46,10 @@ interface CharacterRow {
   gear_composition_points: GearCompositionPoints
   selected_monster_id: string | null
   last_active_at: string
+  // Server-authoritative, same trust model as meteor_count/dragonball_count
+  // above — only ever written by draw_lucky_ticket, never the generic
+  // autosave (see saveNow below).
+  lucky_free_ticket_claimed_at: string | null
 }
 
 interface CharacterRecordState {
@@ -76,7 +81,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     const { data, error } = await supabase
       .from('characters')
       .select(
-        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, meteor_count, dragonball_count, meteor_scroll_count, dragonball_scroll_count, composition_stones, warehouse_points, gear_composition_points, selected_monster_id, last_active_at',
+        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, meteor_count, dragonball_count, meteor_scroll_count, dragonball_scroll_count, composition_stones, warehouse_points, gear_composition_points, selected_monster_id, last_active_at, lucky_free_ticket_claimed_at',
       )
       .eq('id', characterId)
       .maybeSingle<CharacterRow>()
@@ -113,6 +118,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     useCompositionStore.getState().hydrate(data.composition_stones)
     useWarehouseStore.getState().hydratePoints(data.warehouse_points)
     useWarehouseStore.getState().hydrateGearCompositionPoints(data.gear_composition_points)
+    useLuckyStore.getState().hydrate(data.lucky_free_ticket_claimed_at)
 
     set({ loaded: true, previousLastActiveAt: data.last_active_at, characterName: data.name })
   },

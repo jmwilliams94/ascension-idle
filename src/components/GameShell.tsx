@@ -273,7 +273,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
           {activeTab === 'shop' && <ShopPanel />}
           {activeTab === 'warehouse' && <WarehousePanel characterId={characterId} />}
           {activeTab === 'achievements' && <AchievementsPanel characterId={characterId} />}
-          {activeTab === 'lucky' && <LuckyPanel />}
+          {activeTab === 'lucky' && <LuckyPanel characterId={characterId} />}
         </section>
       </main>
 

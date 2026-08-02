@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.54.0",
+    "date": "2026-08-03",
+    "changes": [
+      "Added the Lucky ticket-draw feature — a free ticket every 6 hours, or pay 20 Ascension Points for more, pick 1 of 9 cards for a reward",
+      "Rewards currently include gold, Meteors, DragonBalls, and Meteor/DragonBall Scrolls — more reward types are coming"
+    ]
+  },
+  {
     "version": "1.53.0",
     "date": "2026-08-03",
     "changes": [
