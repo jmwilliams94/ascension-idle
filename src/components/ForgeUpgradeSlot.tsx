@@ -1,6 +1,6 @@
 import InventorySlot, { SLOT_LABEL_HEIGHT_CLASS, SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
 import { useDraggableTile } from './dragDropContext'
-import { buildGearTooltip, formatItemDisplayName, formatQualityAndLevel, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
+import { buildGearTooltip, formatItemDisplayName, formatItemLevel, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
 import type { ItemInstance } from '../game/items/useInventoryStore'
 import type { ItemTemplate } from '../game/items/useItemTemplatesStore'
 
@@ -57,7 +57,7 @@ export default function ForgeUpgradeSlot({ item, template, onRemove }: ForgeUpgr
           <p className="text-xs font-medium text-slate-200">
             {template ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level) : 'Unknown item'}
           </p>
-          <p className="text-[10px] text-slate-500">{formatQualityAndLevel(item.quality_tier, item.level)}</p>
+          <p className="text-[10px] text-slate-500">{formatItemLevel(item.level)}</p>
           <button
             type="button"
             onClick={onRemove}

@@ -221,8 +221,8 @@ export function nextQualityTier(qualityTier: string): string | null {
   return QUALITY_ORDER[index + 1]
 }
 
-export function formatQualityAndLevel(qualityTier: string, level: number): string {
-  return `${QUALITY_LABELS[qualityTier] ?? qualityTier} · Lv ${level}`
+export function formatItemLevel(level: number): string {
+  return `Lv ${level}`
 }
 
 // Display-layer only — the stored item_templates.name is never renamed. Normal
@@ -261,7 +261,7 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
       ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level)
       : 'Unknown item',
     titleColor: getQualityColor(item.quality_tier),
-    lines: [formatQualityAndLevel(item.quality_tier, item.level), ...(classLine ? [classLine] : []), ...socketLines],
+    lines: [formatItemLevel(item.level), ...(classLine ? [classLine] : []), ...socketLines],
     stats: template ? formatBaseStats(template.base_stats, item.quality_tier).split(', ').filter(Boolean) : [],
   }
 }

@@ -5,7 +5,7 @@ import {
   buildGearTooltip,
   formatBaseStats,
   formatItemDisplayName,
-  formatQualityAndLevel,
+  formatItemLevel,
   getItemIcon,
   getQualityColor,
   previewSellPrice,
@@ -736,7 +736,7 @@ export default function InventoryPanel({
                   ? formatItemDisplayName(selectedTemplate.name, selectedItem.quality_tier, selectedItem.composition_level)
                   : 'Unknown item'}
               </p>
-              <p className="text-xs text-slate-500">{formatQualityAndLevel(selectedItem.quality_tier, selectedItem.level)}</p>
+              <p className="text-xs text-slate-500">{formatItemLevel(selectedItem.level)}</p>
               {selectedTemplate && (
                 <p className="text-xs text-slate-500">{formatBaseStats(selectedTemplate.base_stats, selectedItem.quality_tier)}</p>
               )}

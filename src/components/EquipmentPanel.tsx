@@ -4,7 +4,7 @@ import {
   buildGearTooltip,
   formatBaseStats,
   formatItemDisplayName,
-  formatQualityAndLevel,
+  formatItemLevel,
   getItemIcon,
   getQualityColor,
 } from '../game/items/equipmentBonus'
@@ -120,7 +120,7 @@ export default function EquipmentPanel() {
               <p className="text-sm font-medium text-slate-200">
                 {formatItemDisplayName(selected.template.name, selected.item.quality_tier, selected.item.composition_level)}
               </p>
-              <p className="text-xs text-slate-500">{formatQualityAndLevel(selected.item.quality_tier, selected.item.level)}</p>
+              <p className="text-xs text-slate-500">{formatItemLevel(selected.item.level)}</p>
               <p className="text-xs text-slate-500">{formatBaseStats(selected.template.base_stats, selected.item.quality_tier)}</p>
             </div>
           </div>

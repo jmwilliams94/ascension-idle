@@ -1,4 +1,4 @@
-import { formatItemDisplayName, formatQualityAndLevel, getQualityColor } from '../game/items/equipmentBonus'
+import { formatItemDisplayName, formatItemLevel, getQualityColor } from '../game/items/equipmentBonus'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { usePotionStore } from '../game/items/usePotionStore'
@@ -80,7 +80,7 @@ export default function InventoryFullModal() {
                   <span className="truncate text-slate-200">
                     {template ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level) : 'Unknown item'}
                   </span>
-                  <span className="shrink-0 text-slate-500">{formatQualityAndLevel(item.quality_tier, item.level)}</span>
+                  <span className="shrink-0 text-slate-500">{formatItemLevel(item.level)}</span>
                 </div>
 
                 <button
