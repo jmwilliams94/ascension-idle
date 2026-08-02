@@ -27,17 +27,28 @@ function formatDuration(ms: number): string {
 // other UI surface for it now, this modal shows itself even when there's no
 // fresh offline gain worth a "Welcome back" summary, as long as unclaimed
 // entries exist (e.g. left over from a previous session) — otherwise they'd
-// never be reachable again. "Got it" dismisses the whole thing for the rest
-// of this page load regardless of what's still unclaimed (a deliberately
-// simple, non-blocking choice — anything left will resurface the same way
-// next time the app loads, rather than this modal staying permanently
-// un-dismissable until every last entry is dealt with).
+// never be reachable again.
+//
+// Bottom button simplified (2026-08-03, per the user's request): the old
+// per-item detail card, checkbox multi-select, and "Claim All" button inside
+// LootHoldingCard are gone (see that file's own note) — this modal's own
+// bottom button now does the claiming. It reads "Claim" (and claims every
+// remaining entry, one at a time so each honors the live Inventory-room
+// check rather than racing it) whenever Loot Holding has anything left,
+// falling back to the plain "Got it" label/behavior when it's already empty.
+// Still a deliberately simple, non-blocking dismiss either way — closes
+// regardless of whether every claim actually succeeded (e.g. Inventory
+// filled up partway through); anything left unclaimed resurfaces the same
+// way next time the app loads, rather than this modal staying permanently
+// un-dismissable until every last entry is dealt with.
 export default function OfflineProgressModal() {
   const result = useOfflineProgressStore((state) => state.result)
   const dismissResult = useOfflineProgressStore((state) => state.dismiss)
   const selectedMonsterId = useZoneStore((state) => state.selectedMonsterId)
   const lootHoldingCount = useLootHoldingStore((state) => state.entries.length)
+  const claim = useLootHoldingStore((state) => state.claim)
   const [closed, setClosed] = useState(false)
+  const [claiming, setClaiming] = useState(false)
 
   if (closed || (!result && lootHoldingCount === 0)) {
     return null
@@ -45,7 +56,15 @@ export default function OfflineProgressModal() {
 
   const type = result && selectedMonsterId ? ENEMY_TYPES[selectedMonsterId] : null
 
-  const handleClose = () => {
+  const handleClose = async () => {
+    if (useLootHoldingStore.getState().entries.length > 0) {
+      setClaiming(true)
+      const ids = useLootHoldingStore.getState().entries.map((entry) => entry.id)
+      for (const id of ids) {
+        await claim(id)
+      }
+      setClaiming(false)
+    }
     dismissResult()
     setClosed(true)
   }
@@ -119,10 +138,11 @@ export default function OfflineProgressModal() {
 
         <button
           type="button"
-          onClick={handleClose}
-          className="w-full rounded-lg border border-sky-500 bg-sky-500/10 py-2 text-sm font-medium text-sky-300 hover:bg-sky-500/20"
+          disabled={claiming}
+          onClick={() => void handleClose()}
+          className="w-full rounded-lg border border-sky-500 bg-sky-500/10 py-2 text-sm font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Got it
+          {claiming ? 'Claiming…' : lootHoldingCount > 0 ? 'Claim' : 'Got it'}
         </button>
       </div>
     </div>

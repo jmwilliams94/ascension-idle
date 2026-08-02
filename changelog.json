@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.52.1",
+    "date": "2026-08-03",
+    "changes": [
+      "Redesigned the Welcome Back screen's Loot Holding list — fixed the item grid getting cut off on narrower screens",
+      "Simplified Loot Holding to just Sell All Normal plus a single Claim button, instead of selecting and claiming items one at a time"
+    ]
+  },
+  {
     "version": "1.52.0",
     "date": "2026-08-03",
     "changes": [
