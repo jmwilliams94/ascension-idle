@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.49.5",
+    "date": "2026-08-02",
+    "changes": [
+      "Added 3 new \"premium\" Item Effects examples — a foil-card light sweep, rising ember particles, and a soft pulsing glow with corner accents — as simpler alternatives to the web/lightning line-art examples"
+    ]
+  },
+  {
     "version": "1.49.4",
     "date": "2026-08-02",
     "changes": [

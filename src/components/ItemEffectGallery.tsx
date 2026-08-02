@@ -1,4 +1,11 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
+
+// EmberLayer's per-particle style sets a CSS custom property (--ember-drift)
+// alongside normal properties — CSSProperties doesn't type arbitrary custom
+// properties, so this extends it rather than reaching for an `any` cast.
+interface EmberStyle extends CSSProperties {
+  '--ember-drift': string
+}
 
 // Exploratory gallery — a "heap of examples" of animated background effects
 // for a gear tile square, requested to compare candidates for the faint
@@ -245,6 +252,67 @@ function CloudLayer({ tones, blend = 'screen' }: { tones: string[]; blend?: 'scr
   )
 }
 
+// --- "Premium" alternatives -------------------------------------------------
+// After several rounds, the procedural web/lightning line-art kept reading as
+// sketchy/hand-drawn rather than polished, no matter the blend/color fixes —
+// and a static screenshot can't show the (real, existing) shimmer animation
+// on the crack examples anyway. These lean on techniques actual loot/gacha
+// game UIs use for their highest-rarity item frames — simpler than a "web,"
+// which is often exactly why they read as premium (restraint over
+// busyness): a periodic foil-card light sweep, and embers rising and fading.
+
+// A diagonal bright band sweeping across the tile every few seconds, like a
+// trading-card foil catching the light — see effect-shimmer-sweep in
+// index.css.
+function ShimmerLayer({ tint }: { tint: string }) {
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      <div className={`absolute inset-0 ${tint}`} />
+      <div
+        className="effect-shimmer absolute -top-1/2 left-0 h-[200%] w-10"
+        style={{
+          background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.55) 45%, rgba(255,255,255,0.9) 50%, rgba(255,255,255,0.55) 55%, transparent 100%)',
+        }}
+      />
+    </div>
+  )
+}
+
+const EMBERS: { left: string; size: number; delay: string; duration: string; drift: string }[] = [
+  { left: '12%', size: 3, delay: '0s', duration: '3.2s', drift: '8px' },
+  { left: '28%', size: 2, delay: '0.6s', duration: '2.8s', drift: '-6px' },
+  { left: '46%', size: 3, delay: '1.1s', duration: '3.6s', drift: '4px' },
+  { left: '58%', size: 2, delay: '0.3s', duration: '3s', drift: '-8px' },
+  { left: '70%', size: 3, delay: '1.6s', duration: '3.4s', drift: '6px' },
+  { left: '84%', size: 2, delay: '0.9s', duration: '2.9s', drift: '-4px' },
+  { left: '38%', size: 2, delay: '2s', duration: '3.1s', drift: '10px' },
+]
+
+// Small glowing particles rising and fading — see effect-ember-rise in
+// index.css. `--ember-drift` is a per-particle CSS custom property the
+// keyframe reads for its horizontal wobble, so one shared animation class
+// still gives each particle its own slightly different path.
+function EmberLayer({ color }: { color: string }) {
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      {EMBERS.map((ember, i) => {
+        // Assigned to a separately-typed variable (not inlined) so the CSS
+        // custom property in EmberStyle doesn't trip an excess-property
+        // check against style=`'s plain CSSProperties expectation.
+        const style: EmberStyle = {
+          left: ember.left,
+          width: `${ember.size}px`,
+          height: `${ember.size}px`,
+          animationDelay: ember.delay,
+          animationDuration: ember.duration,
+          '--ember-drift': ember.drift,
+        }
+        return <span key={i} className={`effect-ember absolute bottom-1 rounded-full ${color}`} style={style} />
+      })}
+    </div>
+  )
+}
+
 function SampleTile({ border, layer }: { border: string; layer: ReactNode }) {
   return (
     <div
@@ -447,17 +515,67 @@ const EFFECTS: EffectExample[] = [
       </>
     ),
   },
+  {
+    title: '11. Foil Shimmer Sweep',
+    description:
+      'A periodic diagonal light sweep across a softly tinted tile — like a trading-card foil catching the light. Simple and clean; reads as premium through restraint rather than dense linework.',
+    border: '#EF4444',
+    layer: <ShimmerLayer tint="bg-gradient-to-br from-red-600/25 via-orange-500/10 to-transparent" />,
+  },
+  {
+    title: '12. Rising Embers',
+    description:
+      'Small glowing particles drifting upward and fading, each on its own path/timing — the classic high-rarity "legendary aura" look from mobile RPGs and gacha games.',
+    border: '#2E5EAA',
+    layer: (
+      <>
+        <div className="absolute inset-0 bg-gradient-to-t from-orange-950/40 to-transparent" />
+        <EmberLayer color="bg-amber-300 shadow-[0_0_5px_1.5px_rgba(251,191,36,0.85)]" />
+      </>
+    ),
+  },
+  {
+    title: '13. Breathing Glow + Corner Accents',
+    description:
+      'One soft pulsing glow at the center plus four faint animated corner flares — minimal, no linework at all. Closer to how many real premium item frames actually look up close.',
+    border: '#A855F7',
+    layer: (
+      <>
+        <div
+          className="effect-blob-1 absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-400/35 blur-xl mix-blend-screen"
+          style={{ animationDuration: '3.5s' }}
+        />
+        <span
+          className="accent-glow absolute left-1.5 top-1.5 h-4 w-0.5 rounded-full bg-purple-200/70"
+          style={{ color: '#e9d5ff', transform: 'rotate(45deg)' }}
+        />
+        <span
+          className="accent-glow absolute right-1.5 top-1.5 h-4 w-0.5 rounded-full bg-purple-200/70"
+          style={{ color: '#e9d5ff', transform: 'rotate(-45deg)', animationDelay: '0.6s' }}
+        />
+        <span
+          className="accent-glow absolute bottom-1.5 left-1.5 h-4 w-0.5 rounded-full bg-purple-200/70"
+          style={{ color: '#e9d5ff', transform: 'rotate(-45deg)', animationDelay: '1.2s' }}
+        />
+        <span
+          className="accent-glow absolute bottom-1.5 right-1.5 h-4 w-0.5 rounded-full bg-purple-200/70"
+          style={{ color: '#e9d5ff', transform: 'rotate(45deg)', animationDelay: '1.8s' }}
+        />
+      </>
+    ),
+  },
 ]
 
 export default function ItemEffectGallery() {
   return (
     <div className="space-y-4">
       <p className="text-xs text-slate-500">
-        Exploratory only — none of these are wired into real Inventory/Equipment/Forge tiles yet. Effects 1-5 are all bright
-        "neon bolt" takes, built from two structurally different base shapes (Radial Strike vs. Mesh Web). Effects 9-10 are a
-        different, closer read of your reference screenshots — a mottled color-cloud texture with a few thin dark cracks over
-        it, not glowing lines at all. Pick a favorite (or ask for a combination) and it can be built into the real gear slots
-        next, likely tinted per quality tier.
+        Exploratory only — none of these are wired into real Inventory/Equipment/Forge tiles yet, and every effect here is
+        actually animated (a static screenshot just can't show it — view it live to judge motion). Effects 1-5 are bright
+        "neon bolt" web/lightning takes; 9-10 are a mottled cloud-texture read of your reference screenshots. Effects 11-13 are
+        a different direction entirely — simpler, restrained techniques (a foil-card light sweep, rising embers, a soft pulsing
+        glow) closer to how real premium loot-game item frames actually look, rather than dense procedural linework. Pick a
+        favorite (or ask for a combination) and it can be built into the real gear slots next, likely tinted per quality tier.
       </p>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">

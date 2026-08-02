@@ -146,3 +146,44 @@ body {
 .effect-blob-3 {
   animation: effect-blob-drift-3 11s ease-in-out infinite;
 }
+
+/* "Premium" alternatives (2026-08-02) — after several rounds of procedural
+   web/lightning attempts still reading as sketchy rather than polished, the
+   user asked to see other directions. These lean on techniques real loot/
+   gacha-game UIs actually use for high-rarity item frames: a periodic foil-
+   card light sweep, and small embers rising and fading — both simpler than
+   a "web," which is itself often why they read as more premium (restraint
+   over busyness). */
+@keyframes effect-shimmer-sweep {
+  0%,
+  15% {
+    transform: translateX(-140%) rotate(20deg);
+  }
+  45%,
+  100% {
+    transform: translateX(240%) rotate(20deg);
+  }
+}
+.effect-shimmer {
+  animation: effect-shimmer-sweep 3.4s ease-in-out infinite;
+}
+
+@keyframes effect-ember-rise {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(-64px) translateX(var(--ember-drift, 6px));
+    opacity: 0;
+  }
+}
+.effect-ember {
+  animation: effect-ember-rise 3.2s ease-in infinite;
+}
