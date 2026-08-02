@@ -9,12 +9,15 @@ import type { CSSProperties, ReactNode } from 'react'
 // Normal deliberately gets no effect at all (per the user's "that one
 // shouldn't have any" — kept as a labeled baseline tile so the escalation
 // from nothing to Ascended's full flurry is visible side by side, not
-// dropped from the gallery entirely). Confirmed with the user: Ascended
-// uses the "vibrant core" glow variant (brighter, breathing radial glow) as
-// its real look, not the plain flat glow every other tier gets. One extra
-// tile at the end (Radiating (Extreme)) is a pure curiosity, not a tier
-// decision — the same center-outward idea pushed to 100 embers reaching the
-// tile's edge, not meant to represent any real tier.
+// dropped from the gallery entirely). Ascended uses the "vibrant core" glow
+// variant (brighter, breathing radial glow) as its confirmed real look.
+//
+// Radiating-from-center overtook rising-from-bottom as the favorite (the
+// user's own "I love that one the most" about Ascended's 100-ember
+// radiating example) — Tempered/Infused/Radiant each now show both their
+// original rising version and a radiating counterpart (5/10/25 embers, the
+// user's own picked counts) so all four tiers can be compared in both
+// styles before radiating fully replaces rising everywhere.
 
 // Tiny deterministic PRNG (mulberry32) so every tile's ember positions/
 // timing are organically varied but stable across renders — no layout
@@ -186,6 +189,22 @@ const EXAMPLES: Example[] = [
     ),
   },
   {
+    // Radiating became the favorite over rising (per the user's "I love
+    // that one the most" about Ascended's 100-ember radiating example) —
+    // these three give the same treatment to the other tiers, at counts the
+    // user picked (5/10/25), so all four tiers can be compared side by side
+    // before deciding whether radiating fully replaces rising.
+    label: 'Tempered (Radiating)',
+    caption: '5 embers, reaching the tile edge',
+    color: '#4FC3F7',
+    layer: (
+      <>
+        <CoreGlow color="#4FC3F7" vivid />
+        <RadiatingEmberLayer embers={buildRadiateEmbers(5, 138)} color="#4FC3F7" />
+      </>
+    ),
+  },
+  {
     label: 'Infused',
     caption: '7 embers',
     color: '#2E5EAA',
@@ -197,6 +216,17 @@ const EXAMPLES: Example[] = [
     ),
   },
   {
+    label: 'Infused (Radiating)',
+    caption: '10 embers, reaching the tile edge',
+    color: '#2E5EAA',
+    layer: (
+      <>
+        <CoreGlow color="#2E5EAA" vivid />
+        <RadiatingEmberLayer embers={buildRadiateEmbers(10, 175)} color="#2E5EAA" />
+      </>
+    ),
+  },
+  {
     label: 'Radiant',
     caption: '10 embers',
     color: '#A855F7',
@@ -204,6 +234,17 @@ const EXAMPLES: Example[] = [
       <>
         <CoreGlow color="#A855F7" />
         <RisingEmberLayer embers={buildRiseEmbers(10, 211)} color="#A855F7" />
+      </>
+    ),
+  },
+  {
+    label: 'Radiant (Radiating)',
+    caption: '25 embers, reaching the tile edge',
+    color: '#A855F7',
+    layer: (
+      <>
+        <CoreGlow color="#A855F7" vivid />
+        <RadiatingEmberLayer embers={buildRadiateEmbers(25, 212)} color="#A855F7" />
       </>
     ),
   },
@@ -221,10 +262,10 @@ const EXAMPLES: Example[] = [
     ),
   },
   {
-    // Pure curiosity, not a tier decision — same radiating-from-center idea,
-    // pushed to an extreme (100 embers, reaching all the way to the tile's
-    // edge instead of stopping partway) just to see what it looks like.
-    label: 'Radiating (Extreme)',
+    // The favorite so far, per the user directly — same radiating-from-
+    // center idea pushed to an extreme (100 embers, reaching all the way to
+    // the tile's edge instead of stopping partway).
+    label: 'Ascended (Radiating)',
     caption: '100 embers, reaching the tile edge',
     color: '#EF4444',
     layer: (
@@ -256,10 +297,11 @@ export default function ItemEffectGallery() {
   return (
     <div className="space-y-4">
       <p className="text-xs text-slate-500">
-        Exploratory only — not wired into any real Inventory/Equipment/Forge tile yet. Rising Embers per quality tier, colored
-        to match (same hex values as the real quality-tier borders elsewhere in the game) and denser at higher tiers. Normal
-        gets no effect at all; Ascended uses the vibrant breathing core glow as its confirmed look. The last tile is just a
-        curiosity, not a tier decision. Every tile is actually animated; a screenshot won't show the motion.
+        Exploratory only — not wired into any real Inventory/Equipment/Forge tile yet. Colored to match each quality tier (same
+        hex values as the real quality-tier borders elsewhere in the game). Normal gets no effect at all. Every other tier shows
+        both a rising version (embers drift up from the bottom) and a radiating version (embers burst outward from the center
+        to the tile's edge) — radiating has become the favorite. Tempered/Infused/Radiant radiate at 5/10/25 embers, Ascended at
+        100. Every tile is actually animated; a screenshot won't show the motion.
       </p>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">

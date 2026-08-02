@@ -1,16 +1,16 @@
 [
   {
+    "version": "1.49.14",
+    "date": "2026-08-02",
+    "changes": [
+      "Radiating-from-center is now the favorite Item Effects look — added radiating versions of Tempered (5 embers), Infused (10), and Radiant (25) alongside their original rising versions for comparison"
+    ]
+  },
+  {
     "version": "1.49.13",
     "date": "2026-08-02",
     "changes": [
       "Fixed equipped gear staying visible in the Inventory grid until clicking a different item — it now disappears from Inventory the instant it's equipped"
-    ]
-  },
-  {
-    "version": "1.49.12",
-    "date": "2026-08-02",
-    "changes": [
-      "Radiating-from-center is now the favorite Item Effects look — added radiating versions of Tempered (5 embers), Infused (10), and Radiant (25) alongside their original rising versions for comparison"
     ]
   },
   {
