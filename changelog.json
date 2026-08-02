@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.49.8",
+    "date": "2026-08-02",
+    "changes": [
+      "Fixed the rising embers appearing stuck in a line at the bottom instead of visibly rising — a timing curve bug meant they barely moved until right before fading out",
+      "Fixed the radiating embers popping out of existence instead of fading",
+      "Removed the solid center dot from the vibrant Ascended core glow, leaving just the bigger/brighter glow"
+    ]
+  },
+  {
     "version": "1.49.7",
     "date": "2026-08-02",
     "changes": [

@@ -91,8 +91,16 @@ body {
     opacity: 0;
   }
 }
+/* Bug fix (2026-08-02): only two transform keyframes (0%/100%) means the
+   *whole* rise is interpolated under one timing function — `ease-in` is a
+   slow-start curve, so for most of the cycle (while opacity is still >0,
+   i.e. visible) the ember barely moves and just sits near the bottom; it
+   only actually shoots upward right at the very end, by which point it's
+   already fading out. That's exactly the "all the embers in a line at the
+   bottom" report. `linear` moves it steadily across the whole visible
+   window instead. */
 .effect-ember {
-  animation: effect-ember-rise 3.2s ease-in infinite;
+  animation: effect-ember-rise 3.2s linear infinite;
 }
 
 /* Variant (2026-08-02): embers launching from the tile's center out toward
@@ -108,6 +116,13 @@ body {
   }
   20% {
     opacity: 1;
+  }
+  /* Bug fix: no opacity keyframe between 20% and 100% meant it stayed fully
+     visible right up to the loop point, then popped out instantly instead
+     of fading — same "only two keyframes for a property that needs a
+     mid-point" class of bug as effect-ember-rise above. */
+  75% {
+    opacity: 0.8;
   }
   100% {
     transform: translate(-50%, -50%) translate(var(--ember-dx, 0), var(--ember-dy, 0)) scale(0.5);

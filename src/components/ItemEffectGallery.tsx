@@ -137,23 +137,19 @@ function RadiatingEmberLayer({ embers, color }: { embers: RadiateEmberConfig[]; 
 // The faint static tint every effect tile gets (tied to the tier's own
 // color, matching how equipped gear's own border already tints per quality
 // tier elsewhere in the game). `vivid` swaps it for a brighter, breathing
-// version plus a small pulsing core dot, for the "more extravagant" ask.
+// version, for the "more extravagant" ask — no solid center dot (removed
+// per feedback that it read as an odd flat circle rather than part of the
+// glow), just a bigger, brighter, breathing radial gradient.
 function CoreGlow({ color, vivid = false }: { color: string; vivid?: boolean }) {
   if (!vivid) {
     return <div className="absolute inset-0" style={{ background: `radial-gradient(circle, ${color}22, transparent 70%)` }} />
   }
 
   return (
-    <>
-      <div
-        className="effect-core-pulse absolute inset-0"
-        style={{ background: `radial-gradient(circle, ${color}70 0%, ${color}30 32%, transparent 68%)` }}
-      />
-      <span
-        className="effect-core-pulse absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full"
-        style={{ backgroundColor: color, boxShadow: `0 0 14px 4px ${color}` }}
-      />
-    </>
+    <div
+      className="effect-core-pulse absolute inset-0"
+      style={{ background: `radial-gradient(circle, ${color}80 0%, ${color}38 40%, transparent 75%)` }}
+    />
   )
 }
 
