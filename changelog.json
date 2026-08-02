@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.45.1",
+    "date": "2026-08-02",
+    "changes": [
+      "Bows and Rings now grant a small Dodge bonus, matching a stat they were missing compared to the reference data — this one actually affects combat"
+    ]
+  },
+  {
     "version": "1.45.0",
     "date": "2026-08-02",
     "changes": [
