@@ -8,7 +8,7 @@ import { DragDropProvider } from './dragDrop'
 import InventoryPanel from './InventoryPanel'
 import InventorySlot, { SLOT_LABEL_HEIGHT_CLASS, SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
-import { formatItemDisplayName, formatQualityAndLevel, getItemIcon, getQualityColor, nextQualityTier } from '../game/items/equipmentBonus'
+import { buildGearTooltip, formatItemDisplayName, getItemIcon, getQualityColor, nextQualityTier } from '../game/items/equipmentBonus'
 import {
   type CompositionSimulation,
   compositionPointValue,
@@ -24,7 +24,7 @@ import {
 } from '../game/items/forgeCosts'
 import { useForgeStore } from '../game/items/useForgeStore'
 import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
-import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
+import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemTemplatesStore'
 
 // How long a result banner (success/failure) stays up before the Upgrade Slot
 // resets itself for the next item, per the spec's "return to empty" behavior.
@@ -145,30 +145,21 @@ function CompositionLoadBar({
   )
 }
 
-interface PreviewData {
-  name: string
-  qualityAndLevel: string
-  color: string
-}
-
 // The third square in the Upgrade/Material/Preview row — same fixed tile size
-// as the other two (see SLOT_SIZE_CLASS), just showing a glimpse of the
-// result rather than being draggable. The actual name/cost/Confirm button
-// live in the details area below the row (see ForgePanel), so this stays a
-// plain icon tile, matching Upgrade/Material's own square footprint.
+// as the other two (see SLOT_SIZE_CLASS). Shows the *actual* would-be item
+// (previewItem/previewTemplate — see ForgePanel, built by spreading the real
+// selected item so sockets/composition/etc. all carry over unchanged) with a
+// working hover tooltip (buildGearTooltip, the same universal tooltip every
+// other gear tile in the game uses) — per the user's request that hovering
+// the preview show exactly what the upgraded item would look like, not just
+// a name/color guess.
 function PreviewSquare({
-  selectedItem,
-  selectedTemplate,
-  materialMode,
-  previewData,
+  previewItem,
+  previewTemplate,
 }: {
-  selectedItem: ItemInstance | null
-  selectedTemplate: { slot_type: string } | null
-  materialMode: MaterialMode | null
-  previewData: PreviewData | null
+  previewItem: ItemInstance | null
+  previewTemplate: ItemTemplate | null
 }) {
-  const filled = Boolean(selectedItem && materialMode && (materialMode === 'composition' || previewData))
-
   return (
     <div className={`flex flex-col items-center gap-2 ${SLOT_WIDTH_CLASS}`}>
       <div className={`flex ${SLOT_LABEL_HEIGHT_CLASS} items-center justify-center`}>
@@ -176,14 +167,19 @@ function PreviewSquare({
       </div>
 
       <div className={SLOT_SIZE_CLASS}>
-        {filled && selectedItem ? (
+        {previewItem ? (
           <InventorySlot
             slotId="forge-preview"
             filled
             sizeClassName={SLOT_SIZE_CLASS}
-            icon={getItemIcon(selectedTemplate?.slot_type)}
-            qualityColor={materialMode === 'composition' ? getQualityColor(selectedItem.quality_tier) : previewData?.color}
-            label={materialMode === 'composition' ? 'Composition preview' : previewData?.name}
+            icon={getItemIcon(previewTemplate?.slot_type)}
+            qualityColor={getQualityColor(previewItem.quality_tier)}
+            label={
+              previewTemplate
+                ? formatItemDisplayName(previewTemplate.name, previewItem.quality_tier, previewItem.composition_level)
+                : undefined
+            }
+            tooltip={buildGearTooltip(previewItem, previewTemplate ?? undefined)}
           />
         ) : (
           <InventorySlot slotId="forge-preview-empty" filled={false} sizeClassName={SLOT_SIZE_CLASS} />
@@ -381,32 +377,39 @@ export default function ForgePanel() {
         ? `Need ${levelCost} Meteor${levelCost === 1 ? '' : 's'} (have ${meteors}).`
         : null
 
-  const previewData = (() => {
-    if (!selectedItem || !selectedTemplate || (materialMode !== 'quality' && materialMode !== 'level')) {
+  // The actual would-be item after the staged Material is applied — same
+  // sockets/composition/etc. as the real item (spread, not rebuilt), just
+  // whichever field the pending upgrade would change. Feeds the Preview
+  // square's real tooltip (via buildGearTooltip) so hovering it shows exactly
+  // what confirming would produce — not just a name/color guess — per the
+  // user's request that the preview reflect the item's full actual state
+  // (sockets included), not a simplified stand-in.
+  const previewItem: ItemInstance | null = (() => {
+    if (!selectedItem) {
       return null
     }
 
     if (materialMode === 'quality') {
       const next = nextQualityTier(selectedItem.quality_tier)
-      if (!next) {
-        return null
-      }
+      return next ? { ...selectedItem, quality_tier: next } : null
+    }
+
+    if (materialMode === 'level') {
+      return nextLevelTemplate ? { ...selectedItem, template_id: nextLevelTemplate.id, level: nextLevelTemplate.required_level } : null
+    }
+
+    if (materialMode === 'composition') {
       return {
-        name: formatItemDisplayName(selectedTemplate.name, next, selectedItem.composition_level),
-        qualityAndLevel: formatQualityAndLevel(next, selectedItem.level),
-        color: getQualityColor(next),
+        ...selectedItem,
+        composition_level: compositionPreview?.level ?? selectedItem.composition_level,
+        composition_points: compositionPreview?.points ?? selectedItem.composition_points,
       }
     }
 
-    if (!nextLevelTemplate) {
-      return null
-    }
-    return {
-      name: formatItemDisplayName(nextLevelTemplate.name, selectedItem.quality_tier, selectedItem.composition_level),
-      qualityAndLevel: formatQualityAndLevel(selectedItem.quality_tier, nextLevelTemplate.required_level),
-      color: getQualityColor(selectedItem.quality_tier),
-    }
+    return null
   })()
+
+  const previewTemplate = materialMode === 'level' ? nextLevelTemplate : selectedTemplate
 
   const handleConfirm = async () => {
     if (!selectedItem || (materialMode !== 'quality' && materialMode !== 'level')) {
@@ -470,12 +473,7 @@ export default function ForgePanel() {
               )}
             </div>
 
-            <PreviewSquare
-              selectedItem={selectedItem}
-              selectedTemplate={selectedTemplate}
-              materialMode={materialMode}
-              previewData={previewData}
-            />
+            <PreviewSquare previewItem={previewItem} previewTemplate={previewTemplate} />
           </div>
 
           <div className="w-full max-w-xs space-y-2">
@@ -507,19 +505,26 @@ export default function ForgePanel() {
                   </div>
                 )}
 
-                {previewData ? (
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3 text-center">
-                    <p className="text-[10px] uppercase tracking-wide text-slate-600">After upgrade</p>
-                    <p className="mt-1 text-xs font-medium text-slate-200">{previewData.name}</p>
-                    <p className="text-[10px] text-slate-500">{previewData.qualityAndLevel}</p>
-
+                {previewItem ? (
+                  // Deliberately no name/quality/level repeated here — the
+                  // Preview square's own tooltip (hover it) already shows the
+                  // full would-be item, so this is just a plain yes/no.
+                  <div className="flex justify-center gap-2">
                     <button
                       type="button"
                       disabled={busy}
                       onClick={() => void handleConfirm()}
-                      className="mt-3 w-full rounded-lg border border-emerald-600 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-lg border border-emerald-600 bg-emerald-500/10 px-4 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {busy ? 'Working…' : 'Confirm Upgrade'}
+                      {busy ? 'Working…' : 'Confirm'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => setMaterialEntries([])}
+                      className="rounded-lg border border-slate-700 px-4 py-1.5 text-xs font-medium text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Cancel
                     </button>
                   </div>
                 ) : (

@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.48.4",
+    "date": "2026-08-02",
+    "changes": [
+      "The Forge's Preview square now has a working hover tooltip showing the exact upgraded item — quality, level, sockets, and all — instead of just a name and color",
+      "Simplified the Confirm step to a plain Confirm/Cancel choice instead of repeating the item's name and level"
+    ]
+  },
+  {
     "version": "1.48.3",
     "date": "2026-08-02",
     "changes": [
