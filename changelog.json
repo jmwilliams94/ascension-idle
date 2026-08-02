@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.49.4",
+    "date": "2026-08-02",
+    "changes": [
+      "Fixed the Item Effects gallery's new Ember Cloud examples rendering almost solid black — the dark crack color and multiply blend mode both only work against a light background, not our near-black tiles"
+    ]
+  },
+  {
     "version": "1.49.3",
     "date": "2026-08-02",
     "changes": [

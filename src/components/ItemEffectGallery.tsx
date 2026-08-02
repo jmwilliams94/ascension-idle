@@ -180,26 +180,32 @@ const BRANCH_BOLTS: Bolt[] = [
   { d: lightningPath(MESH_NODES.b, { x: 40, y: 2 }, 703, 2, 6), width: 0.45 },
 ]
 
-// CRACK_BOLTS: the same jagged fractal generator, but styled as dark
-// fissures instead of bright neon — sparse (2-3 lines), no glow filter, low
-// opacity, a near-black stroke. Matches the reference screenshots' actual
-// look much better than the earlier bright "electric" bolts did: those
-// close-up reference tiles don't show glowing lines at all, they show a
-// mottled colored cloud texture with a few thin dark cracks over it.
+// CRACK_BOLTS: the same jagged fractal generator, but sparse (2-3 lines)
+// with no glow filter and a slow shimmer instead of a fast strobe.
+//
+// Bug fix: the first version of this stroked the cracks near-black,
+// reasoning "dark fissures, not neon" from how the reference screenshots
+// read on their own *medium-toned* background. Our actual tile background
+// is near-black (bg-slate-900, matching the real game's own dark tiles) —
+// a near-black line on a near-black tile is simply invisible, which is
+// exactly what happened (confirmed by the user's screenshot: both examples
+// rendered as solid black squares). Against a dark canvas, a "crack" has to
+// be a thin catch of *light*, not a dark subtractive line — same fix
+// direction as CloudLayer's blend mode below.
 const CRACK_BOLTS: Bolt[] = [
   { d: lightningPath({ x: 8, y: 8 }, { x: 68, y: 62 }, 801, 3, 8), width: 0.6 },
   { d: lightningPath({ x: 55, y: 4 }, { x: 28, y: 92 }, 802, 3, 8), width: 0.5 },
   { d: lightningPath({ x: 92, y: 22 }, { x: 38, y: 78 }, 803, 2, 7), width: 0.45 },
 ]
 
-function CrackLayer({ opacity = 0.6 }: { opacity?: number }) {
+function CrackLayer({ opacity = 0.75 }: { opacity?: number }) {
   return (
-    <g stroke="#170f0a" strokeWidth={1} fill="none" strokeLinecap="round" opacity={opacity}>
+    <g stroke="#fde4c0" strokeWidth={1} fill="none" strokeLinecap="round" opacity={opacity}>
       {CRACK_BOLTS.map((bolt, i) => (
         <path key={i} d={bolt.d} strokeWidth={bolt.width}>
           {/* A slow, subtle shimmer — real stone/glass cracks don't strobe
               like electricity, they just catch the light unevenly. */}
-          <animate attributeName="opacity" values="0.45;0.8;0.5;0.7;0.45" dur={`${5 + i}s`} begin={`${i * 0.7}s`} repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.35;0.85;0.45;0.7;0.35" dur={`${5 + i}s`} begin={`${i * 0.7}s`} repeatCount="indefinite" />
         </path>
       ))}
     </g>
@@ -207,11 +213,19 @@ function CrackLayer({ opacity = 0.6 }: { opacity?: number }) {
 }
 
 // A mottled, blobby color-cloud texture — several small blurred blobs in
-// muted tones layered together (normal/multiply blend, not screen, so it
-// reads as a painted texture rather than a glow) — this is the actual base
-// layer visible in the reference screenshots, not a plain dark background.
-function CloudLayer({ tones, blend = 'normal' }: { tones: string[]; blend?: 'normal' | 'multiply' }) {
-  const blendClass = blend === 'multiply' ? 'mix-blend-multiply' : ''
+// muted tones layered together.
+//
+// Bug fix: the first version used mix-blend-multiply, reasoning it'd read as
+// a "painted texture" rather than a glow — but multiply only lightens/mutes
+// correctly against a *light* canvas (it's the "combine two photo negatives"
+// blend). Against our near-black tile background, multiplying any color
+// against near-black crushes the result straight back to near-black,
+// exactly what the user's screenshot showed (both examples nearly solid
+// black). `screen` is the dark-canvas equivalent — it lightens instead of
+// darkening — which is what every other blob-based example in this gallery
+// (Aurora Depth Blobs) already correctly used.
+function CloudLayer({ tones, blend = 'screen' }: { tones: string[]; blend?: 'screen' | 'normal' }) {
+  const blendClass = blend === 'screen' ? 'mix-blend-screen' : ''
   return (
     <div className="absolute inset-0 overflow-hidden">
       <div className={`effect-blob-1 absolute left-[8%] top-[12%] h-16 w-16 rounded-full ${tones[0]} blur-lg ${blendClass}`} />
@@ -409,7 +423,7 @@ const EFFECTS: EffectExample[] = [
     border: '#EF4444',
     layer: (
       <>
-        <CloudLayer tones={['bg-orange-700/45', 'bg-red-800/40', 'bg-amber-700/35', 'bg-red-900/45']} blend="multiply" />
+        <CloudLayer tones={['bg-orange-600/60', 'bg-red-600/55', 'bg-amber-500/50', 'bg-orange-800/55']} />
         <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
           <CrackLayer />
         </svg>
@@ -424,9 +438,9 @@ const EFFECTS: EffectExample[] = [
     layer: (
       <>
         <div className="absolute inset-0 opacity-50">
-          <CloudLayer tones={['bg-slate-500/40', 'bg-blue-900/40', 'bg-slate-600/35', 'bg-blue-950/40']} blend="multiply" />
+          <CloudLayer tones={['bg-sky-700/50', 'bg-blue-600/45', 'bg-slate-400/35', 'bg-indigo-700/45']} />
         </div>
-        <CloudLayer tones={['bg-orange-700/40', 'bg-red-800/35', 'bg-amber-600/30', 'bg-red-900/40']} blend="multiply" />
+        <CloudLayer tones={['bg-orange-600/55', 'bg-red-600/50', 'bg-amber-500/45', 'bg-orange-800/50']} />
         <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full">
           <CrackLayer />
         </svg>
