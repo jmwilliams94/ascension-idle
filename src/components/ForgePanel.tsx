@@ -6,7 +6,7 @@ import ForgeSocketsPanel from './ForgeSocketsPanel'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import { DragDropProvider } from './dragDrop'
 import InventoryPanel from './InventoryPanel'
-import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
+import InventorySlot, { SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { formatItemDisplayName, formatQualityAndLevel, getItemIcon, getQualityColor, nextQualityTier } from '../game/items/equipmentBonus'
 import {
@@ -170,8 +170,8 @@ function PreviewSquare({
   const filled = Boolean(selectedItem && materialMode && (materialMode === 'composition' || previewData))
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      <p className="text-xs uppercase tracking-wide text-slate-500">Preview</p>
+    <div className={`flex flex-col items-center gap-2 ${SLOT_WIDTH_CLASS}`}>
+      <p className="text-center text-[10px] uppercase leading-tight tracking-wide text-slate-500">Preview</p>
 
       <div className={SLOT_SIZE_CLASS}>
         {filled && selectedItem ? (

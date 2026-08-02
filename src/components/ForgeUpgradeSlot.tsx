@@ -1,4 +1,4 @@
-import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
+import InventorySlot, { SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
 import { useDraggableTile } from './dragDropContext'
 import { buildGearTooltip, formatItemDisplayName, formatQualityAndLevel, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
 import type { ItemInstance } from '../game/items/useInventoryStore'
@@ -28,8 +28,8 @@ export default function ForgeUpgradeSlot({ item, template, onRemove }: ForgeUpgr
   })
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      <p className="text-xs uppercase tracking-wide text-slate-500">Upgrade Slot</p>
+    <div className={`flex flex-col items-center gap-2 ${SLOT_WIDTH_CLASS}`}>
+      <p className="text-center text-[10px] uppercase leading-tight tracking-wide text-slate-500">Upgrade Slot</p>
 
       <div data-drop-zone="upgrade" className={`${SLOT_SIZE_CLASS} shrink-0`}>
         <InventorySlot

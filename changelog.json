@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.48.2",
+    "date": "2026-08-02",
+    "changes": [
+      "Fixed uneven spacing between the Forge's Upgrade/Material/Preview squares so the row is properly centered — a wide label was silently pushing one square further from the others"
+    ]
+  },
+  {
     "version": "1.48.1",
     "date": "2026-08-02",
     "changes": [

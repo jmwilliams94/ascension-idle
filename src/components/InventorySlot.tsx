@@ -12,6 +12,17 @@ import type { ItemTooltipData } from '../game/items/itemTooltip'
 // every InventoryPanel/Forge/Warehouse usage at once since they all share it.
 export const SLOT_SIZE_CLASS = 'h-14 w-14 lg:h-16 lg:w-16'
 
+// Width-only companion to SLOT_SIZE_CLASS — for a label-above-square column
+// (ForgeUpgradeSlot/ForgeMaterialSlot/ForgePanel's PreviewSquare) that needs
+// to stay exactly tile-width even when its own label text ("UPGRADE SLOT")
+// is wider than the tile. Without this, a `flex flex-col items-center`
+// column sizes itself to its widest child (the label), so a wide label
+// silently pushes the whole column wider than its neighbors — throwing off
+// both the visual gap between adjacent squares and the true center of the
+// row they sit in. Constraining the column to this width forces the label to
+// wrap instead.
+export const SLOT_WIDTH_CLASS = 'w-14 lg:w-16'
+
 interface InventorySlotProps {
   // Stable id for this cell (an item's/arrow stack's id for filled slots, a
   // synthetic key for empty ones) — kept as an explicit prop/data attribute, not
