@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.50.0",
+    "date": "2026-08-02",
+    "changes": [
+      "Tempered/Infused/Radiant/Ascended gear now glows with a radiating ember effect wherever it's shown — Inventory, Forge, Equipment, Bank, and rewards — denser and brighter at higher quality",
+      "Meteors, Composition Stones, and DragonBalls now get the same glowing effect too"
+    ]
+  },
+  {
     "version": "1.49.15",
     "date": "2026-08-02",
     "changes": [

@@ -69,57 +69,19 @@ body {
   animation: forge-success-flash 900ms ease-out;
 }
 
-/* Item Effects gallery (Settings tab, see ItemEffectGallery.tsx) — a
-   per-quality-tier preview of the Rising Embers effect (several earlier
-   directions — web/lightning line-art, ember clouds, a foil sweep, a
-   pulsing glow — were tried and dropped; see git history if worth
-   revisiting). Kept here rather than inline styles since @keyframes/
-   animation shorthand isn't expressible via Tailwind utilities alone. */
-@keyframes effect-ember-rise {
-  0% {
-    transform: translateY(0) translateX(0);
-    opacity: 0;
-  }
-  12% {
-    opacity: 1;
-  }
-  80% {
-    opacity: 0.5;
-  }
-  100% {
-    transform: translateY(-64px) translateX(var(--ember-drift, 6px));
-    opacity: 0;
-  }
-}
-/* Bug fix (2026-08-02): only two transform keyframes (0%/100%) means the
-   *whole* rise is interpolated under one timing function — `ease-in` is a
-   slow-start curve, so for most of the cycle (while opacity is still >0,
-   i.e. visible) the ember barely moves and just sits near the bottom; it
-   only actually shoots upward right at the very end, by which point it's
-   already fading out. That's exactly the "all the embers in a line at the
-   bottom" report. `linear` moves it steadily across the whole visible
-   window instead. */
-/* Bug fix (2026-08-02): each ember has a random animation-delay (staggered
-   starts, so they don't all move in lockstep) — but by default, CSS does
-   NOT apply the keyframes' 0% styles during that delay window, it renders
-   the element's plain undecorated state instead. These spans have no base
-   opacity/transform of their own, so "undecorated" means fully opaque and
-   untransformed — sitting solid at the bottom until its delay elapses. Since
-   this gallery remounts fresh every time the Settings tab is opened (it's
-   not kept alive in the background), that's a real, repeatable "several
-   embers just sitting there, not animating yet" moment, not a one-off.
-   `backwards` fill-mode makes the delay window use the 0% keyframe's
-   styles (invisible) instead, closing the gap. */
-.effect-ember {
-  animation: effect-ember-rise 3.2s linear infinite backwards;
-}
-
-/* Variant (2026-08-02): embers launching from the tile's center out toward
-   the edge, rather than rising from the bottom — --ember-dx/--ember-dy are
-   the per-particle target offset (a random angle/radius computed once in
-   JS), composed with the element's own centering translate(-50%,-50%) in
-   the same transform value (multiple translate() calls in one `transform`
-   compose additively). */
+/* Item tier effect (tierEffects.tsx) — confirmed 2026-08-02, live on every
+   real gear/material tile in the game via InventorySlot, and previewed in
+   Settings' Item Effects tab using the exact same component. Kept here
+   rather than inline styles since @keyframes/animation shorthand isn't
+   expressible via Tailwind utilities alone.
+   An earlier "rising from the bottom" variant (embers drifting up and
+   fading near the top) was tried and dropped once radiating-from-center
+   became the clear favorite — see git history if worth revisiting.
+   Embers launching from the tile's center out toward the edge —
+   --ember-dx/--ember-dy are the per-particle target offset (a random
+   angle/radius computed once in JS), composed with the element's own
+   centering translate(-50%,-50%) in the same transform value (multiple
+   translate() calls in one `transform` compose additively). */
 @keyframes effect-ember-radiate {
   0% {
     transform: translate(-50%, -50%) translate(0, 0) scale(0.5);
@@ -144,8 +106,8 @@ body {
   animation: effect-ember-radiate 2.2s ease-out infinite backwards;
 }
 
-/* A brighter, breathing core glow for a more "extravagant" tier preview —
-   distinct from the plain static ambient tint every tier already gets. */
+/* A brighter, breathing core glow behind the radiating embers above — part
+   of the same confirmed tier effect (tierEffects.tsx). */
 @keyframes effect-core-pulse {
   0%,
   100% {

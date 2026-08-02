@@ -2,6 +2,8 @@ import type { DragEvent, PointerEvent } from 'react'
 import HoverTooltip from './HoverTooltip'
 import ItemTooltip from './ItemTooltip'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
+import { TierEmberEffect } from '../game/items/tierEffects'
+import { emberCountForColor, seedFromId } from '../game/items/tierEffectsData'
 
 // Shared standard tile size — the main Inventory grid, Forge's Upgrade Slot, and
 // Forge's Fuel slots all use this so every tile in the game reads as the same
@@ -131,6 +133,15 @@ export default function InventorySlot({
     )
   }
 
+  // Confirmed 2026-08-02 (see tierEffects.tsx) — a radiating-ember burst
+  // behind any tile whose qualityColor is a "rare" one (gear above Normal
+  // quality, or the established rare-material colors). emberCountForColor
+  // returns 0 for anything else (Normal, potions, no color at all), and
+  // TierEmberEffect itself renders nothing at count 0, so this is safe to
+  // compute/render unconditionally rather than needing its own extra guard
+  // at every call site.
+  const emberCount = emberCountForColor(qualityColor)
+
   const button = (
     <button
       type="button"
@@ -153,13 +164,14 @@ export default function InventorySlot({
       onPointerCancel={onPointerCancel}
       title={tooltip ? undefined : label}
       aria-label={label}
-      className={`relative flex items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg ${sizingClassName} ${
+      className={`relative flex items-center justify-center overflow-hidden rounded-lg border-2 border-slate-700 bg-slate-800 text-lg ${sizingClassName} ${
         selected ? 'ring-2 ring-sky-400' : ''
       } ${draggable ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${dragging ? 'opacity-40' : ''}`}
       style={{ borderColor: qualityColor, backgroundColor: qualityColor ? `${qualityColor}22` : undefined }}
     >
-      {iconSrc ? <img src={iconSrc} alt="" className="h-3/5 w-3/5 object-contain" /> : icon}
-      {badge && <span className="absolute bottom-0.5 right-1 text-[9px] font-semibold text-slate-200">{badge}</span>}
+      {emberCount > 0 && <TierEmberEffect color={qualityColor as string} count={emberCount} seed={seedFromId(slotId)} />}
+      {iconSrc ? <img src={iconSrc} alt="" className="relative z-10 h-3/5 w-3/5 object-contain" /> : <span className="relative z-10">{icon}</span>}
+      {badge && <span className="absolute bottom-0.5 right-1 z-10 text-[9px] font-semibold text-slate-200">{badge}</span>}
     </button>
   )
 
