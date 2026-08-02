@@ -258,11 +258,10 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     // Outgoing hit-chance roll (2026-08-02, confirmed design) — the reverse of
     // the incoming dodge check below: monsters now have a real Dodge stat
     // (see combatResolver.ts's monsterDodge), so the player's own attacks can
-    // miss too. Reuses derived.dodge as the player's own accuracy input — the
-    // same Agility/gear pool that already governs incoming dodge — so gear
-    // that boosts dodge now also makes attacks land more often, not just
-    // survive better.
-    if (!rollAttackLands(derived.dodge, monsterDodge(type))) {
+    // miss too. Uses derived.dexterity — a separate stat from derived.dodge
+    // (Boots' own evasion stat vs. Bows'/Rings' own accuracy stat, both fed
+    // by the same Agility attribute but boosted independently by gear).
+    if (!rollAttackLands(derived.dexterity, monsterDodge(type))) {
       set((s) => ({
         lastAttackAt: nowMs,
         log: appendLog(s.log, { kind: 'miss', message: `Your attack misses ${type.displayName}!` }),

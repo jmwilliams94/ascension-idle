@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.47.1",
+    "date": "2026-08-02",
+    "changes": [
+      "Dodge (Boots) and Dexterity (Bows/Rings) are now separate stats instead of one shared number, each behaving differently in combat"
+    ]
+  },
+  {
     "version": "1.47.0",
     "date": "2026-08-02",
     "changes": [

@@ -107,11 +107,18 @@ export default function StatsPanel() {
                 <dd>{derived.magicDefense}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-slate-400">Dexterity</dt>
+                <dt className="text-slate-400">Dodge</dt>
                 <dd>{derived.dodge}</dd>
               </div>
+              <div className="flex justify-between">
+                <dt className="text-slate-400">Dexterity</dt>
+                <dd>{derived.dexterity}</dd>
+              </div>
             </dl>
-            <p className="mt-2 text-[11px] text-slate-500">Dexterity both helps you dodge attacks and makes your own attacks land more often.</p>
+            <p className="mt-2 text-[11px] text-slate-500">
+              Dodge helps you avoid attacks (Boots); Dexterity helps your own attacks land (Bows/Rings). Both also scale with
+              Agility.
+            </p>
           </div>
         </div>
       )}

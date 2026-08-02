@@ -33,10 +33,19 @@ export interface DerivedStats {
   // sockets/enchant/dodge before their own mechanics landed.
   magicDefense: number
   // Chance to fully avoid an incoming monster attack (see combatResolver.ts's
-  // rollIsHit) — confirmed design direction (Agility governs dodge), newly
-  // wired up alongside boots' own dodge stat. PLACEHOLDER weighting, like
-  // everything else in this game's combat math.
+  // rollIsHit) — confirmed design direction (Agility governs dodge). Gear-side,
+  // this is Boots-only (2026-08-02, split back apart from Dexterity below at
+  // the user's request — Boots keep their own distinct evasion stat rather
+  // than sharing one pooled number with Bows/Rings). PLACEHOLDER weighting,
+  // like everything else in this game's combat math.
   dodge: number
+  // Chance the player's own attack actually lands against monster Dodge (see
+  // combatResolver.ts's rollAttackLands) — a separate stat from `dodge`
+  // above, not a relabeling of it (confirmed with the user, 2026-08-02):
+  // Dodge is Boots' own evasion stat, Dexterity is Bows'/Rings' own accuracy
+  // stat, both still fed by the same Agility attribute but gear-boosted
+  // independently by different slot types. PLACEHOLDER weighting.
+  dexterity: number
 }
 
 // Flat stat bonuses from the currently equipped item(s) — stacks on top of the
@@ -47,6 +56,7 @@ export interface EquipmentBonus {
   physicalDefense?: number
   magicDefense?: number
   dodge?: number
+  dexterity?: number
 }
 
 export function computeDerivedStats(attributes: Attributes, equipmentBonus: EquipmentBonus = {}): DerivedStats {
@@ -58,10 +68,14 @@ export function computeDerivedStats(attributes: Attributes, equipmentBonus: Equi
   const magicAttack = spirit * MAGIC_ATTACK_PER_SPIRIT + (equipmentBonus.magicAttack ?? 0)
   const physicalDefense = equipmentBonus.physicalDefense ?? 0
   const magicDefense = equipmentBonus.magicDefense ?? 0
-  // PLACEHOLDER: 1 dodge per Agility point, plus boots' own dodge stat — the
+  // PLACEHOLDER: 1 dodge per Agility point, plus Boots' own dodge stat — the
   // first time Agility actually feeds into anything, per the confirmed
   // "Agility governs accuracy/dodge" design that had nothing wired to it yet.
   const dodge = agility * 1 + (equipmentBonus.dodge ?? 0)
+  // PLACEHOLDER: same 1-per-Agility-point rate as dodge above (Agility governs
+  // both, per the confirmed design), plus Bows'/Rings' own dexterity stat —
+  // a separate gear-side pool from dodge's Boots-only one.
+  const dexterity = agility * 1 + (equipmentBonus.dexterity ?? 0)
 
   return {
     hp,
@@ -72,5 +86,6 @@ export function computeDerivedStats(attributes: Attributes, equipmentBonus: Equi
     physicalDefense,
     magicDefense,
     dodge,
+    dexterity,
   }
 }

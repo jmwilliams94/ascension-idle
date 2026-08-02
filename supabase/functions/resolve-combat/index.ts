@@ -134,17 +134,18 @@ const BASE_ATTACK_SPEED = 1.0
 
 function computeDerivedStats(
   attributes: Attributes,
-  equipmentBonus: { physicalAttack?: number; magicAttack?: number; dodge?: number },
+  equipmentBonus: { physicalAttack?: number; magicAttack?: number; dexterity?: number },
 ) {
   const hp = BASE_HP + attributes.vitality * 24 + attributes.strength * 3 + attributes.agility * 3 + attributes.spirit * 3
   const physicalAttack = attributes.strength * PHYSICAL_ATTACK_PER_STRENGTH + (equipmentBonus.physicalAttack ?? 0)
   const magicAttack = attributes.spirit * MAGIC_ATTACK_PER_SPIRIT + (equipmentBonus.magicAttack ?? 0)
-  // Mirrors derivedStats.ts — 1 dodge per Agility point plus gear's own dodge
-  // stat. Used here for outgoing hit chance only (see rollAttackLands) — see
-  // the equipmentBonus comment above for why incoming mitigation still isn't
-  // simulated server-side.
-  const dodge = attributes.agility * 1 + (equipmentBonus.dodge ?? 0)
-  return { hp, physicalAttack, magicAttack, attackSpeed: BASE_ATTACK_SPEED, dodge }
+  // Mirrors derivedStats.ts — 1 dexterity per Agility point plus Bows'/Rings'
+  // own dexterity stat (a separate gear pool from dodge, which is Boots-only
+  // and not tracked here at all — see the equipmentBonus comment above for
+  // why incoming mitigation isn't simulated server-side). Used here for
+  // outgoing hit chance only (see rollAttackLands).
+  const dexterity = attributes.agility * 1 + (equipmentBonus.dexterity ?? 0)
+  return { hp, physicalAttack, magicAttack, attackSpeed: BASE_ATTACK_SPEED, dexterity }
 }
 
 // Mirrors src/game/items/equipmentBonus.ts (recalibrated 2026-07-31 — 1 + weight/4
@@ -291,8 +292,8 @@ function monsterDodge(type: EnemyType): number {
   return Math.round(type.level * 0.8)
 }
 
-function rollAttackLands(playerAccuracy: number, monsterDodgeValue: number): boolean {
-  const missChance = Math.min(Math.max(0, monsterDodgeValue - playerAccuracy) * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
+function rollAttackLands(playerDexterity: number, monsterDodgeValue: number): boolean {
+  const missChance = Math.min(Math.max(0, monsterDodgeValue - playerDexterity) * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
   return Math.random() >= missChance
 }
 
@@ -494,19 +495,21 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // Character combat stats — derived server-side, never trusted from the
   // request. Attributes are a pure function of (class, level) via
   // auto-allotment (see classes.ts); gear bonus sums physical_attack/
-  // magic_attack/dodge across every equipped slot (Ring/Necklace/Boots/Hat/
-  // Coat are now functional too, not just Main Hand — see
+  // magic_attack/dexterity across every equipped slot (Ring/Necklace/Boots/
+  // Hat/Coat are now functional too, not just Main Hand — see
   // useEquipmentStore.ts/computeEquipmentBonus's client-side mirror).
-  // physicalDefense still isn't simulated server-side (player HP/knockout
-  // only ever lived in useCombatStore.runTick, an accepted gap) — but dodge
-  // now matters here too (2026-08-02), since it also drives the player's own
-  // outgoing hit chance against monster Dodge (see rollAttackLands below),
-  // which affects real kill counts/rewards, unlike incoming mitigation.
+  // physicalDefense/dodge (Boots' evasion stat) still aren't simulated
+  // server-side (player HP/knockout only ever lived in
+  // useCombatStore.runTick, an accepted gap) — but dexterity (Bows'/Rings'
+  // own accuracy stat, a separate stat from dodge as of 2026-08-02) matters
+  // here too, since it drives the player's own outgoing hit chance against
+  // monster Dodge (see rollAttackLands below), which affects real kill
+  // counts/rewards, unlike incoming mitigation.
   const attributes = getAttributesForLevel(character.class ?? 'hunter', character.level)
-  const equipmentBonus: { physicalAttack: number; magicAttack: number; dodge: number } = {
+  const equipmentBonus: { physicalAttack: number; magicAttack: number; dexterity: number } = {
     physicalAttack: 0,
     magicAttack: 0,
-    dodge: 0,
+    dexterity: 0,
   }
 
   const equippedItemIds = [
@@ -535,7 +538,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
         if (!template) continue
         equipmentBonus.physicalAttack += scaledStat(template.base_stats, 'physical_attack', item.quality_tier) ?? 0
         equipmentBonus.magicAttack += scaledStat(template.base_stats, 'magic_attack', item.quality_tier) ?? 0
-        equipmentBonus.dodge += scaledStat(template.base_stats, 'dodge', item.quality_tier) ?? 0
+        equipmentBonus.dexterity += scaledStat(template.base_stats, 'dexterity', item.quality_tier) ?? 0
       }
     }
   }
@@ -682,7 +685,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       // attack (still counts toward totalAttacks/elapsed time) but deals no
       // damage — matches the client exactly rather than an expected-value
       // approximation, same reasoning as the per-attack damage roll below.
-      if (!rollAttackLands(derived.dodge, monsterDodge(monster))) {
+      if (!rollAttackLands(derived.dexterity, monsterDodge(monster))) {
         continue
       }
 

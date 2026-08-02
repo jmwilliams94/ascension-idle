@@ -177,15 +177,14 @@ export function monsterDodge(type: EnemyTypeDef): number {
   return Math.round(type.level * 0.8)
 }
 
-// The reverse of rollIsHit above — the player's own accuracy (reusing
-// `derived.dodge` directly rather than a separate stat, see the Stats
-// section note on Agility/Dex serving double duty for both evasion and
-// accuracy) reduces the monster's effective Dodge before the same
+// The reverse of rollIsHit above — the player's own Dexterity (`derived.
+// dexterity`, a separate stat from `dodge` as of 2026-08-02 — see
+// derivedStats.ts) reduces the monster's effective Dodge before the same
 // per-point/cap curve applies. Confirmed design intent: this is what makes
-// Ascended gear (which scales the same dodge stat via QUALITY_STAT_
+// Ascended gear (which scales the same dexterity stat via QUALITY_STAT_
 // MULTIPLIERS) feel meaningfully better than Normal gear beyond just raw
 // damage — it also lands more often, not just hits harder.
-export function rollAttackLands(playerAccuracy: number, monsterDodgeValue: number): boolean {
-  const missChance = Math.min(Math.max(0, monsterDodgeValue - playerAccuracy) * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
+export function rollAttackLands(playerDexterity: number, monsterDodgeValue: number): boolean {
+  const missChance = Math.min(Math.max(0, monsterDodgeValue - playerDexterity) * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
   return Math.random() >= missChance
 }
