@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { changelogNewestFirst } from '../lib/changelog'
 import ChangelogEntries from './ChangelogEntries'
 import DisplaySettingsSection from './DisplaySettingsSection'
+import ItemEffectGallery from './ItemEffectGallery'
 
 interface SettingsSection {
   id: string
@@ -16,6 +17,11 @@ const SECTIONS: SettingsSection[] = [
     id: 'display',
     label: 'Display',
     content: <DisplaySettingsSection />,
+  },
+  {
+    id: 'effects',
+    label: 'Item Effects',
+    content: <ItemEffectGallery />,
   },
   {
     id: 'changelog',

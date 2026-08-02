@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.49.0",
+    "date": "2026-08-02",
+    "changes": [
+      "Added an \"Item Effects\" tab in Settings — a gallery of 7 example animated background effects (web-like lightning, layered noise, crackling lines, energy sweeps, and more) to preview and compare, ahead of picking one for real gear tiles"
+    ]
+  },
+  {
     "version": "1.48.6",
     "date": "2026-08-02",
     "changes": [
