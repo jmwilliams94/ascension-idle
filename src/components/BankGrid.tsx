@@ -3,16 +3,16 @@ import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import TooltipActionPopover from './TooltipActionPopover'
 import { buildGearTooltip, getGearIconSrc, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
 import {
-  DRAGONBALL_COLOR,
-  DRAGONBALL_ICON_SRC,
+  FALLEN_STAR_COLOR,
+  FALLEN_STAR_ICON_SRC,
   MATERIAL_COLOR,
-  METEOR_ICON_SRC,
-  buildDragonballTooltip,
-  buildMeteorTooltip,
+  COMET_ICON_SRC,
+  buildFallenStarTooltip,
+  buildCometTooltip,
 } from '../game/items/forgeCosts'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
-import { WAREHOUSE_SLOT_CAP, useWarehouseStore } from '../game/items/useWarehouseStore'
+import { BANK_SLOT_CAP, useBankStore } from '../game/items/useBankStore'
 
 // The Bank's own 40-slot grid — fully account-wide now (2026-08-03, Bank tab
 // rework, confirmed with the user): any of an account's 5 characters can see
@@ -24,27 +24,27 @@ import { WAREHOUSE_SLOT_CAP, useWarehouseStore } from '../game/items/useWarehous
 // BankSquares.tsx as one square per tier (a cleaner fit than dozens of
 // non-stacking stone tiles sharing an account-wide grid). What's left is
 // just banked gear (real, identity-preserving items, non-stacking) and
-// banked Meteor/DragonBall units.
-interface WarehouseGridProps {
+// banked Comet/Fallen Star units.
+interface BankGridProps {
   // The character claiming a withdrawal — always the active character (no
   // character-picker UI for this pass), passed through to
   // withdrawItemFromStorage/withdrawCurrencyItem as the recipient.
   characterId: string
 }
 
-type SelectedBankedSlot = { kind: 'item'; id: string } | { kind: 'currency'; currencyType: 'meteor' | 'dragonball' } | null
+type SelectedBankedSlot = { kind: 'item'; id: string } | { kind: 'currency'; currencyType: 'comet' | 'fallen_star' } | null
 
-export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
-  const bankedItems = useWarehouseStore((state) => state.bankedItems)
-  const busy = useWarehouseStore((state) => state.busy)
-  const fullMessage = useWarehouseStore((state) => state.fullMessage)
-  const withdrawItemFromStorage = useWarehouseStore((state) => state.withdrawItemFromStorage)
-  const withdrawCurrencyItem = useWarehouseStore((state) => state.withdrawCurrencyItem)
-  const clearFullMessage = useWarehouseStore((state) => state.clearFullMessage)
+export default function BankGrid({ characterId }: BankGridProps) {
+  const bankedItems = useBankStore((state) => state.bankedItems)
+  const busy = useBankStore((state) => state.busy)
+  const fullMessage = useBankStore((state) => state.fullMessage)
+  const withdrawItemFromStorage = useBankStore((state) => state.withdrawItemFromStorage)
+  const withdrawCurrencyItem = useBankStore((state) => state.withdrawCurrencyItem)
+  const clearFullMessage = useBankStore((state) => state.clearFullMessage)
   const templates = useItemTemplatesStore((state) => state.templates)
 
-  const meteorBankCount = usePlayerRecordStore((state) => state.meteorBankCount)
-  const dragonballBankCount = usePlayerRecordStore((state) => state.dragonballBankCount)
+  const cometBankCount = usePlayerRecordStore((state) => state.cometBankCount)
+  const fallenStarBankCount = usePlayerRecordStore((state) => state.fallenStarBankCount)
 
   const [selectedBankedSlot, setSelectedBankedSlot] = useState<SelectedBankedSlot>(null)
   const [bankedPopoverAnchorRect, setBankedPopoverAnchorRect] = useState<DOMRect | null>(null)
@@ -54,15 +54,15 @@ export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
   // Same greedy budget-clamp InventoryPanel uses for its own non-stacking
   // tiles, just against whatever's left after banked gear items have already
   // claimed a slot each.
-  const baseBudget = Math.max(0, WAREHOUSE_SLOT_CAP - bankedItems.length)
-  const meteorShown = Math.min(meteorBankCount, baseBudget)
-  const bankedMeteorTiles = Array.from({ length: meteorShown }, (_, index) => index)
-  const remainingAfterMeteors = Math.max(0, baseBudget - bankedMeteorTiles.length)
-  const dragonballShown = Math.min(dragonballBankCount, remainingAfterMeteors)
-  const bankedDragonballTiles = Array.from({ length: dragonballShown }, (_, index) => index)
+  const baseBudget = Math.max(0, BANK_SLOT_CAP - bankedItems.length)
+  const cometShown = Math.min(cometBankCount, baseBudget)
+  const bankedCometTiles = Array.from({ length: cometShown }, (_, index) => index)
+  const remainingAfterComets = Math.max(0, baseBudget - bankedCometTiles.length)
+  const fallenStarShown = Math.min(fallenStarBankCount, remainingAfterComets)
+  const bankedFallenStarTiles = Array.from({ length: fallenStarShown }, (_, index) => index)
 
-  const occupiedCount = bankedItems.length + meteorShown + dragonballShown
-  const emptySlotCount = Math.max(0, WAREHOUSE_SLOT_CAP - occupiedCount)
+  const occupiedCount = bankedItems.length + cometShown + fallenStarShown
+  const emptySlotCount = Math.max(0, BANK_SLOT_CAP - occupiedCount)
 
   const selectedBankedItem =
     selectedBankedSlot?.kind === 'item' ? bankedItems.find((item) => item.id === selectedBankedSlot.id) : undefined
@@ -124,22 +124,22 @@ export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
     }
   }
 
-  const handleWithdrawBankedCurrency = async (currencyType: 'meteor' | 'dragonball') => {
+  const handleWithdrawBankedCurrency = async (currencyType: 'comet' | 'fallen_star') => {
     setBankedActionError(null)
     setBankedActionBusy(true)
     const result = await withdrawCurrencyItem(characterId, currencyType, 1)
     setBankedActionBusy(false)
 
     if (!result.ok) {
-      setBankedActionError(`Couldn't withdraw that ${currencyType === 'meteor' ? 'Meteor' : 'DragonBall'}.`)
+      setBankedActionError(`Couldn't withdraw that ${currencyType === 'comet' ? 'Comet' : 'Fallen Star'}.`)
       return
     }
 
     closeBankedPopover()
   }
 
-  const handleWithdrawAllBankedCurrency = async (currencyType: 'meteor' | 'dragonball') => {
-    const owned = currencyType === 'meteor' ? meteorBankCount : dragonballBankCount
+  const handleWithdrawAllBankedCurrency = async (currencyType: 'comet' | 'fallen_star') => {
+    const owned = currencyType === 'comet' ? cometBankCount : fallenStarBankCount
     if (owned <= 0) {
       return
     }
@@ -149,7 +149,7 @@ export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
     setBankedActionBusy(false)
 
     if (!result.ok) {
-      setBankedActionError(`Couldn't withdraw your ${currencyType === 'meteor' ? 'Meteors' : 'DragonBalls'}.`)
+      setBankedActionError(`Couldn't withdraw your ${currencyType === 'comet' ? 'Comets' : 'Fallen Stars'}.`)
       return
     }
 
@@ -160,7 +160,7 @@ export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
     <div className="space-y-4">
       <div>
         <p className="text-xs uppercase tracking-wide text-slate-500">
-          Storage ({occupiedCount}/{WAREHOUSE_SLOT_CAP})
+          Storage ({occupiedCount}/{BANK_SLOT_CAP})
         </p>
 
         {/* Responsive tracks matching InventoryPanel's own fix (3.5rem below
@@ -202,47 +202,47 @@ export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
               )
             })}
 
-            {/* Banked Meteor/DragonBall tiles — same non-stacking convention. */}
-            {bankedMeteorTiles.map((index) => (
+            {/* Banked Comet/Fallen Star tiles — same non-stacking convention. */}
+            {bankedCometTiles.map((index) => (
               <div
-                key={`banked-meteor-${index}`}
+                key={`banked-comet-${index}`}
                 data-tooltip-action-anchor
-                onClick={(event) => toggleBankedSlot({ kind: 'currency', currencyType: 'meteor' }, event.currentTarget.getBoundingClientRect())}
+                onClick={(event) => toggleBankedSlot({ kind: 'currency', currencyType: 'comet' }, event.currentTarget.getBoundingClientRect())}
               >
                 <InventorySlot
-                  slotId={`banked-meteor-${index}`}
+                  slotId={`banked-comet-${index}`}
                   filled
                   sizeClassName={SLOT_SIZE_CLASS}
-                  iconSrc={METEOR_ICON_SRC}
+                  iconSrc={COMET_ICON_SRC}
                   qualityColor={MATERIAL_COLOR}
-                  label="Meteor (Storage)"
-                  selected={selectedBankedSlot?.kind === 'currency' && selectedBankedSlot.currencyType === 'meteor'}
+                  label="Comet (Storage)"
+                  selected={selectedBankedSlot?.kind === 'currency' && selectedBankedSlot.currencyType === 'comet'}
                 />
               </div>
             ))}
 
-            {bankedDragonballTiles.map((index) => (
+            {bankedFallenStarTiles.map((index) => (
               <div
-                key={`banked-dragonball-${index}`}
+                key={`banked-fallen-star-${index}`}
                 data-tooltip-action-anchor
                 onClick={(event) =>
-                  toggleBankedSlot({ kind: 'currency', currencyType: 'dragonball' }, event.currentTarget.getBoundingClientRect())
+                  toggleBankedSlot({ kind: 'currency', currencyType: 'fallen_star' }, event.currentTarget.getBoundingClientRect())
                 }
               >
                 <InventorySlot
-                  slotId={`banked-dragonball-${index}`}
+                  slotId={`banked-fallen-star-${index}`}
                   filled
                   sizeClassName={SLOT_SIZE_CLASS}
-                  iconSrc={DRAGONBALL_ICON_SRC}
-                  qualityColor={DRAGONBALL_COLOR}
-                  label="DragonBall (Storage)"
-                  selected={selectedBankedSlot?.kind === 'currency' && selectedBankedSlot.currencyType === 'dragonball'}
+                  iconSrc={FALLEN_STAR_ICON_SRC}
+                  qualityColor={FALLEN_STAR_COLOR}
+                  label="Fallen Star (Storage)"
+                  selected={selectedBankedSlot?.kind === 'currency' && selectedBankedSlot.currencyType === 'fallen_star'}
                 />
               </div>
             ))}
 
             {Array.from({ length: emptySlotCount }, (_, index) => (
-              <InventorySlot key={`empty-${index}`} slotId={`wh-empty-${index}`} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+              <InventorySlot key={`empty-${index}`} slotId={`bank-empty-${index}`} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
             ))}
           </div>
         </div>
@@ -281,7 +281,7 @@ export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
       {selectedBankedCurrencyType && bankedPopoverAnchorRect && (
         <TooltipActionPopover
           anchorRect={bankedPopoverAnchorRect}
-          tooltip={selectedBankedCurrencyType === 'meteor' ? buildMeteorTooltip() : buildDragonballTooltip()}
+          tooltip={selectedBankedCurrencyType === 'comet' ? buildCometTooltip() : buildFallenStarTooltip()}
           actions={[
             {
               label: bankedActionBusy ? 'Withdrawing…' : 'Withdraw',

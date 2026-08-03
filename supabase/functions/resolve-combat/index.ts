@@ -11,8 +11,8 @@
 // two parallel client-side resolvers that used to have to be kept in sync.
 //
 // KNOWN DUPLICATION, ACCEPTED: the math below (rare rolls, HP/reward scaling,
-// the EXP curve, the simplified Attack-vs-Defense damage formula, Meteor/
-// DragonBall odds) mirrors src/game/combat/combatResolver.ts and
+// the EXP curve, the simplified Attack-vs-Defense damage formula, Comet/
+// Fallen Star odds) mirrors src/game/combat/combatResolver.ts and
 // src/game/stats/{derivedStats,classes,useProgressionStore}.ts and
 // src/game/items/equipmentBonus.ts almost line-for-line. Deno can't cleanly
 // import those files directly (they're resolved by Vite without file
@@ -153,10 +153,10 @@ function computeDerivedStats(
 // never got updated here when the client-side constant changed).
 const QUALITY_STAT_MULTIPLIERS: Record<string, number> = {
   normal: 1,
-  refined: 1.25,
-  unique: 1.5,
-  elite: 1.75,
-  super: 2,
+  tempered: 1.25,
+  infused: 1.5,
+  radiant: 1.75,
+  ascended: 2,
 }
 
 function scaledStat(baseStats: Record<string, number>, key: string, qualityTier: string): number | undefined {
@@ -175,13 +175,13 @@ const MIN_DAMAGE_PERCENT_OF_ATTACK = 0.1
 // midpoint 2).
 const DAMAGE_ROLL_MIN_RATIO = 0.5
 const DAMAGE_ROLL_MAX_RATIO = 1.5
-// Meteor/DragonBall kill-drop odds — confirmed, flat (reverted 2026-08-03: a
+// Comet/Fallen Star kill-drop odds — confirmed, flat (reverted 2026-08-03: a
 // same-day earlier attempt scaled *this* base rate by monster level, but the
 // user clarified that was the wrong lever — the base rate was never the
 // problem and stays untouched. See killCountBonusDropMultiplier below for
 // the actual fix.).
-const METEOR_DROP_CHANCE = 1 / 500
-const DRAGONBALL_DROP_CHANCE = 1 / 20000
+const COMET_DROP_CHANCE = 1 / 500
+const FALLEN_STAR_DROP_CHANCE = 1 / 20000
 // Gear drop rate + per-drop quality odds (confirmed with the user,
 // 2026-08-01) — supersedes the earlier flat 10%-per-kill/always-Normal-
 // quality placeholder. A drop itself is now genuinely rare on its own; the
@@ -193,10 +193,10 @@ const DRAGONBALL_DROP_CHANCE = 1 / 20000
 // log flavor text — so it doesn't need the quality roll, just the rate).
 const DROP_CHANCE = 1 / 150
 const QUALITY_DROP_CHANCES: [tier: string, chance: number][] = [
-  ['super', 1 / 15000],
-  ['elite', 1 / 5000],
-  ['unique', 1 / 2000],
-  ['refined', 1 / 500],
+  ['ascended', 1 / 15000],
+  ['radiant', 1 / 5000],
+  ['infused', 1 / 2000],
+  ['tempered', 1 / 500],
 ]
 
 function rollDroppedQualityTier(): string {
@@ -233,7 +233,7 @@ const ACHIEVEMENT_GOLD_MULTIPLIER: Record<number, number> = {
 }
 
 // Kill Count's own reward category — a bonus multiplier on the per-kill
-// Meteor/DragonBall drop chance (see rollBonusCurrencyDrops below), scaled
+// Comet/Fallen Star drop chance (see rollBonusCurrencyDrops below), scaled
 // by the highest Kill Count tier reached for the monster being fought.
 // PLACEHOLDER magnitudes, same "highest tier wins" shape as the gold table
 // above. These are the values reached only at the fought monster's *own*
@@ -244,8 +244,8 @@ const ACHIEVEMENT_GOLD_MULTIPLIER: Record<number, number> = {
 // own kill count, and low-level monsters die in far fewer hits, maxing this
 // out on the fastest-to-kill monster in the game (level-1 Quailwing) was
 // strictly optimal, making players never want to fight anything else for
-// Meteor/DragonBall farming. The base per-kill drop chance itself
-// (METEOR_DROP_CHANCE/DRAGONBALL_DROP_CHANCE above) was never the problem
+// Comet/Fallen Star farming. The base per-kill drop chance itself
+// (COMET_DROP_CHANCE/FALLEN_STAR_DROP_CHANCE above) was never the problem
 // and is deliberately untouched — a same-day earlier attempt scaled that
 // instead, which the user corrected.
 const KILL_COUNT_BONUS_DROP_MULTIPLIER: Record<number, number> = {
@@ -281,7 +281,7 @@ const PET_DROP_CHANCE = 1 / 25000
 // confirmed with the user) — the first real per-monster tier content (Stage
 // 1 shipped with one uniform placeholder reward only). Reaching 1000 kills
 // (Kill Count Tier 4) on each of Windhollow's 5 monsters grants a specific
-// Tempered ('refined') gear item once — one slot type per monster, in zone
+// Tempered gear item once — one slot type per monster, in zone
 // order: armor, weapon, ring, necklace, boots. Only the slot-type order was
 // specified; the exact item within each slot is this pass's own judgment
 // call — level-appropriate picks from the existing catalog (Fawnhide Coat/
@@ -306,10 +306,10 @@ const MONSTER_GEAR_REWARDS: Record<string, { templateId: string; requiredLevel: 
 // monsters (confirmed by CLAUDE.md's Zones section), so 5 monsters x 6 tiers
 // = 30 possible tier-milestones per zone, uniformly — this even 6-step
 // ladder (5/10/15/20/25/30) mirrors every other tier system in this game.
-// DragonBall reward per zone tier, PLACEHOLDER, escalating — "gives you a
-// DragonBall or something," per the user's own framing.
+// Fallen Star reward per zone tier, PLACEHOLDER, escalating — "gives you a
+// Fallen Star or something," per the user's own framing.
 const ZONE_TIER_COMPLETIONS = [5, 10, 15, 20, 25, 30]
-const ZONE_TIER_DRAGONBALL_REWARD = [1, 2, 3, 4, 5, 8]
+const ZONE_TIER_FALLEN_STAR_REWARD = [1, 2, 3, 4, 5, 8]
 
 // Every tier now costs something to unlock (confirmed with the user,
 // 2026-08-01 — supersedes the original "first 3 free, pay once for the rest"
@@ -428,8 +428,8 @@ function rollDamageInRange(midpoint: number): number {
 // applied to both flat base chances alike.
 function rollBonusCurrencyDrops(bonusDropMultiplier: number) {
   return {
-    meteors: Math.random() < METEOR_DROP_CHANCE * bonusDropMultiplier ? 1 : 0,
-    dragonballs: Math.random() < DRAGONBALL_DROP_CHANCE * bonusDropMultiplier ? 1 : 0,
+    comets: Math.random() < COMET_DROP_CHANCE * bonusDropMultiplier ? 1 : 0,
+    fallenStars: Math.random() < FALLEN_STAR_DROP_CHANCE * bonusDropMultiplier ? 1 : 0,
   }
 }
 
@@ -555,7 +555,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const { data: character, error: characterError } = await db
     .from('characters')
     .select(
-      'id, account_id, class, level, gold, exp, meteor_count, dragonball_count, meteor_scroll_count, dragonball_scroll_count, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, selected_monster_id, combat_last_resolved_at',
+      'id, account_id, class, level, gold, exp, comet_count, fallen_star_count, comet_scroll_count, fallen_star_scroll_count, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, selected_monster_id, combat_last_resolved_at',
     )
     .eq('id', characterId)
     .maybeSingle()
@@ -583,13 +583,13 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     return json({
       ok: true,
       elapsedMs,
-      gained: { kills: 0, rareKills: 0, gold: 0, exp: 0, meteors: 0, dragonballs: 0 },
+      gained: { kills: 0, rareKills: 0, gold: 0, exp: 0, comets: 0, fallenStars: 0 },
       character: {
         gold: character.gold,
         exp: character.exp,
         level: character.level,
-        meteors: character.meteor_count,
-        dragonballs: character.dragonball_count,
+        comets: character.comet_count,
+        fallenStars: character.fallen_star_count,
       },
       itemsGranted: [],
       itemsHeld: [],
@@ -678,8 +678,8 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   let rareKills = 0
   let goldGained = 0
   let expGained = 0
-  let meteorsGained = 0
-  let dragonballsGained = 0
+  let cometsGained = 0
+  let fallenStarsGained = 0
   // Live mode only (confirmed with the user, 2026-07-31): set the moment a
   // kill rolls a drop that can't fit, at which point the whole simulated
   // window stops right there rather than continuing to fight and stashing
@@ -746,7 +746,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     0,
   )
   // Bug fix (2026-07-31): this baseline previously omitted potions and the
-  // character's own already-owned Meteor/DragonBall/Scroll counts entirely —
+  // character's own already-owned Comet/Fallen Star/Scroll counts entirely —
   // it only ever counted gear + stones, silently under-counting real
   // Inventory fullness (see CLAUDE.md's Warehouse economy redesign note,
   // stage 2 — caught while adding Scroll accounting here). Mirrors
@@ -755,10 +755,10 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     (gearCount ?? 0) +
     stoneSlotCount +
     (potionCount ?? 0) +
-    character.meteor_count +
-    character.dragonball_count +
-    character.meteor_scroll_count +
-    character.dragonball_scroll_count
+    character.comet_count +
+    character.fallen_star_count +
+    character.comet_scroll_count +
+    character.fallen_star_scroll_count
   let heldCount = holdingCount ?? 0
   // Live mode only — a running projection of `occupied` as this window's
   // kills are simulated, so a mid-window fit-check can be made without
@@ -766,7 +766,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // The two never disagree (both start from the same baseline and increment
   // by the same items in the same order), so the post-loop pass never needs
   // its own live/offline branch — for live mode, anything in
-  // droppedTemplates/meteorsGained/dragonballsGained was already confirmed
+  // droppedTemplates/cometsGained/fallenStarsGained was already confirmed
   // to fit at roll time, so occupied is guaranteed to still have room when
   // the post-loop pass reaches it.
   let projectedOccupied = occupied
@@ -867,7 +867,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
           const withQuality = {
             id: monsterGearReward.templateId,
             required_level: monsterGearReward.requiredLevel,
-            qualityTier: 'refined',
+            qualityTier: 'tempered',
           }
           if (mode === 'live') {
             if (projectedOccupied < INVENTORY_SLOT_CAP) {
@@ -883,25 +883,25 @@ async function handleResolveCombat(req: Request): Promise<Response> {
 
         const bonusCurrency = rollBonusCurrencyDrops(bonusDropMultiplier)
         if (mode === 'live') {
-          if (bonusCurrency.meteors > 0) {
+          if (bonusCurrency.comets > 0) {
             if (projectedOccupied < INVENTORY_SLOT_CAP) {
-              meteorsGained += bonusCurrency.meteors
+              cometsGained += bonusCurrency.comets
               projectedOccupied += 1
             } else {
               inventoryFull = true
             }
           }
-          if (bonusCurrency.dragonballs > 0) {
+          if (bonusCurrency.fallenStars > 0) {
             if (projectedOccupied < INVENTORY_SLOT_CAP) {
-              dragonballsGained += bonusCurrency.dragonballs
+              fallenStarsGained += bonusCurrency.fallenStars
               projectedOccupied += 1
             } else {
               inventoryFull = true
             }
           }
         } else {
-          meteorsGained += bonusCurrency.meteors
-          dragonballsGained += bonusCurrency.dragonballs
+          cometsGained += bonusCurrency.comets
+          fallenStarsGained += bonusCurrency.fallenStars
         }
 
         // Live mode stops the whole window right here — this kill's own
@@ -968,12 +968,12 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // own header). Recomputes this zone's total tier-completions across its
   // whole 5-monster roster (using the just-written characterKillCount for the
   // fought monster, fresh DB reads for the other 4) and grants any newly
-  // crossed zone-tier DragonBall reward exactly once, tracked via
-  // character_zone_progress. Folded into dragonballsGained below (right
+  // crossed zone-tier Fallen Star reward exactly once, tracked via
+  // character_zone_progress. Folded into fallenStarsGained below (right
   // before the existing per-unit grant loop) rather than granted separately,
   // so it goes through the exact same live-mode-room-check/offline-Loot-
-  // Holding routing a dropped DragonBall already does — no special-casing.
-  let zoneDragonballReward = 0
+  // Holding routing a dropped Fallen Star already does — no special-casing.
+  let zoneFallenStarReward = 0
   if (killsThisWindow > 0 && monster.zone_id) {
     const { data: zoneMonsters } = await db.from('enemy_types').select('id').eq('zone_id', monster.zone_id)
     const zoneMonsterIds = (zoneMonsters ?? []).map((row) => row.id as string)
@@ -1017,7 +1017,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
 
       if (zoneTier > highestGranted) {
         for (let tier = highestGranted + 1; tier <= zoneTier; tier += 1) {
-          zoneDragonballReward += ZONE_TIER_DRAGONBALL_REWARD[tier - 1]
+          zoneFallenStarReward += ZONE_TIER_FALLEN_STAR_REWARD[tier - 1]
         }
         const { error: zoneProgressWriteError } = await db
           .from('character_zone_progress')
@@ -1026,7 +1026,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
             { onConflict: 'character_id,zone_id' },
           )
         if (zoneProgressWriteError) {
-          // The reward is already folded into dragonballsGained below by this
+          // The reward is already folded into fallenStarsGained below by this
           // point — logging is what makes a future occurrence of this class
           // of bug diagnosable via the Dashboard's Logs tab, not silent.
           console.error('resolve-combat character_zone_progress write failed:', zoneProgressWriteError.message)
@@ -1050,7 +1050,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
 
   const itemsGranted: GrantedItemRow[] = []
   const itemsHeld: { template_id: string }[] = []
-  const currencyHeld: { currency_type: 'meteor' | 'dragonball' }[] = []
+  const currencyHeld: { currency_type: 'comet' | 'fallen_star' }[] = []
 
   for (const template of droppedTemplates) {
     if (mode === 'live') {
@@ -1082,43 +1082,43 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     // else: genuinely lost — offline only, Loot Holding itself is full too.
   }
 
-  // Meteors/DragonBalls are individual, non-stacking Inventory items — each
+  // Comets/Fallen Stars are individual, non-stacking Inventory items — each
   // gained unit competes for the same 40-slot cap as gear. Live mode grants
   // straight into the character's own count (already confirmed to fit at
   // roll time — see the mirror-image reasoning above for gear); offline mode
   // always routes to Loot Holding instead, same "never silently rearrange
   // the bag while the player's away" rule the gear loop above now follows.
-  // Zone Achievement DragonBall reward (if any) folds in here, right before
-  // the grant loop, so it's treated exactly like a dropped DragonBall for
-  // inventory-cap purposes — see the zoneDragonballReward computation above.
-  dragonballsGained += zoneDragonballReward
+  // Zone Achievement Fallen Star reward (if any) folds in here, right before
+  // the grant loop, so it's treated exactly like a dropped Fallen Star for
+  // inventory-cap purposes — see the zoneFallenStarReward computation above.
+  fallenStarsGained += zoneFallenStarReward
 
-  let meteorsToGrant = 0
-  for (let i = 0; i < meteorsGained; i += 1) {
+  let cometsToGrant = 0
+  for (let i = 0; i < cometsGained; i += 1) {
     if (mode === 'live') {
-      meteorsToGrant += 1
+      cometsToGrant += 1
       occupied += 1
     } else if (heldCount < LOOT_HOLDING_CAP) {
-      await db.from('loot_holding').insert({ character_id: characterId, currency_type: 'meteor' })
+      await db.from('loot_holding').insert({ character_id: characterId, currency_type: 'comet' })
       heldCount += 1
-      currencyHeld.push({ currency_type: 'meteor' })
+      currencyHeld.push({ currency_type: 'comet' })
     }
   }
 
-  let dragonballsToGrant = 0
-  for (let i = 0; i < dragonballsGained; i += 1) {
+  let fallenStarsToGrant = 0
+  for (let i = 0; i < fallenStarsGained; i += 1) {
     if (mode === 'live') {
-      dragonballsToGrant += 1
+      fallenStarsToGrant += 1
       occupied += 1
     } else if (heldCount < LOOT_HOLDING_CAP) {
-      await db.from('loot_holding').insert({ character_id: characterId, currency_type: 'dragonball' })
+      await db.from('loot_holding').insert({ character_id: characterId, currency_type: 'fallen_star' })
       heldCount += 1
-      currencyHeld.push({ currency_type: 'dragonball' })
+      currencyHeld.push({ currency_type: 'fallen_star' })
     }
   }
 
-  const newMeteors = character.meteor_count + meteorsToGrant
-  const newDragonballs = character.dragonball_count + dragonballsToGrant
+  const newComets = character.comet_count + cometsToGrant
+  const newFallenStars = character.fallen_star_count + fallenStarsToGrant
 
   await db
     .from('characters')
@@ -1126,8 +1126,8 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       gold: character.gold + goldGained,
       exp,
       level,
-      meteor_count: newMeteors,
-      dragonball_count: newDragonballs,
+      comet_count: newComets,
+      fallen_star_count: newFallenStars,
       combat_last_resolved_at: new Date(now).toISOString(),
     })
     .eq('id', characterId)
@@ -1136,10 +1136,10 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     ok: true,
     elapsedMs,
     // Deltas — for display/toast purposes only (combat-log flavor text).
-    // Deliberately the full rolled amount (meteorsGained/dragonballsGained),
+    // Deliberately the full rolled amount (cometsGained/fallenStarsGained),
     // not just what actually fit in Inventory — matches how gear drops'
     // flavor text isn't reduced either when a drop overflows to Loot Holding.
-    gained: { kills, rareKills, gold: goldGained, exp: expGained, meteors: meteorsGained, dragonballs: dragonballsGained },
+    gained: { kills, rareKills, gold: goldGained, exp: expGained, comets: cometsGained, fallenStars: fallenStarsGained },
     // Absolute, authoritative new totals — this is what the client reconciles
     // its local state to (replace, not add — see useProgressionStore's
     // applyServerCombatResult).
@@ -1147,8 +1147,8 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       gold: character.gold + goldGained,
       exp,
       level,
-      meteors: newMeteors,
-      dragonballs: newDragonballs,
+      comets: newComets,
+      fallenStars: newFallenStars,
     },
     leveledUp: level > character.level,
     itemsGranted,
@@ -1157,7 +1157,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     inventoryFull,
     // Achievements & Pets, Stage 1 — this monster's updated kill totals (so
     // the client can reflect them without a refetch, same pattern as gold/
-    // exp/meteors), and the monster id if a pet was newly obtained this call.
+    // exp/comets), and the monster id if a pet was newly obtained this call.
     monsterId: character.selected_monster_id,
     characterKillCount,
     accountKillCount,

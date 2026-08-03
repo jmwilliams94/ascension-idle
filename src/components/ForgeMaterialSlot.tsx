@@ -2,12 +2,12 @@ import { motion } from 'framer-motion'
 import InventorySlot, { SLOT_LABEL_HEIGHT_CLASS, SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
 import { buildGearTooltip, formatItemDisplayName, getGearIconSrc, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
 import {
-  DRAGONBALL_COLOR,
-  DRAGONBALL_ICON_SRC,
+  FALLEN_STAR_COLOR,
+  FALLEN_STAR_ICON_SRC,
   MATERIAL_COLOR,
-  METEOR_ICON_SRC,
-  buildDragonballTooltip,
-  buildMeteorTooltip,
+  COMET_ICON_SRC,
+  buildFallenStarTooltip,
+  buildCometTooltip,
   buildStoneTooltip,
   compositionPointValue,
 } from '../game/items/forgeCosts'
@@ -15,15 +15,15 @@ import type { ItemInstance } from '../game/items/useInventoryStore'
 import type { ItemTemplate } from '../game/items/useItemTemplatesStore'
 
 // Fed as a real gear item (destroyed on Feed), a single stone (stones don't
-// stack — each entry is one stone), or a single Meteor/DragonBall tile (see
+// stack — each entry is one stone), or a single Comet/Fallen Star tile (see
 // ForgePanel — dropping one of these doesn't literally consume that exact
 // unit, it just tells the Material slot which action the player means:
-// Meteor -> Level Upgrade, DragonBall -> Quality Upgrade, both flat-cost-1
+// Comet -> Level Upgrade, Fallen Star -> Quality Upgrade, both flat-cost-1
 // so there's never a reason to stack more than one).
 export type MaterialEntry =
   | { kind: 'stone'; id: string; tier: number }
   | { kind: 'item'; id: string; item: ItemInstance }
-  | { kind: 'currency'; id: string; currencyType: 'meteor' | 'dragonball' }
+  | { kind: 'currency'; id: string; currencyType: 'comet' | 'fallen_star' }
 
 export const MAX_MATERIAL_ENTRIES = 2
 
@@ -36,7 +36,7 @@ interface ForgeMaterialSlotProps {
 // The Forge's single material drop target (data-drop-zone="material" — see
 // dragDropContext.ts) — one column, not two side-by-side boxes. What lands
 // here determines the upgrade path (see ForgePanel's materialMode
-// inference): a Meteor/DragonBall always collapses to a single entry (their
+// inference): a Comet/Fallen Star always collapses to a single entry (their
 // cost is flat, nothing more to add); a stone or gear-fuel item stacks up to
 // MAX_MATERIAL_ENTRIES, sliding the first one up to make room for the second
 // below it (framer-motion's `layout` animates that reflow automatically).
@@ -64,10 +64,10 @@ export default function ForgeMaterialSlot({ entries, templates, onRemoveEntry }:
                   slotId={entry.id}
                   filled
                   sizeClassName={SLOT_SIZE_CLASS}
-                  iconSrc={entry.currencyType === 'meteor' ? METEOR_ICON_SRC : DRAGONBALL_ICON_SRC}
-                  qualityColor={entry.currencyType === 'meteor' ? MATERIAL_COLOR : DRAGONBALL_COLOR}
-                  label={entry.currencyType === 'meteor' ? 'Meteor' : 'DragonBall'}
-                  tooltip={entry.currencyType === 'meteor' ? buildMeteorTooltip() : buildDragonballTooltip()}
+                  iconSrc={entry.currencyType === 'comet' ? COMET_ICON_SRC : FALLEN_STAR_ICON_SRC}
+                  qualityColor={entry.currencyType === 'comet' ? MATERIAL_COLOR : FALLEN_STAR_COLOR}
+                  label={entry.currencyType === 'comet' ? 'Comet' : 'Fallen Star'}
+                  tooltip={entry.currencyType === 'comet' ? buildCometTooltip() : buildFallenStarTooltip()}
                   onClick={() => onRemoveEntry(entry.id)}
                 />
               </motion.div>

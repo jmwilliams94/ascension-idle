@@ -15,8 +15,8 @@ import {
   compositionPointsRequired,
   findNextTemplateInChain,
   formatCompositionTier,
-  isDragonballDragId,
-  isMeteorDragId,
+  isFallenStarDragId,
+  isCometDragId,
   parseStoneDragId,
   previewLevelUpgradeCost,
   previewQualityUpgradeCost,
@@ -41,10 +41,10 @@ interface AttemptResult {
 
 function describeFailure(error?: string): string {
   switch (error) {
-    case 'not_enough_dragonballs':
-      return 'Not enough DragonBalls.'
-    case 'not_enough_meteors':
-      return 'Not enough Meteors.'
+    case 'not_enough_fallen_stars':
+      return 'Not enough Fallen Stars.'
+    case 'not_enough_comets':
+      return 'Not enough Comets.'
     case 'already_max_quality':
       return 'Already at Ascended quality.'
     case 'already_max_level':
@@ -79,12 +79,12 @@ function describeFeedFailure(error?: string): string {
 
 type ResolvedMaterialKind =
   | { kind: 'stone'; tier: number }
-  | { kind: 'currency'; currencyType: 'meteor' | 'dragonball' }
+  | { kind: 'currency'; currencyType: 'comet' | 'fallen_star' }
   | { kind: 'item' }
   | null
 
 // What a dragged tile means once it lands in the Material slot — a stone or
-// gear item is Composition fuel; a Meteor/DragonBall tile isn't literally
+// gear item is Composition fuel; a Comet/Fallen Star tile isn't literally
 // consumed by being dropped (the RPCs still just deduct a flat 1 from the
 // character's own count), it's purely how the player tells the Forge which
 // action they mean, since Quality/Level Upgrade take no fuel item at all.
@@ -93,11 +93,11 @@ function resolveMaterialKind(id: string, items: ItemInstance[]): ResolvedMateria
   if (stoneTier !== null) {
     return { kind: 'stone', tier: stoneTier }
   }
-  if (isMeteorDragId(id)) {
-    return { kind: 'currency', currencyType: 'meteor' }
+  if (isCometDragId(id)) {
+    return { kind: 'currency', currencyType: 'comet' }
   }
-  if (isDragonballDragId(id)) {
-    return { kind: 'currency', currencyType: 'dragonball' }
+  if (isFallenStarDragId(id)) {
+    return { kind: 'currency', currencyType: 'fallen_star' }
   }
   if (items.some((item) => item.id === id)) {
     return { kind: 'item' }
@@ -193,18 +193,18 @@ function PreviewSquare({
 // Forge screen: three slots side by side at every viewport size — Upgrade
 // (left), Material (middle), Preview (right) — with the Inventory grid below/
 // beside it feeding items into them. Dropping something into the Material
-// slot both stages it and picks the upgrade path dynamically (Meteor -> Level,
-// DragonBall -> Quality, Stone/gear -> Composition) — there's no separate
+// slot both stages it and picks the upgrade path dynamically (Comet -> Level,
+// Fallen Star -> Quality, Stone/gear -> Composition) — there's no separate
 // Quality/Level/Composition button row anymore, per the user's request
 // (2026-08-02) that "these should all be dragged." Weapon Socket unlock is
-// deliberately NOT part of this material-driven flow (it shares DragonBalls
+// deliberately NOT part of this material-driven flow (it shares Fallen Stars
 // with Quality Upgrade with no way to tell them apart from what's dropped) —
 // it stays its own small toggle, unchanged internally (ForgeSocketsPanel).
 export default function ForgePanel() {
   const items = useInventoryStore((state) => state.items)
   const templates = useItemTemplatesStore((state) => state.templates)
-  const meteors = useCurrencyStore((state) => state.meteors)
-  const dragonballs = useCurrencyStore((state) => state.dragonballs)
+  const comets = useCurrencyStore((state) => state.comets)
+  const fallenStars = useCurrencyStore((state) => state.fallenStars)
   const busy = useForgeStore((state) => state.busy)
   const qualityUpgrade = useForgeStore((state) => state.qualityUpgrade)
   const levelUpgrade = useForgeStore((state) => state.levelUpgrade)
@@ -221,13 +221,13 @@ export default function ForgePanel() {
 
   // Whichever kind of thing occupies the first Material entry decides the
   // mode — a currency entry always collapses to a single entry (see
-  // handleDropMaterial), so there's never a mix of e.g. a Meteor and a Stone
+  // handleDropMaterial), so there's never a mix of e.g. a Comet and a Stone
   // staged at once.
   const materialMode: MaterialMode | null =
     materialEntries.length === 0
       ? null
       : materialEntries[0].kind === 'currency'
-        ? materialEntries[0].currencyType === 'meteor'
+        ? materialEntries[0].currencyType === 'comet'
           ? 'level'
           : 'quality'
         : 'composition'
@@ -355,7 +355,7 @@ export default function ForgePanel() {
     }
   }
 
-  const isMaxQuality = selectedItem?.quality_tier === 'super'
+  const isMaxQuality = selectedItem?.quality_tier === 'ascended'
   const nextLevelTemplate = selectedTemplate ? findNextTemplateInChain(templates, selectedTemplate) : null
   const isMaxLevel = Boolean(selectedTemplate) && !nextLevelTemplate
   const qualityCost = selectedItem ? previewQualityUpgradeCost() : 0
@@ -365,8 +365,8 @@ export default function ForgePanel() {
     ? null
     : isMaxQuality
       ? 'Already at Ascended quality.'
-      : dragonballs < qualityCost
-        ? `Need ${qualityCost} DragonBall${qualityCost === 1 ? '' : 's'} (have ${dragonballs}).`
+      : fallenStars < qualityCost
+        ? `Need ${qualityCost} Fallen Star${qualityCost === 1 ? '' : 's'} (have ${fallenStars}).`
         : null
   const levelDisabledReason = !selectedItem
     ? null
@@ -374,8 +374,8 @@ export default function ForgePanel() {
       ? selectedTemplate?.item_family
         ? 'Already at the top tier for this item.'
         : 'This item has no further upgrades.'
-      : meteors < levelCost
-        ? `Need ${levelCost} Meteor${levelCost === 1 ? '' : 's'} (have ${meteors}).`
+      : comets < levelCost
+        ? `Need ${levelCost} Comet${levelCost === 1 ? '' : 's'} (have ${comets}).`
         : null
 
   // The actual would-be item after the staged Material is applied — same
@@ -482,7 +482,7 @@ export default function ForgePanel() {
               <p className="text-center text-[11px] text-slate-600">Drag an item into the Upgrade Slot.</p>
             ) : !materialMode ? (
               <p className="text-center text-[11px] text-slate-600">
-                Drag a Meteor, DragonBall, Stone, or gear item into the Material slot.
+                Drag a Comet, Fallen Star, Stone, or gear item into the Material slot.
               </p>
             ) : materialMode === 'composition' ? (
               <ForgeCompositionPanel

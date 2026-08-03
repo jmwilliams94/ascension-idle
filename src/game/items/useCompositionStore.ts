@@ -2,7 +2,7 @@ import { create } from 'zustand'
 
 // Per-character stone stacks (characters.composition_stones jsonb), keyed by tier
 // "1".."4" as strings (jsonb object keys are always strings). Same trust model as
-// meteors/dragonballs (see useCurrencyStore) — deliberately NOT wired into
+// comets/fallen stars (see useCurrencyStore) — deliberately NOT wired into
 // usePersistGameState's autosave, since composition_feed already deducts these
 // server-side in the same transaction as the item write. The client only ever
 // reads them (on load, and from each composition_feed response).

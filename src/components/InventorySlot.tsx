@@ -11,7 +11,7 @@ import { emberCountForColor, seedFromId } from '../game/items/tierEffectsData'
 // Responsive (smaller below `lg`, unchanged 4rem at `lg` and up) — a fixed 4rem
 // tile size was the root cause of the Inventory grid overflowing narrow phone
 // viewports (see CLAUDE.md's PWA & Mobile section); shrinking it here fixes
-// every InventoryPanel/Forge/Warehouse usage at once since they all share it.
+// every InventoryPanel/Forge/Bank usage at once since they all share it.
 export const SLOT_SIZE_CLASS = 'h-14 w-14 lg:h-16 lg:w-16'
 
 // Width-only companion to SLOT_SIZE_CLASS — for a label-above-square column
@@ -45,7 +45,7 @@ interface InventorySlotProps {
   qualityColor?: string
   icon?: string
   // Real art, when supplied, renders instead of the emoji `icon` above (see
-  // forgeCosts.ts's METEOR_ICON_SRC for the established pattern of exposing
+  // forgeCosts.ts's COMET_ICON_SRC for the established pattern of exposing
   // one of these as a shared constant per item).
   iconSrc?: string
   // Plain accessibility label (aria-label). Also used as the native `title` popup,
@@ -63,8 +63,8 @@ interface InventorySlotProps {
   // context menu is suppressed on this tile.
   onContextMenu?: () => void
   // Two coexisting drag systems, picked per call site (never both at once):
-  // native HTML5 DnD (still used by Warehouse — see WarehouseGrid/
-  // WarehousePanel, unaffected by this step) and Pointer Events (used by Forge
+  // native HTML5 DnD (still used by the Bank — see BankGrid/
+  // BankPanel, unaffected by this step) and Pointer Events (used by Forge
   // — see dragDrop.tsx — which works on touch too, unlike native HTML5 DnD).
   // `draggable` is shared styling (cursor/touch-action) for either system; the
   // native HTML `draggable` attribute itself is only set when onDragStart is

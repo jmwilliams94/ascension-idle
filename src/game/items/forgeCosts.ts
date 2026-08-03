@@ -123,133 +123,133 @@ export function buildStoneTooltip(tier: number): ItemTooltipData {
   }
 }
 
-// Meteors/DragonBalls are individual, non-stacking Inventory items now (confirmed
+// Comets/Fallen Stars are individual, non-stacking Inventory items now (confirmed
 // with the user, 2026-07-31 — see CLAUDE.md's Warehouse economy redesign note),
 // same pattern as Composition Stones above: no per-unit id in the backend (just a
-// running count, characters.meteor_count/dragonball_count), so each rendered tile
+// running count, characters.comet_count/fallen_star_count), so each rendered tile
 // gets a synthetic id combining the currency with a render-time index, purely for
 // a stable React key — same-currency units are fully fungible, the index has no
 // other meaning.
-const METEOR_DRAG_ID_PREFIX = 'meteor:'
-const DRAGONBALL_DRAG_ID_PREFIX = 'dragonball:'
+const COMET_DRAG_ID_PREFIX = 'comet:'
+const FALLEN_STAR_DRAG_ID_PREFIX = 'fallen_star:'
 
-export function meteorDragId(index: number): string {
-  return `${METEOR_DRAG_ID_PREFIX}${index}`
+export function cometDragId(index: number): string {
+  return `${COMET_DRAG_ID_PREFIX}${index}`
 }
 
-export function dragonballDragId(index: number): string {
-  return `${DRAGONBALL_DRAG_ID_PREFIX}${index}`
+export function fallenStarDragId(index: number): string {
+  return `${FALLEN_STAR_DRAG_ID_PREFIX}${index}`
 }
 
-// Used by Forge's Material slot (ForgePanel.tsx) to tell a dragged Meteor/
-// DragonBall tile apart from a stone/gear fuel tile — the prefix check is
-// safe against the Scroll ids below (e.g. "dragonball-scroll:0") since those
+// Used by Forge's Material slot (ForgePanel.tsx) to tell a dragged Comet/
+// Fallen Star tile apart from a stone/gear fuel tile — the prefix check is
+// safe against the Scroll ids below (e.g. "fallen_star-scroll:0") since those
 // have "-scroll" right after the currency name, not a colon.
-export function isMeteorDragId(id: string): boolean {
-  return id.startsWith(METEOR_DRAG_ID_PREFIX)
+export function isCometDragId(id: string): boolean {
+  return id.startsWith(COMET_DRAG_ID_PREFIX)
 }
 
-export function isDragonballDragId(id: string): boolean {
-  return id.startsWith(DRAGONBALL_DRAG_ID_PREFIX)
+export function isFallenStarDragId(id: string): boolean {
+  return id.startsWith(FALLEN_STAR_DRAG_ID_PREFIX)
 }
 
-// Real art (2026-08-02), supersedes the 🌠/🔮 emoji everywhere a Meteor/
-// DragonBall tile renders (InventoryPanel's grid + detail card,
+// Real art (2026-08-02), supersedes the 🌠/🔮 emoji everywhere a Comet/
+// Fallen Star tile renders (InventoryPanel's grid + detail card,
 // LootHoldingCard) — pass to InventorySlot's iconSrc prop, which takes
 // priority over its emoji icon prop.
-export const METEOR_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/meteor.png`
-export const DRAGONBALL_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/dragonball.png`
+export const COMET_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/comet.png`
+export const FALLEN_STAR_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/fallen-star.png`
 
 // Own distinct border/glow colors (2026-08-02), same InventorySlot
 // qualityColor mechanism gear uses for its tier tint — materials previously
 // rendered with the same plain slate border as an empty/generic tile, giving
-// them no visual identity of their own. DragonBall reuses the old (pre-
+// them no visual identity of their own. Fallen Star reuses the old (pre-
 // recalibration) Ascended orange at the user's request.
-export const DRAGONBALL_COLOR = '#F0B87A'
+export const FALLEN_STAR_COLOR = '#F0B87A'
 
-// Revised same day, per the user: Meteor's own green was reassigned to
+// Revised same day, per the user: Comet's own green was reassigned to
 // Consumables instead (a broader category the user wants visually unified as
-// green), and "all other materials" — Meteor, Composition Stones, and
+// green), and "all other materials" — Comet, Composition Stones, and
 // (once built) Gems — now share one color instead of each getting its own:
 // the old (pre-recalibration) Infused Silver, the user's specific pick from
-// that retired palette. Distinct from DRAGONBALL_COLOR (still its own
+// that retired palette. Distinct from FALLEN_STAR_COLOR (still its own
 // orange, not folded into this) and from every QUALITY_COLORS value.
 export const MATERIAL_COLOR = '#C8D0DC'
 
 // Potions (HP/Mana) — see potionTypes.ts/InventoryPanel.tsx's potion tiles.
 export const CONSUMABLE_COLOR = '#4ADE80'
 
-export function buildMeteorTooltip(): ItemTooltipData {
+export function buildCometTooltip(): ItemTooltipData {
   return {
-    title: 'Meteor',
-    iconSrc: METEOR_ICON_SRC,
+    title: 'Comet',
+    iconSrc: COMET_ICON_SRC,
     iconColor: MATERIAL_COLOR,
     lines: ['Forge material'],
     stats: ['Used for Level Upgrade'],
   }
 }
 
-export function buildDragonballTooltip(): ItemTooltipData {
+export function buildFallenStarTooltip(): ItemTooltipData {
   return {
-    title: 'DragonBall',
-    iconSrc: DRAGONBALL_ICON_SRC,
-    iconColor: DRAGONBALL_COLOR,
+    title: 'Fallen Star',
+    iconSrc: FALLEN_STAR_ICON_SRC,
+    iconColor: FALLEN_STAR_COLOR,
     lines: ['Forge material'],
     stats: ['Used for Quality Upgrade'],
   }
 }
 
-// Meteor Scroll / DragonBall Scroll (stage 2 of the Warehouse economy
+// Comet Scroll / Fallen Star Scroll (stage 2 of the Warehouse economy
 // redesign, 2026-07-31) — a compact-storage bundle of 10 loose units into 1
 // non-stacking Inventory item. Same synthetic-id convention as the units
 // themselves (no per-unit DB row, just a running count —
-// characters.meteor_scroll_count/dragonball_scroll_count).
-const METEOR_SCROLL_DRAG_ID_PREFIX = 'meteor-scroll:'
-const DRAGONBALL_SCROLL_DRAG_ID_PREFIX = 'dragonball-scroll:'
+// characters.comet_scroll_count/fallen_star_scroll_count).
+const COMET_SCROLL_DRAG_ID_PREFIX = 'comet-scroll:'
+const FALLEN_STAR_SCROLL_DRAG_ID_PREFIX = 'fallen_star-scroll:'
 
-export function meteorScrollDragId(index: number): string {
-  return `${METEOR_SCROLL_DRAG_ID_PREFIX}${index}`
+export function cometScrollDragId(index: number): string {
+  return `${COMET_SCROLL_DRAG_ID_PREFIX}${index}`
 }
 
-export function dragonballScrollDragId(index: number): string {
-  return `${DRAGONBALL_SCROLL_DRAG_ID_PREFIX}${index}`
+export function fallenStarScrollDragId(index: number): string {
+  return `${FALLEN_STAR_SCROLL_DRAG_ID_PREFIX}${index}`
 }
 
-// Same purpose as isMeteorDragId/isDragonballDragId above — used by the
+// Same purpose as isCometDragId/isFallenStarDragId above — used by the
 // Marketplace's "List an Item" drop zone to tell a dragged Scroll tile apart
 // from a loose unit or gear item.
-export function isMeteorScrollDragId(id: string): boolean {
-  return id.startsWith(METEOR_SCROLL_DRAG_ID_PREFIX)
+export function isCometScrollDragId(id: string): boolean {
+  return id.startsWith(COMET_SCROLL_DRAG_ID_PREFIX)
 }
 
-export function isDragonballScrollDragId(id: string): boolean {
-  return id.startsWith(DRAGONBALL_SCROLL_DRAG_ID_PREFIX)
+export function isFallenStarScrollDragId(id: string): boolean {
+  return id.startsWith(FALLEN_STAR_SCROLL_DRAG_ID_PREFIX)
 }
 
-export function buildMeteorScrollTooltip(): ItemTooltipData {
+export function buildCometScrollTooltip(): ItemTooltipData {
   return {
-    title: 'Meteor Scroll',
+    title: 'Comet Scroll',
     icon: '📜',
     iconColor: MATERIAL_COLOR,
     lines: ['Compact storage'],
-    stats: ['Holds 10 Meteors — Open to unbundle'],
+    stats: ['Holds 10 Comets — Open to unbundle'],
   }
 }
 
-export function buildDragonballScrollTooltip(): ItemTooltipData {
+export function buildFallenStarScrollTooltip(): ItemTooltipData {
   return {
-    title: 'DragonBall Scroll',
+    title: 'Fallen Star Scroll',
     icon: '📜',
-    iconColor: DRAGONBALL_COLOR,
+    iconColor: FALLEN_STAR_COLOR,
     lines: ['Compact storage'],
-    stats: ['Holds 10 DragonBalls — Open to unbundle'],
+    stats: ['Holds 10 Fallen Stars — Open to unbundle'],
   }
 }
 
 // Gear's "Deposit as Composition" path (stage 4 of the Warehouse economy
 // redesign, 2026-07-31) — six separate, non-fungible per-slot-type point
 // pools (characters.gear_composition_points jsonb), distinct from the shared
-// warehouse_points balance stones/"Deposit as Item" tokens liquidate into. A
+// bank_points balance stones/"Deposit as Item" tokens liquidate into. A
 // Ring's points can only ever buy back a Ring, never a Coat. Same point-value/
 // cost formulas as Composition/Stones (compositionPointValue/
 // compositionPointsRequired above) — mirrors deposit_item_as_composition/

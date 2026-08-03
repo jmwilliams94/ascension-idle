@@ -9,13 +9,13 @@ import { useInventoryStore, type ItemInstance } from './useInventoryStore'
 // server-side in one transaction — the client only ever reflects the result.
 interface QualityUpgradeResult {
   ok: boolean
-  error?: 'item_not_found' | 'not_owner' | 'already_max_quality' | 'not_enough_dragonballs'
+  error?: 'item_not_found' | 'not_owner' | 'already_max_quality' | 'not_enough_fallen_stars'
   upgraded?: boolean
   quality_tier?: string
   cost?: number
-  dragonballs?: number
-  dragonballs_spent?: number
-  dragonballs_remaining?: number
+  fallen_stars?: number
+  fallen_stars_spent?: number
+  fallen_stars_remaining?: number
   // Armor-only RNG side effect (see 20260802010000_add_gear_sockets.sql) — the
   // item's full sockets array (unchanged if socket_gained is false) and
   // whether this particular attempt happened to roll a new one.
@@ -25,7 +25,7 @@ interface QualityUpgradeResult {
 
 interface LevelUpgradeResult {
   ok: boolean
-  error?: 'item_not_found' | 'not_owner' | 'already_max_level' | 'not_enough_meteors' | 'no_upgrade_path'
+  error?: 'item_not_found' | 'not_owner' | 'already_max_level' | 'not_enough_comets' | 'no_upgrade_path'
   upgraded?: boolean
   level?: number
   // The item's new template on success (Level Upgrade now advances the item to
@@ -33,9 +33,9 @@ interface LevelUpgradeResult {
   // unchanged on failure.
   template_id?: string
   cost?: number
-  meteors?: number
-  meteors_spent?: number
-  meteors_remaining?: number
+  comets?: number
+  comets_spent?: number
+  comets_remaining?: number
   // Same armor-only RNG socket side effect as Quality Upgrade above.
   sockets?: ItemInstance['sockets']
   socket_gained?: boolean
@@ -46,12 +46,12 @@ interface LevelUpgradeResult {
 // armor's RNG-on-upgrade path above).
 interface UnlockWeaponSocketResult {
   ok: boolean
-  error?: 'item_not_found' | 'not_owner' | 'not_a_weapon' | 'max_sockets' | 'not_enough_dragonballs'
+  error?: 'item_not_found' | 'not_owner' | 'not_a_weapon' | 'max_sockets' | 'not_enough_fallen_stars'
   sockets?: ItemInstance['sockets']
   cost?: number
-  dragonballs?: number
-  dragonballs_spent?: number
-  dragonballs_remaining?: number
+  fallen_stars?: number
+  fallen_stars_spent?: number
+  fallen_stars_remaining?: number
 }
 
 // Shape returned by composition_feed (see migration 20260728000000). No RNG and no
@@ -114,8 +114,8 @@ export const useForgeStore = create<ForgeState>((set) => ({
     if (result.ok && result.sockets) {
       useInventoryStore.getState().patchItem(itemId, { sockets: result.sockets })
     }
-    if (result.ok && typeof result.dragonballs_remaining === 'number') {
-      useCurrencyStore.getState().setDragonballs(result.dragonballs_remaining)
+    if (result.ok && typeof result.fallen_stars_remaining === 'number') {
+      useCurrencyStore.getState().setFallenStars(result.fallen_stars_remaining)
     }
 
     return result
@@ -144,8 +144,8 @@ export const useForgeStore = create<ForgeState>((set) => ({
     if (result.ok && result.sockets) {
       useInventoryStore.getState().patchItem(itemId, { sockets: result.sockets })
     }
-    if (result.ok && typeof result.meteors_remaining === 'number') {
-      useCurrencyStore.getState().setMeteors(result.meteors_remaining)
+    if (result.ok && typeof result.comets_remaining === 'number') {
+      useCurrencyStore.getState().setComets(result.comets_remaining)
     }
 
     return result
@@ -203,8 +203,8 @@ export const useForgeStore = create<ForgeState>((set) => ({
     if (result.ok && result.sockets) {
       useInventoryStore.getState().patchItem(itemId, { sockets: result.sockets })
     }
-    if (result.ok && typeof result.dragonballs_remaining === 'number') {
-      useCurrencyStore.getState().setDragonballs(result.dragonballs_remaining)
+    if (result.ok && typeof result.fallen_stars_remaining === 'number') {
+      useCurrencyStore.getState().setFallenStars(result.fallen_stars_remaining)
     }
 
     return result

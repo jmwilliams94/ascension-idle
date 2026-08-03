@@ -2,18 +2,20 @@ import { createContext, useContext, useRef } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 
 // A minimal cross-input (mouse + touch + pen) drag-and-drop primitive built on
-// Pointer Events, shared by Forge and Warehouse (originally built for Forge
-// only, generalized 2026-07-31 when Warehouse's own native-DnD gap was fixed
-// the same way). Replaces native HTML5 drag-and-drop (draggable/dragstart/
-// dragover/drop), which never fires on touchscreens — see CLAUDE.md's "PWA &
-// Mobile" section. A drop target just needs a `data-drop-zone="<key>"`
-// attribute on its wrapper element; the drag source resolves which target (if
-// any) is under the pointer via `document.elementFromPoint`, so drop targets
-// themselves need no handlers. Key namespacing is the caller's responsibility
-// — Forge uses `"upgrade"`/`"fuel-0"`/`"fuel-1"`, Warehouse uses
-// `"warehouse-storage"`/`"inventory"`; each page's own DragDropProvider is a
-// separate React context, so there's no cross-page collision risk even though
-// the keys aren't prefixed.
+// Pointer Events, originally built for Forge only, generalized 2026-07-31
+// when the Bank's own native-DnD gap was fixed the same way (the Bank tab
+// rework, 2026-08-03, later dropped drag-and-drop between its two views
+// entirely — see BankPanel.tsx — so `"warehouse-storage"`/`"inventory"` is no
+// longer a live example of this, just Forge's own keys remain in active use).
+// Replaces native HTML5 drag-and-drop (draggable/dragstart/dragover/drop),
+// which never fires on touchscreens — see CLAUDE.md's "PWA & Mobile" section.
+// A drop target just needs a `data-drop-zone="<key>"` attribute on its
+// wrapper element; the drag source resolves which target (if any) is under
+// the pointer via `document.elementFromPoint`, so drop targets themselves
+// need no handlers. Key namespacing is the caller's responsibility — Forge
+// uses `"upgrade"`/`"fuel-0"`/`"fuel-1"`; each page's own DragDropProvider is
+// a separate React context, so there's no cross-page collision risk even
+// though the keys aren't prefixed.
 // Split from dragDrop.tsx (which holds the components) because a file mixing
 // component and non-component exports breaks React Fast Refresh.
 
@@ -42,7 +44,7 @@ export interface DragPayload {
   // Real art, when supplied, renders in the floating drag ghost instead of the
   // emoji `icon` above — same "iconSrc wins when both are supplied" pattern as
   // InventorySlot's own icon/iconSrc props (see forgeCosts.ts's
-  // METEOR_ICON_SRC/DRAGONBALL_ICON_SRC). Without this, Meteor/DragonBall
+  // COMET_ICON_SRC/FALLEN_STAR_ICON_SRC). Without this, Comet/Fallen Star
   // tiles (the only draggable tiles with real art instead of an emoji) had to
   // fall back to a plain emoji ghost mid-drag, which read as "an older image"
   // even though the tile itself, before and after dragging, showed the real

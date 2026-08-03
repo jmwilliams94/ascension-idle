@@ -7,7 +7,7 @@ import { useCompositionStore, type CompositionStones } from './useCompositionSto
 import { type GearSlotType } from './forgeCosts'
 import { useInventoryStore, occupiedSlotCount, INVENTORY_SLOT_CAP, type ItemInstance } from './useInventoryStore'
 
-type BankCurrencyType = 'meteor' | 'dragonball'
+type BankCurrencyType = 'comet' | 'fallen_star'
 
 interface BankItemResult {
   ok: boolean
@@ -40,7 +40,7 @@ interface WithdrawItemFromStorageResult {
 // Bank Storage (Bank tab rework, 2026-08-03, confirmed with the user) —
 // fully account-wide now, not per-character: any of an account's 5
 // characters can deposit into or withdraw from the same shared Storage and
-// the same points pools. Its own 40-slot cap (WAREHOUSE_SLOT_CAP), mirroring
+// the same points pools. Its own 40-slot cap (BANK_SLOT_CAP), mirroring
 // Inventory's own INVENTORY_SLOT_CAP.
 //
 // The dead legacy "fungible token" system (warehouse_items, deposit_item/
@@ -51,15 +51,15 @@ interface WithdrawItemFromStorageResult {
 // bank_stone_item — identity/tier preserved, no points) and liquidation
 // (transfer_stone/deposit_item_as_composition/withdraw_gear_composition —
 // converts into a fungible points pool). See CLAUDE.md's Bank tab section.
-export const WAREHOUSE_SLOT_CAP = 40
+export const BANK_SLOT_CAP = 40
 
-type Currency = 'gold' | 'meteors' | 'dragonballs'
+type Currency = 'gold' | 'comets' | 'fallen_stars'
 
 interface TransferStoneResult {
   ok: boolean
   error?: 'invalid_direction' | 'invalid_request' | 'not_owner' | 'not_enough_stones' | 'not_enough_points'
   stones?: CompositionStones
-  warehouse_points?: number
+  bank_points?: number
 }
 
 interface TransferCurrencyResult {
@@ -67,7 +67,7 @@ interface TransferCurrencyResult {
   error?: 'invalid_currency' | 'invalid_direction' | 'invalid_amount' | 'not_owner' | 'not_enough_balance'
   character_balance?: number
   bank_balance?: number
-  // Set only for meteors/dragonballs — a deposit that couldn't be covered by
+  // Set only for comets/fallen_stars — a deposit that couldn't be covered by
   // loose units alone auto-unbundles however many Scrolls it needed (see
   // migration 20260731090000_smart_scroll_currency_deposit.sql), so the
   // client's Scroll count can change too, not just the loose-unit count.
@@ -94,7 +94,7 @@ interface WithdrawGearCompositionResult {
   gear_composition_points?: Record<GearSlotType, number>
 }
 
-interface WarehouseState {
+interface BankState {
   // Account-wide banked gear (item_instances where location='bank', across
   // every character on the account — not just the active one). Populated by
   // loadBankItems, patched locally on each successful deposit/withdraw
@@ -134,7 +134,7 @@ interface WarehouseState {
   withdrawStoneItem: (characterId: string, tier: number, amount: number) => Promise<BankStoneItemResult>
 }
 
-export const useWarehouseStore = create<WarehouseState>((set, get) => ({
+export const useBankStore = create<BankState>((set, get) => ({
   bankedItems: [],
   loaded: false,
   busy: false,
@@ -171,13 +171,13 @@ export const useWarehouseStore = create<WarehouseState>((set, get) => ({
     set({ bankedItems: (data ?? []) as ItemInstance[], loaded: true })
   },
 
-  // Only gear tiles + banked Meteor/DragonBall units count toward Storage's
+  // Only gear tiles + banked Comet/Fallen Star units count toward Storage's
   // 40-slot cap — banked stones live as squares now (see BankSquares.tsx),
   // not grid tiles, and points pools are a fungible balance, not a physical
   // stack of tiles, same as currency isn't slot-based.
   occupiedSlotCount: () => {
     const player = usePlayerRecordStore.getState()
-    return get().bankedItems.length + player.meteorBankCount + player.dragonballBankCount
+    return get().bankedItems.length + player.cometBankCount + player.fallenStarBankCount
   },
 
   depositItemAsComposition: async (itemId) => {
@@ -244,9 +244,9 @@ export const useWarehouseStore = create<WarehouseState>((set, get) => ({
     }
 
     const result = data as TransferStoneResult
-    if (result.ok && result.stones && typeof result.warehouse_points === 'number') {
+    if (result.ok && result.stones && typeof result.bank_points === 'number') {
       useCompositionStore.getState().setStones(result.stones)
-      usePlayerRecordStore.getState().setWarehousePoints(result.warehouse_points)
+      usePlayerRecordStore.getState().setBankPoints(result.bank_points)
     }
     return result
   },
@@ -267,9 +267,9 @@ export const useWarehouseStore = create<WarehouseState>((set, get) => ({
     }
 
     const result = data as TransferStoneResult
-    if (result.ok && result.stones && typeof result.warehouse_points === 'number') {
+    if (result.ok && result.stones && typeof result.bank_points === 'number') {
       useCompositionStore.getState().setStones(result.stones)
-      usePlayerRecordStore.getState().setWarehousePoints(result.warehouse_points)
+      usePlayerRecordStore.getState().setBankPoints(result.bank_points)
     }
     return result
   },
@@ -313,7 +313,7 @@ export const useWarehouseStore = create<WarehouseState>((set, get) => ({
   clearFullMessage: () => set({ fullMessage: null }),
 
   depositItemToStorage: async (itemId) => {
-    if (get().occupiedSlotCount() >= WAREHOUSE_SLOT_CAP) {
+    if (get().occupiedSlotCount() >= BANK_SLOT_CAP) {
       set({ fullMessage: 'Storage is full.' })
       return { ok: false }
     }
@@ -369,7 +369,7 @@ export const useWarehouseStore = create<WarehouseState>((set, get) => ({
   },
 
   depositCurrencyItem: async (characterId, currencyType, amount) => {
-    if (get().occupiedSlotCount() + amount > WAREHOUSE_SLOT_CAP) {
+    if (get().occupiedSlotCount() + amount > BANK_SLOT_CAP) {
       set({ fullMessage: 'Storage is full.' })
       return { ok: false }
     }
@@ -461,12 +461,12 @@ function applyBankCurrencyItemResult(currencyType: BankCurrencyType, result: Ban
     return result
   }
 
-  if (currencyType === 'meteor') {
-    useCurrencyStore.getState().setMeteors(result.count)
-    usePlayerRecordStore.getState().setMeteorBankCount(result.bank_count)
+  if (currencyType === 'comet') {
+    useCurrencyStore.getState().setComets(result.count)
+    usePlayerRecordStore.getState().setCometBankCount(result.bank_count)
   } else {
-    useCurrencyStore.getState().setDragonballs(result.count)
-    usePlayerRecordStore.getState().setDragonballBankCount(result.bank_count)
+    useCurrencyStore.getState().setFallenStars(result.count)
+    usePlayerRecordStore.getState().setFallenStarBankCount(result.bank_count)
   }
 
   return result
@@ -480,18 +480,18 @@ function applyCurrencyResult(currency: Currency, result: TransferCurrencyResult)
   if (currency === 'gold') {
     useProgressionStore.getState().setGold(result.character_balance)
     usePlayerRecordStore.getState().setBankBalances({ bankGold: result.bank_balance })
-  } else if (currency === 'meteors') {
-    useCurrencyStore.getState().setMeteors(result.character_balance)
+  } else if (currency === 'comets') {
+    useCurrencyStore.getState().setComets(result.character_balance)
     if (typeof result.character_scroll_count === 'number') {
-      useCurrencyStore.getState().setMeteorScrolls(result.character_scroll_count)
+      useCurrencyStore.getState().setCometScrolls(result.character_scroll_count)
     }
-    usePlayerRecordStore.getState().setBankBalances({ bankMeteors: result.bank_balance })
+    usePlayerRecordStore.getState().setBankBalances({ bankComets: result.bank_balance })
   } else {
-    useCurrencyStore.getState().setDragonballs(result.character_balance)
+    useCurrencyStore.getState().setFallenStars(result.character_balance)
     if (typeof result.character_scroll_count === 'number') {
-      useCurrencyStore.getState().setDragonballScrolls(result.character_scroll_count)
+      useCurrencyStore.getState().setFallenStarScrolls(result.character_scroll_count)
     }
-    usePlayerRecordStore.getState().setBankBalances({ bankDragonballs: result.bank_balance })
+    usePlayerRecordStore.getState().setBankBalances({ bankFallenStars: result.bank_balance })
   }
 
   return result

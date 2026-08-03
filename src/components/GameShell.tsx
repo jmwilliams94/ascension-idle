@@ -14,7 +14,7 @@ import SettingsModal from './SettingsModal'
 import ShopPanel from './ShopPanel'
 import TabNav from './TabNav'
 import MobileBottomNav from './MobileBottomNav'
-import WarehousePanel from './WarehousePanel'
+import BankPanel from './BankPanel'
 import AchievementsPanel from './AchievementsPanel'
 import LuckyPanel from './LuckyPanel'
 import { useAuthStore } from '../lib/useAuthStore'
@@ -23,7 +23,7 @@ import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { usePersistGameState } from '../lib/usePersistGameState'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { usePotionStore } from '../game/items/usePotionStore'
-import { useWarehouseStore } from '../game/items/useWarehouseStore'
+import { useBankStore } from '../game/items/useBankStore'
 import { useLootHoldingStore } from '../game/items/useLootHoldingStore'
 import { useAchievementsStore } from '../game/achievements/useAchievementsStore'
 import { useMarketplaceStore } from '../game/marketplace/useMarketplaceStore'
@@ -51,7 +51,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
   const loadCharacterRecord = useCharacterRecordStore((state) => state.loadCharacterRecord)
   const loadInventory = useInventoryStore((state) => state.loadInventory)
   const loadPotionStacks = usePotionStore((state) => state.loadStacks)
-  const loadBankItems = useWarehouseStore((state) => state.loadBankItems)
+  const loadBankItems = useBankStore((state) => state.loadBankItems)
   const loadLootHolding = useLootHoldingStore((state) => state.loadLootHolding)
   const loadAchievements = useAchievementsStore((state) => state.loadAchievements)
   const loadMyListings = useMarketplaceStore((state) => state.loadMyListings)
@@ -279,7 +279,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
           {activeTab === 'forge' && <ForgePanel />}
           {activeTab === 'marketplace' && <MarketplacePanel />}
           {activeTab === 'shop' && <ShopPanel />}
-          {activeTab === 'warehouse' && <WarehousePanel characterId={characterId} />}
+          {activeTab === 'bank' && <BankPanel characterId={characterId} />}
           {activeTab === 'achievements' && <AchievementsPanel characterId={characterId} />}
           {activeTab === 'lucky' && <LuckyPanel characterId={characterId} />}
         </section>

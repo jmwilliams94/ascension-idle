@@ -8,7 +8,7 @@ import type { ListableCurrencyType } from './useMarketplaceStore'
 // supabase/migrations/20260802050000_add_marketplace.sql). Sale proceeds
 // (Gold/Ascension Points) still credit the seller's wallet directly, but as
 // of 2026-08-03 an entry here can now carry a listable currency unit
-// (Meteor/DragonBall/their Scrolls) instead of a gear item — exactly one of
+// (Comet/Fallen Star/their Scrolls) instead of a gear item — exactly one of
 // item_id/currency_type is set per row (DB check constraint), same split as
 // marketplace_listings itself. Populated exclusively by the Marketplace RPCs
 // (buy/end_marketplace_listing); this store never writes the mail table
@@ -101,17 +101,17 @@ export const useMailStore = create<MailState>((set, get) => ({
         // other currency mutation in this game already uses.
         const currencyStore = useCurrencyStore.getState()
         switch (result.currency_type) {
-          case 'meteor':
-            currencyStore.setMeteors(result.new_count)
+          case 'comet':
+            currencyStore.setComets(result.new_count)
             break
-          case 'dragonball':
-            currencyStore.setDragonballs(result.new_count)
+          case 'fallen_star':
+            currencyStore.setFallenStars(result.new_count)
             break
-          case 'meteor_scroll':
-            currencyStore.setMeteorScrolls(result.new_count)
+          case 'comet_scroll':
+            currencyStore.setCometScrolls(result.new_count)
             break
-          case 'dragonball_scroll':
-            currencyStore.setDragonballScrolls(result.new_count)
+          case 'fallen_star_scroll':
+            currencyStore.setFallenStarScrolls(result.new_count)
             break
         }
       } else if (entry?.item) {

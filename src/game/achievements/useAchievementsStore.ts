@@ -10,7 +10,7 @@ import { useCurrencyStore } from '../stats/useCurrencyStore'
 // unlock_next_achievement_tier. This store just mirrors what the server
 // already decided, same "server response reconciles local state" pattern
 // every other store in this game already follows (useCurrencyStore,
-// useCompositionStore, useWarehouseStore, etc.).
+// useCompositionStore, useBankStore, etc.).
 export interface CharacterKillEntry {
   kills: number
   unlockedTierIndex: number
@@ -24,17 +24,17 @@ interface UnlockNextTierResult {
   // rejection. Previously this case set no `error` at all, so the UI could
   // only ever show a generic "Something went wrong" with no way to tell
   // which of these two very different situations it actually was.
-  error?: 'not_owner' | 'already_maxed' | 'not_enough_meteors' | 'not_enough_dragonballs' | 'kill_count_tier_required' | 'rpc_failed'
+  error?: 'not_owner' | 'already_maxed' | 'not_enough_comets' | 'not_enough_fallen_stars' | 'kill_count_tier_required' | 'rpc_failed'
   // Only set for 'rpc_failed' — the raw Supabase/Postgres error message, so
   // it can actually be shown instead of silently living in console.error.
   message?: string
   cost?: number
-  currency?: 'meteor' | 'dragonball'
-  meteors?: number
-  dragonballs?: number
+  currency?: 'comet' | 'fallen_star'
+  comets?: number
+  fallen_stars?: number
   unlocked_tier_index?: number
-  meteors_remaining?: number
-  dragonballs_remaining?: number
+  comets_remaining?: number
+  fallen_stars_remaining?: number
 }
 
 interface AchievementsState {
@@ -116,11 +116,11 @@ export const useAchievementsStore = create<AchievementsState>((set, get) => ({
     const result = data as UnlockNextTierResult
 
     if (result.ok && typeof result.unlocked_tier_index === 'number') {
-      if (typeof result.meteors_remaining === 'number') {
-        useCurrencyStore.getState().setMeteors(result.meteors_remaining)
+      if (typeof result.comets_remaining === 'number') {
+        useCurrencyStore.getState().setComets(result.comets_remaining)
       }
-      if (typeof result.dragonballs_remaining === 'number') {
-        useCurrencyStore.getState().setDragonballs(result.dragonballs_remaining)
+      if (typeof result.fallen_stars_remaining === 'number') {
+        useCurrencyStore.getState().setFallenStars(result.fallen_stars_remaining)
       }
       set((state) => ({
         characterKills: {

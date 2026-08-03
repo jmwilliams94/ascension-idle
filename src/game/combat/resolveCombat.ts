@@ -27,12 +27,12 @@ export interface ResolveCombatResult {
   ok: boolean
   error?: string
   elapsedMs?: number
-  gained?: { kills: number; rareKills: number; gold: number; exp: number; meteors: number; dragonballs: number }
-  character?: { gold: number; exp: number; level: number; meteors: number; dragonballs: number }
+  gained?: { kills: number; rareKills: number; gold: number; exp: number; comets: number; fallenStars: number }
+  character?: { gold: number; exp: number; level: number; comets: number; fallenStars: number }
   leveledUp?: boolean
   itemsGranted?: ItemInstance[]
   itemsHeld?: { template_id: string }[]
-  currencyHeld?: { currency_type: 'meteor' | 'dragonball' }[]
+  currencyHeld?: { currency_type: 'comet' | 'fallen_star' }[]
   // Live mode only — set when a kill rolled a drop that had nowhere to go,
   // so the server stopped simulating further attacks for the rest of this
   // window. Never set for an offline-mode call (that window always overflows
@@ -63,8 +63,8 @@ export async function resolveCombat(characterId: string, mode: ResolveCombatMode
   }
 
   useProgressionStore.getState().applyServerCombatResult(result.character)
-  useCurrencyStore.getState().setMeteors(result.character.meteors)
-  useCurrencyStore.getState().setDragonballs(result.character.dragonballs)
+  useCurrencyStore.getState().setComets(result.character.comets)
+  useCurrencyStore.getState().setFallenStars(result.character.fallenStars)
 
   for (const item of result.itemsGranted ?? []) {
     useInventoryStore.getState().addItem(item)
@@ -74,7 +74,7 @@ export async function resolveCombat(characterId: string, mode: ResolveCombatMode
     // resolve-combat doesn't return loot_holding row ids (it's fire-and-forget
     // from its perspective) — a lightweight refetch keeps this simple rather
     // than threading ids back through the response. Covers both gear and
-    // currency-type holds (Meteor/DragonBall — see useLootHoldingStore).
+    // currency-type holds (Comet/Fallen Star — see useLootHoldingStore).
     void useLootHoldingStore.getState().loadLootHolding(characterId)
   }
 

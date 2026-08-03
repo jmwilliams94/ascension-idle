@@ -3,7 +3,7 @@ import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import { LOOT_HOLDING_CAP, useLootHoldingStore } from '../game/items/useLootHoldingStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { formatItemDisplayName, getGearIconSrc, getItemIcon, getQualityColor, previewSellPrice } from '../game/items/equipmentBonus'
-import { DRAGONBALL_COLOR, DRAGONBALL_ICON_SRC, MATERIAL_COLOR, METEOR_ICON_SRC } from '../game/items/forgeCosts'
+import { FALLEN_STAR_COLOR, FALLEN_STAR_ICON_SRC, MATERIAL_COLOR, COMET_ICON_SRC } from '../game/items/forgeCosts'
 
 // Loot Holding (confirmed with the user, 2026-07-30): where a server-resolved
 // kill's item drop lands when Inventory is full — see useLootHoldingStore and
@@ -25,7 +25,7 @@ import { DRAGONBALL_COLOR, DRAGONBALL_ICON_SRC, MATERIAL_COLOR, METEOR_ICON_SRC 
 //
 // Grid width bug fix (2026-08-03): this was hardcoded to 8 columns, wider
 // than a phone viewport even at the smaller mobile tile size — the same
-// overflow bug already fixed elsewhere (InventoryPanel, WarehouseGrid,
+// overflow bug already fixed elsewhere (InventoryPanel, BankGrid,
 // Forge/Bank's own InventoryPanel usages), just never caught here since it
 // only ever renders inside this one modal. Now 5, matching that established
 // convention, and centered like every other grid that got the same fix.
@@ -97,17 +97,17 @@ export default function LootHoldingCard() {
             const isCurrency = Boolean(entry.currency_type)
             const template = entry.template_id ? templates.find((t) => t.id === entry.template_id) : null
             const label = isCurrency
-              ? entry.currency_type === 'meteor'
-                ? 'Meteor'
-                : 'DragonBall'
+              ? entry.currency_type === 'comet'
+                ? 'Comet'
+                : 'Fallen Star'
               : template && entry.quality_tier
                 ? formatItemDisplayName(template.name, entry.quality_tier)
                 : 'Unknown item'
             const icon = isCurrency ? undefined : getItemIcon(template?.slot_type)
             const iconSrc = isCurrency
-              ? entry.currency_type === 'meteor'
-                ? METEOR_ICON_SRC
-                : DRAGONBALL_ICON_SRC
+              ? entry.currency_type === 'comet'
+                ? COMET_ICON_SRC
+                : FALLEN_STAR_ICON_SRC
               : getGearIconSrc(template?.name)
 
             return (
@@ -121,9 +121,9 @@ export default function LootHoldingCard() {
                 label={label}
                 qualityColor={
                   isCurrency
-                    ? entry.currency_type === 'meteor'
+                    ? entry.currency_type === 'comet'
                       ? MATERIAL_COLOR
-                      : DRAGONBALL_COLOR
+                      : FALLEN_STAR_COLOR
                     : getQualityColor(entry.quality_tier ?? 'normal')
                 }
               />

@@ -4,7 +4,7 @@ import ItemTooltip from './ItemTooltip'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
 
 // Inventory-grid-only (confirmed with the user, 2026-08-03 — scoped away from
-// Forge/Warehouse/Shop/Equipment's own gear tiles, which all keep today's
+// Forge/Bank/Shop/Equipment's own gear tiles, which all keep today's
 // hover-peek ItemTooltip + separate below-grid detail card unchanged). Press
 // a gear tile → this opens instead of the old detail card, showing the same
 // ItemTooltip content plus Equip/Compare buttons directly in it — replaces

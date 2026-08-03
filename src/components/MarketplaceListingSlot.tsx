@@ -7,7 +7,7 @@ import type { ItemInstance } from '../game/items/useInventoryStore'
 import type { ItemTemplate } from '../game/items/useItemTemplatesStore'
 
 // What's currently staged to list — either a real gear item or one of the 4
-// listable currency types (Meteor/DragonBall/their Scrolls, 2026-08-03),
+// listable currency types (Comet/Fallen Star/their Scrolls, 2026-08-03),
 // always exactly 1 unit either way (matching gear's own "1 listing = 1
 // unique item" model).
 export type ListingDraftTarget =
@@ -24,7 +24,7 @@ interface MarketplaceListingSlotProps {
 // carries the target key a dragged tile lands on, reuses InventorySlot so the
 // universal hover tooltip works here too). A small, deliberate duplication
 // rather than a shared generic component, matching this codebase's existing
-// style (ForgeUpgradeSlot/WarehouseGrid already have some duplication rather
+// style (ForgeUpgradeSlot/BankGrid already have some duplication rather
 // than an over-abstracted shared slot).
 export default function MarketplaceListingSlot({ target, onRemove }: MarketplaceListingSlotProps) {
   const item = target?.kind === 'item' ? target.item : null

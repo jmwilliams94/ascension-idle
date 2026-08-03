@@ -11,7 +11,7 @@ import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 // appear anymore now that kills resolve in the background (see
 // resolveCombat.ts / supabase/functions/resolve-combat). A simple ~100-slot
 // holding area; claiming moves an item into Inventory whenever there's room.
-// Extended (2026-07-31) to also hold a pending Meteor/DragonBall drop
+// Extended (2026-07-31) to also hold a pending Comet/Fallen Star drop
 // (currency_type set, template_id null) alongside its original gear-drop
 // shape (template_id set, currency_type null) — see CLAUDE.md's Warehouse
 // economy redesign note.
@@ -21,7 +21,7 @@ export interface LootHoldingEntry {
   id: string
   template_id: string | null
   quality_tier: string | null
-  currency_type: 'meteor' | 'dragonball' | null
+  currency_type: 'comet' | 'fallen_star' | null
   created_at: string
 }
 
@@ -29,14 +29,14 @@ interface ClaimResult {
   ok: boolean
   error?: 'not_found' | 'not_owner'
   item?: ItemInstance
-  currency_type?: 'meteor' | 'dragonball'
+  currency_type?: 'comet' | 'fallen_star'
   new_count?: number
 }
 
 // sell_loot_holding (2026-07-31) — sells a pending gear drop straight out of
 // Loot Holding for gold, without claiming it into Inventory first. Mirrors
 // sell_item's own price formula exactly (see the migration). Currency-type
-// entries (Meteor/DragonBall) are rejected server-side with 'not_sellable' —
+// entries (Comet/Fallen Star) are rejected server-side with 'not_sellable' —
 // the UI only ever offers this on gear entries to begin with.
 interface SellResult {
   ok: boolean
@@ -106,10 +106,10 @@ export const useLootHoldingStore = create<LootHoldingState>((set) => ({
       useInventoryStore.getState().addItem(result.item)
       set((state) => ({ entries: state.entries.filter((entry) => entry.id !== holdingId) }))
     } else if (result.ok && result.currency_type && typeof result.new_count === 'number') {
-      if (result.currency_type === 'meteor') {
-        useCurrencyStore.getState().setMeteors(result.new_count)
+      if (result.currency_type === 'comet') {
+        useCurrencyStore.getState().setComets(result.new_count)
       } else {
-        useCurrencyStore.getState().setDragonballs(result.new_count)
+        useCurrencyStore.getState().setFallenStars(result.new_count)
       }
       set((state) => ({ entries: state.entries.filter((entry) => entry.id !== holdingId) }))
     }

@@ -10,15 +10,15 @@ import {
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
-import { useWarehouseStore } from '../game/items/useWarehouseStore'
+import { useBankStore } from '../game/items/useBankStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 
-type CurrencyId = 'gold' | 'meteors' | 'dragonballs'
+type CurrencyId = 'gold' | 'comets' | 'fallen_stars'
 
 const CURRENCIES: { id: CurrencyId; label: string }[] = [
   { id: 'gold', label: 'Gold' },
-  { id: 'meteors', label: 'Meteors' },
-  { id: 'dragonballs', label: 'DragonBalls' },
+  { id: 'comets', label: 'Comets' },
+  { id: 'fallen_stars', label: 'Fallen Stars' },
 ]
 
 type SelectedSquare =
@@ -45,11 +45,11 @@ function squareKey(square: NonNullable<SelectedSquare>): string {
 // BankedCard's row-based layout (CurrencyRow/StonesRow/GearCompositionRow)
 // with a grid of simple squares: label on top, quantity underneath, nothing
 // more. Always rendered regardless of the Inventory/Storage toggle in
-// WarehousePanel — these are account-wide totals, independent of which side
+// BankPanel — these are account-wide totals, independent of which side
 // the main grid is currently showing.
 //
 // Each square shows a *different* pool than the physical Bank Storage grid
-// (WarehouseGrid) — these are all liquidated/converted balances (currency
+// (BankGrid) — these are all liquidated/converted balances (currency
 // Bank balances, banked stone-tile counts, and the two points-conversion
 // pools), not physical item tiles. Depositing into most of these now happens
 // via the per-item "Bank"/"Deposit" popover in the Inventory-side grid
@@ -62,21 +62,21 @@ function squareKey(square: NonNullable<SelectedSquare>): string {
 // mint them).
 export default function BankSquares({ characterId }: { characterId: string }) {
   const gold = useProgressionStore((state) => state.gold)
-  const meteors = useCurrencyStore((state) => state.meteors)
-  const dragonballs = useCurrencyStore((state) => state.dragonballs)
+  const comets = useCurrencyStore((state) => state.comets)
+  const fallenStars = useCurrencyStore((state) => state.fallenStars)
   const bankGold = usePlayerRecordStore((state) => state.bankGold)
-  const bankMeteors = usePlayerRecordStore((state) => state.bankMeteors)
-  const bankDragonballs = usePlayerRecordStore((state) => state.bankDragonballs)
+  const bankComets = usePlayerRecordStore((state) => state.bankComets)
+  const bankFallenStars = usePlayerRecordStore((state) => state.bankFallenStars)
   const stonesBanked = usePlayerRecordStore((state) => state.stonesBanked)
-  const warehousePoints = usePlayerRecordStore((state) => state.warehousePoints)
+  const bankPoints = usePlayerRecordStore((state) => state.bankPoints)
   const gearCompositionPoints = usePlayerRecordStore((state) => state.gearCompositionPoints)
 
-  const busy = useWarehouseStore((state) => state.busy)
-  const depositCurrency = useWarehouseStore((state) => state.depositCurrency)
-  const withdrawCurrency = useWarehouseStore((state) => state.withdrawCurrency)
-  const withdrawStoneItem = useWarehouseStore((state) => state.withdrawStoneItem)
-  const withdrawStone = useWarehouseStore((state) => state.withdrawStone)
-  const withdrawGearComposition = useWarehouseStore((state) => state.withdrawGearComposition)
+  const busy = useBankStore((state) => state.busy)
+  const depositCurrency = useBankStore((state) => state.depositCurrency)
+  const withdrawCurrency = useBankStore((state) => state.withdrawCurrency)
+  const withdrawStoneItem = useBankStore((state) => state.withdrawStoneItem)
+  const withdrawStone = useBankStore((state) => state.withdrawStone)
+  const withdrawGearComposition = useBankStore((state) => state.withdrawGearComposition)
 
   const [selected, setSelected] = useState<SelectedSquare>(null)
 
@@ -84,8 +84,8 @@ export default function BankSquares({ characterId }: { characterId: string }) {
     setSelected((current) => (current && squareKey(current) === squareKey(square) ? null : square))
   }
 
-  const walletFor = (id: CurrencyId) => (id === 'gold' ? gold : id === 'meteors' ? meteors : dragonballs)
-  const bankFor = (id: CurrencyId) => (id === 'gold' ? bankGold : id === 'meteors' ? bankMeteors : bankDragonballs)
+  const walletFor = (id: CurrencyId) => (id === 'gold' ? gold : id === 'comets' ? comets : fallenStars)
+  const bankFor = (id: CurrencyId) => (id === 'gold' ? bankGold : id === 'comets' ? bankComets : bankFallenStars)
 
   return (
     <div className="h-fit space-y-3 rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
@@ -112,7 +112,7 @@ export default function BankSquares({ characterId }: { characterId: string }) {
         ))}
         <Square
           label="Composition Points"
-          value={warehousePoints}
+          value={bankPoints}
           selected={selected?.kind === 'compositionPoints'}
           onClick={() => toggle({ kind: 'compositionPoints' })}
         />
@@ -149,7 +149,7 @@ export default function BankSquares({ characterId }: { characterId: string }) {
 
       {selected?.kind === 'compositionPoints' && (
         <CompositionPointsPanel
-          points={warehousePoints}
+          points={bankPoints}
           busy={busy}
           onWithdraw={(tier, amount) => withdrawStone(characterId, tier, amount)}
         />

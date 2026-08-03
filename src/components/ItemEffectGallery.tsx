@@ -27,8 +27,8 @@ const EXAMPLES: Example[] = [
   { label: 'Infused', caption: '10 embers', color: '#2E5EAA' },
   { label: 'Radiant', caption: '25 embers', color: '#A855F7' },
   { label: 'Ascended', caption: '100 embers', color: '#EF4444' },
-  { label: 'Meteor / Stones', caption: '10 embers (rare material)', color: '#C8D0DC' },
-  { label: 'DragonBall', caption: '10 embers (rare material)', color: '#F0B87A' },
+  { label: 'Comet / Stones', caption: '10 embers (rare material)', color: '#C8D0DC' },
+  { label: 'Fallen Star', caption: '10 embers (rare material)', color: '#F0B87A' },
 ]
 
 function ExampleTile({ example, index }: { example: Example; index: number }) {
@@ -53,9 +53,9 @@ export default function ItemEffectGallery() {
   return (
     <div className="space-y-4">
       <p className="text-xs text-slate-500">
-        Live on every real gear/material tile in the game now (Inventory, Forge, Equipment, Warehouse, Loot Holding) — colored
+        Live on every real gear/material tile in the game now (Inventory, Forge, Equipment, Bank, Loot Holding) — colored
         to match each tile's own established color ({Object.keys(EMBER_DENSITY_BY_COLOR).length} colors mapped: 4 gear quality
-        tiers + Meteor/Stones + DragonBall), denser for rarer/more valuable tiles. Normal quality and Potions get no effect at
+        tiers + Comet/Stones + Fallen Star), denser for rarer/more valuable tiles. Normal quality and Potions get no effect at
         all. Every tile is actually animated; a screenshot won't show the motion.
       </p>
 

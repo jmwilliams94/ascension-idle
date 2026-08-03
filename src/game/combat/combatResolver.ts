@@ -56,7 +56,7 @@ export function killRewards(type: EnemyTypeDef, isRare: boolean, characterLevel:
   }
 }
 
-// Meteor/Dragonball kill-drop odds — confirmed by the user (2026-07-30), not a
+// Comet/Fallen Star kill-drop odds — confirmed by the user (2026-07-30), not a
 // placeholder like the rest of this file's numbers. Independent per-kill rolls,
 // not affected by rare status (rare only multiplies HP/gold/EXP per the
 // existing confirmed design above). Reverted back to flat (2026-08-03) — a
@@ -69,13 +69,13 @@ export function killRewards(type: EnemyTypeDef, isRare: boolean, characterLevel:
 // resolve-combat/index.ts, not here. Shared by live combat and the offline
 // simulator so odds can never drift between the two, same convention as
 // every other roll in this module.
-export const METEOR_DROP_CHANCE = 1 / 500
-export const DRAGONBALL_DROP_CHANCE = 1 / 20000
+export const COMET_DROP_CHANCE = 1 / 500
+export const FALLEN_STAR_DROP_CHANCE = 1 / 20000
 
-export function rollBonusCurrencyDrops(): { meteors: number; dragonballs: number } {
+export function rollBonusCurrencyDrops(): { comets: number; fallenStars: number } {
   return {
-    meteors: Math.random() < METEOR_DROP_CHANCE ? 1 : 0,
-    dragonballs: Math.random() < DRAGONBALL_DROP_CHANCE ? 1 : 0,
+    comets: Math.random() < COMET_DROP_CHANCE ? 1 : 0,
+    fallenStars: Math.random() < FALLEN_STAR_DROP_CHANCE ? 1 : 0,
   }
 }
 

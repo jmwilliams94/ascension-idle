@@ -25,10 +25,10 @@ import { damageRangeFromMidpoint } from '../combat/combatResolver'
 // since that's all scaledStat needs.
 export const QUALITY_STAT_MULTIPLIERS: Record<string, number> = {
   normal: 1,
-  refined: 1.25,
-  unique: 1.5,
-  elite: 1.75,
-  super: 2,
+  tempered: 1.25,
+  infused: 1.5,
+  radiant: 1.75,
+  ascended: 2,
 }
 
 function scaledStat(baseStats: Record<string, number>, key: string, qualityTier: string): number | undefined {
@@ -121,17 +121,22 @@ export function formatBaseStats(baseStats: Record<string, number>, qualityTier: 
     .join(', ')
 }
 
-// Display names only — the underlying stored quality_tier values ('normal',
-// 'refined', 'unique', 'elite', 'super') are unchanged, so this rename needed
-// no schema/migration/SQL changes at all, just remapping these two lookup
-// tables. Confirmed tier names/colors (replaces the earlier placeholder
-// gray->blue->purple->orange->red gradient with a real, designed palette).
+// Underlying stored quality_tier values were originally 'normal'/'refined'/
+// 'unique'/'elite'/'super' (a display-only rename, 2026-08-01/02, mapped them
+// to these labels without any schema/migration/SQL change) — since fully
+// renamed at the storage layer too (2026-08-03, see
+// supabase/migrations/20260803110000_rename_quality_tiers.sql), so the
+// stored values now match these labels directly (just lowercase, one word
+// each). This lookup table stays for the capitalization/display formatting,
+// not because the underlying key differs anymore. Confirmed tier names/
+// colors (replaces the earlier placeholder gray->blue->purple->orange->red
+// gradient with a real, designed palette).
 const QUALITY_LABELS: Record<string, string> = {
   normal: 'Normal',
-  refined: 'Tempered',
-  unique: 'Infused',
-  elite: 'Radiant',
-  super: 'Ascended',
+  tempered: 'Tempered',
+  infused: 'Infused',
+  radiant: 'Radiant',
+  ascended: 'Ascended',
 }
 
 // Recalibrated (2026-08-02, supersedes the earlier White/Warm-bronze/Silver/
@@ -144,10 +149,10 @@ const QUALITY_LABELS: Record<string, string> = {
 // stand out more.
 export const QUALITY_COLORS: Record<string, string> = {
   normal: '#FFFFFF',
-  refined: '#4FC3F7',
-  unique: '#2E5EAA',
-  elite: '#A855F7',
-  super: '#EF4444',
+  tempered: '#4FC3F7',
+  infused: '#2E5EAA',
+  radiant: '#A855F7',
+  ascended: '#EF4444',
 }
 
 export function getQualityColor(qualityTier: string): string {
@@ -231,12 +236,12 @@ export function getWeaponIcon(itemFamily: string | null | undefined): string {
   return getItemIcon('weapon')
 }
 
-const QUALITY_ORDER = ['normal', 'refined', 'unique', 'elite', 'super']
+const QUALITY_ORDER = ['normal', 'tempered', 'infused', 'radiant', 'ascended']
 
 // Mirrors the quality_upgrade Postgres function's tier progression exactly (see
-// supabase/migrations/20260727050000_add_quality_level_upgrade.sql's v_next_tier
+// supabase/migrations/20260803110000_rename_quality_tiers.sql's v_next_tier
 // case statement) — used for the Forge preview, which needs to know the *next*
-// tier before committing. Returns null when already at Super (the real max).
+// tier before committing. Returns null when already at Ascended (the real max).
 export function nextQualityTier(qualityTier: string): string | null {
   const index = QUALITY_ORDER.indexOf(qualityTier)
   if (index === -1 || index === QUALITY_ORDER.length - 1) {

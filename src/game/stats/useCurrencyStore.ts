@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '../../lib/supabaseClient'
 
-// Meteors (Level Upgrade) and DragonBalls (Quality Upgrade + weapon sockets later),
+// Comets (Level Upgrade) and Fallen Stars (Quality Upgrade + weapon sockets later),
 // per CLAUDE.md. Deliberately NOT wired into usePersistGameState's autosave: the
 // quality_upgrade/level_upgrade Postgres functions and the resolve-combat Edge
 // Function already mutate these server-side, so the client only ever reads them
@@ -11,17 +11,17 @@ import { supabase } from '../../lib/supabaseClient'
 //
 // Superseded: kill-drop grants used to go through a dedicated grant_currency_reward
 // RPC (an atomic increment, called directly from useCombatStore's kill branch).
-// That RPC still exists but is no longer called from the client — Meteor/
-// DragonBall kill-drops are now resolved as part of resolve-combat's own
+// That RPC still exists but is no longer called from the client — Comet/
+// Fallen Star kill-drops are now resolved as part of resolve-combat's own
 // transaction (see resolveCombat.ts), alongside gold/EXP/item drops, rather than
 // as a separate call.
 //
 // Scrolls (stage 2 of the Warehouse economy redesign, 2026-07-31): a compact-
-// storage bundle of 10 loose Meteors/DragonBalls into 1 non-stacking Inventory
+// storage bundle of 10 loose Comets/Fallen Stars into 1 non-stacking Inventory
 // item. Same trust model as the units themselves — server-authoritative via
 // the bundle_currency_scroll/unbundle_currency_scroll RPCs (SECURITY DEFINER,
 // atomic), the client only ever reflects each call's response.
-type CurrencyType = 'meteor' | 'dragonball'
+type CurrencyType = 'comet' | 'fallen_star'
 
 interface BundleResult {
   ok: boolean
@@ -31,24 +31,24 @@ interface BundleResult {
 }
 
 interface CurrencyState {
-  meteors: number
-  dragonballs: number
-  meteorScrolls: number
-  dragonballScrolls: number
+  comets: number
+  fallenStars: number
+  cometScrolls: number
+  fallenStarScrolls: number
   // Ascension Points moved to usePlayerRecordStore (2026-08-03) — it's
   // account-wide (a premium currency), not per-character, so it doesn't
   // belong in this store anymore. See usePlayerRecordStore.ts.
   //
-  // Bank Storage's own Meteor/DragonBall counts also moved to
+  // Bank Storage's own Comet/Fallen Star counts also moved to
   // usePlayerRecordStore (2026-08-03, Bank tab rework) — Storage is now
-  // fully account-wide, not per-character, so meteorBankCount/
-  // dragonballBankCount live there now too, alongside warehousePoints/
+  // fully account-wide, not per-character, so cometBankCount/
+  // fallenStarBankCount live there now too, alongside bankPoints/
   // gearCompositionPoints/stonesBanked.
-  hydrate: (saved: { meteors: number; dragonballs: number; meteorScrolls: number; dragonballScrolls: number }) => void
-  setMeteors: (value: number) => void
-  setDragonballs: (value: number) => void
-  setMeteorScrolls: (value: number) => void
-  setDragonballScrolls: (value: number) => void
+  hydrate: (saved: { comets: number; fallenStars: number; cometScrolls: number; fallenStarScrolls: number }) => void
+  setComets: (value: number) => void
+  setFallenStars: (value: number) => void
+  setCometScrolls: (value: number) => void
+  setFallenStarScrolls: (value: number) => void
   // Bundles 10 loose units into 1 Scroll — one fixed-size transaction per
   // call (mirrors buyArrows/buyPotions always purchasing one full stack),
   // not a variable amount.
@@ -60,22 +60,22 @@ interface CurrencyState {
 }
 
 export const useCurrencyStore = create<CurrencyState>((set) => ({
-  meteors: 0,
-  dragonballs: 0,
-  meteorScrolls: 0,
-  dragonballScrolls: 0,
+  comets: 0,
+  fallenStars: 0,
+  cometScrolls: 0,
+  fallenStarScrolls: 0,
 
   hydrate: (saved) =>
     set({
-      meteors: saved.meteors,
-      dragonballs: saved.dragonballs,
-      meteorScrolls: saved.meteorScrolls,
-      dragonballScrolls: saved.dragonballScrolls,
+      comets: saved.comets,
+      fallenStars: saved.fallenStars,
+      cometScrolls: saved.cometScrolls,
+      fallenStarScrolls: saved.fallenStarScrolls,
     }),
-  setMeteors: (value) => set({ meteors: value }),
-  setDragonballs: (value) => set({ dragonballs: value }),
-  setMeteorScrolls: (value) => set({ meteorScrolls: value }),
-  setDragonballScrolls: (value) => set({ dragonballScrolls: value }),
+  setComets: (value) => set({ comets: value }),
+  setFallenStars: (value) => set({ fallenStars: value }),
+  setCometScrolls: (value) => set({ cometScrolls: value }),
+  setFallenStarScrolls: (value) => set({ fallenStarScrolls: value }),
 
   bundleScroll: async (characterId, currencyType) => {
     const { data, error } = await supabase.rpc('bundle_currency_scroll', {
@@ -91,10 +91,10 @@ export const useCurrencyStore = create<CurrencyState>((set) => ({
     const result = data as BundleResult
 
     if (result.ok && typeof result.unit_count === 'number' && typeof result.scroll_count === 'number') {
-      if (currencyType === 'meteor') {
-        set({ meteors: result.unit_count, meteorScrolls: result.scroll_count })
+      if (currencyType === 'comet') {
+        set({ comets: result.unit_count, cometScrolls: result.scroll_count })
       } else {
-        set({ dragonballs: result.unit_count, dragonballScrolls: result.scroll_count })
+        set({ fallenStars: result.unit_count, fallenStarScrolls: result.scroll_count })
       }
     }
 
@@ -115,10 +115,10 @@ export const useCurrencyStore = create<CurrencyState>((set) => ({
     const result = data as BundleResult
 
     if (result.ok && typeof result.unit_count === 'number' && typeof result.scroll_count === 'number') {
-      if (currencyType === 'meteor') {
-        set({ meteors: result.unit_count, meteorScrolls: result.scroll_count })
+      if (currencyType === 'comet') {
+        set({ comets: result.unit_count, cometScrolls: result.scroll_count })
       } else {
-        set({ dragonballs: result.unit_count, dragonballScrolls: result.scroll_count })
+        set({ fallenStars: result.unit_count, fallenStarScrolls: result.scroll_count })
       }
     }
 

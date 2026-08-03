@@ -30,7 +30,7 @@ import { MONSTER_GEAR_REWARDS } from '../game/achievements/monsterGearRewards'
 //     own Zones/Quests sub-tabs (see PlayerTabContent).
 //   - Account: the account-wide ladder, split into Zones/Quests/Unlocks
 //     sub-tabs (see AccountTabContent) — Unlocks moved here from its own
-//     top-level tab (it still spends a *character's* own Meteors/DragonBalls
+//     top-level tab (it still spends a *character's* own Comets/Fallen Stars
 //     to unlock a *character* tier, see UnlockRow — only where it lives in
 //     the UI changed, not what it does).
 //   - Pets: every monster's pet status (obtained/locked).
@@ -143,7 +143,7 @@ function killCountTierTooltipLines(tierIndex: number, state: TierVisualState, ki
   // reach, so low-level monsters (e.g. Quailwing) show a far smaller number
   // here than a harder monster would at the same tier.
   const rewardPct = Math.round((killCountBonusMultiplierAtTier(threshold, ENEMY_TYPES[monsterId].level) - 1) * 100)
-  const rewardLine = `Reward: +${rewardPct}% Meteor/DragonBall drop chance`
+  const rewardLine = `Reward: +${rewardPct}% Comet/Fallen Star drop chance`
   // Zone 1's per-monster gear rewards (2026-08-03) stack on top of the
   // ongoing drop-chance bonus above, not instead of it — both apply once
   // this tier is reached.
@@ -267,15 +267,15 @@ function UnlockRow({ characterId, monsterId, displayName }: { characterId: strin
   const characterEntry = useAchievementsStore((state) => state.characterKills[monsterId])
   const busy = useAchievementsStore((state) => state.busy)
   const unlockNextTier = useAchievementsStore((state) => state.unlockNextTier)
-  const meteors = useCurrencyStore((state) => state.meteors)
-  const dragonballs = useCurrencyStore((state) => state.dragonballs)
+  const comets = useCurrencyStore((state) => state.comets)
+  const fallenStars = useCurrencyStore((state) => state.fallenStars)
 
   const [error, setError] = useState<string | null>(null)
 
   const kills = characterEntry?.kills ?? 0
   const unlockedTierIndex = characterEntry?.unlockedTierIndex ?? 0
   const toUnlock = nextTierToUnlock(unlockedTierIndex)
-  const affordable = toUnlock ? (toUnlock.cost.currency === 'meteor' ? meteors : dragonballs) >= toUnlock.cost.amount : false
+  const affordable = toUnlock ? (toUnlock.cost.currency === 'comet' ? comets : fallenStars) >= toUnlock.cost.amount : false
   const meetsKillGate = kills >= MIN_KILLS_FOR_PRESTIGE
 
   if (!toUnlock) {
@@ -290,10 +290,10 @@ function UnlockRow({ characterId, monsterId, displayName }: { characterId: strin
     const result = await unlockNextTier(characterId, monsterId)
     if (!result.ok) {
       setError(
-        result.error === 'not_enough_meteors'
-          ? "You don't have enough Meteors."
-          : result.error === 'not_enough_dragonballs'
-            ? "You don't have enough DragonBalls."
+        result.error === 'not_enough_comets'
+          ? "You don't have enough Comets."
+          : result.error === 'not_enough_fallen_stars'
+            ? "You don't have enough Fallen Stars."
             : result.error === 'kill_count_tier_required'
               ? `Reach ${MIN_KILLS_FOR_PRESTIGE.toLocaleString()} kills on this monster first.`
               : result.error === 'already_maxed'
@@ -311,7 +311,7 @@ function UnlockRow({ characterId, monsterId, displayName }: { characterId: strin
   const disabledReason = !meetsKillGate
     ? `Reach ${MIN_KILLS_FOR_PRESTIGE.toLocaleString()} kills (Kill Count Tier 1) first`
     : !affordable
-      ? `Need ${toUnlock.cost.amount} ${toUnlock.cost.currency === 'meteor' ? 'Meteors' : 'DragonBalls'}`
+      ? `Need ${toUnlock.cost.amount} ${toUnlock.cost.currency === 'comet' ? 'Comets' : 'Fallen Stars'}`
       : undefined
 
   return (
@@ -329,7 +329,7 @@ function UnlockRow({ characterId, monsterId, displayName }: { characterId: strin
             title={disabledReason}
             className="rounded-lg border border-purple-600 bg-purple-500/10 px-2.5 py-1 text-[11px] font-medium text-purple-300 hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Prestige tier {unlockedTierIndex + 1} ({toUnlock.cost.amount} {toUnlock.cost.currency === 'meteor' ? 'Meteors' : 'DragonBalls'})
+            Prestige tier {unlockedTierIndex + 1} ({toUnlock.cost.amount} {toUnlock.cost.currency === 'comet' ? 'Comets' : 'Fallen Stars'})
           </button>
           {disabledReason && !error && <p className="mt-1 text-[11px] text-slate-500">{disabledReason}</p>}
           {error && <p className="mt-1 text-[11px] text-amber-400">{error}</p>}
@@ -350,7 +350,7 @@ function UnlockRow({ characterId, monsterId, displayName }: { characterId: strin
 }
 
 // Redesigned (2026-08-01, supersedes the earlier flat name+badge list row) to
-// read as a tile grid, matching the Inventory/Forge/Warehouse tile
+// read as a tile grid, matching the Inventory/Forge/Bank tile
 // convention (same SLOT_SIZE_CLASS, same universal hover tooltip) rather than
 // a plain list — an obtained pet gets a colored, glowing tile; a locked one
 // stays dim, same "special vs. mundane" visual language as gear quality tiers.
@@ -398,7 +398,7 @@ function PlaceholderCard({ title, description }: { title: string; description: s
 // status is visible without expanding to see the 5 individual monster rows.
 // Purely a display computation off useAchievementsStore's already-loaded
 // characterKills (see zoneTierCompletions in achievementData.ts) — the real
-// DragonBall grant only ever happens server-side, tracked via
+// Fallen Star grant only ever happens server-side, tracked via
 // character_zone_progress, which the client never reads.
 function ZoneAchievementSummary({ zoneId }: { zoneId: ZoneId }) {
   const characterKills = useAchievementsStore((state) => state.characterKills)
@@ -494,7 +494,7 @@ type PlayerSubTab = 'zones' | 'quests'
 
 const PLAYER_SUB_TAB_DESCRIPTIONS: Record<PlayerSubTab, string> = {
   zones:
-    'Kill a monster repeatedly to climb its personal ladder. Hover a tier segment to see its reward. Each zone also tracks its own total across all 5 monsters — shown on the zone header — and pays out its own DragonBall reward at milestones. Tap a zone to expand it.',
+    'Kill a monster repeatedly to climb its personal ladder. Hover a tier segment to see its reward. Each zone also tracks its own total across all 5 monsters — shown on the zone header — and pays out its own Fallen Star reward at milestones. Tap a zone to expand it.',
   quests: 'Quests aren’t designed yet.',
 }
 
@@ -585,8 +585,8 @@ function PetZoneGroups({ renderMonster }: { renderMonster: (monsterId: EnemyType
 // 2026-08-01) — mirrors the Character tab's Zones/Quests split, plus a third
 // Prestige sub-tab (renamed from "Unlocks," 2026-08-03, confirmed with the
 // user, wording only) moved here from what used to be its own top-level tab
-// (buying a Prestige tier still spends a *character's* own Meteors/
-// DragonBalls, and now also requires that monster's own Kill Count to have
+// (buying a Prestige tier still spends a *character's* own Comets/
+// Fallen Stars, and now also requires that monster's own Kill Count to have
 // reached Tier 1 first — see UnlockRow — only where it lives in the UI
 // changed). All three zone-grouped sections here collapse per zone
 // independently (their own expanded-zone state each), matching the
@@ -598,7 +598,7 @@ const ACCOUNT_SUB_TAB_DESCRIPTIONS: Record<AccountSubTab, string> = {
     'Every character on this account contributes to the same account-wide ladder per monster — its own reward category is still being designed. Tap a zone to expand it.',
   quests: 'Quests aren’t designed yet.',
   prestige:
-    'Spend Meteors/DragonBalls to advance a monster’s Prestige — a paid gold bonus, separate from Kill Count’s own free reward. Reaching Kill Count Tier 1 on a monster is required before its Prestige can advance at all.',
+    'Spend Comets/Fallen Stars to advance a monster’s Prestige — a paid gold bonus, separate from Kill Count’s own free reward. Reaching Kill Count Tier 1 on a monster is required before its Prestige can advance at all.',
 }
 
 function AccountTabContent({ characterId }: { characterId: string }) {

@@ -14,7 +14,7 @@ export type ListingCurrency = 'gold' | 'ascension_points'
 // The 4 currency "items" that can be listed alongside gear (2026-08-03) —
 // each listing is always exactly 1 unit, same as gear is always exactly 1
 // unique item. See 20260803010000_marketplace_currency_listings.sql.
-export type ListableCurrencyType = 'meteor' | 'dragonball' | 'meteor_scroll' | 'dragonball_scroll'
+export type ListableCurrencyType = 'comet' | 'fallen_star' | 'comet_scroll' | 'fallen_star_scroll'
 // Exactly one of item_id/currency_type is set per row (DB check constraint)
 // — a listing lists either a real gear item or one of the currency types.
 export type ListingTarget = { kind: 'item'; itemId: string } | { kind: 'currency'; currencyType: ListableCurrencyType }
@@ -93,7 +93,7 @@ interface MarketplaceState {
   // else in GameShell — it's a live cross-account feed, not "your own state."
   loadBrowseListings: () => Promise<void>
   // This character's own listings, active and historical — eager-loaded in
-  // GameShell alongside Warehouse/Loot Holding/Achievements.
+  // GameShell alongside Bank/Loot Holding/Achievements.
   loadMyListings: (characterId: string) => Promise<void>
   // Used by InventoryPanel's visibleItems filter — hides an item mid-listing
   // the same way isEquipped already hides an equipped one.

@@ -10,7 +10,7 @@ import {
   type LuckyReward,
 } from '../game/lucky/useLuckyStore'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
-import { DRAGONBALL_COLOR, DRAGONBALL_ICON_SRC, MATERIAL_COLOR, METEOR_ICON_SRC } from '../game/items/forgeCosts'
+import { FALLEN_STAR_COLOR, FALLEN_STAR_ICON_SRC, MATERIAL_COLOR, COMET_ICON_SRC } from '../game/items/forgeCosts'
 
 // Lucky — Stage 1 (confirmed design, see CLAUDE.md's Lucky section and the
 // draw_lucky_ticket migration's own header). A free ticket every 6 hours,
@@ -27,14 +27,14 @@ function rewardLabel(reward: LuckyReward): string {
   switch (reward.kind) {
     case 'gold':
       return `${reward.amount.toLocaleString()} Gold`
-    case 'meteor':
-      return 'Meteor'
-    case 'dragonball':
-      return 'DragonBall'
-    case 'meteor_scroll':
-      return 'Meteor Scroll'
-    case 'dragonball_scroll':
-      return 'DragonBall Scroll'
+    case 'comet':
+      return 'Comet'
+    case 'fallen_star':
+      return 'Fallen Star'
+    case 'comet_scroll':
+      return 'Comet Scroll'
+    case 'fallen_star_scroll':
+      return 'Fallen Star Scroll'
   }
 }
 
@@ -42,14 +42,14 @@ function rewardVisual(reward: LuckyReward): { icon?: string; iconSrc?: string; c
   switch (reward.kind) {
     case 'gold':
       return { icon: '💰', color: '#F0B87A' }
-    case 'meteor':
-      return { iconSrc: METEOR_ICON_SRC, color: MATERIAL_COLOR }
-    case 'dragonball':
-      return { iconSrc: DRAGONBALL_ICON_SRC, color: DRAGONBALL_COLOR }
-    case 'meteor_scroll':
+    case 'comet':
+      return { iconSrc: COMET_ICON_SRC, color: MATERIAL_COLOR }
+    case 'fallen_star':
+      return { iconSrc: FALLEN_STAR_ICON_SRC, color: FALLEN_STAR_COLOR }
+    case 'comet_scroll':
       return { icon: '📜', color: MATERIAL_COLOR }
-    case 'dragonball_scroll':
-      return { icon: '📜', color: DRAGONBALL_COLOR }
+    case 'fallen_star_scroll':
+      return { icon: '📜', color: FALLEN_STAR_COLOR }
   }
 }
 

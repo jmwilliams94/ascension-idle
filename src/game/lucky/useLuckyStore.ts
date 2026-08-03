@@ -25,7 +25,7 @@ export const LUCKYLAD_ICON_SRC = `${BASE_URL}lucky-icons/luckylad.png`
 export const CHEST_CLOSED_ICON_SRC = `${BASE_URL}lucky-icons/chest-closed.png`
 export const CHEST_OPEN_ICON_SRC = `${BASE_URL}lucky-icons/chest-open.png`
 
-export type LuckyRewardKind = 'gold' | 'meteor' | 'dragonball' | 'meteor_scroll' | 'dragonball_scroll'
+export type LuckyRewardKind = 'gold' | 'comet' | 'fallen_star' | 'comet_scroll' | 'fallen_star_scroll'
 
 export interface LuckyReward {
   kind: LuckyRewardKind
@@ -34,10 +34,10 @@ export interface LuckyReward {
 
 interface LuckyCharacterTotals {
   gold: number
-  meteor_count: number
-  dragonball_count: number
-  meteor_scroll_count: number
-  dragonball_scroll_count: number
+  comet_count: number
+  fallen_star_count: number
+  comet_scroll_count: number
+  fallen_star_scroll_count: number
 }
 
 export interface DrawLuckyTicketResult {
@@ -97,10 +97,10 @@ export const useLuckyStore = create<LuckyState>((set, get) => ({
 
     if (result.ok && result.character) {
       useProgressionStore.getState().setGold(result.character.gold)
-      useCurrencyStore.getState().setMeteors(result.character.meteor_count)
-      useCurrencyStore.getState().setDragonballs(result.character.dragonball_count)
-      useCurrencyStore.getState().setMeteorScrolls(result.character.meteor_scroll_count)
-      useCurrencyStore.getState().setDragonballScrolls(result.character.dragonball_scroll_count)
+      useCurrencyStore.getState().setComets(result.character.comet_count)
+      useCurrencyStore.getState().setFallenStars(result.character.fallen_star_count)
+      useCurrencyStore.getState().setCometScrolls(result.character.comet_scroll_count)
+      useCurrencyStore.getState().setFallenStarScrolls(result.character.fallen_star_scroll_count)
     }
 
     if (result.ok && typeof result.ascension_points === 'number') {

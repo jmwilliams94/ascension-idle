@@ -23,23 +23,23 @@ export type AchievementTier = (typeof ACHIEVEMENT_TIERS)[number]
 export const MIN_KILLS_FOR_PRESTIGE = ACHIEVEMENT_TIERS[0]
 
 // Confirmed with the user (2026-08-01, supersedes the original "first 3 free,
-// then pay a flat 50 DragonBalls for the rest" gate) — every tier now costs
-// something to unlock, escalating from cheap Meteors up to a DragonBall at
+// then pay a flat 50 Fallen Stars for the rest" gate) — every tier now costs
+// something to unlock, escalating from cheap Comets up to a Fallen Star at
 // the top, paid one tier at a time in order (see unlock_next_achievement_tier
 // — the caller never picks which tier, only "buy the next one"). Must match
 // the migration SQL's own per-tier case statement.
 export interface AchievementTierCost {
-  currency: 'meteor' | 'dragonball'
+  currency: 'comet' | 'fallen_star'
   amount: number
 }
 
 export const ACHIEVEMENT_TIER_COSTS: Record<AchievementTier, AchievementTierCost> = {
-  100: { currency: 'meteor', amount: 1 },
-  250: { currency: 'meteor', amount: 3 },
-  500: { currency: 'meteor', amount: 5 },
-  1000: { currency: 'meteor', amount: 10 },
-  5000: { currency: 'meteor', amount: 20 },
-  10000: { currency: 'dragonball', amount: 1 },
+  100: { currency: 'comet', amount: 1 },
+  250: { currency: 'comet', amount: 3 },
+  500: { currency: 'comet', amount: 5 },
+  1000: { currency: 'comet', amount: 10 },
+  5000: { currency: 'comet', amount: 20 },
+  10000: { currency: 'fallen_star', amount: 1 },
 }
 
 // Corrected (2026-08-03, confirmed with the user) — supersedes the earlier
@@ -61,7 +61,7 @@ export const ACHIEVEMENT_GOLD_MULTIPLIER: Record<AchievementTier, number> = {
 }
 
 // Kill Count's own reward category (2026-08-03, confirmed with the user) — a
-// bonus multiplier on the per-kill Meteor/DragonBall drop chance, scaled by
+// bonus multiplier on the per-kill Comet/Fallen Star drop chance, scaled by
 // the highest Kill Count tier reached for that monster. PLACEHOLDER
 // magnitudes, same "highest tier wins, not cumulative — reaching tier 2
 // overwrites tier 1's reward rather than stacking with it" shape as the gold
@@ -72,7 +72,7 @@ export const ACHIEVEMENT_GOLD_MULTIPLIER: Record<AchievementTier, number> = {
 // monster regardless of level, making it strictly optimal to max it out on
 // the fastest-to-kill monster in the game — level-1 Quailwing — rather than
 // ever fighting anything harder). The base per-kill drop chance itself
-// (see combatResolver.ts's METEOR_DROP_CHANCE/DRAGONBALL_DROP_CHANCE) was
+// (see combatResolver.ts's COMET_DROP_CHANCE/FALLEN_STAR_DROP_CHANCE) was
 // never the problem and stays flat/untouched.
 export const KILL_COUNT_BONUS_DROP_MULTIPLIER: Record<AchievementTier, number> = {
   100: 1.1,
@@ -120,8 +120,8 @@ export const PET_DROP_CHANCE = 1 / 25000
 // reached across the zone's whole roster so far" (e.g. "3/30 tiers
 // completed"), independent of which specific monster they came from. This
 // even 6-step ladder (5/10/15/20/25/30) mirrors every other tier system in
-// this game. Reward is a DragonBall grant per zone tier, PLACEHOLDER,
-// escalating — "gives you a DragonBall or something," per the user's own
+// this game. Reward is a Fallen Star grant per zone tier, PLACEHOLDER,
+// escalating — "gives you a Fallen Star or something," per the user's own
 // framing. The actual grant only ever happens server-side (resolve-combat,
 // tracked via character_zone_progress so it's not re-granted) — these
 // constants exist client-side purely to drive the live display, computed
@@ -130,7 +130,7 @@ export const PET_DROP_CHANCE = 1 / 25000
 export const ZONE_MONSTER_COUNT = 5
 export const ZONE_TOTAL_TIER_MILESTONES = ZONE_MONSTER_COUNT * ACHIEVEMENT_TIERS.length
 export const ZONE_TIER_COMPLETIONS = [5, 10, 15, 20, 25, 30] as const
-export const ZONE_TIER_DRAGONBALL_REWARD = [1, 2, 3, 4, 5, 8] as const
+export const ZONE_TIER_FALLEN_STAR_REWARD = [1, 2, 3, 4, 5, 8] as const
 
 // Highest Kill Count tier reached for one monster (its own reward — a bonus
 // to currency-drop chance, see KILL_COUNT_BONUS_DROP_MULTIPLIER), unrelated

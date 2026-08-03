@@ -316,10 +316,10 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       }
 
       const bonusCurrency = rollBonusCurrencyDrops()
-      if (bonusCurrency.meteors > 0 || bonusCurrency.dragonballs > 0) {
+      if (bonusCurrency.comets > 0 || bonusCurrency.fallenStars > 0) {
         const parts = [
-          bonusCurrency.meteors > 0 ? `+${bonusCurrency.meteors} Meteor` : null,
-          bonusCurrency.dragonballs > 0 ? `+${bonusCurrency.dragonballs} DragonBall` : null,
+          bonusCurrency.comets > 0 ? `+${bonusCurrency.comets} Comet` : null,
+          bonusCurrency.fallenStars > 0 ? `+${bonusCurrency.fallenStars} Fallen Star` : null,
         ].filter((part): part is string => part !== null)
         set((s) => ({
           log: appendLog(s.log, { kind: 'currency', message: `You found: ${parts.join(', ')}` }),

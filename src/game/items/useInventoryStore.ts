@@ -100,7 +100,7 @@ export const INVENTORY_SLOT_CAP = 40
 // Inventory slot, since it's shown only in the Equipment tab's paper doll once
 // worn (confirmed, 2026-07-30 — supersedes the earlier behavior where an
 // equipped item's tile stayed visible/counted in Inventory too).
-// Exported so useWarehouseStore can run the identical "would this overflow the
+// Exported so useBankStore can run the identical "would this overflow the
 // cap" check before a withdraw (which adds to Inventory), reusing this rather
 // than reimplementing it.
 export function occupiedSlotCount(items: ItemInstance[]): number {
@@ -112,12 +112,12 @@ export function occupiedSlotCount(items: ItemInstance[]): number {
   // A potion stack occupies a slot exactly like a stone tier does — see
   // usePotionStore/potionTypes.ts.
   const potionStackCount = usePotionStore.getState().stacks.filter((stack) => stack.count > 0).length
-  // Meteors/DragonBalls are individual, non-stacking Inventory items now
+  // Comets/Fallen Stars are individual, non-stacking Inventory items now
   // (confirmed with the user, 2026-07-31) — same "one tile per unit" term
   // shape as the stone total above. Scrolls (stage 2, same day) are their
   // own non-stacking item too — one Scroll tile per owned Scroll.
   const currency = useCurrencyStore.getState()
-  const currencyCount = currency.meteors + currency.dragonballs + currency.meteorScrolls + currency.dragonballScrolls
+  const currencyCount = currency.comets + currency.fallenStars + currency.cometScrolls + currency.fallenStarScrolls
   return gearCount + totalStoneCount + potionStackCount + currencyCount
 }
 
@@ -164,11 +164,11 @@ interface InventoryState {
   // need a full refetch just to stop showing them.
   removeItems: (itemIds: string[]) => void
   // Appends an item the server already created (e.g. withdraw_item's fresh
-  // Normal/level-1 instance — see useWarehouseStore) without a DB write of its own.
+  // Normal/level-1 instance — see useBankStore) without a DB write of its own.
   addItem: (item: ItemInstance) => void
   // Flips an item's location locally after a successful
   // deposit_item_to_storage/withdraw_item_from_storage call (see
-  // useWarehouseStore) — the RPC already wrote the real value server-side,
+  // useBankStore) — the RPC already wrote the real value server-side,
   // this just keeps the client's copy in sync without a full refetch, same
   // spirit as patchItem above.
   setItemLocation: (itemId: string, location: 'inventory' | 'bank') => void

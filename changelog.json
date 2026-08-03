@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.59.5",
+    "date": "2026-08-04",
+    "changes": [
+      "Renamed DragonBall to Fallen Star and Meteor to Comet everywhere",
+      "Renamed the remaining internal Warehouse references to Bank",
+      "Renamed the quality tier names (Refined/Unique/Elite/Super became Tempered/Infused/Radiant/Ascended a while back — the underlying save data now matches those names too)"
+    ]
+  },
+  {
     "version": "1.59.4",
     "date": "2026-08-03",
     "changes": [

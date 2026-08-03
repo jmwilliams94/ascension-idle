@@ -61,7 +61,7 @@ export default function EquipmentSlot({
   // bespoke component (not built on InventorySlot, see its own tooltip note
   // above), so it was missed entirely when the effect first went live
   // game-wide, even though every *other* gear tile (Inventory, Forge,
-  // Warehouse) already had it. seedFromId(label) rather than an item id
+  // Bank) already had it. seedFromId(label) rather than an item id
   // (not available here) — fine since only one tile per slot is ever shown
   // at once, unlike the Inventory grid's many-at-a-time case.
   const emberCount = filled ? emberCountForColor(qualityColor) : 0

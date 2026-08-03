@@ -1,4 +1,4 @@
-import { DRAGONBALL_COLOR, DRAGONBALL_ICON_SRC, MATERIAL_COLOR, METEOR_ICON_SRC } from '../items/forgeCosts'
+import { FALLEN_STAR_COLOR, FALLEN_STAR_ICON_SRC, MATERIAL_COLOR, COMET_ICON_SRC } from '../items/forgeCosts'
 import type { ListableCurrencyType } from './useMarketplaceStore'
 
 // Small display helpers shared by MarketplaceListingSlot (the "List an Item"
@@ -8,14 +8,14 @@ import type { ListableCurrencyType } from './useMarketplaceStore'
 // currency-type listing or Mail entry renders.
 export function listableCurrencyLabel(type: ListableCurrencyType): string {
   switch (type) {
-    case 'meteor':
-      return 'Meteor'
-    case 'dragonball':
-      return 'DragonBall'
-    case 'meteor_scroll':
-      return 'Meteor Scroll'
-    case 'dragonball_scroll':
-      return 'DragonBall Scroll'
+    case 'comet':
+      return 'Comet'
+    case 'fallen_star':
+      return 'Fallen Star'
+    case 'comet_scroll':
+      return 'Comet Scroll'
+    case 'fallen_star_scroll':
+      return 'Fallen Star Scroll'
   }
 }
 
@@ -27,13 +27,13 @@ export interface ListableCurrencyVisual {
 
 export function listableCurrencyVisual(type: ListableCurrencyType): ListableCurrencyVisual {
   switch (type) {
-    case 'meteor':
-      return { iconSrc: METEOR_ICON_SRC, qualityColor: MATERIAL_COLOR }
-    case 'dragonball':
-      return { iconSrc: DRAGONBALL_ICON_SRC, qualityColor: DRAGONBALL_COLOR }
-    case 'meteor_scroll':
+    case 'comet':
+      return { iconSrc: COMET_ICON_SRC, qualityColor: MATERIAL_COLOR }
+    case 'fallen_star':
+      return { iconSrc: FALLEN_STAR_ICON_SRC, qualityColor: FALLEN_STAR_COLOR }
+    case 'comet_scroll':
       return { icon: '📜', qualityColor: MATERIAL_COLOR }
-    case 'dragonball_scroll':
-      return { icon: '📜', qualityColor: DRAGONBALL_COLOR }
+    case 'fallen_star_scroll':
+      return { icon: '📜', qualityColor: FALLEN_STAR_COLOR }
   }
 }

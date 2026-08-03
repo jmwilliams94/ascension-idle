@@ -27,7 +27,7 @@ export const TAB_ICONS: Partial<Record<TabId, NavIcon>> = {
   // ones that already have real art.
   marketplace: { kind: 'emoji', value: '🤝' },
   shop: { kind: 'image', src: `${BASE_URL}nav-icons/shop.png`, alt: 'Shop' },
-  warehouse: { kind: 'image', src: `${BASE_URL}nav-icons/bank.png`, alt: 'Bank' },
+  bank: { kind: 'image', src: `${BASE_URL}nav-icons/bank.png`, alt: 'Bank' },
   achievements: { kind: 'image', src: `${BASE_URL}nav-icons/achievements.png`, alt: 'Achievements' },
 }
 

@@ -37,7 +37,7 @@ const LEFT_ITEMS: { id: TabId; label: string }[] = [
 // before this restructure.
 const TOWN_ITEMS: { id: TabId; label: string }[] = [
   { id: 'marketplace', label: 'Market' },
-  { id: 'warehouse', label: 'Bank' },
+  { id: 'bank', label: 'Bank' },
   { id: 'shop', label: 'Shop' },
   { id: 'forge', label: 'Forge' },
 ]

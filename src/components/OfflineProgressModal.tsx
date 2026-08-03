@@ -100,13 +100,13 @@ export default function OfflineProgressModal() {
           </div>
         )}
 
-        {result && result.dragonballs > 0 && (
+        {result && result.fallenStars > 0 && (
           <div className="relative rounded-xl border border-violet-400 bg-violet-500/10 p-3 text-center shadow-lg shadow-violet-500/20">
             <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-violet-500 px-1.5 py-0.5 text-[9px] font-bold text-slate-950">
               RARE DROP
             </span>
             <p className="mt-1 text-sm font-semibold text-violet-300">
-              ✨ A DragonBall dropped while you were away! (+{result.dragonballs})
+              ✨ A Fallen Star dropped while you were away! (+{result.fallenStars})
             </p>
           </div>
         )}
@@ -141,10 +141,10 @@ export default function OfflineProgressModal() {
                 <dd>{result.itemsFoundCount}</dd>
               </div>
             )}
-            {result.meteors > 0 && (
+            {result.comets > 0 && (
               <div className="flex justify-between">
-                <dt className="text-slate-400">Meteors</dt>
-                <dd className="font-semibold text-slate-200">+{result.meteors}</dd>
+                <dt className="text-slate-400">Comets</dt>
+                <dd className="font-semibold text-slate-200">+{result.comets}</dd>
               </div>
             )}
           </dl>

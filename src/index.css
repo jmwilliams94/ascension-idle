@@ -29,8 +29,8 @@ body {
 }
 
 /* Every gear/currency icon in the game now renders as a real <img> (see
-   equipmentBonus.ts's getGearIconSrc, forgeCosts.ts's METEOR_ICON_SRC/
-   DRAGONBALL_ICON_SRC, ItemTooltip.tsx's icon column) instead of a plain
+   equipmentBonus.ts's getGearIconSrc, forgeCosts.ts's COMET_ICON_SRC/
+   FALLEN_STAR_ICON_SRC, ItemTooltip.tsx's icon column) instead of a plain
    emoji <span>. On iOS Safari, long-pressing *any* <img> — including a tap
    held slightly too long while trying to trigger our own long-press tooltip
    (see HoverTooltip.tsx) — pops the browser's own native Share/Save to

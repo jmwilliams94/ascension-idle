@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import InventoryPanel from './InventoryPanel'
-import WarehouseGrid from './WarehouseGrid'
+import BankGrid from './BankGrid'
 import BankSquares from './BankSquares'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 
@@ -13,12 +13,12 @@ type BankView = 'inventory' | 'storage'
 // are never shown at the same time anymore, drag-and-drop between them is no
 // longer possible (or needed) — depositing/withdrawing now goes entirely
 // through InventoryPanel's enableBankDeposit click popover (Deposit/Bank
-// buttons) and WarehouseGrid's own click-to-withdraw popover, no
+// buttons) and BankGrid's own click-to-withdraw popover, no
 // DragDropProvider/data-drop-zone wiring left in this file at all.
 // BankSquares (the right column) is always rendered regardless of which
 // side the toggle is on — it shows account-wide totals independent of
 // whether the main area is currently showing Inventory or Storage.
-export default function WarehousePanel({ characterId }: { characterId: string }) {
+export default function BankPanel({ characterId }: { characterId: string }) {
   const characterName = useCharacterRecordStore((state) => state.characterName)
   const [view, setView] = useState<BankView>('inventory')
 
@@ -51,7 +51,7 @@ export default function WarehousePanel({ characterId }: { characterId: string })
           wider than the viewport instead of actually wrapping. */}
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
         <div className="min-w-0">
-          {view === 'inventory' ? <InventoryPanel columns={5} enableBankDeposit /> : <WarehouseGrid characterId={characterId} />}
+          {view === 'inventory' ? <InventoryPanel columns={5} enableBankDeposit /> : <BankGrid characterId={characterId} />}
         </div>
 
         <div className="min-w-0">

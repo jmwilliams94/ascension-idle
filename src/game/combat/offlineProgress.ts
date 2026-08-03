@@ -24,8 +24,8 @@ export interface OfflineProgressResult {
   gold: number
   exp: number
   itemsFoundCount: number
-  meteors: number
-  dragonballs: number
+  comets: number
+  fallenStars: number
   // Pet drop rate/notification pass (2026-08-03, confirmed with the user) —
   // display name (already resolved from the raw monster id, same
   // ENEMY_TYPES lookup resolveCombat.ts's own live-toast handling uses), so
@@ -56,8 +56,8 @@ export async function runOfflineProgressCheck(characterId: string): Promise<Offl
     gold: result.gained.gold,
     exp: result.gained.exp,
     itemsFoundCount: (result.itemsGranted?.length ?? 0) + (result.itemsHeld?.length ?? 0),
-    meteors: result.gained.meteors,
-    dragonballs: result.gained.dragonballs,
+    comets: result.gained.comets,
+    fallenStars: result.gained.fallenStars,
     petObtained: result.petObtained ? (ENEMY_TYPES[result.petObtained as EnemyTypeId]?.displayName ?? 'monster') : null,
   }
 }

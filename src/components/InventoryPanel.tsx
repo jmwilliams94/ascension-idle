@@ -17,20 +17,20 @@ import { EQUIP_SLOTS, useEquipmentStore, type EquipSlot } from '../game/items/us
 import {
   COMPOSITION_STONE_TIERS,
   CONSUMABLE_COLOR,
-  DRAGONBALL_COLOR,
-  DRAGONBALL_ICON_SRC,
+  FALLEN_STAR_COLOR,
+  FALLEN_STAR_ICON_SRC,
   MATERIAL_COLOR,
-  METEOR_ICON_SRC,
-  buildDragonballScrollTooltip,
-  buildDragonballTooltip,
-  buildMeteorScrollTooltip,
-  buildMeteorTooltip,
+  COMET_ICON_SRC,
+  buildFallenStarScrollTooltip,
+  buildFallenStarTooltip,
+  buildCometScrollTooltip,
+  buildCometTooltip,
   buildStoneTooltip,
   compositionPointValue,
-  dragonballDragId,
-  dragonballScrollDragId,
-  meteorDragId,
-  meteorScrollDragId,
+  fallenStarDragId,
+  fallenStarScrollDragId,
+  cometDragId,
+  cometScrollDragId,
   stoneDragId,
 } from '../game/items/forgeCosts'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
@@ -45,10 +45,10 @@ import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { POTION_TYPES } from '../game/items/potionTypes'
-import { useWarehouseStore } from '../game/items/useWarehouseStore'
+import { useBankStore } from '../game/items/useBankStore'
 
 // A single fixed 40-cell grid shared by gear (item_instances), Composition
-// stones, Meteors/DragonBalls (+ their Scrolls), and HP/Mana potion stacks —
+// stones, Comets/Fallen Stars (+ their Scrolls), and HP/Mana potion stacks —
 // a stack/stone/currency unit takes up a slot exactly like a gear item does,
 // all counting against the same cap (see occupiedSlotCount in
 // useInventoryStore). Always renders all 40 cells, empty ones
@@ -58,8 +58,8 @@ type SelectedSlot =
   | { kind: 'item'; id: string }
   | { kind: 'stone'; dragId: string; tier: number }
   | { kind: 'potion'; id: string }
-  | { kind: 'currency'; dragId: string; currencyType: 'meteor' | 'dragonball' }
-  | { kind: 'scroll'; dragId: string; currencyType: 'meteor' | 'dragonball' }
+  | { kind: 'currency'; dragId: string; currencyType: 'comet' | 'fallen_star' }
+  | { kind: 'scroll'; dragId: string; currencyType: 'comet' | 'fallen_star' }
   | null
 
 interface InventoryPanelProps {
@@ -69,16 +69,16 @@ interface InventoryPanelProps {
   // Stone tiers use the synthetic id from stoneDragId, real items use their own id.
   // Only ForgePanel passes this; every other usage is unaffected.
   reservedItemIds?: string[]
-  // Present when rendered inside Forge or Warehouse — makes gear and stone
+  // Present when rendered inside Forge or the Bank — makes gear and stone
   // tiles draggable (see dragDrop.tsx), calling back with whichever
-  // data-drop-zone target (Forge: ForgeUpgradeSlot/ForgeMaterialSlot; Warehouse:
-  // WarehouseGrid's own storage grid) the tile was released over, and the
+  // data-drop-zone target (Forge: ForgeUpgradeSlot/ForgeMaterialSlot; Bank:
+  // BankGrid's own storage grid) the tile was released over, and the
   // dragged id (a real item id, or a synthetic stoneDragId for a stone). Not
   // called if the tile was dropped somewhere with no valid target. Stones
   // don't stack — each tile is exactly one stone, so dragging one tile feeds
   // exactly one; feeding more means dragging in more individual tiles. The
   // grid area itself always carries data-drop-zone="inventory" (below) so a
-  // tile dragged the other way — e.g. from WarehouseGrid — can land back here,
+  // tile dragged the other way — e.g. from BankGrid — can land back here,
   // regardless of whether this instance's own tiles are draggable.
   onTileDrop?: (overTarget: string, id: string) => void
   // Present only when rendered inside the Shop — adds a "Sell" button to the gear
@@ -96,19 +96,19 @@ interface InventoryPanelProps {
   // directly into the same hover-tooltip-styled card, and drops the plain
   // hover/long-press peek for these tiles (press is now the only trigger).
   // Only CombatPage's two InventoryPanel instances pass this — Forge/
-  // Warehouse/Shop/Marketplace's own embeddings are unaffected, since their
+  // Bank/Shop/Marketplace's own embeddings are unaffected, since their
   // click already means something else there (drag source, sell selection,
   // listing source) that this popover isn't designed around.
   equipPopoverEnabled?: boolean
   // Bank-tab-only. Mirrors equipPopoverEnabled's own click-opens-actionable-
-  // tooltip pattern: clicking a gear, stone, Meteor, or DragonBall tile opens
+  // tooltip pattern: clicking a gear, stone, Comet, or Fallen Star tile opens
   // a TooltipActionPopover showing that tile's own tooltip plus "Deposit"/
   // "Deposit All" (physical Bank Storage — deposit_item_to_storage/
   // bank_stone_item/bank_currency_item) and, where applicable, "Bank"/
   // "Bank All" (liquidate to currency/points — deposit_item_as_composition/
   // transfer_stone/transfer_currency; hidden for a still-Normal gear item,
   // which has nothing to bank — Bank tab rework, 2026-08-03, confirmed with
-  // the user). Only WarehousePanel's Inventory-grid embedding passes this.
+  // the user). Only BankPanel's Inventory-grid embedding passes this.
   // Potions and Scrolls are out of scope (confirmed with the user) and stay
   // exactly as they were — Scrolls keep their existing Bundle/Unbundle card.
   enableBankDeposit?: boolean
@@ -135,10 +135,10 @@ export default function InventoryPanel({
   const characterLevel = useProgressionStore((state) => state.level)
 
   const stones = useCompositionStore((state) => state.stones)
-  const meteors = useCurrencyStore((state) => state.meteors)
-  const dragonballs = useCurrencyStore((state) => state.dragonballs)
-  const meteorScrolls = useCurrencyStore((state) => state.meteorScrolls)
-  const dragonballScrolls = useCurrencyStore((state) => state.dragonballScrolls)
+  const comets = useCurrencyStore((state) => state.comets)
+  const fallenStars = useCurrencyStore((state) => state.fallenStars)
+  const cometScrolls = useCurrencyStore((state) => state.cometScrolls)
+  const fallenStarScrolls = useCurrencyStore((state) => state.fallenStarScrolls)
   const bundleScroll = useCurrencyStore((state) => state.bundleScroll)
   const unbundleScroll = useCurrencyStore((state) => state.unbundleScroll)
   const characterId = useActiveCharacterStore((state) => state.characterId)
@@ -153,15 +153,15 @@ export default function InventoryPanel({
   const isListed = (itemId: string) => myListings.some((listing) => listing.status === 'active' && listing.item_id === itemId)
   const mailEntries = useMailStore((state) => state.entries)
   const hasUnclaimedMail = (itemId: string) => mailEntries.some((entry) => entry.item_id === itemId)
-  const depositItemToStorage = useWarehouseStore((state) => state.depositItemToStorage)
-  const depositStoneItem = useWarehouseStore((state) => state.depositStoneItem)
-  const depositCurrencyItem = useWarehouseStore((state) => state.depositCurrencyItem)
+  const depositItemToStorage = useBankStore((state) => state.depositItemToStorage)
+  const depositStoneItem = useBankStore((state) => state.depositStoneItem)
+  const depositCurrencyItem = useBankStore((state) => state.depositCurrencyItem)
   // "Bank" (liquidate to currency/points), alongside "Deposit" (physical
   // storage) above — the other half of the Bank tab rework's per-item
   // Deposit/Bank choice (2026-08-03, confirmed with the user).
-  const depositItemAsComposition = useWarehouseStore((state) => state.depositItemAsComposition)
-  const depositStone = useWarehouseStore((state) => state.depositStone)
-  const depositCurrency = useWarehouseStore((state) => state.depositCurrency)
+  const depositItemAsComposition = useBankStore((state) => state.depositItemAsComposition)
+  const depositStone = useBankStore((state) => state.depositStone)
+  const depositCurrency = useBankStore((state) => state.depositCurrency)
 
   const [selectedSlot, setSelectedSlot] = useState<SelectedSlot>(null)
   // GearEquipPopover-only (equipPopoverEnabled) — the clicked tile's own
@@ -195,7 +195,7 @@ export default function InventoryPanel({
   // Marketplace item and an item sitting in unclaimed Mail — see
   // useMarketplaceStore.isListed/useMailStore.hasUnclaimedMail. Same again
   // (2026-08-03) for a Bank-Storage item (location === 'bank') — shows only
-  // in WarehouseGrid's Storage grid once banked, same as an equipped item
+  // in BankGrid's Storage grid once banked, same as an equipped item
   // shows only on the paper doll.
   const visibleItems = items.filter(
     (item) => item.location !== 'bank' && !isEquipped(item.id) && !isListed(item.id) && !hasUnclaimedMail(item.id),
@@ -221,34 +221,34 @@ export default function InventoryPanel({
     return acc
   }, [])
 
-  // Meteors/DragonBalls don't stack either (same as Stones — confirmed with the
+  // Comets/Fallen Stars don't stack either (same as Stones — confirmed with the
   // user, 2026-07-31) — one tile per owned unit, sharing the same remaining-
   // budget clamp, allocated after Stones in the same greedy fashion.
   const remainingAfterStones = Math.max(0, baseStoneBudget - stoneTiles.length)
-  const meteorShown = Math.min(meteors, remainingAfterStones)
-  const meteorTiles = Array.from({ length: meteorShown }, (_, index) => ({ index, dragId: meteorDragId(index) }))
-  const remainingAfterMeteors = Math.max(0, remainingAfterStones - meteorTiles.length)
-  const dragonballShown = Math.min(dragonballs, remainingAfterMeteors)
-  const dragonballTiles = Array.from({ length: dragonballShown }, (_, index) => ({ index, dragId: dragonballDragId(index) }))
+  const cometShown = Math.min(comets, remainingAfterStones)
+  const cometTiles = Array.from({ length: cometShown }, (_, index) => ({ index, dragId: cometDragId(index) }))
+  const remainingAfterComets = Math.max(0, remainingAfterStones - cometTiles.length)
+  const fallenStarShown = Math.min(fallenStars, remainingAfterComets)
+  const fallenStarTiles = Array.from({ length: fallenStarShown }, (_, index) => ({ index, dragId: fallenStarDragId(index) }))
 
   // Scrolls (stage 2, 2026-07-31) are their own non-stacking item too — one
   // tile per owned Scroll, allocated last in the same greedy chain.
-  const remainingAfterDragonballs = Math.max(0, remainingAfterMeteors - dragonballTiles.length)
-  const meteorScrollShown = Math.min(meteorScrolls, remainingAfterDragonballs)
-  const meteorScrollTiles = Array.from({ length: meteorScrollShown }, (_, index) => ({ index, dragId: meteorScrollDragId(index) }))
-  const remainingAfterMeteorScrolls = Math.max(0, remainingAfterDragonballs - meteorScrollTiles.length)
-  const dragonballScrollShown = Math.min(dragonballScrolls, remainingAfterMeteorScrolls)
-  const dragonballScrollTiles = Array.from({ length: dragonballScrollShown }, (_, index) => ({
+  const remainingAfterFallenStars = Math.max(0, remainingAfterComets - fallenStarTiles.length)
+  const cometScrollShown = Math.min(cometScrolls, remainingAfterFallenStars)
+  const cometScrollTiles = Array.from({ length: cometScrollShown }, (_, index) => ({ index, dragId: cometScrollDragId(index) }))
+  const remainingAfterCometScrolls = Math.max(0, remainingAfterFallenStars - cometScrollTiles.length)
+  const fallenStarScrollShown = Math.min(fallenStarScrolls, remainingAfterCometScrolls)
+  const fallenStarScrollTiles = Array.from({ length: fallenStarScrollShown }, (_, index) => ({
     index,
-    dragId: dragonballScrollDragId(index),
+    dragId: fallenStarScrollDragId(index),
   }))
 
   const occupiedCount =
     stoneTiles.length +
-    meteorTiles.length +
-    dragonballTiles.length +
-    meteorScrollTiles.length +
-    dragonballScrollTiles.length +
+    cometTiles.length +
+    fallenStarTiles.length +
+    cometScrollTiles.length +
+    fallenStarScrollTiles.length +
     visiblePotionStacks.length +
     visibleItems.length
   const emptySlotCount = Math.max(0, INVENTORY_SLOT_CAP - occupiedCount)
@@ -403,7 +403,7 @@ export default function InventoryPanel({
     closeBankPopover()
   }
 
-  const handleBankDepositCurrency = async (currencyType: 'meteor' | 'dragonball') => {
+  const handleBankDepositCurrency = async (currencyType: 'comet' | 'fallen_star') => {
     if (!characterId) {
       return
     }
@@ -413,18 +413,18 @@ export default function InventoryPanel({
     setBankDepositBusy(false)
 
     if (!result.ok) {
-      setBankDepositError(`Couldn't deposit that ${currencyType === 'meteor' ? 'Meteor' : 'DragonBall'}.`)
+      setBankDepositError(`Couldn't deposit that ${currencyType === 'comet' ? 'Comet' : 'Fallen Star'}.`)
       return
     }
 
     closeBankPopover()
   }
 
-  const handleBankDepositAllCurrency = async (currencyType: 'meteor' | 'dragonball') => {
+  const handleBankDepositAllCurrency = async (currencyType: 'comet' | 'fallen_star') => {
     if (!characterId) {
       return
     }
-    const owned = currencyType === 'meteor' ? meteors : dragonballs
+    const owned = currencyType === 'comet' ? comets : fallenStars
     if (owned <= 0) {
       return
     }
@@ -434,7 +434,7 @@ export default function InventoryPanel({
     setBankDepositBusy(false)
 
     if (!result.ok) {
-      setBankDepositError(`Couldn't deposit your ${currencyType === 'meteor' ? 'Meteors' : 'DragonBalls'}.`)
+      setBankDepositError(`Couldn't deposit your ${currencyType === 'comet' ? 'Comets' : 'Fallen Stars'}.`)
       return
     }
 
@@ -522,38 +522,38 @@ export default function InventoryPanel({
     closeBankPopover()
   }
 
-  const handleBankCurrency = async (currencyType: 'meteor' | 'dragonball') => {
+  const handleBankCurrency = async (currencyType: 'comet' | 'fallen_star') => {
     if (!characterId) {
       return
     }
     setBankDepositError(null)
     setBankDepositBusy(true)
-    const result = await depositCurrency(characterId, currencyType === 'meteor' ? 'meteors' : 'dragonballs', 1)
+    const result = await depositCurrency(characterId, currencyType === 'comet' ? 'comets' : 'fallen_stars', 1)
     setBankDepositBusy(false)
 
     if (!result.ok) {
-      setBankDepositError(`Couldn't bank that ${currencyType === 'meteor' ? 'Meteor' : 'DragonBall'}.`)
+      setBankDepositError(`Couldn't bank that ${currencyType === 'comet' ? 'Comet' : 'Fallen Star'}.`)
       return
     }
 
     closeBankPopover()
   }
 
-  const handleBankAllCurrency = async (currencyType: 'meteor' | 'dragonball') => {
+  const handleBankAllCurrency = async (currencyType: 'comet' | 'fallen_star') => {
     if (!characterId) {
       return
     }
-    const owned = currencyType === 'meteor' ? meteors : dragonballs
+    const owned = currencyType === 'comet' ? comets : fallenStars
     if (owned <= 0) {
       return
     }
     setBankDepositError(null)
     setBankDepositBusy(true)
-    const result = await depositCurrency(characterId, currencyType === 'meteor' ? 'meteors' : 'dragonballs', owned)
+    const result = await depositCurrency(characterId, currencyType === 'comet' ? 'comets' : 'fallen_stars', owned)
     setBankDepositBusy(false)
 
     if (!result.ok) {
-      setBankDepositError(`Couldn't bank your ${currencyType === 'meteor' ? 'Meteors' : 'DragonBalls'}.`)
+      setBankDepositError(`Couldn't bank your ${currencyType === 'comet' ? 'Comets' : 'Fallen Stars'}.`)
       return
     }
 
@@ -580,7 +580,7 @@ export default function InventoryPanel({
     setSelectedSlot(null)
   }
 
-  const handleBundle = async (currencyType: 'meteor' | 'dragonball') => {
+  const handleBundle = async (currencyType: 'comet' | 'fallen_star') => {
     if (!characterId) {
       return
     }
@@ -597,7 +597,7 @@ export default function InventoryPanel({
     setSelectedSlot(null)
   }
 
-  const handleUnbundle = async (currencyType: 'meteor' | 'dragonball') => {
+  const handleUnbundle = async (currencyType: 'comet' | 'fallen_star') => {
     if (!characterId) {
       return
     }
@@ -770,7 +770,7 @@ export default function InventoryPanel({
             )
           })}
 
-          {meteorTiles.map(({ dragId }) => {
+          {cometTiles.map(({ dragId }) => {
             if (reservedItemIds.includes(dragId)) {
               return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
             }
@@ -779,28 +779,28 @@ export default function InventoryPanel({
               slotId: dragId,
               filled: true as const,
               sizeClassName: SLOT_SIZE_CLASS,
-              iconSrc: METEOR_ICON_SRC,
+              iconSrc: COMET_ICON_SRC,
               qualityColor: MATERIAL_COLOR,
-              label: 'Meteor',
-              tooltip: enableBankDeposit ? undefined : buildMeteorTooltip(),
+              label: 'Comet',
+              tooltip: enableBankDeposit ? undefined : buildCometTooltip(),
               selected: selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId,
             }
 
-            const meteorSlot = onTileDrop ? (
+            const cometSlot = onTileDrop ? (
               <DraggableInventorySlot
                 key={dragId}
                 {...commonProps}
                 dragEnabled
-                dragPayload={{ id: dragId, icon: '☄️', iconSrc: METEOR_ICON_SRC, qualityColor: MATERIAL_COLOR }}
+                dragPayload={{ id: dragId, icon: '☄️', iconSrc: COMET_ICON_SRC, qualityColor: MATERIAL_COLOR }}
                 onDrop={handleTileDrop}
-                onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'meteor' })}
+                onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'comet' })}
               />
             ) : (
-              <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'meteor' })} />
+              <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'comet' })} />
             )
 
             if (!enableBankDeposit) {
-              return meteorSlot
+              return cometSlot
             }
 
             return (
@@ -809,12 +809,12 @@ export default function InventoryPanel({
                 data-tooltip-action-anchor
                 onClick={(event) => setBankPopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
               >
-                {meteorSlot}
+                {cometSlot}
               </div>
             )
           })}
 
-          {dragonballTiles.map(({ dragId }) => {
+          {fallenStarTiles.map(({ dragId }) => {
             if (reservedItemIds.includes(dragId)) {
               return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
             }
@@ -823,32 +823,32 @@ export default function InventoryPanel({
               slotId: dragId,
               filled: true as const,
               sizeClassName: SLOT_SIZE_CLASS,
-              iconSrc: DRAGONBALL_ICON_SRC,
-              qualityColor: DRAGONBALL_COLOR,
-              label: 'DragonBall',
-              tooltip: enableBankDeposit ? undefined : buildDragonballTooltip(),
+              iconSrc: FALLEN_STAR_ICON_SRC,
+              qualityColor: FALLEN_STAR_COLOR,
+              label: 'Fallen Star',
+              tooltip: enableBankDeposit ? undefined : buildFallenStarTooltip(),
               selected: selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId,
             }
 
-            const dragonballSlot = onTileDrop ? (
+            const fallenStarSlot = onTileDrop ? (
               <DraggableInventorySlot
                 key={dragId}
                 {...commonProps}
                 dragEnabled
-                dragPayload={{ id: dragId, icon: '🔮', iconSrc: DRAGONBALL_ICON_SRC, qualityColor: DRAGONBALL_COLOR }}
+                dragPayload={{ id: dragId, icon: '🔮', iconSrc: FALLEN_STAR_ICON_SRC, qualityColor: FALLEN_STAR_COLOR }}
                 onDrop={handleTileDrop}
-                onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'dragonball' })}
+                onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'fallen_star' })}
               />
             ) : (
               <InventorySlot
                 key={dragId}
                 {...commonProps}
-                onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'dragonball' })}
+                onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'fallen_star' })}
               />
             )
 
             if (!enableBankDeposit) {
-              return dragonballSlot
+              return fallenStarSlot
             }
 
             return (
@@ -857,12 +857,12 @@ export default function InventoryPanel({
                 data-tooltip-action-anchor
                 onClick={(event) => setBankPopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
               >
-                {dragonballSlot}
+                {fallenStarSlot}
               </div>
             )
           })}
 
-          {meteorScrollTiles.map(({ dragId }) => {
+          {cometScrollTiles.map(({ dragId }) => {
             if (reservedItemIds.includes(dragId)) {
               return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
             }
@@ -872,8 +872,8 @@ export default function InventoryPanel({
               filled: true as const,
               sizeClassName: SLOT_SIZE_CLASS,
               icon: '📜',
-              label: 'Meteor Scroll',
-              tooltip: buildMeteorScrollTooltip(),
+              label: 'Comet Scroll',
+              tooltip: buildCometScrollTooltip(),
               selected: selectedSlot?.kind === 'scroll' && selectedSlot.dragId === dragId,
             }
 
@@ -885,17 +885,17 @@ export default function InventoryPanel({
                   dragEnabled
                   dragPayload={{ id: dragId, icon: '📜' }}
                   onDrop={handleTileDrop}
-                  onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'meteor' })}
+                  onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'comet' })}
                 />
               )
             }
 
             return (
-              <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'meteor' })} />
+              <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'comet' })} />
             )
           })}
 
-          {dragonballScrollTiles.map(({ dragId }) => {
+          {fallenStarScrollTiles.map(({ dragId }) => {
             if (reservedItemIds.includes(dragId)) {
               return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
             }
@@ -905,8 +905,8 @@ export default function InventoryPanel({
               filled: true as const,
               sizeClassName: SLOT_SIZE_CLASS,
               icon: '📜',
-              label: 'DragonBall Scroll',
-              tooltip: buildDragonballScrollTooltip(),
+              label: 'Fallen Star Scroll',
+              tooltip: buildFallenStarScrollTooltip(),
               selected: selectedSlot?.kind === 'scroll' && selectedSlot.dragId === dragId,
             }
 
@@ -918,7 +918,7 @@ export default function InventoryPanel({
                   dragEnabled
                   dragPayload={{ id: dragId, icon: '📜' }}
                   onDrop={handleTileDrop}
-                  onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'dragonball' })}
+                  onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'fallen_star' })}
                 />
               )
             }
@@ -927,7 +927,7 @@ export default function InventoryPanel({
               <InventorySlot
                 key={dragId}
                 {...commonProps}
-                onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'dragonball' })}
+                onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'fallen_star' })}
               />
             )
           })}
@@ -963,7 +963,7 @@ export default function InventoryPanel({
 
             // Merged (2026-08-03, was two separate early-return branches) so
             // the popover wrappers below can apply regardless of whether this
-            // instance also has onTileDrop wired up (WarehousePanel's
+            // instance also has onTileDrop wired up (BankPanel's
             // Inventory grid now wants both: drag-to-deposit stays working,
             // click-to-open-the-Deposit-popover is additive) — no existing
             // caller combined onTileDrop with enableSelling/equipPopoverEnabled,
@@ -1075,26 +1075,26 @@ export default function InventoryPanel({
             <div
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg"
               style={{
-                borderColor: selectedCurrencyType === 'meteor' ? MATERIAL_COLOR : DRAGONBALL_COLOR,
-                backgroundColor: `${selectedCurrencyType === 'meteor' ? MATERIAL_COLOR : DRAGONBALL_COLOR}22`,
+                borderColor: selectedCurrencyType === 'comet' ? MATERIAL_COLOR : FALLEN_STAR_COLOR,
+                backgroundColor: `${selectedCurrencyType === 'comet' ? MATERIAL_COLOR : FALLEN_STAR_COLOR}22`,
               }}
             >
               <img
-                src={selectedCurrencyType === 'meteor' ? METEOR_ICON_SRC : DRAGONBALL_ICON_SRC}
+                src={selectedCurrencyType === 'comet' ? COMET_ICON_SRC : FALLEN_STAR_ICON_SRC}
                 alt=""
                 className="h-3/5 w-3/5 object-contain"
               />
             </div>
             <div>
-              <p className="text-sm font-medium text-slate-200">{selectedCurrencyType === 'meteor' ? 'Meteor' : 'DragonBall'}</p>
+              <p className="text-sm font-medium text-slate-200">{selectedCurrencyType === 'comet' ? 'Comet' : 'Fallen Star'}</p>
               <p className="text-xs text-slate-500">
-                {selectedCurrencyType === 'meteor' ? meteors : dragonballs} owned total
+                {selectedCurrencyType === 'comet' ? comets : fallenStars} owned total
               </p>
             </div>
           </div>
 
           {(() => {
-            const owned = selectedCurrencyType === 'meteor' ? meteors : dragonballs
+            const owned = selectedCurrencyType === 'comet' ? comets : fallenStars
             const disabled = owned < 10 || scrollBusy
 
             return (
@@ -1125,10 +1125,10 @@ export default function InventoryPanel({
             </div>
             <div>
               <p className="text-sm font-medium text-slate-200">
-                {selectedScrollType === 'meteor' ? 'Meteor Scroll' : 'DragonBall Scroll'}
+                {selectedScrollType === 'comet' ? 'Comet Scroll' : 'Fallen Star Scroll'}
               </p>
               <p className="text-xs text-slate-500">
-                {selectedScrollType === 'meteor' ? meteorScrolls : dragonballScrolls} owned total
+                {selectedScrollType === 'comet' ? cometScrolls : fallenStarScrolls} owned total
               </p>
             </div>
           </div>
@@ -1360,7 +1360,7 @@ export default function InventoryPanel({
       {enableBankDeposit && selectedCurrencyType && bankPopoverAnchorRect && (
         <TooltipActionPopover
           anchorRect={bankPopoverAnchorRect}
-          tooltip={selectedCurrencyType === 'meteor' ? buildMeteorTooltip() : buildDragonballTooltip()}
+          tooltip={selectedCurrencyType === 'comet' ? buildCometTooltip() : buildFallenStarTooltip()}
           actions={[
             {
               label: bankDepositBusy ? 'Depositing…' : 'Deposit',

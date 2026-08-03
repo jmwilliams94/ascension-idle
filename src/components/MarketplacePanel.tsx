@@ -19,7 +19,7 @@ import { LISTING_DURATION_OPTIONS, previewListingFee } from '../game/marketplace
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { buildGearTooltip, formatItemDisplayName, getGearIconSrc, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
-import { isDragonballDragId, isDragonballScrollDragId, isMeteorDragId, isMeteorScrollDragId } from '../game/items/forgeCosts'
+import { isFallenStarDragId, isFallenStarScrollDragId, isCometDragId, isCometScrollDragId } from '../game/items/forgeCosts'
 
 // Marketplace (see CLAUDE.md's Gear system / Marketplace section) — three
 // page-local sub-tabs, same "sub-navigation inside one top-level tab"
@@ -274,23 +274,23 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
   const canAffordFee = fee > 0 && balance >= fee
 
   const handleDropTarget = (dragId: string) => {
-    if (isMeteorDragId(dragId)) {
-      setDraft({ kind: 'currency', dragId, currencyType: 'meteor' })
+    if (isCometDragId(dragId)) {
+      setDraft({ kind: 'currency', dragId, currencyType: 'comet' })
       setError(null)
       return
     }
-    if (isDragonballDragId(dragId)) {
-      setDraft({ kind: 'currency', dragId, currencyType: 'dragonball' })
+    if (isFallenStarDragId(dragId)) {
+      setDraft({ kind: 'currency', dragId, currencyType: 'fallen_star' })
       setError(null)
       return
     }
-    if (isMeteorScrollDragId(dragId)) {
-      setDraft({ kind: 'currency', dragId, currencyType: 'meteor_scroll' })
+    if (isCometScrollDragId(dragId)) {
+      setDraft({ kind: 'currency', dragId, currencyType: 'comet_scroll' })
       setError(null)
       return
     }
-    if (isDragonballScrollDragId(dragId)) {
-      setDraft({ kind: 'currency', dragId, currencyType: 'dragonball_scroll' })
+    if (isFallenStarScrollDragId(dragId)) {
+      setDraft({ kind: 'currency', dragId, currencyType: 'fallen_star_scroll' })
       setError(null)
       return
     }

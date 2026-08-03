@@ -27,7 +27,7 @@ export const EMBER_DENSITY_BY_COLOR: Record<string, number> = {
   // way gear/gems are, so both share one "valuable" density rather than an
   // escalating scale.
   '#C8D0DC': 10, // MATERIAL_COLOR
-  '#F0B87A': 10, // DRAGONBALL_COLOR
+  '#F0B87A': 10, // FALLEN_STAR_COLOR
 }
 
 export function emberCountForColor(color: string | undefined): number {

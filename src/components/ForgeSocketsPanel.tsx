@@ -9,8 +9,8 @@ const ARMOR_SLOT_TYPES = ['ring', 'necklace', 'boots', 'hat', 'coat']
 
 function describeUnlockFailure(error?: string): string {
   switch (error) {
-    case 'not_enough_dragonballs':
-      return 'Not enough DragonBalls.'
+    case 'not_enough_fallen_stars':
+      return 'Not enough Fallen Stars.'
     case 'max_sockets':
       return 'Already has the max 2 sockets.'
     case 'not_a_weapon':
@@ -22,14 +22,14 @@ function describeUnlockFailure(error?: string): string {
 
 // Sockets tab (2026-08-02) — see CLAUDE.md's Sockets section for the
 // confirmed, asymmetric-by-item-type design this implements: weapons get a
-// guaranteed, player-paid unlock (1 DragonBall for the first, 5 for the
+// guaranteed, player-paid unlock (1 Fallen Star for the first, 5 for the
 // second); armor instead gets a small RNG chance to gain one as a side
 // effect of a Quality or Level Upgrade (see quality_upgrade/level_upgrade's
 // own socket-roll logic — there's nothing to click for that case, this tab
 // is informational only). Either way, an unlocked socket just shows Empty —
 // gems aren't implemented as items yet, so nothing can ever fill one.
 export default function ForgeSocketsPanel({ item, template }: { item: ItemInstance; template: ItemTemplate | null }) {
-  const dragonballs = useCurrencyStore((state) => state.dragonballs)
+  const fallenStars = useCurrencyStore((state) => state.fallenStars)
   const busy = useForgeStore((state) => state.busy)
   const unlockWeaponSocket = useForgeStore((state) => state.unlockWeaponSocket)
   const [error, setError] = useState<string | null>(null)
@@ -75,12 +75,12 @@ export default function ForgeSocketsPanel({ item, template }: { item: ItemInstan
           ) : (
             <button
               type="button"
-              disabled={busy || dragonballs < cost}
+              disabled={busy || fallenStars < cost}
               onClick={() => void handleUnlock()}
-              title={dragonballs < cost ? `Need ${cost} DragonBall${cost === 1 ? '' : 's'} (have ${dragonballs}).` : undefined}
+              title={fallenStars < cost ? `Need ${cost} Fallen Star${cost === 1 ? '' : 's'} (have ${fallenStars}).` : undefined}
               className="w-full rounded-lg border border-emerald-600 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {busy ? 'Working…' : `Unlock Socket ${socketCount + 1} (${cost} DragonBall${cost === 1 ? '' : 's'})`}
+              {busy ? 'Working…' : `Unlock Socket ${socketCount + 1} (${cost} Fallen Star${cost === 1 ? '' : 's'})`}
             </button>
           )}
         </>

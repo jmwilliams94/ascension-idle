@@ -6,7 +6,7 @@ import { buildRadiateEmbers } from './tierEffectsData'
 // used as a live preview of exactly this component, not a separate copy).
 // Wired into InventorySlot.tsx, the single shared tile renderer behind
 // every real gear/material tile in the game (Inventory grid, Forge's
-// Upgrade/Material slots, Equipment paper doll, Warehouse Storage, Loot
+// Upgrade/Material slots, Equipment paper doll, Bank Storage, Loot
 // Holding) — so this file is the one place that needs updating if the
 // look ever changes. See tierEffectsData.ts for the density table (which
 // colors get the effect and how dense) and the ember-layout math.
@@ -19,7 +19,7 @@ import { buildRadiateEmbers } from './tierEffectsData'
 //      equipmentBonus.ts) — Normal is deliberately absent, so it renders no
 //      effect at all, per the user's "that one shouldn't have any."
 //   2. The established "rare material" colors (see forgeCosts.ts) —
-//      MATERIAL_COLOR (Meteor, Composition Stones) and DRAGONBALL_COLOR.
+//      MATERIAL_COLOR (Comet, Composition Stones) and FALLEN_STAR_COLOR.
 //      CONSUMABLE_COLOR (Potions) is deliberately absent — potions aren't
 //      "rare" in the same sense.
 

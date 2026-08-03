@@ -13,12 +13,12 @@ import { useLuckyStore } from '../game/lucky/useLuckyStore'
 // Loads/saves the active character's row (characters table) — class, level, gold,
 // exp, zone, equipped items (including the Quiver, for Hunters). Replaces what
 // usePlayerRecordStore used to do before the character-slots restructure; that
-// store is now account-level only. meteors/dragonballs/composition_stones are
+// store is now account-level only. comets/fallen_stars/composition_stones are
 // intentionally excluded from both load-hydration-triggers-save and saveNow —
 // see useCurrencyStore for why (server-authoritative via the forge RPCs).
 // Ascension Points, and (2026-08-03, Bank tab rework) the entire Bank Storage
-// system — warehouse_points/gear_composition_points/meteor_bank_count/
-// dragonball_bank_count/composition_stones_banked — all live on the account
+// system — bank_points/gear_composition_points/comet_bank_count/
+// fallen_star_bank_count/composition_stones_banked — all live on the account
 // (players table, see usePlayerRecordStore) rather than here now, not
 // per-character. The
 // Quiver is just an equipped item like any other slot (equipped_quiver_id) —
@@ -37,14 +37,14 @@ interface CharacterRow {
   equipped_hat_id: string | null
   equipped_coat_id: string | null
   equipped_quiver_id: string | null
-  meteor_count: number
-  dragonball_count: number
-  meteor_scroll_count: number
-  dragonball_scroll_count: number
+  comet_count: number
+  fallen_star_count: number
+  comet_scroll_count: number
+  fallen_star_scroll_count: number
   composition_stones: CompositionStones
   selected_monster_id: string | null
   last_active_at: string
-  // Server-authoritative, same trust model as meteor_count/dragonball_count
+  // Server-authoritative, same trust model as comet_count/fallen_star_count
   // above — only ever written by draw_lucky_ticket, never the generic
   // autosave (see saveNow below).
   lucky_free_ticket_claimed_at: string | null
@@ -79,7 +79,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     const { data, error } = await supabase
       .from('characters')
       .select(
-        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, meteor_count, dragonball_count, meteor_scroll_count, dragonball_scroll_count, composition_stones, selected_monster_id, last_active_at, lucky_free_ticket_claimed_at',
+        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, comet_count, fallen_star_count, comet_scroll_count, fallen_star_scroll_count, composition_stones, selected_monster_id, last_active_at, lucky_free_ticket_claimed_at',
       )
       .eq('id', characterId)
       .maybeSingle<CharacterRow>()
@@ -108,10 +108,10 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
       quiver: data.equipped_quiver_id,
     } satisfies Record<EquipSlot, string | null>)
     useCurrencyStore.getState().hydrate({
-      meteors: data.meteor_count,
-      dragonballs: data.dragonball_count,
-      meteorScrolls: data.meteor_scroll_count,
-      dragonballScrolls: data.dragonball_scroll_count,
+      comets: data.comet_count,
+      fallenStars: data.fallen_star_count,
+      cometScrolls: data.comet_scroll_count,
+      fallenStarScrolls: data.fallen_star_scroll_count,
     })
     useCompositionStore.getState().hydrate(data.composition_stones)
     useLuckyStore.getState().hydrate(data.lucky_free_ticket_claimed_at)
