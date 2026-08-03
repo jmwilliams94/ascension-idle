@@ -30,7 +30,10 @@ type NavIcon = { kind: 'emoji'; value: string } | { kind: 'image'; src: string; 
 
 const LEFT_ITEMS: { id: TabId; label: string; icon: NavIcon }[] = [
   { id: 'equipment', label: 'Equip', icon: { kind: 'image', src: `${BASE_URL}nav-icons/equipment.png`, alt: 'Equipment' } },
-  { id: 'lucky', label: 'Lucky', icon: { kind: 'emoji', value: '🍀' } },
+  // Renamed "Lucky" -> "LuckyLad" (2026-08-03, confirmed with the user,
+  // wording + mascot art only) — real art now exists (public/lucky-icons/
+  // luckylad.png), replacing the placeholder 🍀 emoji.
+  { id: 'lucky', label: 'LuckyLad', icon: { kind: 'image', src: `${BASE_URL}lucky-icons/luckylad.png`, alt: 'LuckyLad' } },
 ]
 
 // TownNavButton's own rollup contents — everything that used to have its own

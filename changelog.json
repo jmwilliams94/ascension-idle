@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.55.1",
+    "date": "2026-08-03",
+    "changes": [
+      "\"Lucky\" is now \"LuckyLad\", with a real mascot icon",
+      "Lucky cards now show a closed treasure chest face-down, and an opened chest when revealed"
+    ]
+  },
+  {
     "version": "1.55.0",
     "date": "2026-08-03",
     "changes": [

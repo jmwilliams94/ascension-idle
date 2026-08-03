@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { useLuckyStore, LUCKY_TICKET_AP_COST, LUCKY_CARD_COUNT, type LuckyReward } from '../game/lucky/useLuckyStore'
+import {
+  useLuckyStore,
+  LUCKY_TICKET_AP_COST,
+  LUCKY_CARD_COUNT,
+  LUCKYLAD_ICON_SRC,
+  CHEST_CLOSED_ICON_SRC,
+  CHEST_OPEN_ICON_SRC,
+  type LuckyReward,
+} from '../game/lucky/useLuckyStore'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 import { DRAGONBALL_COLOR, DRAGONBALL_ICON_SRC, MATERIAL_COLOR, METEOR_ICON_SRC } from '../game/items/forgeCosts'
 
@@ -74,7 +82,7 @@ function LuckyCard({
       type="button"
       disabled={disabled || !onClick}
       onClick={onClick}
-      className={`relative flex aspect-[3/4] flex-col items-center justify-center gap-1 rounded-xl border-2 p-1 text-center transition-colors ${
+      className={`relative flex aspect-[3/4] flex-col items-center justify-center gap-0.5 rounded-xl border-2 p-1 text-center transition-colors ${
         won
           ? 'border-amber-400 bg-amber-500/10 shadow-lg shadow-amber-500/20'
           : armed
@@ -89,18 +97,25 @@ function LuckyCard({
           initial={{ rotateY: 90, opacity: 0 }}
           animate={{ rotateY: 0, opacity: 1 }}
           transition={{ duration: 0.25, delay: won ? 0 : 0.15 + index * 0.06 }}
-          className="flex flex-col items-center gap-1"
+          className="flex flex-col items-center gap-0.5"
         >
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-lg border text-base"
-            style={{ borderColor: visual.color, backgroundColor: `${visual.color}22` }}
-          >
-            {visual.iconSrc ? <img src={visual.iconSrc} alt="" className="h-4/5 w-4/5 object-contain" /> : visual.icon}
+          {/* Opened chest as the reveal backdrop (real art, 2026-08-03) —
+              same for every reward kind, with the reward's own icon overlaid
+              as a small badge so the 9 revealed cards still read apart from
+              each other at a glance. */}
+          <div className="relative flex h-11 w-11 items-center justify-center">
+            <img src={CHEST_OPEN_ICON_SRC} alt="" className="h-full w-full object-contain" />
+            <div
+              className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border text-[10px]"
+              style={{ borderColor: visual.color, backgroundColor: `${visual.color}dd` }}
+            >
+              {visual.iconSrc ? <img src={visual.iconSrc} alt="" className="h-3/5 w-3/5 object-contain" /> : visual.icon}
+            </div>
           </div>
           <p className="text-[9px] font-medium leading-tight text-slate-300">{rewardLabel(reward)}</p>
         </motion.div>
       ) : (
-        <span className="text-2xl">❓</span>
+        <img src={CHEST_CLOSED_ICON_SRC} alt="" className="h-11 w-11 object-contain" />
       )}
       {won && <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold text-slate-950">WON</span>}
     </button>
@@ -174,11 +189,11 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
     <div className="space-y-4">
       <div className="rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900/80 to-slate-950/80 p-4">
         <div className="flex items-center gap-2">
-          <span className="text-lg">🍀</span>
-          <p className="text-sm font-semibold text-slate-200">Lucky</p>
+          <img src={LUCKYLAD_ICON_SRC} alt="" className="h-8 w-8 object-contain" />
+          <p className="text-sm font-semibold text-slate-200">LuckyLad</p>
         </div>
         <p className="mt-1 text-xs text-slate-500">
-          Pick one of 9 cards for a shot at a reward — the rest reveal what they would have been, but only your pick counts.
+          Pick one of 9 chests for a shot at a reward — the rest reveal what they would have been, but only your pick counts.
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
           <span>
