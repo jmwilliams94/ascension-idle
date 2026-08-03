@@ -190,6 +190,7 @@ export function getItemIcon(slotType: string | undefined): string {
 // of art — no other file needs touching.
 const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Sapling Bow': `${import.meta.env.BASE_URL}item-icons/sapling-bow.png`,
+  "Ranger's Bow": `${import.meta.env.BASE_URL}item-icons/rangers-bow.png`,
 }
 
 export function getGearIconSrc(templateName: string | undefined): string | undefined {

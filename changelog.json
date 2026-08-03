@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.54.3",
+    "date": "2026-08-03",
+    "changes": [
+      "Added a real icon for the Ranger's Bow"
+    ]
+  },
+  {
     "version": "1.54.2",
     "date": "2026-08-03",
     "changes": [
