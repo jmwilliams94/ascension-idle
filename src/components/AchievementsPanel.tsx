@@ -18,6 +18,7 @@ import {
   nextTierToUnlock,
   zoneTierCompletions,
 } from '../game/achievements/achievementData'
+import { MONSTER_GEAR_REWARDS } from '../game/achievements/monsterGearRewards'
 
 // Achievements & Pets, Stage 1 (confirmed shape, see CLAUDE.md — added from a
 // mobile session). Grouped by zone (reusing ZONE_ORDER/ZONES the same way
@@ -135,11 +136,23 @@ function killCountTierState(kills: number, tierIndex: number): TierVisualState {
   return kills >= ACHIEVEMENT_TIERS[tierIndex] ? 'active' : 'locked'
 }
 
-function killCountTierTooltipLines(tierIndex: number, state: TierVisualState, kills: number): string[] {
+function killCountTierTooltipLines(tierIndex: number, state: TierVisualState, kills: number, monsterId: EnemyTypeId): string[] {
   const threshold = ACHIEVEMENT_TIERS[tierIndex]
   const rewardPct = Math.round((KILL_COUNT_BONUS_DROP_MULTIPLIER[threshold] - 1) * 100)
   const rewardLine = `Reward: +${rewardPct}% Meteor/DragonBall drop chance`
-  return [rewardLine, state === 'active' ? 'Active now' : `${(threshold - kills).toLocaleString()} kills to go`]
+  // Zone 1's per-monster gear rewards (2026-08-03) stack on top of the
+  // ongoing drop-chance bonus above, not instead of it — both apply once
+  // this tier is reached.
+  const gearReward = MONSTER_GEAR_REWARDS[monsterId]
+  const gearLine =
+    gearReward && gearReward.killsRequired === threshold
+      ? `Also grants: Tempered ${gearReward.templateName} (${gearReward.slotLabel}, one-time)`
+      : null
+  return [
+    rewardLine,
+    ...(gearLine ? [gearLine] : []),
+    state === 'active' ? 'Active now' : `${(threshold - kills).toLocaleString()} kills to go`,
+  ]
 }
 
 function unlockTierState(unlockedTierIndex: number, tierIndex: number): TierVisualState {
@@ -185,7 +198,7 @@ function CharacterProgress({ monsterId }: { monsterId: EnemyTypeId }) {
           <TierLadderBar
             kills={kills}
             getState={(tierIndex) => killCountTierState(kills, tierIndex)}
-            getTooltipLines={(tierIndex, state) => killCountTierTooltipLines(tierIndex, state, kills)}
+            getTooltipLines={(tierIndex, state) => killCountTierTooltipLines(tierIndex, state, kills, monsterId)}
           />
         </div>
       </div>

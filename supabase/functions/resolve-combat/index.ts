@@ -175,8 +175,32 @@ const MIN_DAMAGE_PERCENT_OF_ATTACK = 0.1
 // midpoint 2).
 const DAMAGE_ROLL_MIN_RATIO = 0.5
 const DAMAGE_ROLL_MAX_RATIO = 1.5
-const METEOR_DROP_CHANCE = 1 / 500
-const DRAGONBALL_DROP_CHANCE = 1 / 20000
+// Meteor/DragonBall kill-drop odds — scaled by the fought monster's own level
+// (2026-08-03, confirmed with the user, supersedes the flat 1/500 / 1/20000
+// rates — see combatResolver.ts's mirror for the full write-up on why: a
+// low-level/fast-kill monster produced identical odds per kill as a much
+// harder endgame one, making camping the first zone forever strictly optimal
+// for currency farming). PLACEHOLDER curve, linear on level 1-130,
+// DragonBall:Meteor ratio held constant at 40x.
+const METEOR_DROP_CHANCE_AT_LEVEL_1 = 1 / 2000
+const METEOR_DROP_CHANCE_AT_LEVEL_130 = 1 / 100
+const DRAGONBALL_DROP_CHANCE_AT_LEVEL_1 = 1 / 80000
+const DRAGONBALL_DROP_CHANCE_AT_LEVEL_130 = 1 / 4000
+const MAX_MONSTER_LEVEL_FOR_DROP_SCALING = 130
+
+function dropChanceLevelT(monsterLevel: number): number {
+  return Math.min(Math.max((monsterLevel - 1) / (MAX_MONSTER_LEVEL_FOR_DROP_SCALING - 1), 0), 1)
+}
+
+function meteorDropChance(monsterLevel: number): number {
+  const t = dropChanceLevelT(monsterLevel)
+  return METEOR_DROP_CHANCE_AT_LEVEL_1 + (METEOR_DROP_CHANCE_AT_LEVEL_130 - METEOR_DROP_CHANCE_AT_LEVEL_1) * t
+}
+
+function dragonballDropChance(monsterLevel: number): number {
+  const t = dropChanceLevelT(monsterLevel)
+  return DRAGONBALL_DROP_CHANCE_AT_LEVEL_1 + (DRAGONBALL_DROP_CHANCE_AT_LEVEL_130 - DRAGONBALL_DROP_CHANCE_AT_LEVEL_1) * t
+}
 // Gear drop rate + per-drop quality odds (confirmed with the user,
 // 2026-08-01) — supersedes the earlier flat 10%-per-kill/always-Normal-
 // quality placeholder. A drop itself is now genuinely rare on its own; the
@@ -244,6 +268,29 @@ const KILL_COUNT_BONUS_DROP_MULTIPLIER: Record<number, number> = {
 // Confirmed, not a placeholder — 1/5000 chance per kill, independent of every
 // other roll this function makes.
 const PET_DROP_CHANCE = 1 / 5000
+
+// Zone 1 (Windhollow) per-monster Kill Count gear rewards (2026-08-03,
+// confirmed with the user) — the first real per-monster tier content (Stage
+// 1 shipped with one uniform placeholder reward only). Reaching 1000 kills
+// (Kill Count Tier 4) on each of Windhollow's 5 monsters grants a specific
+// Tempered ('refined') gear item once — one slot type per monster, in zone
+// order: armor, weapon, ring, necklace, boots. Only the slot-type order was
+// specified; the exact item within each slot is this pass's own judgment
+// call — level-appropriate picks from the existing catalog (Fawnhide Coat/
+// Ranger's Bow/Pewter Ring/Twine Necklace/Padded Boots), not new items, not
+// final content for the other 7 zones. Granted through the exact same
+// live-mode-room-check/offline-Loot-Holding pipeline a random gear drop
+// already uses (pushed into droppedTemplates below) rather than a
+// special-cased grant path. Mirrors
+// src/game/achievements/monsterGearRewards.ts — keep in sync (that file is
+// display-only today, no client prediction for this specific reward).
+const MONSTER_GEAR_REWARDS: Record<string, { templateId: string; requiredLevel: number; killsRequired: number }> = {
+  quailwing: { templateId: '7b025b99-2a66-43e6-9168-75aae059a267', requiredLevel: 15, killsRequired: 1000 }, // Fawnhide Coat
+  'mourning-dove': { templateId: 'f36c9a78-fcf0-441e-851d-99de940482dd', requiredLevel: 15, killsRequired: 1000 }, // Ranger's Bow
+  redbreast: { templateId: '64dba91d-82cf-4f90-8a73-7dd4270926d8', requiredLevel: 20, killsRequired: 1000 }, // Pewter Ring
+  warshade: { templateId: '8631651a-a59d-449e-b2ae-82e32caace51', requiredLevel: 27, killsRequired: 1000 }, // Twine Necklace
+  'grim-specter': { templateId: '7d6d3f99-44cb-4f89-b2e4-2627e093b4cc', requiredLevel: 30, killsRequired: 1000 }, // Padded Boots
+}
 
 // Zone-level Achievements layer (2026-08-03, confirmed with the user,
 // additive to the per-monster system above, not a replacement — see the
@@ -369,10 +416,10 @@ function rollDamageInRange(midpoint: number): number {
 
 // bonusDropMultiplier — Kill Count's own reward (see
 // KILL_COUNT_BONUS_DROP_MULTIPLIER above), applied to both chances alike.
-function rollBonusCurrencyDrops(bonusDropMultiplier: number) {
+function rollBonusCurrencyDrops(monsterLevel: number, bonusDropMultiplier: number) {
   return {
-    meteors: Math.random() < METEOR_DROP_CHANCE * bonusDropMultiplier ? 1 : 0,
-    dragonballs: Math.random() < DRAGONBALL_DROP_CHANCE * bonusDropMultiplier ? 1 : 0,
+    meteors: Math.random() < meteorDropChance(monsterLevel) * bonusDropMultiplier ? 1 : 0,
+    dragonballs: Math.random() < dragonballDropChance(monsterLevel) * bonusDropMultiplier ? 1 : 0,
   }
 }
 
@@ -740,6 +787,10 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       )
     }
 
+    // Looked up once per resolve call (the fought monster never changes
+    // mid-window), not per-kill — see MONSTER_GEAR_REWARDS above.
+    const monsterGearReward = MONSTER_GEAR_REWARDS[character.selected_monster_id]
+
     let isRare = rollIsRare()
     let hp = spawnMonsterHp(monster, isRare)
 
@@ -797,7 +848,30 @@ async function handleResolveCombat(req: Request): Promise<Response> {
           }
         }
 
-        const bonusCurrency = rollBonusCurrencyDrops(bonusDropMultiplier)
+        // Zone 1 Kill Count gear reward — fires exactly once, the instant
+        // this specific kill crosses the required threshold (checked against
+        // the pre-window count + how many kills have happened in this window
+        // so far), regardless of whether kills jumped past it in one big
+        // offline catch-up or one at a time live.
+        if (monsterGearReward && characterKillsBefore + killsThisWindow === monsterGearReward.killsRequired) {
+          const withQuality = {
+            id: monsterGearReward.templateId,
+            required_level: monsterGearReward.requiredLevel,
+            qualityTier: 'refined',
+          }
+          if (mode === 'live') {
+            if (projectedOccupied < INVENTORY_SLOT_CAP) {
+              droppedTemplates.push(withQuality)
+              projectedOccupied += 1
+            } else {
+              inventoryFull = true
+            }
+          } else {
+            droppedTemplates.push(withQuality)
+          }
+        }
+
+        const bonusCurrency = rollBonusCurrencyDrops(monster.level, bonusDropMultiplier)
         if (mode === 'live') {
           if (bonusCurrency.meteors > 0) {
             if (projectedOccupied < INVENTORY_SLOT_CAP) {

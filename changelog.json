@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.56.0",
+    "date": "2026-08-03",
+    "changes": [
+      "Meteor/DragonBall drop chance now scales with monster level — low-level monsters are worse for currency farming, high-level monsters are much better",
+      "Added the first real Kill Count gear rewards — reach 1000 kills on each Windhollow monster for a piece of Tempered gear (Quailwing: Armor, Mourning Dove: Weapon, Redbreast: Ring, Warshade: Necklace, Grim Specter: Boots)"
+    ]
+  },
+  {
     "version": "1.55.3",
     "date": "2026-08-03",
     "changes": [
