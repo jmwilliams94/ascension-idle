@@ -5,6 +5,7 @@ import { useInventoryStore, type ItemInstance } from '../items/useInventoryStore
 import { useInventoryFullWarningStore } from '../items/useInventoryFullWarningStore'
 import { useLootHoldingStore } from '../items/useLootHoldingStore'
 import { useAchievementsStore } from '../achievements/useAchievementsStore'
+import { usePetToastStore } from '../achievements/usePetToastStore'
 import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
 import { useCombatStore } from './useCombatStore'
 
@@ -91,6 +92,13 @@ export async function resolveCombat(characterId: string, mode: ResolveCombatMode
   if (result.petObtained) {
     const type = ENEMY_TYPES[result.petObtained as EnemyTypeId]
     useCombatStore.getState().logPetObtained(type?.displayName ?? 'monster')
+    // Live-only celebration toast — offline-mode pet grants get their own
+    // dedicated callout in OfflineProgressModal instead (see
+    // offlineProgress.ts), since there's no live page open to show a
+    // transient toast on while the player was away.
+    if (mode === 'live') {
+      usePetToastStore.getState().show(type?.displayName ?? 'monster')
+    }
   }
 
   return result

@@ -89,6 +89,28 @@ export default function OfflineProgressModal() {
           </div>
         </div>
 
+        {result && result.petObtained && (
+          <div className="relative rounded-xl border border-amber-400 bg-amber-500/10 p-3 text-center shadow-lg shadow-amber-500/20">
+            <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold text-slate-950">
+              NEW PET
+            </span>
+            <p className="mt-1 text-sm font-semibold text-amber-300">
+              🎉 You obtained the {result.petObtained} pet while you were away!
+            </p>
+          </div>
+        )}
+
+        {result && result.dragonballs > 0 && (
+          <div className="relative rounded-xl border border-violet-400 bg-violet-500/10 p-3 text-center shadow-lg shadow-violet-500/20">
+            <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-violet-500 px-1.5 py-0.5 text-[9px] font-bold text-slate-950">
+              RARE DROP
+            </span>
+            <p className="mt-1 text-sm font-semibold text-violet-300">
+              ✨ A DragonBall dropped while you were away! (+{result.dragonballs})
+            </p>
+          </div>
+        )}
+
         {result && (
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-sm text-slate-300">
             <div className="flex justify-between">
@@ -123,12 +145,6 @@ export default function OfflineProgressModal() {
               <div className="flex justify-between">
                 <dt className="text-slate-400">Meteors</dt>
                 <dd className="font-semibold text-slate-200">+{result.meteors}</dd>
-              </div>
-            )}
-            {result.dragonballs > 0 && (
-              <div className="flex justify-between">
-                <dt className="text-slate-400">DragonBalls</dt>
-                <dd className="font-semibold text-slate-200">+{result.dragonballs}</dd>
               </div>
             )}
           </dl>

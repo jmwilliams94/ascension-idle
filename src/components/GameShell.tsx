@@ -5,6 +5,7 @@ import InventoryFullWarningHud from './InventoryFullWarningHud'
 import CombatPage from './CombatPage'
 import EquipmentTabPage from './EquipmentTabPage'
 import ExpBar from './ExpBar'
+import PetToast from './PetToast'
 import ForgePanel from './ForgePanel'
 import InventoryFullModal from './InventoryFullModal'
 import MarketplacePanel from './MarketplacePanel'
@@ -265,6 +266,10 @@ export default function GameShell({ characterId }: { characterId: string }) {
           <QuiverWarningHud />
           <InventoryFullWarningHud />
         </div>
+
+        {/* Renders nothing when there's no pet to celebrate — safe to mount
+            unconditionally, same as every other HUD element here. */}
+        <PetToast />
 
         <TabNav />
 

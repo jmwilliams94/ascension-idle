@@ -272,9 +272,10 @@ function killCountBonusLevelT(monsterLevel: number): number {
   return MIN_LEVEL_SCALE_FRACTION + (1 - MIN_LEVEL_SCALE_FRACTION) * Math.min(Math.max(raw, 0), 1)
 }
 
-// Confirmed, not a placeholder — 1/5000 chance per kill, independent of every
-// other roll this function makes.
-const PET_DROP_CHANCE = 1 / 5000
+// Confirmed, not a placeholder — 1/25000 chance per kill (lowered from the
+// original 1/5000, 2026-08-03), independent of every other roll this
+// function makes. Mirrors achievementData.ts — keep in sync.
+const PET_DROP_CHANCE = 1 / 25000
 
 // Zone 1 (Windhollow) per-monster Kill Count gear rewards (2026-08-03,
 // confirmed with the user) — the first real per-monster tier content (Stage

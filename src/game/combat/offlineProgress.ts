@@ -1,5 +1,6 @@
 import { useZoneStore } from '../zones/useZoneStore'
 import { resolveCombat } from './resolveCombat'
+import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
 
 // Idle/AFK progress while away, and the login-time reconciliation of live
 // combat both go through the same resolve-combat Edge Function now (see
@@ -25,6 +26,12 @@ export interface OfflineProgressResult {
   itemsFoundCount: number
   meteors: number
   dragonballs: number
+  // Pet drop rate/notification pass (2026-08-03, confirmed with the user) —
+  // display name (already resolved from the raw monster id, same
+  // ENEMY_TYPES lookup resolveCombat.ts's own live-toast handling uses), so
+  // OfflineProgressModal can render it directly with no lookup of its own.
+  // Null when no pet was obtained during the away window.
+  petObtained: string | null
 }
 
 // Called once from GameShell's load effect, after character/inventory/arrow
@@ -51,5 +58,6 @@ export async function runOfflineProgressCheck(characterId: string): Promise<Offl
     itemsFoundCount: (result.itemsGranted?.length ?? 0) + (result.itemsHeld?.length ?? 0),
     meteors: result.gained.meteors,
     dragonballs: result.gained.dragonballs,
+    petObtained: result.petObtained ? (ENEMY_TYPES[result.petObtained as EnemyTypeId]?.displayName ?? 'monster') : null,
   }
 }

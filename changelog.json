@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.59.4",
+    "date": "2026-08-03",
+    "changes": [
+      "Pet drop rate is now 1 in 25,000 (down from 1 in 5,000 — it was too easy to get before)",
+      "Getting a pet during live play now shows a celebration pop-up",
+      "Returning from being away now calls out any pet you obtained, and separately highlights any DragonBall you found while away"
+    ]
+  },
+  {
     "version": "1.59.3",
     "date": "2026-08-03",
     "changes": [

@@ -105,9 +105,11 @@ export function killCountBonusMultiplierAtTier(tier: AchievementTier, monsterLev
   return 1 + (KILL_COUNT_BONUS_DROP_MULTIPLIER[tier] - 1) * killCountBonusLevelT(monsterLevel)
 }
 
-// Confirmed, not a placeholder — 1/5000 chance per kill, independent of every
-// other roll combat makes, account-wide one-shot unlock per monster.
-export const PET_DROP_CHANCE = 1 / 5000
+// Confirmed, not a placeholder — 1/25000 chance per kill (lowered from the
+// original 1/5000, 2026-08-03, per the user — that rate felt too common),
+// independent of every other roll combat makes, account-wide one-shot
+// unlock per monster.
+export const PET_DROP_CHANCE = 1 / 25000
 
 // Zone-level Achievements layer (2026-08-03, confirmed with the user) —
 // ADDITIVE to the per-monster system above, not a replacement (an earlier
