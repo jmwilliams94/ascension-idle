@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.58.1",
+    "date": "2026-08-03",
+    "changes": [
+      "Fixed a bug where items claimed from Loot Holding always showed as level 1, even when they were actually a higher-level item (stats were always correct — only the displayed level was wrong)",
+      "Corrected the level on every already-claimed item this affected"
+    ]
+  },
+  {
     "version": "1.58.0",
     "date": "2026-08-03",
     "changes": [
