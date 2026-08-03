@@ -11,6 +11,8 @@ import {
   ACHIEVEMENT_TIERS,
   MIN_KILLS_FOR_PRESTIGE,
   PET_DROP_CHANCE,
+  ZONE_TIER_COMPLETIONS,
+  ZONE_TIER_FALLEN_STAR_REWARD,
   ZONE_TOTAL_TIER_MILESTONES,
   currentKillCountTier,
   currentPrestigeTier,
@@ -392,24 +394,81 @@ function PlaceholderCard({ title, description }: { title: string; description: s
   )
 }
 
-// Zone-level Achievements summary (2026-08-03, confirmed with the user) — a
-// compact readout shown on the zone's own collapsed accordion header ("when
-// the zone is collapsed maybe it can display its zone rewards"), so its
-// status is visible without expanding to see the 5 individual monster rows.
-// Purely a display computation off useAchievementsStore's already-loaded
-// characterKills (see zoneTierCompletions in achievementData.ts) — the real
-// Fallen Star grant only ever happens server-side, tracked via
-// character_zone_progress, which the client never reads.
-function ZoneAchievementSummary({ zoneId }: { zoneId: ZoneId }) {
+// Zone-level Achievements milestone bar (2026-08-04, confirmed with the
+// user — "I need a bar on each zone indicating those milestones and the
+// rewards") — supersedes the plain-text ZoneAchievementSummary this used to
+// be (a "X/30 tiers completed" line with no reward visibility at all).
+// Modeled directly on TierLadderBar above (same track/fill/dot-marker
+// structure), just driven by ZONE_TIER_COMPLETIONS/completions (out of
+// ZONE_TOTAL_TIER_MILESTONES = 30) instead of ACHIEVEMENT_TIERS/kills, and
+// each dot's tooltip pulls its reward from ZONE_TIER_FALLEN_STAR_REWARD
+// instead of a per-monster gold multiplier. Shown on the zone's own
+// collapsed accordion header ("when the zone is collapsed maybe it can
+// display its zone rewards"), so its status is visible without expanding to
+// see the 5 individual monster rows. Purely a display computation off
+// useAchievementsStore's already-loaded characterKills (see
+// zoneTierCompletions in achievementData.ts) — the real Fallen Star grant
+// only ever happens server-side, tracked via character_zone_progress, which
+// the client never reads; a dot showing 'active' here means the threshold
+// has been crossed, which in practice means the reward already granted
+// itself automatically (no separate manual-claim step exists for this
+// ladder, unlike Prestige).
+function ZoneMilestoneBar({ zoneId }: { zoneId: ZoneId }) {
   const characterKills = useAchievementsStore((state) => state.characterKills)
   const zoneMonsterKills = ZONES[zoneId].monsterOrder.map((monsterId) => characterKills[monsterId]?.kills ?? 0)
   const { completions, zoneTier } = zoneTierCompletions(zoneMonsterKills)
+  const overallPct = (completions / ZONE_TOTAL_TIER_MILESTONES) * 100
 
   return (
-    <span className="text-[11px] text-slate-500">
-      {completions}/{ZONE_TOTAL_TIER_MILESTONES} tiers completed
-      {zoneTier > 0 && <span className="ml-1 text-emerald-400">(Zone Tier {zoneTier})</span>}
-    </span>
+    // Swallows clicks so tapping a dot (or the bar's own empty track) doesn't
+    // also bubble up to the accordion header's onClick and toggle the zone
+    // open/closed — this bar is an info display, not another toggle target.
+    <div className="w-40" onClick={(event) => event.stopPropagation()}>
+      <div className="flex items-center justify-between text-[11px] text-slate-500">
+        <span>
+          {completions}/{ZONE_TOTAL_TIER_MILESTONES}
+        </span>
+        {zoneTier > 0 && <span className="text-emerald-400">Zone Tier {zoneTier}</span>}
+      </div>
+      <div className="relative py-1.5">
+        <div className="h-3 w-full overflow-hidden rounded-full bg-slate-800">
+          <div className="h-full rounded-full bg-sky-500 transition-[width]" style={{ width: `${overallPct}%` }} />
+        </div>
+        <div className="pointer-events-none absolute inset-0 flex items-center">
+          {ZONE_TIER_COMPLETIONS.map((threshold, index) => {
+            const state: TierVisualState = completions >= threshold ? 'active' : 'locked'
+            const color = TIER_STATE_COLOR[state]
+            const leftPct = (threshold / ZONE_TOTAL_TIER_MILESTONES) * 100
+
+            const tooltip = (
+              <ItemTooltip
+                title={`Zone Tier ${index + 1} · ${threshold} completions`}
+                titleColor={color}
+                lines={[
+                  `Reward: ${ZONE_TIER_FALLEN_STAR_REWARD[index]} Fallen Star${ZONE_TIER_FALLEN_STAR_REWARD[index] === 1 ? '' : 's'}`,
+                  state === 'active' ? 'Granted' : `${(threshold - completions).toLocaleString()} to go`,
+                ]}
+              />
+            )
+
+            return (
+              <div key={threshold} className="pointer-events-auto absolute -translate-x-1/2" style={{ left: `${leftPct}%` }}>
+                <HoverTooltip content={tooltip}>
+                  <div
+                    className={`h-3 w-3 rounded-full border-2 ${state === 'active' ? 'accent-glow' : ''}`}
+                    style={{
+                      borderColor: color,
+                      backgroundColor: state === 'locked' ? '#020617' : color,
+                      color,
+                    }}
+                  />
+                </HoverTooltip>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -430,7 +489,7 @@ function CollapsibleZoneGroups({
   renderMonster: (monsterId: EnemyTypeId, displayName: string) => ReactNode
   // Only the Character tab's own Zones sub-tab passes this — Account's Zones/
   // Unlocks reuse of this same component shouldn't show a per-zone
-  // Achievements summary that's actually scoped to one character.
+  // Achievements milestone bar that's actually scoped to one character.
   showZoneSummary?: boolean
 }) {
   return (
@@ -457,8 +516,8 @@ function CollapsibleZoneGroups({
               <div>
                 <p className="text-sm font-medium text-slate-200">{zone.displayName}</p>
                 {showZoneSummary && (
-                  <div className="mt-0.5">
-                    <ZoneAchievementSummary zoneId={zoneId} />
+                  <div className="mt-1">
+                    <ZoneMilestoneBar zoneId={zoneId} />
                   </div>
                 )}
               </div>
