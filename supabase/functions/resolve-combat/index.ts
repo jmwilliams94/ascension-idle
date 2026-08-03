@@ -201,14 +201,23 @@ function rollDroppedQualityTier(): string {
   return 'normal'
 }
 
-// Achievements & Pets, Stage 1 (confirmed shape, see CLAUDE.md — the tracking
+// Achievements & Pets (confirmed shape, see CLAUDE.md — the tracking
 // mechanism is real, the reward VALUES below are a deliberate uniform
-// placeholder until real per-monster tier content is designed; do not treat
-// these numbers as final). Mirrors src/game/achievements/achievementData.ts —
-// keep in sync.
+// placeholder until real per-monster/per-zone tier content is designed; do
+// not treat these numbers as final). Mirrors
+// src/game/achievements/achievementData.ts — keep in sync.
 const ACHIEVEMENT_TIERS = [100, 250, 500, 1000, 5000, 10000]
-// PLACEHOLDER gold multiplier per tier, uniform across every monster — highest
-// tier reached wins, not cumulative/stacking.
+
+// Corrected (2026-08-03, confirmed with the user) — supersedes the previous
+// "Kill Count and Prestige both grant gold, stacking multiplicatively"
+// design. Prestige (renamed from "Unlock") now solely owns the yield/
+// kill-rate reward category — this is the only gold multiplier left. Kill
+// Count's own reward moved to a separate, non-gold category (a bonus-
+// currency-drop-chance multiplier, see KILL_COUNT_BONUS_DROP_MULTIPLIER
+// below) — "other bonuses," per the user's own framing, distinct from
+// Prestige's yield/rate role. Same table (PLACEHOLDER, highest tier reached
+// wins, not cumulative) reused for both, since both still escalate across
+// the same 6 tiers uniformly across every monster.
 const ACHIEVEMENT_GOLD_MULTIPLIER: Record<number, number> = {
   100: 1.05,
   250: 1.1,
@@ -217,32 +226,44 @@ const ACHIEVEMENT_GOLD_MULTIPLIER: Record<number, number> = {
   5000: 1.5,
   10000: 2,
 }
+
+// Kill Count's own reward category (2026-08-03) — a bonus multiplier on the
+// per-kill Meteor/DragonBall drop chance (see rollBonusCurrencyDrops below),
+// scaled by the highest Kill Count tier reached for the monster being
+// fought. PLACEHOLDER magnitudes, same "highest tier wins" shape as the gold
+// table above.
+const KILL_COUNT_BONUS_DROP_MULTIPLIER: Record<number, number> = {
+  100: 1.1,
+  250: 1.25,
+  500: 1.5,
+  1000: 2,
+  5000: 3,
+  10000: 5,
+}
+
 // Confirmed, not a placeholder — 1/5000 chance per kill, independent of every
 // other roll this function makes.
 const PET_DROP_CHANCE = 1 / 5000
 
+// Zone-level Achievements layer (2026-08-03, confirmed with the user,
+// additive to the per-monster system above, not a replacement — see the
+// migration's own header for the full write-up). Every zone has exactly 5
+// monsters (confirmed by CLAUDE.md's Zones section), so 5 monsters x 6 tiers
+// = 30 possible tier-milestones per zone, uniformly — this even 6-step
+// ladder (5/10/15/20/25/30) mirrors every other tier system in this game.
+// DragonBall reward per zone tier, PLACEHOLDER, escalating — "gives you a
+// DragonBall or something," per the user's own framing.
+const ZONE_TIER_COMPLETIONS = [5, 10, 15, 20, 25, 30]
+const ZONE_TIER_DRAGONBALL_REWARD = [1, 2, 3, 4, 5, 8]
+
 // Every tier now costs something to unlock (confirmed with the user,
 // 2026-08-01 — supersedes the original "first 3 free, pay once for the rest"
 // design), paid one at a time in order via unlock_next_achievement_tier.
-// Corrected (2026-08-03, confirmed with the user) — kill-count progress and
-// paying to unlock are now two fully independent reward tracks, not one
-// track gated on both: reaching a kill-count tier grants its multiplier for
-// free regardless of unlock status, and unlocking a tier grants its own
-// multiplier immediately regardless of kill count — they stack
-// multiplicatively. Mirrors src/game/achievements/achievementData.ts's own
-// killCountGoldMultiplier/unlockGoldMultiplier/totalAchievementGoldMultiplier
-// split — keep in sync.
-function killCountGoldMultiplier(kills: number): number {
-  let multiplier = 1
-  for (const tier of ACHIEVEMENT_TIERS) {
-    if (kills >= tier) {
-      multiplier = ACHIEVEMENT_GOLD_MULTIPLIER[tier]
-    }
-  }
-  return multiplier
-}
-
-function unlockGoldMultiplier(unlockedTierIndex: number): number {
+// unlockedTierIndex counts how many of the 6 tiers, in order, have been
+// unlocked so far. Renamed prestigeGoldMultiplier (2026-08-03, "Unlocks" is
+// now called "Prestige" everywhere) — mirrors
+// src/game/achievements/achievementData.ts's own function of the same name.
+function prestigeGoldMultiplier(unlockedTierIndex: number): number {
   let multiplier = 1
   for (let i = 0; i < unlockedTierIndex; i += 1) {
     multiplier = ACHIEVEMENT_GOLD_MULTIPLIER[ACHIEVEMENT_TIERS[i]]
@@ -250,8 +271,30 @@ function unlockGoldMultiplier(unlockedTierIndex: number): number {
   return multiplier
 }
 
-function currentAchievementGoldMultiplier(kills: number, unlockedTierIndex: number): number {
-  return killCountGoldMultiplier(kills) * unlockGoldMultiplier(unlockedTierIndex)
+function killCountBonusDropMultiplier(kills: number): number {
+  let multiplier = 1
+  for (const tier of ACHIEVEMENT_TIERS) {
+    if (kills >= tier) {
+      multiplier = KILL_COUNT_BONUS_DROP_MULTIPLIER[tier]
+    }
+  }
+  return multiplier
+}
+
+// How many of this zone's 30 possible tier-milestones a set of per-monster
+// kill counts has reached in total, and which zone tier (0-6) that maps to.
+function zoneTierCompletions(zoneMonsterKills: number[]): { completions: number; zoneTier: number } {
+  let completions = 0
+  for (const kills of zoneMonsterKills) {
+    for (const tier of ACHIEVEMENT_TIERS) {
+      if (kills >= tier) completions += 1
+    }
+  }
+  let zoneTier = 0
+  for (const threshold of ZONE_TIER_COMPLETIONS) {
+    if (completions >= threshold) zoneTier += 1
+  }
+  return { completions, zoneTier }
 }
 
 type LevelDiffColor = 'white' | 'green' | 'red' | 'black'
@@ -324,10 +367,12 @@ function rollDamageInRange(midpoint: number): number {
   return min + Math.floor(Math.random() * (max - min + 1))
 }
 
-function rollBonusCurrencyDrops() {
+// bonusDropMultiplier — Kill Count's own reward (see
+// KILL_COUNT_BONUS_DROP_MULTIPLIER above), applied to both chances alike.
+function rollBonusCurrencyDrops(bonusDropMultiplier: number) {
   return {
-    meteors: Math.random() < METEOR_DROP_CHANCE ? 1 : 0,
-    dragonballs: Math.random() < DRAGONBALL_DROP_CHANCE ? 1 : 0,
+    meteors: Math.random() < METEOR_DROP_CHANCE * bonusDropMultiplier ? 1 : 0,
+    dragonballs: Math.random() < DRAGONBALL_DROP_CHANCE * bonusDropMultiplier ? 1 : 0,
   }
 }
 
@@ -631,7 +676,11 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const unlockedTierIndex = characterKillsRow?.unlocked_tier_index ?? 0
   const accountKillsBefore = accountKillsRow?.kills ?? 0
   const petAlreadyUnlocked = Boolean(petRow)
-  const achievementGoldMultiplier = currentAchievementGoldMultiplier(characterKillsBefore, unlockedTierIndex)
+  // Prestige owns gold/yield; Kill Count owns its own separate bonus-currency-
+  // drop-chance multiplier (2026-08-03, see the constants above) — no longer
+  // stacked into one combined gold multiplier.
+  const achievementGoldMultiplier = prestigeGoldMultiplier(unlockedTierIndex)
+  const bonusDropMultiplier = killCountBonusDropMultiplier(characterKillsBefore)
   let killsThisWindow = 0
   let petObtained = false
 
@@ -748,7 +797,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
           }
         }
 
-        const bonusCurrency = rollBonusCurrencyDrops()
+        const bonusCurrency = rollBonusCurrencyDrops(bonusDropMultiplier)
         if (mode === 'live') {
           if (bonusCurrency.meteors > 0) {
             if (projectedOccupied < INVENTORY_SLOT_CAP) {
@@ -831,6 +880,59 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     await db.from('account_pets').insert({ account_id: character.account_id, monster_id: character.selected_monster_id })
   }
 
+  // Zone-level Achievements layer (2026-08-03, additive — see the migration's
+  // own header). Recomputes this zone's total tier-completions across its
+  // whole 5-monster roster (using the just-written characterKillCount for the
+  // fought monster, fresh DB reads for the other 4) and grants any newly
+  // crossed zone-tier DragonBall reward exactly once, tracked via
+  // character_zone_progress. Folded into dragonballsGained below (right
+  // before the existing per-unit grant loop) rather than granted separately,
+  // so it goes through the exact same live-mode-room-check/offline-Loot-
+  // Holding routing a dropped DragonBall already does — no special-casing.
+  let zoneDragonballReward = 0
+  if (killsThisWindow > 0 && monster.zone_id) {
+    const { data: zoneMonsters } = await db.from('enemy_types').select('id').eq('zone_id', monster.zone_id)
+    const zoneMonsterIds = (zoneMonsters ?? []).map((row) => row.id as string)
+
+    const { data: zoneKillRows } = await db
+      .from('character_monster_kills')
+      .select('monster_id, kills')
+      .eq('character_id', characterId)
+      .in('monster_id', zoneMonsterIds)
+
+    const killsByMonster: Record<string, number> = {}
+    for (const row of zoneKillRows ?? []) {
+      killsByMonster[row.monster_id as string] = row.kills as number
+    }
+    // Authoritative for the just-fought monster regardless of whether the
+    // select above raced the upsert earlier in this function.
+    killsByMonster[character.selected_monster_id] = characterKillCount
+
+    const zoneMonsterKills = zoneMonsterIds.map((id) => killsByMonster[id] ?? 0)
+    const { zoneTier } = zoneTierCompletions(zoneMonsterKills)
+
+    const { data: zoneProgressRow } = await db
+      .from('character_zone_progress')
+      .select('highest_zone_tier_granted')
+      .eq('character_id', characterId)
+      .eq('zone_id', monster.zone_id)
+      .maybeSingle()
+
+    const highestGranted = zoneProgressRow?.highest_zone_tier_granted ?? 0
+
+    if (zoneTier > highestGranted) {
+      for (let tier = highestGranted + 1; tier <= zoneTier; tier += 1) {
+        zoneDragonballReward += ZONE_TIER_DRAGONBALL_REWARD[tier - 1]
+      }
+      await db
+        .from('character_zone_progress')
+        .upsert(
+          { character_id: characterId, zone_id: monster.zone_id, highest_zone_tier_granted: zoneTier },
+          { onConflict: 'character_id,zone_id' },
+        )
+    }
+  }
+
   interface GrantedItemRow {
     id: string
     template_id: string
@@ -884,6 +986,11 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // roll time — see the mirror-image reasoning above for gear); offline mode
   // always routes to Loot Holding instead, same "never silently rearrange
   // the bag while the player's away" rule the gear loop above now follows.
+  // Zone Achievement DragonBall reward (if any) folds in here, right before
+  // the grant loop, so it's treated exactly like a dropped DragonBall for
+  // inventory-cap purposes — see the zoneDragonballReward computation above.
+  dragonballsGained += zoneDragonballReward
+
   let meteorsToGrant = 0
   for (let i = 0; i < meteorsGained; i += 1) {
     if (mode === 'live') {

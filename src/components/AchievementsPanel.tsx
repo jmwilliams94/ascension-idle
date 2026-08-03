@@ -9,10 +9,14 @@ import { SLOT_SIZE_CLASS } from './InventorySlot'
 import {
   ACHIEVEMENT_GOLD_MULTIPLIER,
   ACHIEVEMENT_TIERS,
+  KILL_COUNT_BONUS_DROP_MULTIPLIER,
+  MIN_KILLS_FOR_PRESTIGE,
   PET_DROP_CHANCE,
+  ZONE_TOTAL_TIER_MILESTONES,
   currentKillCountTier,
-  currentUnlockTier,
+  currentPrestigeTier,
   nextTierToUnlock,
+  zoneTierCompletions,
 } from '../game/achievements/achievementData'
 
 // Achievements & Pets, Stage 1 (confirmed shape, see CLAUDE.md — added from a
@@ -133,8 +137,8 @@ function killCountTierState(kills: number, tierIndex: number): TierVisualState {
 
 function killCountTierTooltipLines(tierIndex: number, state: TierVisualState, kills: number): string[] {
   const threshold = ACHIEVEMENT_TIERS[tierIndex]
-  const rewardPct = Math.round((ACHIEVEMENT_GOLD_MULTIPLIER[threshold] - 1) * 100)
-  const rewardLine = `Reward: +${rewardPct}% gold (free)`
+  const rewardPct = Math.round((KILL_COUNT_BONUS_DROP_MULTIPLIER[threshold] - 1) * 100)
+  const rewardLine = `Reward: +${rewardPct}% Meteor/DragonBall drop chance`
   return [rewardLine, state === 'active' ? 'Active now' : `${(threshold - kills).toLocaleString()} kills to go`]
 }
 
@@ -145,30 +149,37 @@ function unlockTierState(unlockedTierIndex: number, tierIndex: number): TierVisu
 function unlockTierTooltipLines(tierIndex: number, state: TierVisualState): string[] {
   const threshold = ACHIEVEMENT_TIERS[tierIndex]
   const rewardPct = Math.round((ACHIEVEMENT_GOLD_MULTIPLIER[threshold] - 1) * 100)
-  const rewardLine = `Reward: +${rewardPct}% gold (paid, stacks with the free reward)`
-  return [rewardLine, state === 'active' ? 'Active now' : 'Not unlocked yet — see Unlocks']
+  const rewardLine = `Reward: +${rewardPct}% gold`
+  return [rewardLine, state === 'active' ? 'Active now' : 'Not unlocked yet — see Prestige']
 }
 
-// Pure progress display — no unlock button here anymore, see UnlockRow. Now
-// shows both tracks stacked, since they're independent — the top ladder
-// tracks kills (free), the bottom tracks paid unlocks, each with its own
-// active-reward readout.
+// Pure progress display — no buy button here anymore, see UnlockRow. Kill
+// Count keeps its full ladder (free, automatic, its own bonus-drop-chance
+// reward — see achievementData.ts). Prestige (renamed from "Unlock",
+// 2026-08-03, confirmed with the user) drops its own dot-ladder here in
+// favor of a single line of text — "Instead of the existing Unlock tier bar
+// ... we can change it to just say what Tier it is" — the full ladder still
+// exists over in Prestige's own buy row (UnlockRow), where seeing which
+// tiers are already bought is actually useful context for a purchase
+// decision; here it's just a status readout.
 function CharacterProgress({ monsterId }: { monsterId: EnemyTypeId }) {
   const characterEntry = useAchievementsStore((state) => state.characterKills[monsterId])
   const kills = characterEntry?.kills ?? 0
   const unlockedTierIndex = characterEntry?.unlockedTierIndex ?? 0
 
   const killTier = currentKillCountTier(kills)
-  const killPct = killTier ? Math.round((ACHIEVEMENT_GOLD_MULTIPLIER[killTier] - 1) * 100) : 0
-  const unlockTier = currentUnlockTier(unlockedTierIndex)
-  const unlockPct = unlockTier ? Math.round((ACHIEVEMENT_GOLD_MULTIPLIER[unlockTier] - 1) * 100) : 0
+  const killPct = killTier ? Math.round((KILL_COUNT_BONUS_DROP_MULTIPLIER[killTier] - 1) * 100) : 0
+  const prestigeTier = currentPrestigeTier(unlockedTierIndex)
+  const prestigePct = prestigeTier ? Math.round((ACHIEVEMENT_GOLD_MULTIPLIER[prestigeTier] - 1) * 100) : 0
 
   return (
     <div className="space-y-3">
       <div>
         <div className="flex items-center justify-between text-[11px] text-slate-500">
           <span>Kill Count Reward (free) · {kills.toLocaleString()} kills</span>
-          <span className={killTier ? 'text-emerald-400' : ''}>{killTier ? `+${killPct}% gold active` : 'No tier active yet'}</span>
+          <span className={killTier ? 'text-emerald-400' : ''}>
+            {killTier ? `+${killPct}% drop chance active` : 'No tier active yet'}
+          </span>
         </div>
         <div className="mt-1.5">
           <TierLadderBar
@@ -178,24 +189,9 @@ function CharacterProgress({ monsterId }: { monsterId: EnemyTypeId }) {
           />
         </div>
       </div>
-      <div>
-        <div className="flex items-center justify-between text-[11px] text-slate-500">
-          <span>
-            Unlock Reward (paid) · tier {unlockedTierIndex} of {ACHIEVEMENT_TIERS.length}
-          </span>
-          <span className={unlockTier ? 'text-emerald-400' : ''}>{unlockTier ? `+${unlockPct}% gold active` : 'No tier active yet'}</span>
-        </div>
-        <div className="mt-1.5">
-          {/* Feeds the unlocked tier's own threshold as "kills" purely to
-              drive the bar's fill percentage — TierLadderBar only ever
-              measures its kills prop against the tier thresholds, it has no
-              real opinion on what that number represents. */}
-          <TierLadderBar
-            kills={unlockedTierIndex > 0 ? ACHIEVEMENT_TIERS[unlockedTierIndex - 1] : 0}
-            getState={(tierIndex) => unlockTierState(unlockedTierIndex, tierIndex)}
-            getTooltipLines={(tierIndex, state) => unlockTierTooltipLines(tierIndex, state)}
-          />
-        </div>
+      <div className="flex items-center justify-between text-[11px] text-slate-500">
+        <span>Current Prestige: Tier {unlockedTierIndex}</span>
+        <span className={prestigeTier ? 'text-emerald-400' : ''}>{prestigeTier ? `+${prestigePct}% gold active` : 'No tier active yet'}</span>
       </div>
     </div>
   )
@@ -240,13 +236,16 @@ function AccountProgress({ monsterId }: { monsterId: EnemyTypeId }) {
 }
 
 // Only renders for a monster that actually has a next tier to buy — fully
-// maxed (tier 6) monsters simply don't show up on this tab at all. Now shows
-// the full 6-tier TierLadderBar (confirmed with the user, 2026-08-01 —
-// supersedes an earlier version that only ever showed the single next-tier
-// button and a "tier X of 6" text line, with nothing visualizing the other
-// 5 tiers at all) — the Buy button still only ever purchases the next tier
-// in sequence, but the bar now gives the same full-ladder context every
-// other tab already shows.
+// maxed (tier 6) monsters simply don't show up on this tab at all. Shows the
+// full 6-tier TierLadderBar — the Buy button still only ever purchases the
+// next tier in sequence, but the bar gives the same full-ladder context
+// every other tab already shows. Renamed "Unlock" -> **Prestige** everywhere
+// (2026-08-03, confirmed with the user, wording only — same
+// unlocked_tier_index column/RPC). New gate, also confirmed: a monster's
+// Kill Count must reach Tier 1 (MIN_KILLS_FOR_PRESTIGE) before Prestige can
+// buy its first tier at all — "to proceed to the next Prestige you need to
+// complete the 1st round of Kill Count." A one-time requirement (kills only
+// go up), so once satisfied it stays satisfied for every later tier too.
 function UnlockRow({ characterId, monsterId, displayName }: { characterId: string; monsterId: EnemyTypeId; displayName: string }) {
   const characterEntry = useAchievementsStore((state) => state.characterKills[monsterId])
   const busy = useAchievementsStore((state) => state.busy)
@@ -260,6 +259,7 @@ function UnlockRow({ characterId, monsterId, displayName }: { characterId: strin
   const unlockedTierIndex = characterEntry?.unlockedTierIndex ?? 0
   const toUnlock = nextTierToUnlock(unlockedTierIndex)
   const affordable = toUnlock ? (toUnlock.cost.currency === 'meteor' ? meteors : dragonballs) >= toUnlock.cost.amount : false
+  const meetsKillGate = kills >= MIN_KILLS_FOR_PRESTIGE
 
   if (!toUnlock) {
     return null
@@ -277,16 +277,25 @@ function UnlockRow({ characterId, monsterId, displayName }: { characterId: strin
           ? "You don't have enough Meteors."
           : result.error === 'not_enough_dragonballs'
             ? "You don't have enough DragonBalls."
-            : result.error === 'already_maxed'
-              ? 'All tiers already unlocked.'
-              : result.error === 'not_owner'
-                ? "Couldn't verify this character owns that — try reloading the page."
-                : result.error === 'rpc_failed'
-                  ? `Request failed: ${result.message ?? 'unknown error'}`
-                  : 'Something went wrong (no error detail returned).',
+            : result.error === 'kill_count_tier_required'
+              ? `Reach ${MIN_KILLS_FOR_PRESTIGE.toLocaleString()} kills on this monster first.`
+              : result.error === 'already_maxed'
+                ? 'All tiers already unlocked.'
+                : result.error === 'not_owner'
+                  ? "Couldn't verify this character owns that — try reloading the page."
+                  : result.error === 'rpc_failed'
+                    ? `Request failed: ${result.message ?? 'unknown error'}`
+                    : 'Something went wrong (no error detail returned).',
       )
     }
   }
+
+  const disabled = busy || !affordable || !meetsKillGate
+  const disabledReason = !meetsKillGate
+    ? `Reach ${MIN_KILLS_FOR_PRESTIGE.toLocaleString()} kills (Kill Count Tier 1) first`
+    : !affordable
+      ? `Need ${toUnlock.cost.amount} ${toUnlock.cost.currency === 'meteor' ? 'Meteors' : 'DragonBalls'}`
+      : undefined
 
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
@@ -298,19 +307,20 @@ function UnlockRow({ characterId, monsterId, displayName }: { characterId: strin
         <div className="text-right">
           <button
             type="button"
-            disabled={busy || !affordable}
+            disabled={disabled}
             onClick={() => void handleUnlock()}
-            title={!affordable ? `Need ${toUnlock.cost.amount} ${toUnlock.cost.currency === 'meteor' ? 'Meteors' : 'DragonBalls'}` : undefined}
+            title={disabledReason}
             className="rounded-lg border border-purple-600 bg-purple-500/10 px-2.5 py-1 text-[11px] font-medium text-purple-300 hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Unlock tier {unlockedTierIndex + 1} ({toUnlock.cost.amount} {toUnlock.cost.currency === 'meteor' ? 'Meteors' : 'DragonBalls'})
+            Prestige tier {unlockedTierIndex + 1} ({toUnlock.cost.amount} {toUnlock.cost.currency === 'meteor' ? 'Meteors' : 'DragonBalls'})
           </button>
+          {disabledReason && !error && <p className="mt-1 text-[11px] text-slate-500">{disabledReason}</p>}
           {error && <p className="mt-1 text-[11px] text-amber-400">{error}</p>}
         </div>
       </div>
       <div className="mt-2">
         {/* Fill is driven by unlockedTierIndex, not raw kills, since this
-            ladder is showing paid-unlock progress specifically — see
+            ladder is showing paid-Prestige progress specifically — see
             CharacterProgress's own identical trick. */}
         <TierLadderBar
           kills={unlockedTierIndex > 0 ? ACHIEVEMENT_TIERS[unlockedTierIndex - 1] : 0}
@@ -365,6 +375,27 @@ function PlaceholderCard({ title, description }: { title: string; description: s
   )
 }
 
+// Zone-level Achievements summary (2026-08-03, confirmed with the user) — a
+// compact readout shown on the zone's own collapsed accordion header ("when
+// the zone is collapsed maybe it can display its zone rewards"), so its
+// status is visible without expanding to see the 5 individual monster rows.
+// Purely a display computation off useAchievementsStore's already-loaded
+// characterKills (see zoneTierCompletions in achievementData.ts) — the real
+// DragonBall grant only ever happens server-side, tracked via
+// character_zone_progress, which the client never reads.
+function ZoneAchievementSummary({ zoneId }: { zoneId: ZoneId }) {
+  const characterKills = useAchievementsStore((state) => state.characterKills)
+  const zoneMonsterKills = ZONES[zoneId].monsterOrder.map((monsterId) => characterKills[monsterId]?.kills ?? 0)
+  const { completions, zoneTier } = zoneTierCompletions(zoneMonsterKills)
+
+  return (
+    <span className="text-[11px] text-slate-500">
+      {completions}/{ZONE_TOTAL_TIER_MILESTONES} tiers completed
+      {zoneTier > 0 && <span className="ml-1 text-emerald-400">(Zone Tier {zoneTier})</span>}
+    </span>
+  )
+}
+
 // Same per-zone monster data as ZoneGroups, but each zone starts collapsed
 // and only shows its monster rows once selected — confirmed with the user
 // (2026-08-01), an accordion (one zone open at a time, selecting another
@@ -375,10 +406,15 @@ function CollapsibleZoneGroups({
   expandedZoneId,
   onToggleZone,
   renderMonster,
+  showZoneSummary,
 }: {
   expandedZoneId: ZoneId | null
   onToggleZone: (zoneId: ZoneId) => void
   renderMonster: (monsterId: EnemyTypeId, displayName: string) => ReactNode
+  // Only the Character tab's own Zones sub-tab passes this — Account's Zones/
+  // Unlocks reuse of this same component shouldn't show a per-zone
+  // Achievements summary that's actually scoped to one character.
+  showZoneSummary?: boolean
 }) {
   return (
     <>
@@ -401,7 +437,14 @@ function CollapsibleZoneGroups({
         return (
           <div key={zoneId} className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/80">
             <button type="button" onClick={() => onToggleZone(zoneId)} className="flex w-full items-center justify-between p-4 text-left">
-              <p className="text-sm font-medium text-slate-200">{zone.displayName}</p>
+              <div>
+                <p className="text-sm font-medium text-slate-200">{zone.displayName}</p>
+                {showZoneSummary && (
+                  <div className="mt-0.5">
+                    <ZoneAchievementSummary zoneId={zoneId} />
+                  </div>
+                )}
+              </div>
               <span className={`text-slate-500 transition-transform ${expanded ? 'rotate-180' : ''}`}>▾</span>
             </button>
             {expanded && (
@@ -433,7 +476,8 @@ function CollapsibleZoneGroups({
 type PlayerSubTab = 'zones' | 'quests'
 
 const PLAYER_SUB_TAB_DESCRIPTIONS: Record<PlayerSubTab, string> = {
-  zones: 'Kill a monster repeatedly to climb its personal ladder. Hover a tier segment to see its reward. Tap a zone to expand it.',
+  zones:
+    'Kill a monster repeatedly to climb its personal ladder. Hover a tier segment to see its reward. Each zone also tracks its own total across all 5 monsters — shown on the zone header — and pays out its own DragonBall reward at milestones. Tap a zone to expand it.',
   quests: 'Quests aren’t designed yet.',
 }
 
@@ -469,6 +513,7 @@ function PlayerTabContent() {
         <CollapsibleZoneGroups
           expandedZoneId={expandedZoneId}
           onToggleZone={(zoneId) => setExpandedZoneId((current) => (current === zoneId ? null : zoneId))}
+          showZoneSummary
           renderMonster={(monsterId, displayName) => (
             <MonsterCard displayName={displayName}>
               <CharacterProgress monsterId={monsterId} />
@@ -521,30 +566,33 @@ function PetZoneGroups({ renderMonster }: { renderMonster: (monsterId: EnemyType
 
 // The Account top-level tab's own sub-navigation (confirmed with the user,
 // 2026-08-01) — mirrors the Character tab's Zones/Quests split, plus a third
-// Unlocks sub-tab moved here from what used to be its own top-level tab
-// (unlocking a tier still spends a *character's* own Meteors/DragonBalls —
-// see UnlockRow — only where it lives in the UI changed). All three
-// zone-grouped sections here collapse per zone independently (their own
-// expanded-zone state each), matching the Character tab's Zones behavior.
-type AccountSubTab = 'zones' | 'quests' | 'unlocks'
+// Prestige sub-tab (renamed from "Unlocks," 2026-08-03, confirmed with the
+// user, wording only) moved here from what used to be its own top-level tab
+// (buying a Prestige tier still spends a *character's* own Meteors/
+// DragonBalls, and now also requires that monster's own Kill Count to have
+// reached Tier 1 first — see UnlockRow — only where it lives in the UI
+// changed). All three zone-grouped sections here collapse per zone
+// independently (their own expanded-zone state each), matching the
+// Character tab's Zones behavior.
+type AccountSubTab = 'zones' | 'quests' | 'prestige'
 
 const ACCOUNT_SUB_TAB_DESCRIPTIONS: Record<AccountSubTab, string> = {
   zones:
     'Every character on this account contributes to the same account-wide ladder per monster — its own reward category is still being designed. Tap a zone to expand it.',
   quests: 'Quests aren’t designed yet.',
-  unlocks:
-    'Spend Meteors/DragonBalls to unlock the next tier on a monster’s personal ladder — a paid gold bonus that activates immediately and stacks on top of the free reward you already earn from kills alone.',
+  prestige:
+    'Spend Meteors/DragonBalls to advance a monster’s Prestige — a paid gold bonus, separate from Kill Count’s own free reward. Reaching Kill Count Tier 1 on a monster is required before its Prestige can advance at all.',
 }
 
 function AccountTabContent({ characterId }: { characterId: string }) {
   const [subTab, setSubTab] = useState<AccountSubTab>('zones')
   const [zonesExpandedZoneId, setZonesExpandedZoneId] = useState<ZoneId | null>(null)
-  const [unlocksExpandedZoneId, setUnlocksExpandedZoneId] = useState<ZoneId | null>(null)
+  const [prestigeExpandedZoneId, setPrestigeExpandedZoneId] = useState<ZoneId | null>(null)
 
   const SUB_TABS: { id: AccountSubTab; label: string }[] = [
     { id: 'zones', label: 'Zones' },
     { id: 'quests', label: 'Quests' },
-    { id: 'unlocks', label: 'Unlocks' },
+    { id: 'prestige', label: 'Prestige' },
   ]
 
   return (
@@ -580,10 +628,10 @@ function AccountTabContent({ characterId }: { characterId: string }) {
 
       {subTab === 'quests' && <PlaceholderCard title="Coming soon" description="Quests aren't designed yet." />}
 
-      {subTab === 'unlocks' && (
+      {subTab === 'prestige' && (
         <CollapsibleZoneGroups
-          expandedZoneId={unlocksExpandedZoneId}
-          onToggleZone={(zoneId) => setUnlocksExpandedZoneId((current) => (current === zoneId ? null : zoneId))}
+          expandedZoneId={prestigeExpandedZoneId}
+          onToggleZone={(zoneId) => setPrestigeExpandedZoneId((current) => (current === zoneId ? null : zoneId))}
           renderMonster={(monsterId, displayName) => <UnlockRow characterId={characterId} monsterId={monsterId} displayName={displayName} />}
         />
       )}

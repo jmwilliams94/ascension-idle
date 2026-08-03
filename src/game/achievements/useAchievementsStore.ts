@@ -24,7 +24,7 @@ interface UnlockNextTierResult {
   // rejection. Previously this case set no `error` at all, so the UI could
   // only ever show a generic "Something went wrong" with no way to tell
   // which of these two very different situations it actually was.
-  error?: 'not_owner' | 'already_maxed' | 'not_enough_meteors' | 'not_enough_dragonballs' | 'rpc_failed'
+  error?: 'not_owner' | 'already_maxed' | 'not_enough_meteors' | 'not_enough_dragonballs' | 'kill_count_tier_required' | 'rpc_failed'
   // Only set for 'rpc_failed' — the raw Supabase/Postgres error message, so
   // it can actually be shown instead of silently living in console.error.
   message?: string

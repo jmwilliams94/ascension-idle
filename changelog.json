@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.55.0",
+    "date": "2026-08-03",
+    "changes": [
+      "\"Unlocks\" is now called \"Prestige\" — advancing it now also requires reaching Kill Count Tier 1 on that monster, not just paying Meteors/DragonBalls",
+      "Kill Count now boosts your Meteor/DragonBall drop chance instead of gold — Prestige is the one that boosts gold now",
+      "Added zone-wide Achievement tracking — each zone shows how many of its monsters' kill-count tiers you've completed in total, with its own DragonBall rewards at milestones"
+    ]
+  },
+  {
     "version": "1.54.6",
     "date": "2026-08-03",
     "changes": [
