@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.54.6",
+    "date": "2026-08-03",
+    "changes": [
+      "Fixed a long-press on an item icon popping up your phone's native Save/Share image menu instead of the in-game tooltip"
+    ]
+  },
+  {
     "version": "1.54.5",
     "date": "2026-08-03",
     "changes": [

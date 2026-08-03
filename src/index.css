@@ -28,6 +28,27 @@ body {
   background: #020617;
 }
 
+/* Every gear/currency icon in the game now renders as a real <img> (see
+   equipmentBonus.ts's getGearIconSrc, forgeCosts.ts's METEOR_ICON_SRC/
+   DRAGONBALL_ICON_SRC, ItemTooltip.tsx's icon column) instead of a plain
+   emoji <span>. On iOS Safari, long-pressing *any* <img> — including a tap
+   held slightly too long while trying to trigger our own long-press tooltip
+   (see HoverTooltip.tsx) — pops the browser's own native Share/Save to
+   Photos/Copy/Look Up context menu, since none of these are meant to be
+   treated as "photos" a player would save/share. -webkit-touch-callout
+   disables that native callout outright; -webkit-user-drag/user-select stop
+   the same long-press from instead starting a native image drag or text
+   selection, which would just as easily swallow the gesture our own
+   long-press/drag handling is trying to read. Global, not scoped to a
+   specific class — there's no image anywhere in this game that should ever
+   trigger any of this. */
+img {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 /* Accent glow — a slow, subtle pulse (not a static shadow) flagging "this is
    currently special/active," reused across features rather than one-off per
    feature. Originally the Equipment paper-doll's Super-quality-only glow
