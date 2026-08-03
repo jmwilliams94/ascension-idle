@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.59.1",
+    "date": "2026-08-03",
+    "changes": [
+      "Fixed the Bank tab's Storage grid sitting left-aligned instead of centered, so it no longer jumps sideways when switching between Inventory and Storage"
+    ]
+  },
+  {
     "version": "1.59.0",
     "date": "2026-08-03",
     "changes": [

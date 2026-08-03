@@ -165,9 +165,13 @@ export default function WarehouseGrid({ characterId }: WarehouseGridProps) {
 
         {/* Responsive tracks matching InventoryPanel's own fix (3.5rem below
             `lg`, unchanged 4rem at `lg`+). overflow-x-auto is the same
-            defensive backstop. 5 columns (not 8) — matches Forge/Combat's own
-            InventoryPanel `columns={5}` convention below it on this same page. */}
-        <div className="mt-2 overflow-x-auto">
+            defensive backstop. flex justify-center matches InventoryPanel's
+            own grid wrapper too — without it this grid sits left-aligned
+            while the Inventory grid (in the same toggled spot) is centered,
+            so the two visibly jump sideways when switching tabs. 5 columns
+            (not 8) — matches Forge/Combat's own InventoryPanel `columns={5}`
+            convention below it on this same page. */}
+        <div className="mt-2 flex justify-center overflow-x-auto">
           <div className="grid grid-cols-[repeat(5,3.5rem)] gap-1.5 lg:grid-cols-[repeat(5,4rem)]">
             {/* Banked gear tiles — real, identity-preserving items,
                 non-stacking, no badge (no count to show — each is its own
