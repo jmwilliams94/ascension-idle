@@ -1,13 +1,9 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useCombatStore } from '../game/combat/useCombatStore'
-import { useEquipmentStore } from '../game/items/useEquipmentStore'
-import { useInventoryStore } from '../game/items/useInventoryStore'
-import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
-import { getWeaponIcon } from '../game/items/equipmentBonus'
 import { useTabStore, type TabId } from '../game/hud/useTabStore'
-
-const BASE_URL = import.meta.env.BASE_URL
+import { TAB_ICONS, useEquippedWeaponIcon } from '../game/hud/navIcons'
+import NavIconGlyph from './NavIconGlyph'
 
 // Fixed bottom nav bar, mobile-only (`lg:hidden` — desktop keeps TabNav.tsx
 // unchanged, now `hidden lg:grid`). Combat is centered as "Fight"/"Idle" —
@@ -26,14 +22,12 @@ const BASE_URL = import.meta.env.BASE_URL
 // unaffected by this — it just shows all 8 tabs flat (room isn't scarce
 // there the way it is on a phone-width bottom bar), Town is a mobile-only
 // grouping concept, not a real tab of its own.
-type NavIcon = { kind: 'emoji'; value: string } | { kind: 'image'; src: string; alt: string }
-
-const LEFT_ITEMS: { id: TabId; label: string; icon: NavIcon }[] = [
-  { id: 'equipment', label: 'Equip', icon: { kind: 'image', src: `${BASE_URL}nav-icons/equipment.png`, alt: 'Equipment' } },
+const LEFT_ITEMS: { id: TabId; label: string }[] = [
+  { id: 'equipment', label: 'Equip' },
   // Renamed "Lucky" -> "LuckyLad" (2026-08-03, confirmed with the user,
   // wording + mascot art only) — real art now exists (public/lucky-icons/
   // luckylad.png), replacing the placeholder 🍀 emoji.
-  { id: 'lucky', label: 'LuckyLad', icon: { kind: 'image', src: `${BASE_URL}lucky-icons/luckylad.png`, alt: 'LuckyLad' } },
+  { id: 'lucky', label: 'LuckyLad' },
 ]
 
 // TownNavButton's own rollup contents — everything that used to have its own
@@ -41,28 +35,20 @@ const LEFT_ITEMS: { id: TabId; label: string; icon: NavIcon }[] = [
 // and Combat (always centered). No art exists for Market yet, same
 // established "mixed icon language until more art arrives" precedent as
 // before this restructure.
-const TOWN_ITEMS: { id: TabId; label: string; icon: NavIcon }[] = [
-  { id: 'marketplace', label: 'Market', icon: { kind: 'emoji', value: '🤝' } },
-  { id: 'warehouse', label: 'Bank', icon: { kind: 'image', src: `${BASE_URL}nav-icons/bank.png`, alt: 'Bank' } },
-  { id: 'shop', label: 'Shop', icon: { kind: 'image', src: `${BASE_URL}nav-icons/shop.png`, alt: 'Shop' } },
-  { id: 'forge', label: 'Forge', icon: { kind: 'image', src: `${BASE_URL}nav-icons/forge.png`, alt: 'Forge' } },
+const TOWN_ITEMS: { id: TabId; label: string }[] = [
+  { id: 'marketplace', label: 'Market' },
+  { id: 'warehouse', label: 'Bank' },
+  { id: 'shop', label: 'Shop' },
+  { id: 'forge', label: 'Forge' },
 ]
 
-const RIGHT_ITEMS: { id: TabId; label: string; icon: NavIcon }[] = [
-  { id: 'achievements', label: 'Achiev.', icon: { kind: 'image', src: `${BASE_URL}nav-icons/achievements.png`, alt: 'Achievements' } },
-]
+const RIGHT_ITEMS: { id: TabId; label: string }[] = [{ id: 'achievements', label: 'Achiev.' }]
 
-function NavIconGlyph({ icon }: { icon: NavIcon }) {
-  if (icon.kind === 'image') {
-    return <img src={icon.src} alt={icon.alt} className="h-6 w-6 object-contain" />
-  }
-  return <span className="text-lg">{icon.value}</span>
-}
-
-function NavButton({ id, label, icon }: { id: TabId; label: string; icon: NavIcon }) {
+function NavButton({ id, label }: { id: TabId; label: string }) {
   const activeTab = useTabStore((state) => state.activeTab)
   const setActiveTab = useTabStore((state) => state.setActiveTab)
   const active = activeTab === id
+  const icon = TAB_ICONS[id]
 
   return (
     <button
@@ -72,30 +58,10 @@ function NavButton({ id, label, icon }: { id: TabId; label: string; icon: NavIco
         active ? 'text-sky-300' : 'text-slate-400'
       }`}
     >
-      <NavIconGlyph icon={icon} />
+      {icon && <NavIconGlyph icon={icon} />}
       <span className="truncate">{label}</span>
     </button>
   )
-}
-
-// Reflects whatever's actually equipped in the Main Hand slot (confirmed with
-// the user, 2026-08-02) rather than a fixed ⚔️ — resolves equippedIds.weapon
-// through the owned item's template to its item_family, then to an emoji via
-// getWeaponIcon (see equipmentBonus.ts; no per-weapon art exists yet, so this
-// is the pragmatic "dynamic" implementation). Falls back to the generic ⚔️
-// when no weapon is equipped at all (e.g. a fresh non-Hunter character).
-function useEquippedWeaponIcon(): string {
-  const weaponId = useEquipmentStore((state) => state.equippedIds.weapon)
-  const items = useInventoryStore((state) => state.items)
-  const templates = useItemTemplatesStore((state) => state.templates)
-
-  if (!weaponId) {
-    return '⚔️'
-  }
-
-  const item = items.find((candidate) => candidate.id === weaponId)
-  const template = item ? templates.find((candidate) => candidate.id === item.template_id) : undefined
-  return template ? getWeaponIcon(template.item_family) : '⚔️'
 }
 
 function FightNavButton() {
@@ -166,22 +132,25 @@ function TownNavButton() {
             transition={{ duration: 0.18, ease: 'easeOut' }}
             className="absolute bottom-full mb-2 flex flex-col items-stretch gap-1 rounded-xl border border-slate-800 bg-slate-950/95 p-1.5 shadow-xl shadow-black/60"
           >
-            {TOWN_ITEMS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  setActiveTab(item.id)
-                  setExpanded(false)
-                }}
-                className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-left text-xs font-medium ${
-                  activeTab === item.id ? 'bg-sky-500/10 text-sky-300' : 'text-slate-300 hover:bg-slate-800'
-                }`}
-              >
-                <NavIconGlyph icon={item.icon} />
-                {item.label}
-              </button>
-            ))}
+            {TOWN_ITEMS.map((item) => {
+              const icon = TAB_ICONS[item.id]
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(item.id)
+                    setExpanded(false)
+                  }}
+                  className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-left text-xs font-medium ${
+                    activeTab === item.id ? 'bg-sky-500/10 text-sky-300' : 'text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  {icon && <NavIconGlyph icon={icon} />}
+                  {item.label}
+                </button>
+              )
+            })}
           </motion.div>
         )}
       </AnimatePresence>

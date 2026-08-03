@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.58.3",
+    "date": "2026-08-03",
+    "changes": [
+      "Redesigned the desktop navigation bar to match the mobile bottom nav's icon-forward look, including Combat's dynamic weapon icon and live Fighting/Idle indicator"
+    ]
+  },
+  {
     "version": "1.58.2",
     "date": "2026-08-03",
     "changes": [
