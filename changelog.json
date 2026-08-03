@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.59.2",
+    "date": "2026-08-03",
+    "changes": [
+      "Fixed the LuckyLad chests stretching way too tall on desktop instead of staying a reasonable card size"
+    ]
+  },
+  {
     "version": "1.59.1",
     "date": "2026-08-03",
     "changes": [

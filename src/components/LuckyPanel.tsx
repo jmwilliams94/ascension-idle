@@ -209,7 +209,11 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      {/* max-w-sm caps how wide each card can stretch on desktop — without
+          it, grid-cols-3's fluid columns fill the whole (much wider) page
+          width, and since each card is aspect-[3/4] (taller than wide), a
+          wide card becomes proportionally very tall. */}
+      <div className="mx-auto grid max-w-sm grid-cols-3 gap-2">
         {Array.from({ length: LUCKY_CARD_COUNT }, (_, index) => (
           <LuckyCard
             key={index}
