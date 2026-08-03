@@ -35,32 +35,20 @@ interface CurrencyState {
   dragonballs: number
   meteorScrolls: number
   dragonballScrolls: number
-  // Bank Storage's own Meteor/DragonBall counts (characters.meteor_bank_count/
-  // dragonball_bank_count) — confirmed with the user, 2026-08-03. A genuinely
-  // separate, parallel option to the existing account-wide currency Bank
-  // (players.bank_meteors/bank_dragonballs, via transfer_currency, unchanged):
-  // a unit banked this way stays a physical, non-stacking Storage tile, same
-  // as loose Meteors/DragonBalls already are in Inventory. Moved between the
-  // two via bank_currency_item (see useWarehouseStore), not transfer_currency.
-  meteorBankCount: number
-  dragonballBankCount: number
   // Ascension Points moved to usePlayerRecordStore (2026-08-03) — it's
   // account-wide (a premium currency), not per-character, so it doesn't
   // belong in this store anymore. See usePlayerRecordStore.ts.
-  hydrate: (saved: {
-    meteors: number
-    dragonballs: number
-    meteorScrolls: number
-    dragonballScrolls: number
-    meteorBankCount: number
-    dragonballBankCount: number
-  }) => void
+  //
+  // Bank Storage's own Meteor/DragonBall counts also moved to
+  // usePlayerRecordStore (2026-08-03, Bank tab rework) — Storage is now
+  // fully account-wide, not per-character, so meteorBankCount/
+  // dragonballBankCount live there now too, alongside warehousePoints/
+  // gearCompositionPoints/stonesBanked.
+  hydrate: (saved: { meteors: number; dragonballs: number; meteorScrolls: number; dragonballScrolls: number }) => void
   setMeteors: (value: number) => void
   setDragonballs: (value: number) => void
   setMeteorScrolls: (value: number) => void
   setDragonballScrolls: (value: number) => void
-  setMeteorBankCount: (value: number) => void
-  setDragonballBankCount: (value: number) => void
   // Bundles 10 loose units into 1 Scroll — one fixed-size transaction per
   // call (mirrors buyArrows/buyPotions always purchasing one full stack),
   // not a variable amount.
@@ -76,8 +64,6 @@ export const useCurrencyStore = create<CurrencyState>((set) => ({
   dragonballs: 0,
   meteorScrolls: 0,
   dragonballScrolls: 0,
-  meteorBankCount: 0,
-  dragonballBankCount: 0,
 
   hydrate: (saved) =>
     set({
@@ -85,15 +71,11 @@ export const useCurrencyStore = create<CurrencyState>((set) => ({
       dragonballs: saved.dragonballs,
       meteorScrolls: saved.meteorScrolls,
       dragonballScrolls: saved.dragonballScrolls,
-      meteorBankCount: saved.meteorBankCount,
-      dragonballBankCount: saved.dragonballBankCount,
     }),
   setMeteors: (value) => set({ meteors: value }),
   setDragonballs: (value) => set({ dragonballs: value }),
   setMeteorScrolls: (value) => set({ meteorScrolls: value }),
   setDragonballScrolls: (value) => set({ dragonballScrolls: value }),
-  setMeteorBankCount: (value) => set({ meteorBankCount: value }),
-  setDragonballBankCount: (value) => set({ dragonballBankCount: value }),
 
   bundleScroll: async (characterId, currencyType) => {
     const { data, error } = await supabase.rpc('bundle_currency_scroll', {

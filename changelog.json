@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.59.0",
+    "date": "2026-08-03",
+    "changes": [
+      "Reworked the Bank tab — Storage and all Bank points are now shared account-wide across all your characters instead of separate per character",
+      "Bank tab now has two buttons to switch between your Inventory and Account Storage, with a grid of simple squares on the side showing your Bank totals",
+      "Every bankable item in Inventory now offers both Deposit (store the physical item) and Bank (convert it to currency/points) right on the tile, where applicable",
+      "Removed the old, unused Warehouse token system entirely"
+    ]
+  },
+  {
     "version": "1.58.3",
     "date": "2026-08-03",
     "changes": [

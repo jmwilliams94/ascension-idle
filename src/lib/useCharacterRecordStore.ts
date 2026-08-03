@@ -8,8 +8,6 @@ import { useZoneStore } from '../game/zones/useZoneStore'
 import { useEquipmentStore, type EquipSlot } from '../game/items/useEquipmentStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useCompositionStore, type CompositionStones } from '../game/items/useCompositionStore'
-import { useWarehouseStore } from '../game/items/useWarehouseStore'
-import type { GearCompositionPoints } from '../game/items/forgeCosts'
 import { useLuckyStore } from '../game/lucky/useLuckyStore'
 
 // Loads/saves the active character's row (characters table) — class, level, gold,
@@ -18,9 +16,11 @@ import { useLuckyStore } from '../game/lucky/useLuckyStore'
 // store is now account-level only. meteors/dragonballs/composition_stones are
 // intentionally excluded from both load-hydration-triggers-save and saveNow —
 // see useCurrencyStore for why (server-authoritative via the forge RPCs).
-// Ascension Points live on the account (players table, see
-// usePlayerRecordStore) rather than here — a premium currency, account-wide
-// by design, not per-character. The
+// Ascension Points, and (2026-08-03, Bank tab rework) the entire Bank Storage
+// system — warehouse_points/gear_composition_points/meteor_bank_count/
+// dragonball_bank_count/composition_stones_banked — all live on the account
+// (players table, see usePlayerRecordStore) rather than here now, not
+// per-character. The
 // Quiver is just an equipped item like any other slot (equipped_quiver_id) —
 // having it equipped is the entire Hunter attack gate now, no ammo economy.
 interface CharacterRow {
@@ -41,12 +41,7 @@ interface CharacterRow {
   dragonball_count: number
   meteor_scroll_count: number
   dragonball_scroll_count: number
-  meteor_bank_count: number
-  dragonball_bank_count: number
   composition_stones: CompositionStones
-  composition_stones_banked: CompositionStones
-  warehouse_points: number
-  gear_composition_points: GearCompositionPoints
   selected_monster_id: string | null
   last_active_at: string
   // Server-authoritative, same trust model as meteor_count/dragonball_count
@@ -84,7 +79,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     const { data, error } = await supabase
       .from('characters')
       .select(
-        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, meteor_count, dragonball_count, meteor_scroll_count, dragonball_scroll_count, meteor_bank_count, dragonball_bank_count, composition_stones, composition_stones_banked, warehouse_points, gear_composition_points, selected_monster_id, last_active_at, lucky_free_ticket_claimed_at',
+        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, meteor_count, dragonball_count, meteor_scroll_count, dragonball_scroll_count, composition_stones, selected_monster_id, last_active_at, lucky_free_ticket_claimed_at',
       )
       .eq('id', characterId)
       .maybeSingle<CharacterRow>()
@@ -117,13 +112,8 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
       dragonballs: data.dragonball_count,
       meteorScrolls: data.meteor_scroll_count,
       dragonballScrolls: data.dragonball_scroll_count,
-      meteorBankCount: data.meteor_bank_count,
-      dragonballBankCount: data.dragonball_bank_count,
     })
     useCompositionStore.getState().hydrate(data.composition_stones)
-    useCompositionStore.getState().hydrateBanked(data.composition_stones_banked)
-    useWarehouseStore.getState().hydratePoints(data.warehouse_points)
-    useWarehouseStore.getState().hydrateGearCompositionPoints(data.gear_composition_points)
     useLuckyStore.getState().hydrate(data.lucky_free_ticket_claimed_at)
 
     set({ loaded: true, previousLastActiveAt: data.last_active_at, characterName: data.name })

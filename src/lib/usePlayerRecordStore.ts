@@ -3,6 +3,10 @@ import { changelogEntriesAfter, type ChangelogEntry } from './changelog'
 import { compareVersions } from './semver'
 import { supabase } from './supabaseClient'
 import { APP_VERSION } from '../version'
+import { DEFAULT_GEAR_COMPOSITION_POINTS, type GearCompositionPoints } from '../game/items/forgeCosts'
+import type { CompositionStones } from '../game/items/useCompositionStore'
+
+const DEFAULT_STONES_BANKED: CompositionStones = { '1': 0, '2': 0, '3': 0, '4': 0 }
 
 // Account-level only — class/level/gold/exp/zone/equipped/meteors/dragonballs all
 // moved to the characters table (see useCharacterRecordStore) as part of the
@@ -15,6 +19,11 @@ interface PlayerRow {
   bank_dragonballs: number
   unlocked_classes: string[]
   ascension_points: number
+  warehouse_points: number
+  gear_composition_points: GearCompositionPoints
+  meteor_bank_count: number
+  dragonball_bank_count: number
+  composition_stones_banked: CompositionStones
 }
 
 interface PlayerRecordState {
@@ -41,6 +50,18 @@ interface PlayerRecordState {
   // pair. Server-authoritative — never written except to reflect an RPC's
   // response.
   ascensionPoints: number
+  // Bank tab rework (2026-08-03, confirmed with the user) — Storage becomes
+  // fully account-wide, not just the points pools: warehouse_points/
+  // gear_composition_points (the two liquidation pools) and meteor_bank_count/
+  // dragonball_bank_count/composition_stones_banked (the physical Bank
+  // Storage counts) all moved from characters to players in the same
+  // migration that removed the dead legacy warehouse_items token system. See
+  // useWarehouseStore.ts for the RPC wrappers that mutate these.
+  warehousePoints: number
+  gearCompositionPoints: GearCompositionPoints
+  meteorBankCount: number
+  dragonballBankCount: number
+  stonesBanked: CompositionStones
   loadPlayerRecord: (userId: string) => Promise<void>
   dismissWhatsNew: (userId: string) => Promise<void>
   // Reflects a successful transfer_currency RPC result in the local cache —
@@ -52,6 +73,11 @@ interface PlayerRecordState {
   // calls in parallel (Promise.all); an absolute set from each response could
   // let an out-of-order-arriving response clobber a later one.
   addAscensionPoints: (amount: number) => void
+  setWarehousePoints: (value: number) => void
+  setGearCompositionPoints: (value: GearCompositionPoints) => void
+  setMeteorBankCount: (value: number) => void
+  setDragonballBankCount: (value: number) => void
+  setStonesBanked: (value: CompositionStones) => void
 }
 
 export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
@@ -62,11 +88,18 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
   bankDragonballs: 0,
   unlockedClasses: ['hunter'],
   ascensionPoints: 0,
+  warehousePoints: 0,
+  gearCompositionPoints: DEFAULT_GEAR_COMPOSITION_POINTS,
+  meteorBankCount: 0,
+  dragonballBankCount: 0,
+  stonesBanked: DEFAULT_STONES_BANKED,
 
   loadPlayerRecord: async (userId) => {
     const { data, error } = await supabase
       .from('players')
-      .select('last_seen_version, bank_gold, bank_meteors, bank_dragonballs, unlocked_classes, ascension_points')
+      .select(
+        'last_seen_version, bank_gold, bank_meteors, bank_dragonballs, unlocked_classes, ascension_points, warehouse_points, gear_composition_points, meteor_bank_count, dragonball_bank_count, composition_stones_banked',
+      )
       .eq('id', userId)
       .maybeSingle<PlayerRow>()
 
@@ -94,6 +127,11 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
         bankDragonballs: 0,
         unlockedClasses: ['hunter'],
         ascensionPoints: 0,
+        warehousePoints: 0,
+        gearCompositionPoints: DEFAULT_GEAR_COMPOSITION_POINTS,
+        meteorBankCount: 0,
+        dragonballBankCount: 0,
+        stonesBanked: DEFAULT_STONES_BANKED,
       })
       return
     }
@@ -104,6 +142,11 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
       bankDragonballs: data.bank_dragonballs,
       unlockedClasses: data.unlocked_classes,
       ascensionPoints: data.ascension_points,
+      warehousePoints: data.warehouse_points,
+      gearCompositionPoints: data.gear_composition_points,
+      meteorBankCount: data.meteor_bank_count,
+      dragonballBankCount: data.dragonball_bank_count,
+      stonesBanked: data.composition_stones_banked,
     })
 
     if (!data.last_seen_version) {
@@ -132,4 +175,9 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
   setBankBalances: (patch) => set(patch),
   setAscensionPoints: (value) => set({ ascensionPoints: value }),
   addAscensionPoints: (amount) => set((state) => ({ ascensionPoints: state.ascensionPoints + amount })),
+  setWarehousePoints: (value) => set({ warehousePoints: value }),
+  setGearCompositionPoints: (value) => set({ gearCompositionPoints: value }),
+  setMeteorBankCount: (value) => set({ meteorBankCount: value }),
+  setDragonballBankCount: (value) => set({ dragonballBankCount: value }),
+  setStonesBanked: (value) => set({ stonesBanked: value }),
 }))

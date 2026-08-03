@@ -50,7 +50,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
   const loadCharacterRecord = useCharacterRecordStore((state) => state.loadCharacterRecord)
   const loadInventory = useInventoryStore((state) => state.loadInventory)
   const loadPotionStacks = usePotionStore((state) => state.loadStacks)
-  const loadWarehouseItems = useWarehouseStore((state) => state.loadWarehouseItems)
+  const loadBankItems = useWarehouseStore((state) => state.loadBankItems)
   const loadLootHolding = useLootHoldingStore((state) => state.loadLootHolding)
   const loadAchievements = useAchievementsStore((state) => state.loadAchievements)
   const loadMyListings = useMarketplaceStore((state) => state.loadMyListings)
@@ -66,11 +66,14 @@ export default function GameShell({ characterId }: { characterId: string }) {
         loadCharacterRecord(characterId),
         loadInventory(characterId),
         loadPotionStacks(characterId),
-        loadWarehouseItems(characterId),
         loadLootHolding(characterId),
         loadMyListings(characterId),
         loadMail(characterId),
-        ...(accountId ? [loadAchievements(characterId, accountId)] : []),
+        // Bank Storage is account-wide now (2026-08-03, Bank tab rework), so
+        // this needs the account id, not the character id — same
+        // conditional-spread pattern loadAchievements below already uses for
+        // the same reason.
+        ...(accountId ? [loadBankItems(accountId), loadAchievements(characterId, accountId)] : []),
       ])
 
       if (cancelled) {
@@ -110,7 +113,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
     loadCharacterRecord,
     loadInventory,
     loadPotionStacks,
-    loadWarehouseItems,
+    loadBankItems,
     loadLootHolding,
     loadAchievements,
     loadMyListings,

@@ -100,23 +100,16 @@ interface InventoryPanelProps {
   // click already means something else there (drag source, sell selection,
   // listing source) that this popover isn't designed around.
   equipPopoverEnabled?: boolean
-  // Bank-tab-only (confirmed with the user, 2026-08-03, revised same day after
-  // feedback — see the Bank Storage note on ItemInstance in
-  // useInventoryStore.ts). Mirrors equipPopoverEnabled's own
-  // click-opens-actionable-tooltip pattern: clicking a gear, stone, Meteor, or
-  // DragonBall tile opens a TooltipActionPopover showing that tile's own
-  // tooltip plus "Deposit" (this one) and "Deposit All" (every eligible one
-  // of this same kind) buttons, right on the tile — not a separate header
-  // control. Gear deposits via deposit_item_to_storage (preserves the real
-  // item, no token, no stacking, no points — fixes the old deposit_item
-  // behavior, which is no longer called from here). Stone/Meteor/DragonBall
-  // deposit via bank_stone_item/bank_currency_item — a second, parallel
-  // "store it as a physical unit" option alongside their existing
-  // points/currency path (BankedCard's StonesRow/CurrencyRow, untouched).
-  // Only WarehousePanel's Inventory-grid embedding passes this — it coexists
-  // with that same instance's onTileDrop (drag still deposits gear/stones the
-  // same new way too — see WarehousePanel's handleTileDrop). Potions and
-  // Scrolls are out of scope for this pass (confirmed with the user) and stay
+  // Bank-tab-only. Mirrors equipPopoverEnabled's own click-opens-actionable-
+  // tooltip pattern: clicking a gear, stone, Meteor, or DragonBall tile opens
+  // a TooltipActionPopover showing that tile's own tooltip plus "Deposit"/
+  // "Deposit All" (physical Bank Storage — deposit_item_to_storage/
+  // bank_stone_item/bank_currency_item) and, where applicable, "Bank"/
+  // "Bank All" (liquidate to currency/points — deposit_item_as_composition/
+  // transfer_stone/transfer_currency; hidden for a still-Normal gear item,
+  // which has nothing to bank — Bank tab rework, 2026-08-03, confirmed with
+  // the user). Only WarehousePanel's Inventory-grid embedding passes this.
+  // Potions and Scrolls are out of scope (confirmed with the user) and stay
   // exactly as they were — Scrolls keep their existing Bundle/Unbundle card.
   enableBankDeposit?: boolean
 }
@@ -163,6 +156,12 @@ export default function InventoryPanel({
   const depositItemToStorage = useWarehouseStore((state) => state.depositItemToStorage)
   const depositStoneItem = useWarehouseStore((state) => state.depositStoneItem)
   const depositCurrencyItem = useWarehouseStore((state) => state.depositCurrencyItem)
+  // "Bank" (liquidate to currency/points), alongside "Deposit" (physical
+  // storage) above — the other half of the Bank tab rework's per-item
+  // Deposit/Bank choice (2026-08-03, confirmed with the user).
+  const depositItemAsComposition = useWarehouseStore((state) => state.depositItemAsComposition)
+  const depositStone = useWarehouseStore((state) => state.depositStone)
+  const depositCurrency = useWarehouseStore((state) => state.depositCurrency)
 
   const [selectedSlot, setSelectedSlot] = useState<SelectedSlot>(null)
   // GearEquipPopover-only (equipPopoverEnabled) — the clicked tile's own
@@ -436,6 +435,125 @@ export default function InventoryPanel({
 
     if (!result.ok) {
       setBankDepositError(`Couldn't deposit your ${currencyType === 'meteor' ? 'Meteors' : 'DragonBalls'}.`)
+      return
+    }
+
+    closeBankPopover()
+  }
+
+  // "Bank" handlers — liquidate into currency/points instead of physical
+  // storage. Same shape/error-handling convention as the Deposit handlers
+  // above, just calling the liquidation RPCs instead.
+  const handleBankGear = async (itemId: string) => {
+    setBankDepositError(null)
+    setBankDepositBusy(true)
+    const result = await depositItemAsComposition(itemId)
+    setBankDepositBusy(false)
+
+    if (!result.ok) {
+      setBankDepositError("Couldn't bank that item.")
+      return
+    }
+
+    closeBankPopover()
+  }
+
+  // Scoped to visible gear with composition_level > 0 — an uncomposed item
+  // has nothing to bank (see the composition_level > 0 guard on the
+  // Bank/Bank All buttons themselves below).
+  const handleBankAllGear = async () => {
+    setBankDepositError(null)
+    setBankDepositBusy(true)
+    let failures = 0
+
+    for (const item of visibleItems) {
+      if (reservedItemIds.includes(item.id) || item.composition_level <= 0) {
+        continue
+      }
+      const result = await depositItemAsComposition(item.id)
+      if (!result.ok) {
+        failures += 1
+      }
+    }
+
+    setBankDepositBusy(false)
+    if (failures > 0) {
+      setBankDepositError(`Couldn't bank ${failures} item${failures === 1 ? '' : 's'}.`)
+    } else {
+      closeBankPopover()
+    }
+  }
+
+  const handleBankStone = async (tier: number) => {
+    if (!characterId) {
+      return
+    }
+    setBankDepositError(null)
+    setBankDepositBusy(true)
+    const result = await depositStone(characterId, tier, 1)
+    setBankDepositBusy(false)
+
+    if (!result.ok) {
+      setBankDepositError("Couldn't bank that stone.")
+      return
+    }
+
+    closeBankPopover()
+  }
+
+  const handleBankAllStone = async (tier: number) => {
+    if (!characterId) {
+      return
+    }
+    const owned = stones[String(tier)] ?? 0
+    if (owned <= 0) {
+      return
+    }
+    setBankDepositError(null)
+    setBankDepositBusy(true)
+    const result = await depositStone(characterId, tier, owned)
+    setBankDepositBusy(false)
+
+    if (!result.ok) {
+      setBankDepositError("Couldn't bank those stones.")
+      return
+    }
+
+    closeBankPopover()
+  }
+
+  const handleBankCurrency = async (currencyType: 'meteor' | 'dragonball') => {
+    if (!characterId) {
+      return
+    }
+    setBankDepositError(null)
+    setBankDepositBusy(true)
+    const result = await depositCurrency(characterId, currencyType === 'meteor' ? 'meteors' : 'dragonballs', 1)
+    setBankDepositBusy(false)
+
+    if (!result.ok) {
+      setBankDepositError(`Couldn't bank that ${currencyType === 'meteor' ? 'Meteor' : 'DragonBall'}.`)
+      return
+    }
+
+    closeBankPopover()
+  }
+
+  const handleBankAllCurrency = async (currencyType: 'meteor' | 'dragonball') => {
+    if (!characterId) {
+      return
+    }
+    const owned = currencyType === 'meteor' ? meteors : dragonballs
+    if (owned <= 0) {
+      return
+    }
+    setBankDepositError(null)
+    setBankDepositBusy(true)
+    const result = await depositCurrency(characterId, currencyType === 'meteor' ? 'meteors' : 'dragonballs', owned)
+    setBankDepositBusy(false)
+
+    if (!result.ok) {
+      setBankDepositError(`Couldn't bank your ${currencyType === 'meteor' ? 'Meteors' : 'DragonBalls'}.`)
       return
     }
 
@@ -1186,6 +1304,24 @@ export default function InventoryPanel({
               onClick: () => void handleBankDepositAllGear(),
               disabled: bankDepositBusy,
             },
+            // Bank (liquidate composition into gear_composition_points) only
+            // makes sense once the item actually has a composition level —
+            // a still-Normal item is rejected server-side as worthless, so
+            // it's hidden here rather than shown-then-erroring.
+            ...(selectedItem.composition_level > 0
+              ? [
+                  {
+                    label: bankDepositBusy ? 'Banking…' : 'Bank',
+                    onClick: () => void handleBankGear(selectedItem.id),
+                    disabled: bankDepositBusy,
+                  },
+                  {
+                    label: 'Bank All',
+                    onClick: () => void handleBankAllGear(),
+                    disabled: bankDepositBusy,
+                  },
+                ]
+              : []),
           ]}
           onClose={closeBankPopover}
         />
@@ -1206,6 +1342,16 @@ export default function InventoryPanel({
               onClick: () => void handleBankDepositAllStone(selectedStoneTier),
               disabled: bankDepositBusy,
             },
+            {
+              label: bankDepositBusy ? 'Banking…' : 'Bank',
+              onClick: () => void handleBankStone(selectedStoneTier),
+              disabled: bankDepositBusy,
+            },
+            {
+              label: 'Bank All',
+              onClick: () => void handleBankAllStone(selectedStoneTier),
+              disabled: bankDepositBusy,
+            },
           ]}
           onClose={closeBankPopover}
         />
@@ -1224,6 +1370,16 @@ export default function InventoryPanel({
             {
               label: 'Deposit All',
               onClick: () => void handleBankDepositAllCurrency(selectedCurrencyType),
+              disabled: bankDepositBusy,
+            },
+            {
+              label: bankDepositBusy ? 'Banking…' : 'Bank',
+              onClick: () => void handleBankCurrency(selectedCurrencyType),
+              disabled: bankDepositBusy,
+            },
+            {
+              label: 'Bank All',
+              onClick: () => void handleBankAllCurrency(selectedCurrencyType),
               disabled: bankDepositBusy,
             },
           ]}
