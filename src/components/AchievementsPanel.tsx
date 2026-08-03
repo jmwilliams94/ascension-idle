@@ -9,12 +9,12 @@ import { SLOT_SIZE_CLASS } from './InventorySlot'
 import {
   ACHIEVEMENT_GOLD_MULTIPLIER,
   ACHIEVEMENT_TIERS,
-  KILL_COUNT_BONUS_DROP_MULTIPLIER,
   MIN_KILLS_FOR_PRESTIGE,
   PET_DROP_CHANCE,
   ZONE_TOTAL_TIER_MILESTONES,
   currentKillCountTier,
   currentPrestigeTier,
+  killCountBonusMultiplierAtTier,
   nextTierToUnlock,
   zoneTierCompletions,
 } from '../game/achievements/achievementData'
@@ -138,7 +138,11 @@ function killCountTierState(kills: number, tierIndex: number): TierVisualState {
 
 function killCountTierTooltipLines(tierIndex: number, state: TierVisualState, kills: number, monsterId: EnemyTypeId): string[] {
   const threshold = ACHIEVEMENT_TIERS[tierIndex]
-  const rewardPct = Math.round((KILL_COUNT_BONUS_DROP_MULTIPLIER[threshold] - 1) * 100)
+  // Level-scaled (2026-08-03, confirmed with the user) — this monster's own
+  // level determines how much of the tier's "full" bonus it can actually
+  // reach, so low-level monsters (e.g. Quailwing) show a far smaller number
+  // here than a harder monster would at the same tier.
+  const rewardPct = Math.round((killCountBonusMultiplierAtTier(threshold, ENEMY_TYPES[monsterId].level) - 1) * 100)
   const rewardLine = `Reward: +${rewardPct}% Meteor/DragonBall drop chance`
   // Zone 1's per-monster gear rewards (2026-08-03) stack on top of the
   // ongoing drop-chance bonus above, not instead of it — both apply once
@@ -181,7 +185,7 @@ function CharacterProgress({ monsterId }: { monsterId: EnemyTypeId }) {
   const unlockedTierIndex = characterEntry?.unlockedTierIndex ?? 0
 
   const killTier = currentKillCountTier(kills)
-  const killPct = killTier ? Math.round((KILL_COUNT_BONUS_DROP_MULTIPLIER[killTier] - 1) * 100) : 0
+  const killPct = killTier ? Math.round((killCountBonusMultiplierAtTier(killTier, ENEMY_TYPES[monsterId].level) - 1) * 100) : 0
   const prestigeTier = currentPrestigeTier(unlockedTierIndex)
   const prestigePct = prestigeTier ? Math.round((ACHIEVEMENT_GOLD_MULTIPLIER[prestigeTier] - 1) * 100) : 0
 

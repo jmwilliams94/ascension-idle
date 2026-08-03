@@ -175,32 +175,13 @@ const MIN_DAMAGE_PERCENT_OF_ATTACK = 0.1
 // midpoint 2).
 const DAMAGE_ROLL_MIN_RATIO = 0.5
 const DAMAGE_ROLL_MAX_RATIO = 1.5
-// Meteor/DragonBall kill-drop odds — scaled by the fought monster's own level
-// (2026-08-03, confirmed with the user, supersedes the flat 1/500 / 1/20000
-// rates — see combatResolver.ts's mirror for the full write-up on why: a
-// low-level/fast-kill monster produced identical odds per kill as a much
-// harder endgame one, making camping the first zone forever strictly optimal
-// for currency farming). PLACEHOLDER curve, linear on level 1-130,
-// DragonBall:Meteor ratio held constant at 40x.
-const METEOR_DROP_CHANCE_AT_LEVEL_1 = 1 / 2000
-const METEOR_DROP_CHANCE_AT_LEVEL_130 = 1 / 100
-const DRAGONBALL_DROP_CHANCE_AT_LEVEL_1 = 1 / 80000
-const DRAGONBALL_DROP_CHANCE_AT_LEVEL_130 = 1 / 4000
-const MAX_MONSTER_LEVEL_FOR_DROP_SCALING = 130
-
-function dropChanceLevelT(monsterLevel: number): number {
-  return Math.min(Math.max((monsterLevel - 1) / (MAX_MONSTER_LEVEL_FOR_DROP_SCALING - 1), 0), 1)
-}
-
-function meteorDropChance(monsterLevel: number): number {
-  const t = dropChanceLevelT(monsterLevel)
-  return METEOR_DROP_CHANCE_AT_LEVEL_1 + (METEOR_DROP_CHANCE_AT_LEVEL_130 - METEOR_DROP_CHANCE_AT_LEVEL_1) * t
-}
-
-function dragonballDropChance(monsterLevel: number): number {
-  const t = dropChanceLevelT(monsterLevel)
-  return DRAGONBALL_DROP_CHANCE_AT_LEVEL_1 + (DRAGONBALL_DROP_CHANCE_AT_LEVEL_130 - DRAGONBALL_DROP_CHANCE_AT_LEVEL_1) * t
-}
+// Meteor/DragonBall kill-drop odds — confirmed, flat (reverted 2026-08-03: a
+// same-day earlier attempt scaled *this* base rate by monster level, but the
+// user clarified that was the wrong lever — the base rate was never the
+// problem and stays untouched. See killCountBonusDropMultiplier below for
+// the actual fix.).
+const METEOR_DROP_CHANCE = 1 / 500
+const DRAGONBALL_DROP_CHANCE = 1 / 20000
 // Gear drop rate + per-drop quality odds (confirmed with the user,
 // 2026-08-01) — supersedes the earlier flat 10%-per-kill/always-Normal-
 // quality placeholder. A drop itself is now genuinely rare on its own; the
@@ -251,11 +232,22 @@ const ACHIEVEMENT_GOLD_MULTIPLIER: Record<number, number> = {
   10000: 2,
 }
 
-// Kill Count's own reward category (2026-08-03) — a bonus multiplier on the
-// per-kill Meteor/DragonBall drop chance (see rollBonusCurrencyDrops below),
-// scaled by the highest Kill Count tier reached for the monster being
-// fought. PLACEHOLDER magnitudes, same "highest tier wins" shape as the gold
-// table above.
+// Kill Count's own reward category — a bonus multiplier on the per-kill
+// Meteor/DragonBall drop chance (see rollBonusCurrencyDrops below), scaled
+// by the highest Kill Count tier reached for the monster being fought.
+// PLACEHOLDER magnitudes, same "highest tier wins" shape as the gold table
+// above. These are the values reached only at the fought monster's *own*
+// level 130 — see killCountBonusDropMultiplier below, which scales this
+// down for lower-level monsters. Corrected 2026-08-03 (confirmed with the
+// user): without that scaling, this multiplier was flat across every
+// monster regardless of level — since it's tied to a *specific monster's*
+// own kill count, and low-level monsters die in far fewer hits, maxing this
+// out on the fastest-to-kill monster in the game (level-1 Quailwing) was
+// strictly optimal, making players never want to fight anything else for
+// Meteor/DragonBall farming. The base per-kill drop chance itself
+// (METEOR_DROP_CHANCE/DRAGONBALL_DROP_CHANCE above) was never the problem
+// and is deliberately untouched — a same-day earlier attempt scaled that
+// instead, which the user corrected.
 const KILL_COUNT_BONUS_DROP_MULTIPLIER: Record<number, number> = {
   100: 1.1,
   250: 1.25,
@@ -263,6 +255,21 @@ const KILL_COUNT_BONUS_DROP_MULTIPLIER: Record<number, number> = {
   1000: 2,
   5000: 3,
   10000: 5,
+}
+
+// A monster's own level scales how much of the table above it can actually
+// reach — level 1 only ever reaches MIN_LEVEL_SCALE_FRACTION (10%) of the
+// full bonus even at Kill Count Tier 10000, level 130 reaches the full
+// 100%. PLACEHOLDER floor/curve, same disclosed-not-final status as every
+// other number here — deliberately not zero at level 1, so a low-level
+// monster's Kill Count ladder isn't rendered completely pointless for this
+// reward category, just far weaker than grinding something harder.
+const MIN_LEVEL_SCALE_FRACTION = 0.1
+const MAX_MONSTER_LEVEL_FOR_BONUS_SCALING = 130
+
+function killCountBonusLevelT(monsterLevel: number): number {
+  const raw = (monsterLevel - 1) / (MAX_MONSTER_LEVEL_FOR_BONUS_SCALING - 1)
+  return MIN_LEVEL_SCALE_FRACTION + (1 - MIN_LEVEL_SCALE_FRACTION) * Math.min(Math.max(raw, 0), 1)
 }
 
 // Confirmed, not a placeholder — 1/5000 chance per kill, independent of every
@@ -318,14 +325,14 @@ function prestigeGoldMultiplier(unlockedTierIndex: number): number {
   return multiplier
 }
 
-function killCountBonusDropMultiplier(kills: number): number {
-  let multiplier = 1
+function killCountBonusDropMultiplier(kills: number, monsterLevel: number): number {
+  let fullBonus = 1
   for (const tier of ACHIEVEMENT_TIERS) {
     if (kills >= tier) {
-      multiplier = KILL_COUNT_BONUS_DROP_MULTIPLIER[tier]
+      fullBonus = KILL_COUNT_BONUS_DROP_MULTIPLIER[tier]
     }
   }
-  return multiplier
+  return 1 + (fullBonus - 1) * killCountBonusLevelT(monsterLevel)
 }
 
 // How many of this zone's 30 possible tier-milestones a set of per-monster
@@ -415,11 +422,13 @@ function rollDamageInRange(midpoint: number): number {
 }
 
 // bonusDropMultiplier — Kill Count's own reward (see
-// KILL_COUNT_BONUS_DROP_MULTIPLIER above), applied to both chances alike.
-function rollBonusCurrencyDrops(monsterLevel: number, bonusDropMultiplier: number) {
+// KILL_COUNT_BONUS_DROP_MULTIPLIER/killCountBonusDropMultiplier above,
+// already scaled by the fought monster's level before being passed in here),
+// applied to both flat base chances alike.
+function rollBonusCurrencyDrops(bonusDropMultiplier: number) {
   return {
-    meteors: Math.random() < meteorDropChance(monsterLevel) * bonusDropMultiplier ? 1 : 0,
-    dragonballs: Math.random() < dragonballDropChance(monsterLevel) * bonusDropMultiplier ? 1 : 0,
+    meteors: Math.random() < METEOR_DROP_CHANCE * bonusDropMultiplier ? 1 : 0,
+    dragonballs: Math.random() < DRAGONBALL_DROP_CHANCE * bonusDropMultiplier ? 1 : 0,
   }
 }
 
@@ -727,7 +736,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // drop-chance multiplier (2026-08-03, see the constants above) — no longer
   // stacked into one combined gold multiplier.
   const achievementGoldMultiplier = prestigeGoldMultiplier(unlockedTierIndex)
-  const bonusDropMultiplier = killCountBonusDropMultiplier(characterKillsBefore)
+  const bonusDropMultiplier = killCountBonusDropMultiplier(characterKillsBefore, monster.level)
   let killsThisWindow = 0
   let petObtained = false
 
@@ -871,7 +880,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
           }
         }
 
-        const bonusCurrency = rollBonusCurrencyDrops(monster.level, bonusDropMultiplier)
+        const bonusCurrency = rollBonusCurrencyDrops(bonusDropMultiplier)
         if (mode === 'live') {
           if (bonusCurrency.meteors > 0) {
             if (projectedOccupied < INVENTORY_SLOT_CAP) {

@@ -315,7 +315,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         }))
       }
 
-      const bonusCurrency = rollBonusCurrencyDrops(type.level)
+      const bonusCurrency = rollBonusCurrencyDrops()
       if (bonusCurrency.meteors > 0 || bonusCurrency.dragonballs > 0) {
         const parts = [
           bonusCurrency.meteors > 0 ? `+${bonusCurrency.meteors} Meteor` : null,

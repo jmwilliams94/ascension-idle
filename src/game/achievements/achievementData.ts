@@ -65,7 +65,15 @@ export const ACHIEVEMENT_GOLD_MULTIPLIER: Record<AchievementTier, number> = {
 // the highest Kill Count tier reached for that monster. PLACEHOLDER
 // magnitudes, same "highest tier wins, not cumulative — reaching tier 2
 // overwrites tier 1's reward rather than stacking with it" shape as the gold
-// table above (the user's own framing).
+// table above (the user's own framing). These are the values reached only
+// at the fought monster's own level 130 — see killCountBonusDropMultiplier
+// below, which scales this down for lower-level monsters (corrected
+// 2026-08-03, same day: without that scaling this was flat across every
+// monster regardless of level, making it strictly optimal to max it out on
+// the fastest-to-kill monster in the game — level-1 Quailwing — rather than
+// ever fighting anything harder). The base per-kill drop chance itself
+// (see combatResolver.ts's METEOR_DROP_CHANCE/DRAGONBALL_DROP_CHANCE) was
+// never the problem and stays flat/untouched.
 export const KILL_COUNT_BONUS_DROP_MULTIPLIER: Record<AchievementTier, number> = {
   100: 1.1,
   250: 1.25,
@@ -73,6 +81,28 @@ export const KILL_COUNT_BONUS_DROP_MULTIPLIER: Record<AchievementTier, number> =
   1000: 2,
   5000: 3,
   10000: 5,
+}
+
+// A monster's own level scales how much of the table above it can actually
+// reach — level 1 only ever reaches MIN_LEVEL_SCALE_FRACTION (10%) of the
+// full bonus even at Kill Count Tier 10000, level 130 reaches the full
+// 100%. PLACEHOLDER floor/curve, deliberately not zero at level 1 so a
+// low-level monster's Kill Count ladder isn't rendered completely pointless
+// for this reward category, just far weaker than grinding something harder.
+// Mirrors resolve-combat's own killCountBonusLevelT — keep in sync.
+const MIN_LEVEL_SCALE_FRACTION = 0.1
+const MAX_MONSTER_LEVEL_FOR_BONUS_SCALING = 130
+
+function killCountBonusLevelT(monsterLevel: number): number {
+  const raw = (monsterLevel - 1) / (MAX_MONSTER_LEVEL_FOR_BONUS_SCALING - 1)
+  return MIN_LEVEL_SCALE_FRACTION + (1 - MIN_LEVEL_SCALE_FRACTION) * Math.min(Math.max(raw, 0), 1)
+}
+
+// The bonus a specific tier would give for a specific monster's level —
+// used both for "what would tier N give me on this monster" tooltip text
+// and (via killCountBonusDropMultiplier below) for "what's currently active."
+export function killCountBonusMultiplierAtTier(tier: AchievementTier, monsterLevel: number): number {
+  return 1 + (KILL_COUNT_BONUS_DROP_MULTIPLIER[tier] - 1) * killCountBonusLevelT(monsterLevel)
 }
 
 // Confirmed, not a placeholder — 1/5000 chance per kill, independent of every
@@ -116,9 +146,9 @@ export function nextKillCountTier(kills: number): AchievementTier | null {
   return ACHIEVEMENT_TIERS.find((tier) => kills < tier) ?? null
 }
 
-export function killCountBonusDropMultiplier(kills: number): number {
+export function killCountBonusDropMultiplier(kills: number, monsterLevel: number): number {
   const tier = currentKillCountTier(kills)
-  return tier ? KILL_COUNT_BONUS_DROP_MULTIPLIER[tier] : 1
+  return tier ? killCountBonusMultiplierAtTier(tier, monsterLevel) : 1
 }
 
 // Highest Prestige tier purchased for one monster (paid, via

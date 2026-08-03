@@ -56,45 +56,26 @@ export function killRewards(type: EnemyTypeDef, isRare: boolean, characterLevel:
   }
 }
 
-// Meteor/Dragonball kill-drop odds — now scaled by the fought monster's own
-// level (corrected 2026-08-03, confirmed with the user, supersedes the flat
-// 1/500 / 1/20000 rates from 2026-07-30). Without this, a low-level/fast-kill
-// monster (e.g. level-1 Quailwing) produced identical odds per kill as a much
-// harder, slower-to-kill endgame monster — since low-level monsters die in
-// far fewer hits, that made camping the very first zone forever strictly
-// optimal for currency farming, the opposite of the intended pacing (and
-// compounded further by the Kill Count achievement's own bonus-drop-chance
-// multiplier, trivially easy to max out on a fast-dying monster). PLACEHOLDER
-// curve — linear on monster level from 1 to 130, DragonBall:Meteor ratio held
-// constant at 40x (matching the original flat rates' own ratio) — only the
-// *shape* (scales up with level) is confirmed, not these exact numbers, same
-// as every other economy number in this game. Shared by live combat and the
-// offline simulator so odds can never drift between the two, same convention
-// as every other roll in this module.
-const METEOR_DROP_CHANCE_AT_LEVEL_1 = 1 / 2000
-const METEOR_DROP_CHANCE_AT_LEVEL_130 = 1 / 100
-const DRAGONBALL_DROP_CHANCE_AT_LEVEL_1 = 1 / 80000
-const DRAGONBALL_DROP_CHANCE_AT_LEVEL_130 = 1 / 4000
-const MAX_MONSTER_LEVEL_FOR_DROP_SCALING = 130
+// Meteor/Dragonball kill-drop odds — confirmed by the user (2026-07-30), not a
+// placeholder like the rest of this file's numbers. Independent per-kill rolls,
+// not affected by rare status (rare only multiplies HP/gold/EXP per the
+// existing confirmed design above). Reverted back to flat (2026-08-03) — a
+// same-day earlier attempt at fixing "Quailwing farming is too good" scaled
+// *this* base rate by monster level, but the user clarified that was the
+// wrong lever entirely: the base rate itself was never the problem, and
+// should stay untouched. The actual fix is the Kill Count achievement's own
+// bonus-drop-chance multiplier scaling by level instead — see
+// killCountBonusDropMultiplier in achievementData.ts /
+// resolve-combat/index.ts, not here. Shared by live combat and the offline
+// simulator so odds can never drift between the two, same convention as
+// every other roll in this module.
+export const METEOR_DROP_CHANCE = 1 / 500
+export const DRAGONBALL_DROP_CHANCE = 1 / 20000
 
-function dropChanceLevelT(monsterLevel: number): number {
-  return Math.min(Math.max((monsterLevel - 1) / (MAX_MONSTER_LEVEL_FOR_DROP_SCALING - 1), 0), 1)
-}
-
-export function meteorDropChance(monsterLevel: number): number {
-  const t = dropChanceLevelT(monsterLevel)
-  return METEOR_DROP_CHANCE_AT_LEVEL_1 + (METEOR_DROP_CHANCE_AT_LEVEL_130 - METEOR_DROP_CHANCE_AT_LEVEL_1) * t
-}
-
-export function dragonballDropChance(monsterLevel: number): number {
-  const t = dropChanceLevelT(monsterLevel)
-  return DRAGONBALL_DROP_CHANCE_AT_LEVEL_1 + (DRAGONBALL_DROP_CHANCE_AT_LEVEL_130 - DRAGONBALL_DROP_CHANCE_AT_LEVEL_1) * t
-}
-
-export function rollBonusCurrencyDrops(monsterLevel: number): { meteors: number; dragonballs: number } {
+export function rollBonusCurrencyDrops(): { meteors: number; dragonballs: number } {
   return {
-    meteors: Math.random() < meteorDropChance(monsterLevel) ? 1 : 0,
-    dragonballs: Math.random() < dragonballDropChance(monsterLevel) ? 1 : 0,
+    meteors: Math.random() < METEOR_DROP_CHANCE ? 1 : 0,
+    dragonballs: Math.random() < DRAGONBALL_DROP_CHANCE ? 1 : 0,
   }
 }
 

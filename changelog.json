@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.56.1",
+    "date": "2026-08-03",
+    "changes": [
+      "Reverted the Meteor/DragonBall drop chance change from last version — that wasn't the right fix",
+      "Instead, the Kill Count achievement's bonus drop-chance now scales with monster level, so maxing it out on an easy monster gives a much smaller boost than on a harder one"
+    ]
+  },
+  {
     "version": "1.56.0",
     "date": "2026-08-03",
     "changes": [
