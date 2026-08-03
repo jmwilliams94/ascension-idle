@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.59.7",
+    "date": "2026-08-04",
+    "changes": [
+      "Fixed withdrawing an item from the Bank making it vanish instead of returning it to your Inventory",
+      "Bank tab tiles now show their normal tooltip on hover again, alongside the click-to-deposit/withdraw popover"
+    ]
+  },
+  {
     "version": "1.59.6",
     "date": "2026-08-04",
     "changes": [

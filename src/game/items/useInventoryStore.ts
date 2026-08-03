@@ -305,14 +305,27 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     set((state) => ({ items: state.items.filter((item) => !itemIds.includes(item.id)) }))
   },
 
-  // Idempotent by id — matters for claim_mail's "returned listing" case
-  // (useMailStore.claim): a reclaimed item's owner_id never actually left
-  // the seller, so it's already present in items from the initial load, just
-  // hidden by the isListed/hasUnclaimedMail filter. A purchase claim, by
-  // contrast, genuinely adds an item the buyer never had locally before —
-  // both paths call this same action, so it has to handle either case.
+  // Upsert by id — matters for two distinct already-present cases, not just
+  // duplicate prevention: claim_mail's "returned listing" case
+  // (useMailStore.claim), where a reclaimed item's owner_id never actually
+  // left the seller, so it's already present in items from the initial load,
+  // just hidden by the isListed/hasUnclaimedMail filter (no field actually
+  // changes there, a plain skip used to be enough) — and Bank Storage's own
+  // withdraw (useBankStore.withdrawItemFromStorage/withdrawGearComposition),
+  // where the item genuinely IS already present (loadInventory loads every
+  // item this character owns regardless of location, including banked ones)
+  // but its `location`/`owner_id` fields are stale until the withdraw call's
+  // own patched object replaces them — a plain skip left the item silently
+  // stuck hidden behind the bank-location filter forever, looking exactly
+  // like it had been deleted. Every caller already passes a fully-correct
+  // item object (the server's own response, or a manually patched copy), so
+  // replacing on a match is always safe, not just appending when absent.
   addItem: (item) => {
-    set((state) => (state.items.some((existing) => existing.id === item.id) ? state : { items: [...state.items, item] }))
+    set((state) => ({
+      items: state.items.some((existing) => existing.id === item.id)
+        ? state.items.map((existing) => (existing.id === item.id ? item : existing))
+        : [...state.items, item],
+    }))
   },
 
   setItemLocation: (itemId, location) => {

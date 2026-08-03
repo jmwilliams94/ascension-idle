@@ -738,7 +738,7 @@ export default function InventoryPanel({
               icon: '🔷',
               qualityColor: MATERIAL_COLOR,
               label: `+${tier} Stone — ${compositionPointValue(tier)} pts`,
-              tooltip: enableBankDeposit ? undefined : buildStoneTooltip(tier),
+              tooltip: buildStoneTooltip(tier),
               selected: selectedSlot?.kind === 'stone' && selectedSlot.dragId === dragId,
             }
 
@@ -782,7 +782,7 @@ export default function InventoryPanel({
               iconSrc: COMET_ICON_SRC,
               qualityColor: MATERIAL_COLOR,
               label: 'Comet',
-              tooltip: enableBankDeposit ? undefined : buildCometTooltip(),
+              tooltip: buildCometTooltip(),
               selected: selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId,
             }
 
@@ -826,7 +826,7 @@ export default function InventoryPanel({
               iconSrc: FALLEN_STAR_ICON_SRC,
               qualityColor: FALLEN_STAR_COLOR,
               label: 'Fallen Star',
-              tooltip: enableBankDeposit ? undefined : buildFallenStarTooltip(),
+              tooltip: buildFallenStarTooltip(),
               selected: selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId,
             }
 
@@ -951,13 +951,16 @@ export default function InventoryPanel({
               icon,
               iconSrc,
               label,
-              // Omitted when equipPopoverEnabled/enableBankDeposit — both
-              // modes' whole point is "press is the only trigger now," so the
-              // plain hover/long-press peek this prop drives is dropped for
-              // these tiles specifically (native `title` still works as a
-              // bare-bones desktop fallback, same as any other tile with no
-              // tooltip).
-              tooltip: equipPopoverEnabled || enableBankDeposit ? undefined : buildGearTooltip(item, template),
+              // Omitted only when equipPopoverEnabled (Combat page's gear
+              // tiles) — that mode's whole point is "press is the only
+              // trigger now," so the plain hover/long-press peek this prop
+              // drives is dropped there specifically (native `title` still
+              // works as a bare-bones desktop fallback). enableBankDeposit
+              // (the Bank tab's Inventory grid) keeps the normal hover
+              // tooltip alongside its click-opened Deposit/Bank popover
+              // (confirmed with the user, 2026-08-04) — click for buttons,
+              // hover for a normal peek, not either/or.
+              tooltip: equipPopoverEnabled ? undefined : buildGearTooltip(item, template),
               selected: selectedSlot?.kind === 'item' && selectedSlot.id === item.id,
             }
 

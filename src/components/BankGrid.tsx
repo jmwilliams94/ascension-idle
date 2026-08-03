@@ -196,6 +196,7 @@ export default function BankGrid({ characterId }: BankGridProps) {
                     icon={icon}
                     iconSrc={iconSrc}
                     label={template?.name ?? 'Unknown item'}
+                    tooltip={buildGearTooltip(item, template)}
                     selected={selectedBankedSlot?.kind === 'item' && selectedBankedSlot.id === item.id}
                   />
                 </div>
@@ -216,6 +217,7 @@ export default function BankGrid({ characterId }: BankGridProps) {
                   iconSrc={COMET_ICON_SRC}
                   qualityColor={MATERIAL_COLOR}
                   label="Comet (Storage)"
+                  tooltip={buildCometTooltip()}
                   selected={selectedBankedSlot?.kind === 'currency' && selectedBankedSlot.currencyType === 'comet'}
                 />
               </div>
@@ -236,6 +238,7 @@ export default function BankGrid({ characterId }: BankGridProps) {
                   iconSrc={FALLEN_STAR_ICON_SRC}
                   qualityColor={FALLEN_STAR_COLOR}
                   label="Fallen Star (Storage)"
+                  tooltip={buildFallenStarTooltip()}
                   selected={selectedBankedSlot?.kind === 'currency' && selectedBankedSlot.currencyType === 'fallen_star'}
                 />
               </div>
