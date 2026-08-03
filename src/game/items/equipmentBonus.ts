@@ -285,6 +285,9 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
       ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level)
       : 'Unknown item',
     titleColor: getQualityColor(item.quality_tier),
+    icon: getItemIcon(template?.slot_type),
+    iconSrc: getGearIconSrc(template?.name),
+    iconColor: getQualityColor(item.quality_tier),
     lines: [formatItemLevel(item.level), ...(classLine ? [classLine] : []), ...socketLines],
     stats: template ? formatBaseStats(template.base_stats, item.quality_tier).split(', ').filter(Boolean) : [],
   }

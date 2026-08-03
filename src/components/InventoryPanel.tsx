@@ -414,6 +414,8 @@ export default function InventoryPanel({
             const type = POTION_TYPES[stack.potionType]
             const potionTooltip: ItemTooltipData = {
               title: type.displayName,
+              icon: type.kind === 'hp' ? '🧪' : '💧',
+              iconColor: CONSUMABLE_COLOR,
               lines: [type.kind === 'hp' ? 'HP Potion' : 'Mana Potion', `${stack.count} / ${type.stackSize}`],
               stats: [type.description],
             }

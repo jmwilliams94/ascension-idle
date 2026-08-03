@@ -116,6 +116,8 @@ export function parseStoneDragId(id: string): number | null {
 export function buildStoneTooltip(tier: number): ItemTooltipData {
   return {
     title: `+${tier} Stone`,
+    icon: '🔷',
+    iconColor: MATERIAL_COLOR,
     lines: ['Composition material'],
     stats: [`${compositionPointValue(tier)} pts`],
   }
@@ -180,6 +182,8 @@ export const CONSUMABLE_COLOR = '#4ADE80'
 export function buildMeteorTooltip(): ItemTooltipData {
   return {
     title: 'Meteor',
+    iconSrc: METEOR_ICON_SRC,
+    iconColor: MATERIAL_COLOR,
     lines: ['Forge material'],
     stats: ['Used for Level Upgrade'],
   }
@@ -188,6 +192,8 @@ export function buildMeteorTooltip(): ItemTooltipData {
 export function buildDragonballTooltip(): ItemTooltipData {
   return {
     title: 'DragonBall',
+    iconSrc: DRAGONBALL_ICON_SRC,
+    iconColor: DRAGONBALL_COLOR,
     lines: ['Forge material'],
     stats: ['Used for Quality Upgrade'],
   }
@@ -223,6 +229,8 @@ export function isDragonballScrollDragId(id: string): boolean {
 export function buildMeteorScrollTooltip(): ItemTooltipData {
   return {
     title: 'Meteor Scroll',
+    icon: '📜',
+    iconColor: MATERIAL_COLOR,
     lines: ['Compact storage'],
     stats: ['Holds 10 Meteors — Open to unbundle'],
   }
@@ -231,6 +239,8 @@ export function buildMeteorScrollTooltip(): ItemTooltipData {
 export function buildDragonballScrollTooltip(): ItemTooltipData {
   return {
     title: 'DragonBall Scroll',
+    icon: '📜',
+    iconColor: DRAGONBALL_COLOR,
     lines: ['Compact storage'],
     stats: ['Holds 10 DragonBalls — Open to unbundle'],
   }

@@ -9,6 +9,7 @@ import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemT
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { POTION_TYPES, HP_POTION_ORDER, MP_POTION_ORDER, type PotionTypeId } from '../game/items/potionTypes'
 import { buildGearTooltip, getGearIconSrc, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
+import { CONSUMABLE_COLOR } from '../game/items/forgeCosts'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
 
 // A Shop template isn't an owned ItemInstance yet, but buildGearTooltip (the
@@ -214,6 +215,8 @@ export default function ShopPanel() {
 
                 const potionTooltip: ItemTooltipData = {
                   title: type.displayName,
+                  icon: '🧪',
+                  iconColor: CONSUMABLE_COLOR,
                   lines: ['HP Potion'],
                   stats: [type.description],
                 }
@@ -265,6 +268,8 @@ export default function ShopPanel() {
 
                 const potionTooltip: ItemTooltipData = {
                   title: type.displayName,
+                  icon: '💧',
+                  iconColor: CONSUMABLE_COLOR,
                   lines: ['Mana Potion'],
                   stats: [type.description],
                 }

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.54.4",
+    "date": "2026-08-03",
+    "changes": [
+      "Item tooltips now show the item's icon alongside its name, everywhere tooltips appear"
+    ]
+  },
+  {
     "version": "1.54.3",
     "date": "2026-08-03",
     "changes": [

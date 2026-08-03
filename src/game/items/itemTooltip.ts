@@ -8,6 +8,19 @@ export interface ItemTooltipData {
   // Quality color for gear; omitted (falls back to a neutral slate) for
   // non-quality-tiered things like arrows/stones.
   titleColor?: string
+  // Icon shown in a small bordered box beside the title (2026-08-03,
+  // confirmed with the user from a reference screenshot) — same
+  // iconSrc-over-icon priority InventorySlot already established (real art
+  // wins when both are supplied). Omitted entirely (no icon box at all) when
+  // neither is set, rather than showing an empty box.
+  icon?: string
+  iconSrc?: string
+  // Border/tint color for that icon box — deliberately separate from
+  // titleColor (even though gear sets both to the same quality color) so a
+  // builder can give the icon box a color without also recoloring the title
+  // text, e.g. stones/currency tooltips whose title has always rendered in
+  // the default neutral slate.
+  iconColor?: string
   // Secondary info lines (quality/level, composition tier, ammo count, etc.).
   lines?: string[]
   // Stat bonus lines, shown in a visually distinct block below `lines`.
