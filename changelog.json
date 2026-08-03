@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.55.3",
+    "date": "2026-08-03",
+    "changes": [
+      "Fixed a bug that could repeatedly re-grant zone Achievement DragonBall rewards instead of paying them out once"
+    ]
+  },
+  {
     "version": "1.55.2",
     "date": "2026-08-03",
     "changes": [

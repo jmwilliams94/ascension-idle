@@ -1,0 +1,19 @@
+-- Fixes a real currency-duplication bug: 20260803030000_add_zone_achievements.sql
+-- created character_zone_progress and granted select to `authenticated` (for
+-- potential future client reads) but never granted `service_role` anything on
+-- it -- the exact same gotcha already hit twice before for resolve-combat's
+-- other tables (20260730050000_grant_service_role_table_access.sql,
+-- 20260802030000_grant_service_role_achievements_access.sql; see CLAUDE.md's
+-- Persistence section's "migration gotcha" note).
+--
+-- Consequence here was worse than a silent no-op: resolve-combat's own
+-- zone-reward logic reads character_zone_progress.highest_zone_tier_granted
+-- to avoid re-granting an already-earned zone-tier DragonBall reward. With
+-- service_role locked out of the table, that read (and the later upsert)
+-- both silently failed on every call, so highestGranted was always computed
+-- as 0 -- meaning every resolve-combat call (every ~15s live tick while
+-- fighting, and every offline catch-up) that found the character already
+-- past a zone tier threshold re-granted that tier's full DragonBall reward
+-- again, forever. This is what was actually behind "a crazy amount of
+-- DragonBalls" from idling.
+grant all on public.character_zone_progress to service_role;

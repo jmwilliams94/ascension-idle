@@ -911,25 +911,43 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     const zoneMonsterKills = zoneMonsterIds.map((id) => killsByMonster[id] ?? 0)
     const { zoneTier } = zoneTierCompletions(zoneMonsterKills)
 
-    const { data: zoneProgressRow } = await db
+    // Fail-safe, not fail-open (2026-08-03, added after a real over-grant
+    // incident — see 20260803040000_grant_service_role_zone_progress_access.sql):
+    // a permission/query error here must NOT be treated the same as "no row
+    // yet" (highestGranted = 0), or a missing grant silently re-grants this
+    // zone's entire reward on every single call forever, live tick after
+    // live tick. If the read itself fails, skip granting anything this call
+    // rather than guessing — the next successful call will catch up
+    // correctly once whatever's wrong is fixed.
+    const { data: zoneProgressRow, error: zoneProgressError } = await db
       .from('character_zone_progress')
       .select('highest_zone_tier_granted')
       .eq('character_id', characterId)
       .eq('zone_id', monster.zone_id)
       .maybeSingle()
 
-    const highestGranted = zoneProgressRow?.highest_zone_tier_granted ?? 0
+    if (zoneProgressError) {
+      console.error('resolve-combat character_zone_progress read failed:', zoneProgressError.message)
+    } else {
+      const highestGranted = zoneProgressRow?.highest_zone_tier_granted ?? 0
 
-    if (zoneTier > highestGranted) {
-      for (let tier = highestGranted + 1; tier <= zoneTier; tier += 1) {
-        zoneDragonballReward += ZONE_TIER_DRAGONBALL_REWARD[tier - 1]
+      if (zoneTier > highestGranted) {
+        for (let tier = highestGranted + 1; tier <= zoneTier; tier += 1) {
+          zoneDragonballReward += ZONE_TIER_DRAGONBALL_REWARD[tier - 1]
+        }
+        const { error: zoneProgressWriteError } = await db
+          .from('character_zone_progress')
+          .upsert(
+            { character_id: characterId, zone_id: monster.zone_id, highest_zone_tier_granted: zoneTier },
+            { onConflict: 'character_id,zone_id' },
+          )
+        if (zoneProgressWriteError) {
+          // The reward is already folded into dragonballsGained below by this
+          // point — logging is what makes a future occurrence of this class
+          // of bug diagnosable via the Dashboard's Logs tab, not silent.
+          console.error('resolve-combat character_zone_progress write failed:', zoneProgressWriteError.message)
+        }
       }
-      await db
-        .from('character_zone_progress')
-        .upsert(
-          { character_id: characterId, zone_id: monster.zone_id, highest_zone_tier_granted: zoneTier },
-          { onConflict: 'character_id,zone_id' },
-        )
     }
   }
 
