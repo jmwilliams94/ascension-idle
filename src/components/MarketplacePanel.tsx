@@ -153,11 +153,11 @@ function BrowseTab({ characterId, templates }: { characterId: string; templates:
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    void loadBrowseListings(characterId)
+    void loadBrowseListings()
     // Intentionally not re-run when browseListings itself changes — this only
     // needs to refetch when the tab mounts or the player explicitly refreshes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [characterId])
+  }, [])
 
   const handleBuy = async (listingId: string) => {
     setError(null)
@@ -174,7 +174,7 @@ function BrowseTab({ characterId, templates }: { characterId: string; templates:
         <p className="text-xs text-slate-500">{browseListings.length} listing{browseListings.length === 1 ? '' : 's'} for sale</p>
         <button
           type="button"
-          onClick={() => void loadBrowseListings(characterId)}
+          onClick={() => void loadBrowseListings()}
           className="rounded-lg border border-slate-700 px-3 py-1 text-xs text-slate-300 hover:border-slate-500"
         >
           Refresh
@@ -195,7 +195,9 @@ function BrowseTab({ characterId, templates }: { characterId: string; templates:
               listing={listing}
               templates={templates}
               action={
-                confirmingId === listing.id ? (
+                listing.seller_character_id === characterId ? (
+                  <span className="rounded-lg border border-slate-700 px-3 py-1 text-xs text-slate-500">Your listing</span>
+                ) : confirmingId === listing.id ? (
                   <div className="flex gap-2">
                     <button
                       type="button"

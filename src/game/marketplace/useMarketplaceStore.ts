@@ -86,11 +86,12 @@ interface MarketplaceState {
   browseLoaded: boolean
   myListingsLoaded: boolean
   busy: boolean
-  // Public feed — every other account's active listings. Loaded on demand
-  // when the Browse sub-tab is opened, not eager-loaded at game start like
-  // everything else in GameShell — it's a live cross-account feed, not "your
-  // own state."
-  loadBrowseListings: (characterId: string) => Promise<void>
+  // Public feed — every active listing account-wide, including the viewer's
+  // own (MarketplacePanel shows a "Your listing" badge instead of Buy for
+  // those rows rather than filtering them out). Loaded on demand when the
+  // Browse sub-tab is opened, not eager-loaded at game start like everything
+  // else in GameShell — it's a live cross-account feed, not "your own state."
+  loadBrowseListings: () => Promise<void>
   // This character's own listings, active and historical — eager-loaded in
   // GameShell alongside Warehouse/Loot Holding/Achievements.
   loadMyListings: (characterId: string) => Promise<void>
@@ -115,12 +116,17 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
   myListingsLoaded: false,
   busy: false,
 
-  loadBrowseListings: async (characterId) => {
+  loadBrowseListings: async () => {
+    // Includes the viewer's own listings (this character's and any sibling
+    // character's on the same account) — confirmed with the user, 2026-08-03.
+    // The Buy RPC already rejects buying your own listing with a dedicated
+    // 'own_listing' error, and MarketplacePanel shows a "Your listing" badge
+    // instead of a Buy button for these rows rather than surfacing that as
+    // an error state.
     const { data, error } = await supabase
       .from('marketplace_listings')
       .select('*')
       .eq('status', 'active')
-      .neq('seller_character_id', characterId)
       .order('created_at', { ascending: false })
 
     if (error) {

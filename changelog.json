@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.59.3",
+    "date": "2026-08-03",
+    "changes": [
+      "Browse listings in the Marketplace now include your own — a \"Your listing\" badge shows instead of a Buy button for those"
+    ]
+  },
+  {
     "version": "1.59.2",
     "date": "2026-08-03",
     "changes": [
