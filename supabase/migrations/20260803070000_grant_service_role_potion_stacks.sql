@@ -1,0 +1,15 @@
+-- Bug fix, found during a project-wide audit (2026-08-03): potion_stacks
+-- never had a service_role grant at all (select/insert/update/delete all
+-- missing) — the same "creating a table doesn't auto-grant service_role"
+-- gotcha that has already bitten this project on characters/item_instances,
+-- then again on the achievement tables, then again on
+-- character_zone_progress. resolve-combat's own Inventory-full baseline
+-- query (`select ... from potion_stacks ... count`) has been silently
+-- failing on every single call since the stage-2 fix that added potions to
+-- that formula (see CLAUDE.md's Loot section) — the destructured `count`
+-- comes back null on a permission error (never checked), defaulting to 0 via
+-- `potionCount ?? 0`, so a character holding potion stacks has always had
+-- their real Inventory occupancy under-counted server-side, risking
+-- over-granting past the 40-slot cap. No live-data correction needed here
+-- (this only affects a live-window fit-check going forward, not stored data).
+grant select, insert, update, delete on public.potion_stacks to service_role;

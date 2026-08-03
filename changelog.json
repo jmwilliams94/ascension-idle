@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.58.2",
+    "date": "2026-08-03",
+    "changes": [
+      "Fixed a background permissions bug where potions weren't being counted toward your Inventory-full check during combat resolution"
+    ]
+  },
+  {
     "version": "1.58.1",
     "date": "2026-08-03",
     "changes": [
