@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.55.2",
+    "date": "2026-08-03",
+    "changes": [
+      "Added an Inventory card to the Equipment tab, below your Stats — no need to switch to Combat just to equip gear"
+    ]
+  },
+  {
     "version": "1.55.1",
     "date": "2026-08-03",
     "changes": [
