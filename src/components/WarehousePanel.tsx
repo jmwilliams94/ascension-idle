@@ -551,7 +551,7 @@ export default function WarehousePanel({ characterId }: { characterId: string })
           <div className="min-w-0 space-y-4">
             <WarehouseGrid characterId={characterId} onTileDrop={handleTileDrop} />
             <CompositionDropZone />
-            <InventoryPanel columns={5} onTileDrop={handleTileDrop} />
+            <InventoryPanel columns={5} onTileDrop={handleTileDrop} enableBankDeposit />
           </div>
 
           <div className="min-w-0 space-y-4">

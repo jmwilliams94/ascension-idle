@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.57.0",
+    "date": "2026-08-03",
+    "changes": [
+      "Bank tab: gear and stones in your Inventory now have a quick Deposit button (tap an item), plus a Deposit All shortcut",
+      "Bank tab: Storage now has a Withdraw All button (withdraws everything at the free Normal tier)"
+    ]
+  },
+  {
     "version": "1.56.1",
     "date": "2026-08-03",
     "changes": [

@@ -37,6 +37,8 @@ export default function WarehouseGrid({ characterId, onTileDrop }: WarehouseGrid
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null)
   const [withdrawTier, setWithdrawTier] = useState(0)
   const [withdrawError, setWithdrawError] = useState<string | null>(null)
+  const [withdrawAllBusy, setWithdrawAllBusy] = useState(false)
+  const [withdrawAllError, setWithdrawAllError] = useState<string | null>(null)
 
   const occupiedCount = items.length
   const emptySlotCount = Math.max(0, WAREHOUSE_SLOT_CAP - occupiedCount)
@@ -56,12 +58,61 @@ export default function WarehouseGrid({ characterId, onTileDrop }: WarehouseGrid
     setSelectedEntryId((current) => (current === entryId ? null : entryId))
   }
 
+  // Withdraws every Storage entry at the free Normal tier (confirmed with the
+  // user, 2026-08-03) — matches the existing drag-out shortcut's own default
+  // tier, leaving paid-tier withdrawal to the per-item card above (unchanged
+  // by this addition). Sequential, not Promise.all: withdraw_item's
+  // client-side Inventory-full pre-check needs to see each previous
+  // withdrawal's real effect before the next one fires, and stopping the
+  // moment Inventory actually fills avoids piling up N-1 identical failures
+  // once it does.
+  const handleWithdrawAll = async () => {
+    setWithdrawAllError(null)
+    setWithdrawAllBusy(true)
+    let failures = 0
+    let stoppedForFullInventory = false
+
+    for (const entry of items) {
+      const result = await withdrawItem(characterId, entry.template_id, 0)
+      if (!result.ok) {
+        failures += 1
+        if (result.error === 'inventory_full') {
+          stoppedForFullInventory = true
+          break
+        }
+      }
+    }
+
+    setWithdrawAllBusy(false)
+    if (stoppedForFullInventory) {
+      setWithdrawAllError('Inventory filled up — stopped there.')
+    } else if (failures > 0) {
+      setWithdrawAllError(`Couldn't withdraw ${failures} item${failures === 1 ? '' : 's'}.`)
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-xs uppercase tracking-wide text-slate-500">
-          Storage ({occupiedCount}/{WAREHOUSE_SLOT_CAP})
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs uppercase tracking-wide text-slate-500">
+            Storage ({occupiedCount}/{WAREHOUSE_SLOT_CAP})
+          </p>
+
+          {items.length > 0 && (
+            <div className="flex items-center gap-2 text-xs">
+              {withdrawAllError && <span className="text-amber-400">{withdrawAllError}</span>}
+              <button
+                type="button"
+                disabled={withdrawAllBusy}
+                onClick={() => void handleWithdrawAll()}
+                className="rounded border border-sky-500 bg-sky-500/10 px-2 py-1 font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {withdrawAllBusy ? 'Withdrawing…' : 'Withdraw All (free tier)'}
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Responsive tracks matching InventoryPanel's own fix (3.5rem below
             `lg`, unchanged 4rem at `lg`+) — the previous fixed 4rem-per-column

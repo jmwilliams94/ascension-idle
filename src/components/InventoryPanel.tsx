@@ -2,6 +2,7 @@ import { useState } from 'react'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import { DraggableInventorySlot } from './dragDrop'
 import GearEquipPopover from './GearEquipPopover'
+import TooltipActionPopover from './TooltipActionPopover'
 import {
   buildGearTooltip,
   formatBaseStats,
@@ -44,6 +45,7 @@ import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { POTION_TYPES } from '../game/items/potionTypes'
+import { useWarehouseStore } from '../game/items/useWarehouseStore'
 
 // A single fixed 40-cell grid shared by gear (item_instances), Composition
 // stones, Meteors/DragonBalls (+ their Scrolls), and HP/Mana potion stacks —
@@ -98,6 +100,20 @@ interface InventoryPanelProps {
   // click already means something else there (drag source, sell selection,
   // listing source) that this popover isn't designed around.
   equipPopoverEnabled?: boolean
+  // Bank-tab-only (confirmed with the user, 2026-08-03) — mirrors
+  // equipPopoverEnabled's own click-opens-actionable-tooltip pattern, but for
+  // depositing into Storage instead of equipping. Clicking a gear or stone
+  // tile opens a TooltipActionPopover with a single "Deposit" button (gear:
+  // deposit_item's existing "as item token" path; stone: deposits one of that
+  // tier) rather than the plain hover tooltip/old detail card. Also adds a
+  // "Deposit All" button to the header, looping every eligible gear item +
+  // every owned stone tier. Only WarehousePanel's Inventory-grid embedding
+  // passes this — it coexists with that same instance's onTileDrop (drag
+  // still works for depositing too, this is just a click-based alternative).
+  // Meteor/DragonBall/Scroll tiles are deliberately untouched — those already
+  // have their own dedicated Deposit control in BankedCard's CurrencyRow, and
+  // Bundle/Unbundle still needs to work on those tiles here.
+  enableBankDeposit?: boolean
 }
 
 export default function InventoryPanel({
@@ -106,6 +122,7 @@ export default function InventoryPanel({
   enableSelling = false,
   columns = 8,
   equipPopoverEnabled = false,
+  enableBankDeposit = false,
 }: InventoryPanelProps) {
   const items = useInventoryStore((state) => state.items)
   const sellItem = useInventoryStore((state) => state.sellItem)
@@ -138,12 +155,21 @@ export default function InventoryPanel({
   const isListed = (itemId: string) => myListings.some((listing) => listing.status === 'active' && listing.item_id === itemId)
   const mailEntries = useMailStore((state) => state.entries)
   const hasUnclaimedMail = (itemId: string) => mailEntries.some((entry) => entry.item_id === itemId)
+  const depositItem = useWarehouseStore((state) => state.depositItem)
+  const depositStone = useWarehouseStore((state) => state.depositStone)
 
   const [selectedSlot, setSelectedSlot] = useState<SelectedSlot>(null)
   // GearEquipPopover-only (equipPopoverEnabled) — the clicked tile's own
   // bounding rect, captured at click time so the popover can anchor itself
   // there via a portal. Unused/always null when equipPopoverEnabled is off.
   const [popoverAnchorRect, setPopoverAnchorRect] = useState<DOMRect | null>(null)
+  // enableBankDeposit-only — same anchoring idea as popoverAnchorRect above,
+  // kept as its own state since the two modes are mutually exclusive per
+  // instance but shouldn't share a variable name that implies they're the
+  // same popover.
+  const [bankPopoverAnchorRect, setBankPopoverAnchorRect] = useState<DOMRect | null>(null)
+  const [bankDepositBusy, setBankDepositBusy] = useState(false)
+  const [bankDepositError, setBankDepositError] = useState<string | null>(null)
   const [sellBusy, setSellBusy] = useState(false)
   const [sellError, setSellError] = useState<string | null>(null)
   // Bulk-sell checkbox selection (Shop only, see enableSelling) — independent
@@ -275,6 +301,89 @@ export default function InventoryPanel({
     setPopoverAnchorRect(null)
   }
 
+  // enableBankDeposit-only — dismiss action, also used after a successful
+  // single-item Deposit from inside the popover.
+  const closeBankPopover = () => {
+    setSelectedSlot(null)
+    setBankPopoverAnchorRect(null)
+  }
+
+  const handleBankDepositItem = async (itemId: string) => {
+    if (!characterId) {
+      return
+    }
+    setBankDepositError(null)
+    setBankDepositBusy(true)
+    const result = await depositItem(characterId, itemId)
+    setBankDepositBusy(false)
+
+    if (!result.ok) {
+      setBankDepositError("Couldn't deposit that item.")
+      return
+    }
+
+    closeBankPopover()
+  }
+
+  const handleBankDepositStone = async (tier: number) => {
+    if (!characterId) {
+      return
+    }
+    setBankDepositError(null)
+    setBankDepositBusy(true)
+    const result = await depositStone(characterId, tier, 1)
+    setBankDepositBusy(false)
+
+    if (!result.ok) {
+      setBankDepositError("Couldn't deposit that stone.")
+      return
+    }
+
+    closeBankPopover()
+  }
+
+  // Sequential, not Promise.all (deliberately unlike sellSelected below) —
+  // deposit_item's client-side Storage-full pre-check reads Storage's own
+  // occupied-slot count, which only grows when a genuinely new template gets
+  // its first token; firing every deposit at once would read a stale
+  // snapshot for each concurrent call and could under-count how many new
+  // slots the batch actually needs. Awaiting one at a time keeps each
+  // pre-check accurate against the real, just-updated state.
+  const handleDepositAll = async () => {
+    if (!characterId) {
+      return
+    }
+    setBankDepositError(null)
+    setBankDepositBusy(true)
+    let failures = 0
+
+    for (const item of visibleItems) {
+      if (reservedItemIds.includes(item.id)) {
+        continue
+      }
+      const result = await depositItem(characterId, item.id)
+      if (!result.ok) {
+        failures += 1
+      }
+    }
+
+    for (const tier of COMPOSITION_STONE_TIERS) {
+      const owned = stones[String(tier)] ?? 0
+      if (owned <= 0) {
+        continue
+      }
+      const result = await depositStone(characterId, tier, owned)
+      if (!result.ok) {
+        failures += 1
+      }
+    }
+
+    setBankDepositBusy(false)
+    if (failures > 0) {
+      setBankDepositError(`Couldn't deposit ${failures} item${failures === 1 ? '' : 's'}.`)
+    }
+  }
+
   const handleTileDrop = (overTarget: string | null, id: string) => {
     if (overTarget) {
       onTileDrop?.(overTarget, id)
@@ -399,6 +508,23 @@ export default function InventoryPanel({
               </button>
             </div>
           )}
+
+          {enableBankDeposit && (
+            <div className="flex items-center gap-2 text-xs">
+              {bankDepositError && <span className="text-amber-400">{bankDepositError}</span>}
+              <button
+                type="button"
+                disabled={
+                  bankDepositBusy ||
+                  (visibleItems.length === 0 && COMPOSITION_STONE_TIERS.every((tier) => (stones[String(tier)] ?? 0) === 0))
+                }
+                onClick={() => void handleDepositAll()}
+                className="rounded border border-sky-500 bg-sky-500/10 px-2 py-1 font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {bankDepositBusy ? 'Depositing…' : 'Deposit All'}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* overflow-x-auto is a defensive backstop, not the primary fix — the
@@ -453,20 +579,32 @@ export default function InventoryPanel({
               selected: selectedSlot?.kind === 'stone' && selectedSlot.dragId === dragId,
             }
 
-            if (onTileDrop) {
-              return (
-                <DraggableInventorySlot
-                  key={dragId}
-                  {...commonProps}
-                  dragEnabled
-                  dragPayload={{ id: dragId, icon: '🔷' }}
-                  onDrop={handleTileDrop}
-                  onClick={() => toggleSlot({ kind: 'stone', dragId, tier })}
-                />
-              )
+            const stoneSlot = onTileDrop ? (
+              <DraggableInventorySlot
+                key={dragId}
+                {...commonProps}
+                dragEnabled
+                dragPayload={{ id: dragId, icon: '🔷' }}
+                onDrop={handleTileDrop}
+                onClick={() => toggleSlot({ kind: 'stone', dragId, tier })}
+              />
+            ) : (
+              <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'stone', dragId, tier })} />
+            )
+
+            if (!enableBankDeposit) {
+              return stoneSlot
             }
 
-            return <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'stone', dragId, tier })} />
+            return (
+              <div
+                key={dragId}
+                data-tooltip-action-anchor
+                onClick={(event) => setBankPopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
+              >
+                {stoneSlot}
+              </div>
+            )
           })}
 
           {meteorTiles.map(({ dragId }) => {
@@ -630,29 +768,36 @@ export default function InventoryPanel({
               icon,
               iconSrc,
               label,
-              // Omitted when equipPopoverEnabled — that mode's whole point is
-              // "press is the only trigger now," so the plain hover/long-press
-              // peek this prop drives is dropped for these tiles specifically
-              // (native `title` still works as a bare-bones desktop fallback,
-              // same as any other tile with no tooltip).
-              tooltip: equipPopoverEnabled ? undefined : buildGearTooltip(item, template),
+              // Omitted when equipPopoverEnabled/enableBankDeposit — both
+              // modes' whole point is "press is the only trigger now," so the
+              // plain hover/long-press peek this prop drives is dropped for
+              // these tiles specifically (native `title` still works as a
+              // bare-bones desktop fallback, same as any other tile with no
+              // tooltip).
+              tooltip: equipPopoverEnabled || enableBankDeposit ? undefined : buildGearTooltip(item, template),
               selected: selectedSlot?.kind === 'item' && selectedSlot.id === item.id,
             }
 
-            if (onTileDrop) {
-              return (
-                <DraggableInventorySlot
-                  key={item.id}
-                  {...commonProps}
-                  dragEnabled
-                  dragPayload={{ id: item.id, icon, iconSrc, qualityColor }}
-                  onDrop={handleTileDrop}
-                  onClick={() => toggleSlot({ kind: 'item', id: item.id })}
-                />
-              )
-            }
-
-            const slot = <InventorySlot key={item.id} {...commonProps} onClick={() => toggleSlot({ kind: 'item', id: item.id })} />
+            // Merged (2026-08-03, was two separate early-return branches) so
+            // the popover wrappers below can apply regardless of whether this
+            // instance also has onTileDrop wired up (WarehousePanel's
+            // Inventory grid now wants both: drag-to-deposit stays working,
+            // click-to-open-the-Deposit-popover is additive) — no existing
+            // caller combined onTileDrop with enableSelling/equipPopoverEnabled,
+            // so this doesn't change behavior for Forge/Marketplace's own
+            // onTileDrop-only embeddings.
+            const slot = onTileDrop ? (
+              <DraggableInventorySlot
+                key={item.id}
+                {...commonProps}
+                dragEnabled
+                dragPayload={{ id: item.id, icon, iconSrc, qualityColor }}
+                onDrop={handleTileDrop}
+                onClick={() => toggleSlot({ kind: 'item', id: item.id })}
+              />
+            ) : (
+              <InventorySlot key={item.id} {...commonProps} onClick={() => toggleSlot({ kind: 'item', id: item.id })} />
+            )
 
             // GearEquipPopover (Inventory grid only, see equipPopoverEnabled's
             // own doc comment) — wraps the tile so its click also captures the
@@ -670,6 +815,22 @@ export default function InventoryPanel({
                   key={item.id}
                   data-gear-popover-anchor
                   onClick={(event) => setPopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
+                >
+                  {slot}
+                </div>
+              )
+            }
+
+            // TooltipActionPopover (Deposit, Bank-tab Inventory grid only) —
+            // same anchor-capturing wrapper pattern as equipPopoverEnabled
+            // above, its own data attribute so the two modes' outside-click
+            // listeners never mistake one for the other.
+            if (enableBankDeposit) {
+              return (
+                <div
+                  key={item.id}
+                  data-tooltip-action-anchor
+                  onClick={(event) => setBankPopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
                 >
                   {slot}
                 </div>
@@ -706,7 +867,7 @@ export default function InventoryPanel({
         </div>
       </div>
 
-      {selectedStoneTier !== undefined && (
+      {selectedStoneTier !== undefined && !enableBankDeposit && (
         <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
           <div className="flex items-center gap-3">
             <div
@@ -845,7 +1006,7 @@ export default function InventoryPanel({
         </div>
       )}
 
-      {selectedItem && !equipPopoverEnabled && (
+      {selectedItem && !equipPopoverEnabled && !enableBankDeposit && (
         <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
           <div className="flex items-center gap-3">
             <div
@@ -942,6 +1103,36 @@ export default function InventoryPanel({
             }
           }}
           onClose={closeGearPopover}
+        />
+      )}
+
+      {enableBankDeposit && selectedItem && bankPopoverAnchorRect && (
+        <TooltipActionPopover
+          anchorRect={bankPopoverAnchorRect}
+          tooltip={buildGearTooltip(selectedItem, selectedTemplate)}
+          actions={[
+            {
+              label: bankDepositBusy ? 'Depositing…' : 'Deposit',
+              onClick: () => void handleBankDepositItem(selectedItem.id),
+              disabled: bankDepositBusy,
+            },
+          ]}
+          onClose={closeBankPopover}
+        />
+      )}
+
+      {enableBankDeposit && selectedStoneTier !== undefined && bankPopoverAnchorRect && (
+        <TooltipActionPopover
+          anchorRect={bankPopoverAnchorRect}
+          tooltip={buildStoneTooltip(selectedStoneTier)}
+          actions={[
+            {
+              label: bankDepositBusy ? 'Depositing…' : 'Deposit',
+              onClick: () => void handleBankDepositStone(selectedStoneTier),
+              disabled: bankDepositBusy,
+            },
+          ]}
+          onClose={closeBankPopover}
         />
       )}
     </div>
