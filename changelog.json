@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.54.5",
+    "date": "2026-08-03",
+    "changes": [
+      "Fixed tooltip icon placement — it now sits in its own column beside the full tooltip text instead of just next to the title"
+    ]
+  },
+  {
     "version": "1.54.4",
     "date": "2026-08-03",
     "changes": [
