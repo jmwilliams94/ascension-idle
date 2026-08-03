@@ -7,6 +7,36 @@ import { useCompositionStore, type CompositionStones } from './useCompositionSto
 import { DEFAULT_GEAR_COMPOSITION_POINTS, type GearCompositionPoints, type GearSlotType } from './forgeCosts'
 import { useInventoryStore, occupiedSlotCount, INVENTORY_SLOT_CAP, type ItemInstance } from './useInventoryStore'
 
+type BankCurrencyType = 'meteor' | 'dragonball'
+
+interface BankItemResult {
+  ok: boolean
+  error?: 'invalid_currency' | 'invalid_direction' | 'invalid_amount' | 'not_found' | 'not_owner' | 'not_enough_balance'
+  count?: number
+  bank_count?: number
+}
+
+interface BankStoneItemResult {
+  ok: boolean
+  error?: 'invalid_tier' | 'invalid_direction' | 'invalid_amount' | 'not_found' | 'not_owner' | 'not_enough_stones'
+  stones?: CompositionStones
+  stones_banked?: CompositionStones
+}
+
+interface DepositItemToStorageResult {
+  ok: boolean
+  error?: 'item_not_found' | 'not_owner' | 'already_in_bank'
+  item_id?: string
+}
+
+interface WithdrawItemFromStorageResult {
+  ok: boolean
+  // 'inventory_full' is a client-only synthetic error, same convention as
+  // withdrawItem's own below.
+  error?: 'item_not_found' | 'not_owner' | 'not_in_bank' | 'inventory_full'
+  item_id?: string
+}
+
 // Warehouse: per-character storage for gear tokens and Composition stones (its
 // own 40-slot cap, exactly mirroring Inventory's INVENTORY_SLOT_CAP), plus
 // account-wide currency (gold/meteors/dragonballs) shared across every character
@@ -118,6 +148,20 @@ interface WarehouseState {
   depositCurrency: (characterId: string, currency: Currency, amount: number) => Promise<TransferCurrencyResult>
   withdrawCurrency: (characterId: string, currency: Currency, amount: number) => Promise<TransferCurrencyResult>
   clearFullMessage: () => void
+  // Bank Storage (confirmed with the user, 2026-08-03) — a genuinely
+  // additive, parallel set of actions alongside everything above, not a
+  // replacement for it (except for deposit_item/withdraw_item, which this
+  // does replace for gear — see the migration's own comment for why).
+  // Depositing/withdrawing a gear item just flips item_instances.location,
+  // preserving quality/level/composition/sockets exactly, no token, no
+  // points. Stones/Meteors/DragonBalls get a second "bank it as a physical
+  // unit" option alongside their existing points/currency path.
+  depositItemToStorage: (itemId: string) => Promise<DepositItemToStorageResult>
+  withdrawItemFromStorage: (itemId: string) => Promise<WithdrawItemFromStorageResult>
+  depositCurrencyItem: (characterId: string, currencyType: BankCurrencyType, amount: number) => Promise<BankItemResult>
+  withdrawCurrencyItem: (characterId: string, currencyType: BankCurrencyType, amount: number) => Promise<BankItemResult>
+  depositStoneItem: (characterId: string, tier: number, amount: number) => Promise<BankStoneItemResult>
+  withdrawStoneItem: (characterId: string, tier: number, amount: number) => Promise<BankStoneItemResult>
 }
 
 export const useWarehouseStore = create<WarehouseState>((set, get) => ({
@@ -353,7 +397,173 @@ export const useWarehouseStore = create<WarehouseState>((set, get) => ({
   },
 
   clearFullMessage: () => set({ fullMessage: null }),
+
+  depositItemToStorage: async (itemId) => {
+    if (bankOccupiedSlotCount() >= WAREHOUSE_SLOT_CAP) {
+      set({ fullMessage: 'Storage is full.' })
+      return { ok: false }
+    }
+
+    set({ busy: true, fullMessage: null })
+    const { data, error } = await supabase.rpc('deposit_item_to_storage', { item_id: itemId })
+    set({ busy: false })
+
+    if (error) {
+      console.error('Deposit item to storage call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as DepositItemToStorageResult
+    if (result.ok) {
+      useInventoryStore.getState().setItemLocation(itemId, 'bank')
+    }
+    return result
+  },
+
+  withdrawItemFromStorage: async (itemId) => {
+    if (occupiedSlotCount(useInventoryStore.getState().items) >= INVENTORY_SLOT_CAP) {
+      return { ok: false, error: 'inventory_full' }
+    }
+
+    set({ busy: true })
+    const { data, error } = await supabase.rpc('withdraw_item_from_storage', { item_id: itemId })
+    set({ busy: false })
+
+    if (error) {
+      console.error('Withdraw item from storage call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as WithdrawItemFromStorageResult
+    if (result.ok) {
+      useInventoryStore.getState().setItemLocation(itemId, 'inventory')
+    }
+    return result
+  },
+
+  depositCurrencyItem: async (characterId, currencyType, amount) => {
+    if (bankOccupiedSlotCount() + amount > WAREHOUSE_SLOT_CAP) {
+      set({ fullMessage: 'Storage is full.' })
+      return { ok: false }
+    }
+
+    set({ busy: true, fullMessage: null })
+    const { data, error } = await supabase.rpc('bank_currency_item', {
+      character_id: characterId,
+      currency_type: currencyType,
+      direction: 'deposit',
+      amount,
+    })
+    set({ busy: false })
+
+    if (error) {
+      console.error('Deposit currency item call failed', error)
+      return { ok: false }
+    }
+
+    return applyBankCurrencyItemResult(currencyType, data as BankItemResult)
+  },
+
+  withdrawCurrencyItem: async (characterId, currencyType, amount) => {
+    set({ busy: true })
+    const { data, error } = await supabase.rpc('bank_currency_item', {
+      character_id: characterId,
+      currency_type: currencyType,
+      direction: 'withdraw',
+      amount,
+    })
+    set({ busy: false })
+
+    if (error) {
+      console.error('Withdraw currency item call failed', error)
+      return { ok: false }
+    }
+
+    return applyBankCurrencyItemResult(currencyType, data as BankItemResult)
+  },
+
+  depositStoneItem: async (characterId, tier, amount) => {
+    if (bankOccupiedSlotCount() + amount > WAREHOUSE_SLOT_CAP) {
+      set({ fullMessage: 'Storage is full.' })
+      return { ok: false }
+    }
+
+    set({ busy: true, fullMessage: null })
+    const { data, error } = await supabase.rpc('bank_stone_item', {
+      character_id: characterId,
+      tier,
+      direction: 'deposit',
+      amount,
+    })
+    set({ busy: false })
+
+    if (error) {
+      console.error('Deposit stone item call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as BankStoneItemResult
+    if (result.ok && result.stones && result.stones_banked) {
+      useCompositionStore.getState().setStones(result.stones)
+      useCompositionStore.getState().setStonesBanked(result.stones_banked)
+    }
+    return result
+  },
+
+  withdrawStoneItem: async (characterId, tier, amount) => {
+    set({ busy: true })
+    const { data, error } = await supabase.rpc('bank_stone_item', {
+      character_id: characterId,
+      tier,
+      direction: 'withdraw',
+      amount,
+    })
+    set({ busy: false })
+
+    if (error) {
+      console.error('Withdraw stone item call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as BankStoneItemResult
+    if (result.ok && result.stones && result.stones_banked) {
+      useCompositionStore.getState().setStones(result.stones)
+      useCompositionStore.getState().setStonesBanked(result.stones_banked)
+    }
+    return result
+  },
 }))
+
+// Combined Storage occupancy — the old warehouse_items tokens (still
+// supported, currently always empty going forward — see the migration's own
+// comment) plus the new Bank-Storage gear/stone/currency tiles, all against
+// the same WAREHOUSE_SLOT_CAP. Mirrors useInventoryStore's own
+// occupiedSlotCount shape, just for the Bank side. Exported so WarehouseGrid
+// can compute its own empty-slot count the same way InventoryPanel does.
+export function bankOccupiedSlotCount(): number {
+  const oldTokenCount = useWarehouseStore.getState().items.length
+  const bankedGearCount = useInventoryStore.getState().items.filter((item) => item.location === 'bank').length
+  const totalBankedStoneCount = Object.values(useCompositionStore.getState().stonesBanked).reduce((sum, count) => sum + count, 0)
+  const currency = useCurrencyStore.getState()
+  const bankedCurrencyCount = currency.meteorBankCount + currency.dragonballBankCount
+  return oldTokenCount + bankedGearCount + totalBankedStoneCount + bankedCurrencyCount
+}
+
+function applyBankCurrencyItemResult(currencyType: BankCurrencyType, result: BankItemResult): BankItemResult {
+  if (!result.ok || typeof result.count !== 'number' || typeof result.bank_count !== 'number') {
+    return result
+  }
+
+  if (currencyType === 'meteor') {
+    useCurrencyStore.getState().setMeteors(result.count)
+    useCurrencyStore.getState().setMeteorBankCount(result.bank_count)
+  } else {
+    useCurrencyStore.getState().setDragonballs(result.count)
+    useCurrencyStore.getState().setDragonballBankCount(result.bank_count)
+  }
+
+  return result
+}
 
 function applyCurrencyResult(currency: Currency, result: TransferCurrencyResult): TransferCurrencyResult {
   if (!result.ok || typeof result.character_balance !== 'number' || typeof result.bank_balance !== 'number') {

@@ -30,6 +30,7 @@ function previewInstance(template: ItemTemplate): ItemInstance {
     sockets: [],
     enchant: null,
     created_at: '',
+    location: 'inventory',
   }
 }
 

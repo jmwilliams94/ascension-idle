@@ -100,19 +100,24 @@ interface InventoryPanelProps {
   // click already means something else there (drag source, sell selection,
   // listing source) that this popover isn't designed around.
   equipPopoverEnabled?: boolean
-  // Bank-tab-only (confirmed with the user, 2026-08-03) — mirrors
-  // equipPopoverEnabled's own click-opens-actionable-tooltip pattern, but for
-  // depositing into Storage instead of equipping. Clicking a gear or stone
-  // tile opens a TooltipActionPopover with a single "Deposit" button (gear:
-  // deposit_item's existing "as item token" path; stone: deposits one of that
-  // tier) rather than the plain hover tooltip/old detail card. Also adds a
-  // "Deposit All" button to the header, looping every eligible gear item +
-  // every owned stone tier. Only WarehousePanel's Inventory-grid embedding
-  // passes this — it coexists with that same instance's onTileDrop (drag
-  // still works for depositing too, this is just a click-based alternative).
-  // Meteor/DragonBall/Scroll tiles are deliberately untouched — those already
-  // have their own dedicated Deposit control in BankedCard's CurrencyRow, and
-  // Bundle/Unbundle still needs to work on those tiles here.
+  // Bank-tab-only (confirmed with the user, 2026-08-03, revised same day after
+  // feedback — see the Bank Storage note on ItemInstance in
+  // useInventoryStore.ts). Mirrors equipPopoverEnabled's own
+  // click-opens-actionable-tooltip pattern: clicking a gear, stone, Meteor, or
+  // DragonBall tile opens a TooltipActionPopover showing that tile's own
+  // tooltip plus "Deposit" (this one) and "Deposit All" (every eligible one
+  // of this same kind) buttons, right on the tile — not a separate header
+  // control. Gear deposits via deposit_item_to_storage (preserves the real
+  // item, no token, no stacking, no points — fixes the old deposit_item
+  // behavior, which is no longer called from here). Stone/Meteor/DragonBall
+  // deposit via bank_stone_item/bank_currency_item — a second, parallel
+  // "store it as a physical unit" option alongside their existing
+  // points/currency path (BankedCard's StonesRow/CurrencyRow, untouched).
+  // Only WarehousePanel's Inventory-grid embedding passes this — it coexists
+  // with that same instance's onTileDrop (drag still deposits gear/stones the
+  // same new way too — see WarehousePanel's handleTileDrop). Potions and
+  // Scrolls are out of scope for this pass (confirmed with the user) and stay
+  // exactly as they were — Scrolls keep their existing Bundle/Unbundle card.
   enableBankDeposit?: boolean
 }
 
@@ -155,8 +160,9 @@ export default function InventoryPanel({
   const isListed = (itemId: string) => myListings.some((listing) => listing.status === 'active' && listing.item_id === itemId)
   const mailEntries = useMailStore((state) => state.entries)
   const hasUnclaimedMail = (itemId: string) => mailEntries.some((entry) => entry.item_id === itemId)
-  const depositItem = useWarehouseStore((state) => state.depositItem)
-  const depositStone = useWarehouseStore((state) => state.depositStone)
+  const depositItemToStorage = useWarehouseStore((state) => state.depositItemToStorage)
+  const depositStoneItem = useWarehouseStore((state) => state.depositStoneItem)
+  const depositCurrencyItem = useWarehouseStore((state) => state.depositCurrencyItem)
 
   const [selectedSlot, setSelectedSlot] = useState<SelectedSlot>(null)
   // GearEquipPopover-only (equipPopoverEnabled) — the clicked tile's own
@@ -188,8 +194,13 @@ export default function InventoryPanel({
   // Un-equipping brings it straight back since this filter just stops matching.
   // Same hide-via-filter treatment (2026-08-02) for an actively-listed
   // Marketplace item and an item sitting in unclaimed Mail — see
-  // useMarketplaceStore.isListed/useMailStore.hasUnclaimedMail.
-  const visibleItems = items.filter((item) => !isEquipped(item.id) && !isListed(item.id) && !hasUnclaimedMail(item.id))
+  // useMarketplaceStore.isListed/useMailStore.hasUnclaimedMail. Same again
+  // (2026-08-03) for a Bank-Storage item (location === 'bank') — shows only
+  // in WarehouseGrid's Storage grid once banked, same as an equipped item
+  // shows only on the paper doll.
+  const visibleItems = items.filter(
+    (item) => item.location !== 'bank' && !isEquipped(item.id) && !isListed(item.id) && !hasUnclaimedMail(item.id),
+  )
 
   // Stones don't stack — each one is its own tile, not combined into one tile with
   // a count badge. Since there's no acquisition-time cap check for stones yet (no
@@ -308,13 +319,17 @@ export default function InventoryPanel({
     setBankPopoverAnchorRect(null)
   }
 
+  // Every enableBankDeposit handler below follows the same shape: deposit,
+  // clear the popover on success, surface an error and leave it open on
+  // failure. "All" variants are sequential, not Promise.all (deliberately
+  // unlike sellSelected below) — deposit_item_to_storage/bank_stone_item/
+  // bank_currency_item's client-side Storage-full pre-check reads Storage's
+  // own occupied-slot count live; firing every deposit at once would read a
+  // stale snapshot for each concurrent call.
   const handleBankDepositItem = async (itemId: string) => {
-    if (!characterId) {
-      return
-    }
     setBankDepositError(null)
     setBankDepositBusy(true)
-    const result = await depositItem(characterId, itemId)
+    const result = await depositItemToStorage(itemId)
     setBankDepositBusy(false)
 
     if (!result.ok) {
@@ -325,13 +340,36 @@ export default function InventoryPanel({
     closeBankPopover()
   }
 
+  const handleBankDepositAllGear = async () => {
+    setBankDepositError(null)
+    setBankDepositBusy(true)
+    let failures = 0
+
+    for (const item of visibleItems) {
+      if (reservedItemIds.includes(item.id)) {
+        continue
+      }
+      const result = await depositItemToStorage(item.id)
+      if (!result.ok) {
+        failures += 1
+      }
+    }
+
+    setBankDepositBusy(false)
+    if (failures > 0) {
+      setBankDepositError(`Couldn't deposit ${failures} item${failures === 1 ? '' : 's'}.`)
+    } else {
+      closeBankPopover()
+    }
+  }
+
   const handleBankDepositStone = async (tier: number) => {
     if (!characterId) {
       return
     }
     setBankDepositError(null)
     setBankDepositBusy(true)
-    const result = await depositStone(characterId, tier, 1)
+    const result = await depositStoneItem(characterId, tier, 1)
     setBankDepositBusy(false)
 
     if (!result.ok) {
@@ -342,46 +380,66 @@ export default function InventoryPanel({
     closeBankPopover()
   }
 
-  // Sequential, not Promise.all (deliberately unlike sellSelected below) —
-  // deposit_item's client-side Storage-full pre-check reads Storage's own
-  // occupied-slot count, which only grows when a genuinely new template gets
-  // its first token; firing every deposit at once would read a stale
-  // snapshot for each concurrent call and could under-count how many new
-  // slots the batch actually needs. Awaiting one at a time keeps each
-  // pre-check accurate against the real, just-updated state.
-  const handleDepositAll = async () => {
+  // "Deposit All" from a stone tile only covers stones of that SAME tier —
+  // a deliberate, predictable scoping (matches "every eligible one of this
+  // same kind" from the tile that was actually clicked), not every tier at once.
+  const handleBankDepositAllStone = async (tier: number) => {
+    if (!characterId) {
+      return
+    }
+    const owned = stones[String(tier)] ?? 0
+    if (owned <= 0) {
+      return
+    }
+    setBankDepositError(null)
+    setBankDepositBusy(true)
+    const result = await depositStoneItem(characterId, tier, owned)
+    setBankDepositBusy(false)
+
+    if (!result.ok) {
+      setBankDepositError("Couldn't deposit those stones.")
+      return
+    }
+
+    closeBankPopover()
+  }
+
+  const handleBankDepositCurrency = async (currencyType: 'meteor' | 'dragonball') => {
     if (!characterId) {
       return
     }
     setBankDepositError(null)
     setBankDepositBusy(true)
-    let failures = 0
-
-    for (const item of visibleItems) {
-      if (reservedItemIds.includes(item.id)) {
-        continue
-      }
-      const result = await depositItem(characterId, item.id)
-      if (!result.ok) {
-        failures += 1
-      }
-    }
-
-    for (const tier of COMPOSITION_STONE_TIERS) {
-      const owned = stones[String(tier)] ?? 0
-      if (owned <= 0) {
-        continue
-      }
-      const result = await depositStone(characterId, tier, owned)
-      if (!result.ok) {
-        failures += 1
-      }
-    }
-
+    const result = await depositCurrencyItem(characterId, currencyType, 1)
     setBankDepositBusy(false)
-    if (failures > 0) {
-      setBankDepositError(`Couldn't deposit ${failures} item${failures === 1 ? '' : 's'}.`)
+
+    if (!result.ok) {
+      setBankDepositError(`Couldn't deposit that ${currencyType === 'meteor' ? 'Meteor' : 'DragonBall'}.`)
+      return
     }
+
+    closeBankPopover()
+  }
+
+  const handleBankDepositAllCurrency = async (currencyType: 'meteor' | 'dragonball') => {
+    if (!characterId) {
+      return
+    }
+    const owned = currencyType === 'meteor' ? meteors : dragonballs
+    if (owned <= 0) {
+      return
+    }
+    setBankDepositError(null)
+    setBankDepositBusy(true)
+    const result = await depositCurrencyItem(characterId, currencyType, owned)
+    setBankDepositBusy(false)
+
+    if (!result.ok) {
+      setBankDepositError(`Couldn't deposit your ${currencyType === 'meteor' ? 'Meteors' : 'DragonBalls'}.`)
+      return
+    }
+
+    closeBankPopover()
   }
 
   const handleTileDrop = (overTarget: string | null, id: string) => {
@@ -509,21 +567,8 @@ export default function InventoryPanel({
             </div>
           )}
 
-          {enableBankDeposit && (
-            <div className="flex items-center gap-2 text-xs">
-              {bankDepositError && <span className="text-amber-400">{bankDepositError}</span>}
-              <button
-                type="button"
-                disabled={
-                  bankDepositBusy ||
-                  (visibleItems.length === 0 && COMPOSITION_STONE_TIERS.every((tier) => (stones[String(tier)] ?? 0) === 0))
-                }
-                onClick={() => void handleDepositAll()}
-                className="rounded border border-sky-500 bg-sky-500/10 px-2 py-1 font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {bankDepositBusy ? 'Depositing…' : 'Deposit All'}
-              </button>
-            </div>
+          {enableBankDeposit && bankDepositError && (
+            <span className="text-xs text-amber-400">{bankDepositError}</span>
           )}
         </div>
 
@@ -575,7 +620,7 @@ export default function InventoryPanel({
               icon: '🔷',
               qualityColor: MATERIAL_COLOR,
               label: `+${tier} Stone — ${compositionPointValue(tier)} pts`,
-              tooltip: buildStoneTooltip(tier),
+              tooltip: enableBankDeposit ? undefined : buildStoneTooltip(tier),
               selected: selectedSlot?.kind === 'stone' && selectedSlot.dragId === dragId,
             }
 
@@ -619,25 +664,35 @@ export default function InventoryPanel({
               iconSrc: METEOR_ICON_SRC,
               qualityColor: MATERIAL_COLOR,
               label: 'Meteor',
-              tooltip: buildMeteorTooltip(),
+              tooltip: enableBankDeposit ? undefined : buildMeteorTooltip(),
               selected: selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId,
             }
 
-            if (onTileDrop) {
-              return (
-                <DraggableInventorySlot
-                  key={dragId}
-                  {...commonProps}
-                  dragEnabled
-                  dragPayload={{ id: dragId, icon: '☄️', iconSrc: METEOR_ICON_SRC, qualityColor: MATERIAL_COLOR }}
-                  onDrop={handleTileDrop}
-                  onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'meteor' })}
-                />
-              )
+            const meteorSlot = onTileDrop ? (
+              <DraggableInventorySlot
+                key={dragId}
+                {...commonProps}
+                dragEnabled
+                dragPayload={{ id: dragId, icon: '☄️', iconSrc: METEOR_ICON_SRC, qualityColor: MATERIAL_COLOR }}
+                onDrop={handleTileDrop}
+                onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'meteor' })}
+              />
+            ) : (
+              <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'meteor' })} />
+            )
+
+            if (!enableBankDeposit) {
+              return meteorSlot
             }
 
             return (
-              <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'meteor' })} />
+              <div
+                key={dragId}
+                data-tooltip-action-anchor
+                onClick={(event) => setBankPopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
+              >
+                {meteorSlot}
+              </div>
             )
           })}
 
@@ -653,29 +708,39 @@ export default function InventoryPanel({
               iconSrc: DRAGONBALL_ICON_SRC,
               qualityColor: DRAGONBALL_COLOR,
               label: 'DragonBall',
-              tooltip: buildDragonballTooltip(),
+              tooltip: enableBankDeposit ? undefined : buildDragonballTooltip(),
               selected: selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId,
             }
 
-            if (onTileDrop) {
-              return (
-                <DraggableInventorySlot
-                  key={dragId}
-                  {...commonProps}
-                  dragEnabled
-                  dragPayload={{ id: dragId, icon: '🔮', iconSrc: DRAGONBALL_ICON_SRC, qualityColor: DRAGONBALL_COLOR }}
-                  onDrop={handleTileDrop}
-                  onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'dragonball' })}
-                />
-              )
-            }
-
-            return (
+            const dragonballSlot = onTileDrop ? (
+              <DraggableInventorySlot
+                key={dragId}
+                {...commonProps}
+                dragEnabled
+                dragPayload={{ id: dragId, icon: '🔮', iconSrc: DRAGONBALL_ICON_SRC, qualityColor: DRAGONBALL_COLOR }}
+                onDrop={handleTileDrop}
+                onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'dragonball' })}
+              />
+            ) : (
               <InventorySlot
                 key={dragId}
                 {...commonProps}
                 onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'dragonball' })}
               />
+            )
+
+            if (!enableBankDeposit) {
+              return dragonballSlot
+            }
+
+            return (
+              <div
+                key={dragId}
+                data-tooltip-action-anchor
+                onClick={(event) => setBankPopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
+              >
+                {dragonballSlot}
+              </div>
             )
           })}
 
@@ -886,7 +951,7 @@ export default function InventoryPanel({
         </div>
       )}
 
-      {selectedCurrencyType && (
+      {selectedCurrencyType && !enableBankDeposit && (
         <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
           <div className="flex items-center gap-3">
             <div
@@ -1116,6 +1181,11 @@ export default function InventoryPanel({
               onClick: () => void handleBankDepositItem(selectedItem.id),
               disabled: bankDepositBusy,
             },
+            {
+              label: 'Deposit All',
+              onClick: () => void handleBankDepositAllGear(),
+              disabled: bankDepositBusy,
+            },
           ]}
           onClose={closeBankPopover}
         />
@@ -1129,6 +1199,31 @@ export default function InventoryPanel({
             {
               label: bankDepositBusy ? 'Depositing…' : 'Deposit',
               onClick: () => void handleBankDepositStone(selectedStoneTier),
+              disabled: bankDepositBusy,
+            },
+            {
+              label: 'Deposit All',
+              onClick: () => void handleBankDepositAllStone(selectedStoneTier),
+              disabled: bankDepositBusy,
+            },
+          ]}
+          onClose={closeBankPopover}
+        />
+      )}
+
+      {enableBankDeposit && selectedCurrencyType && bankPopoverAnchorRect && (
+        <TooltipActionPopover
+          anchorRect={bankPopoverAnchorRect}
+          tooltip={selectedCurrencyType === 'meteor' ? buildMeteorTooltip() : buildDragonballTooltip()}
+          actions={[
+            {
+              label: bankDepositBusy ? 'Depositing…' : 'Deposit',
+              onClick: () => void handleBankDepositCurrency(selectedCurrencyType),
+              disabled: bankDepositBusy,
+            },
+            {
+              label: 'Deposit All',
+              onClick: () => void handleBankDepositAllCurrency(selectedCurrencyType),
               disabled: bankDepositBusy,
             },
           ]}

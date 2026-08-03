@@ -33,6 +33,14 @@ export interface ItemInstance {
   sockets: (null | Record<string, unknown>)[]
   enchant: unknown | null
   created_at: string
+  // Bank Storage (confirmed with the user, 2026-08-03, replaces the earlier
+  // fungible warehouse_items token model for gear) — a genuinely additive
+  // flag, not a new table: depositing/withdrawing an item into/out of Bank
+  // Storage just flips this, the row (quality/level/composition/sockets)
+  // never changes. 'bank' items are hidden from every Inventory-grid
+  // embedding (see occupiedSlotCount below and InventoryPanel's
+  // visibleItems), same as an equipped item is.
+  location: 'inventory' | 'bank'
 }
 
 // Mirrors supabase/functions/resolve-combat's own DROP_CHANCE (confirmed
@@ -97,7 +105,9 @@ export const INVENTORY_SLOT_CAP = 40
 // than reimplementing it.
 export function occupiedSlotCount(items: ItemInstance[]): number {
   const isEquipped = useEquipmentStore.getState().isEquipped
-  const gearCount = items.filter((item) => !isEquipped(item.id)).length
+  // Banked gear (location === 'bank') frees its Inventory slot exactly like
+  // an equipped item does — see the Bank Storage note on ItemInstance above.
+  const gearCount = items.filter((item) => !isEquipped(item.id) && item.location !== 'bank').length
   const totalStoneCount = Object.values(useCompositionStore.getState().stones).reduce((sum, count) => sum + count, 0)
   // A potion stack occupies a slot exactly like a stone tier does — see
   // usePotionStore/potionTypes.ts.
@@ -156,6 +166,12 @@ interface InventoryState {
   // Appends an item the server already created (e.g. withdraw_item's fresh
   // Normal/level-1 instance — see useWarehouseStore) without a DB write of its own.
   addItem: (item: ItemInstance) => void
+  // Flips an item's location locally after a successful
+  // deposit_item_to_storage/withdraw_item_from_storage call (see
+  // useWarehouseStore) — the RPC already wrote the real value server-side,
+  // this just keeps the client's copy in sync without a full refetch, same
+  // spirit as patchItem above.
+  setItemLocation: (itemId: string, location: 'inventory' | 'bank') => void
   // Sells a gear item for gold from the Shop tab (see sell_item — item_instances
   // has no client-side delete grant, so this has to go through a SECURITY
   // DEFINER function even though gold itself is otherwise client-authoritative).
@@ -297,6 +313,10 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   // both paths call this same action, so it has to handle either case.
   addItem: (item) => {
     set((state) => (state.items.some((existing) => existing.id === item.id) ? state : { items: [...state.items, item] }))
+  },
+
+  setItemLocation: (itemId, location) => {
+    set((state) => ({ items: state.items.map((item) => (item.id === itemId ? { ...item, location } : item)) }))
   },
 
   sellItem: async (itemId) => {

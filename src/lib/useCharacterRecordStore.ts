@@ -41,7 +41,10 @@ interface CharacterRow {
   dragonball_count: number
   meteor_scroll_count: number
   dragonball_scroll_count: number
+  meteor_bank_count: number
+  dragonball_bank_count: number
   composition_stones: CompositionStones
+  composition_stones_banked: CompositionStones
   warehouse_points: number
   gear_composition_points: GearCompositionPoints
   selected_monster_id: string | null
@@ -81,7 +84,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     const { data, error } = await supabase
       .from('characters')
       .select(
-        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, meteor_count, dragonball_count, meteor_scroll_count, dragonball_scroll_count, composition_stones, warehouse_points, gear_composition_points, selected_monster_id, last_active_at, lucky_free_ticket_claimed_at',
+        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, meteor_count, dragonball_count, meteor_scroll_count, dragonball_scroll_count, meteor_bank_count, dragonball_bank_count, composition_stones, composition_stones_banked, warehouse_points, gear_composition_points, selected_monster_id, last_active_at, lucky_free_ticket_claimed_at',
       )
       .eq('id', characterId)
       .maybeSingle<CharacterRow>()
@@ -114,8 +117,11 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
       dragonballs: data.dragonball_count,
       meteorScrolls: data.meteor_scroll_count,
       dragonballScrolls: data.dragonball_scroll_count,
+      meteorBankCount: data.meteor_bank_count,
+      dragonballBankCount: data.dragonball_bank_count,
     })
     useCompositionStore.getState().hydrate(data.composition_stones)
+    useCompositionStore.getState().hydrateBanked(data.composition_stones_banked)
     useWarehouseStore.getState().hydratePoints(data.warehouse_points)
     useWarehouseStore.getState().hydrateGearCompositionPoints(data.gear_composition_points)
     useLuckyStore.getState().hydrate(data.lucky_free_ticket_claimed_at)

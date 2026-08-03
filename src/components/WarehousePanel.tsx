@@ -486,43 +486,49 @@ function BankedCard({ characterId }: { characterId: string }) {
 
 export default function WarehousePanel({ characterId }: { characterId: string }) {
   const withdrawItem = useWarehouseStore((state) => state.withdrawItem)
-  const depositItem = useWarehouseStore((state) => state.depositItem)
   const depositItemAsComposition = useWarehouseStore((state) => state.depositItemAsComposition)
-  const depositStone = useWarehouseStore((state) => state.depositStone)
-  const depositCurrency = useWarehouseStore((state) => state.depositCurrency)
+  const depositItemToStorage = useWarehouseStore((state) => state.depositItemToStorage)
+  const depositStoneItem = useWarehouseStore((state) => state.depositStoneItem)
+  const depositCurrencyItem = useWarehouseStore((state) => state.depositCurrencyItem)
   const items = useWarehouseStore((state) => state.items)
 
   // Routes a dragged tile to whichever side it landed on, identified by that
-  // side's data-drop-zone key (see dragDrop.tsx) — "warehouse-storage" means a
-  // grid, stone, or Meteor/DragonBall tile was dragged in from Inventory to
-  // deposit (a currency tile doesn't become a warehouse_items token — it
-  // deposits 1 unit straight into the account Bank via the same
-  // depositCurrency the Banked card's own CurrencyRow uses, since that's
-  // where Meteors/DragonBalls actually live, not the Storage grid); "inventory"
-  // means a Warehouse tile was dragged out to withdraw it at the free Normal
-  // tier (a shortcut for the common case — the click-to-select detail card in
-  // WarehouseGrid still handles choosing a paid composition tier);
-  // "composition-pool" (stage 4) deposits a real gear item's composition tier
-  // into its slot_type's points pool instead, destroying the item outright —
-  // stone/currency/scroll synthetic ids aren't real item_instances rows and
-  // are silently ignored here (parseStoneDragId already excludes stones; the
-  // items.some check excludes everything else that isn't a real gear item).
+  // side's data-drop-zone key (see dragDrop.tsx). "warehouse-storage" means a
+  // gear/stone/Meteor/DragonBall tile was dragged in from Inventory to
+  // deposit — as of the Bank Storage redesign (2026-08-03, see the note on
+  // ItemInstance in useInventoryStore.ts), this always deposits it as a real,
+  // identity-preserving physical Storage tile (deposit_item_to_storage/
+  // bank_stone_item/bank_currency_item), never the old fungible token or the
+  // account-wide currency Bank — those still exist but are reached through
+  // their own separate UI (the old warehouse_items token path has no UI
+  // trigger left at all; the account Bank is BankedCard's CurrencyRow). Drag
+  // is just a shortcut for the same "Deposit" action InventoryPanel's own
+  // popover offers. "inventory" means an OLD token tile was dragged out to
+  // withdraw it at the free Normal tier (a shortcut for the common case — the
+  // click-to-select detail card in WarehouseGrid still handles choosing a
+  // paid composition tier); the new banked tiles aren't draggable yet, only
+  // click-to-withdraw via their own popover. "composition-pool" (stage 4)
+  // deposits a real gear item's composition tier into its slot_type's points
+  // pool instead, destroying the item outright — stone/currency/scroll
+  // synthetic ids aren't real item_instances rows and are silently ignored
+  // here (parseStoneDragId already excludes stones; the items.some check
+  // excludes everything else that isn't a real gear item).
   const handleTileDrop = (overTarget: string, id: string) => {
     if (overTarget === 'warehouse-storage') {
       const stoneTier = parseStoneDragId(id)
       if (stoneTier !== null) {
-        void depositStone(characterId, stoneTier, 1)
+        void depositStoneItem(characterId, stoneTier, 1)
         return
       }
       if (isMeteorDragId(id)) {
-        void depositCurrency(characterId, 'meteors', 1)
+        void depositCurrencyItem(characterId, 'meteor', 1)
         return
       }
       if (isDragonballDragId(id)) {
-        void depositCurrency(characterId, 'dragonballs', 1)
+        void depositCurrencyItem(characterId, 'dragonball', 1)
         return
       }
-      void depositItem(characterId, id)
+      void depositItemToStorage(id)
       return
     }
 
