@@ -470,10 +470,23 @@ function requiredExpForLevel(level: number): number {
 // longer read here) — mirrors src/game/stats/expCurve.ts's own
 // expRewardForLevel; see that file's comment for the full "why" and for why
 // this steps up at each promotion tier rather than using one flat rate
-// (confirmed with the user: "it should feel harder as you level up"). Both
-// tables must stay in sync with expCurve.ts.
+// (confirmed with the user: "it should feel harder as you level up"), and for
+// why this table was retuned a second time the same day (steeper tier-to-tier
+// jumps — "later levels should take longer"). Both tables must stay in sync
+// with expCurve.ts.
 const PROMOTION_TIER_ANCHORS = [1, 15, 40, 70, 100, 110, 120]
-const KILLS_PER_LEVEL_BY_TIER = [200, 320, 500, 800, 1250, 2000, 3200]
+const KILLS_PER_LEVEL_BY_TIER = [200, 350, 650, 1300, 2600, 5200, 10000]
+
+// Idle/offline EXP rate — confirmed with the user, 2026-08-05: live play
+// keeps the full expRewardForLevel/damageExpForHit rate above; the once-at-
+// login offline catch-up (mode === 'offline') earns EXP at half that rate,
+// so actually playing is meaningfully better than leaving the game running,
+// without making AFK catch-up pointless. Deliberately EXP-only, same as the
+// existing White/Green/Red/Black level-diff multiplier above — gold is
+// unaffected in either mode. Applied once to the whole window's expGained
+// total right before the level-up loop, not per-hit/per-kill, since it's
+// mathematically identical and cheaper.
+const IDLE_EXP_MULTIPLIER = 0.5
 
 function killsPerLevelForLevel(level: number): number {
   let tierIndex = 0
@@ -1010,6 +1023,14 @@ async function handleResolveCombat(req: Request): Promise<Response> {
         spawnMaxHp = hp
       }
     }
+  }
+
+  // Idle/offline EXP rate (see IDLE_EXP_MULTIPLIER above) — applied once to
+  // the whole window's total here, reassigning expGained in place so both the
+  // level-up loop below and the response's own gained.exp reflect the real,
+  // already-scaled amount rather than the pre-scaled live-equivalent.
+  if (mode === 'offline') {
+    expGained = Math.round(expGained * IDLE_EXP_MULTIPLIER)
   }
 
   // Level-up loop, capped at MAX_CHARACTER_LEVEL — mirrors

@@ -74,15 +74,24 @@ export function requiredExpForLevel(level: number): number {
 // mins"): kills-per-level instead steps up at each of this game's own
 // confirmed promotion tiers (1/15/40/70/100/110/120 — see CLAUDE.md's
 // Progression section), so the grind genuinely escalates at each promotion
-// rather than staying constant or exploding. PLACEHOLDER table, same
-// disclosed-not-final status as every other economy number in this combat
-// system — roughly 10 min/level at the very start up to ~2.5-3 hours/level in
-// the endgame, ~98 hours of active play for the full 1-130 run. Doesn't
-// account for the White/Green/Red/Black level-diff EXP multiplier
-// (expMultiplierForLevelDiff in combatResolver.ts) or the new damage-dealt
-// EXP below — both still apply on top of this exactly as before, unchanged.
+// rather than staying constant or exploding.
+//
+// Retuned again the same day (still 2026-08-05) — the first version of this
+// table (200/320/500/800/1250/2000/3200, ~1.5-1.6x per tier) was still "a
+// little fast" per the user, who specifically wanted later levels to *take
+// longer* (steeper tier-to-tier jumps), not just a uniform slowdown, and
+// early levels left close to where they already were. This version escalates
+// ~1.75-2x per tier instead: roughly 10 min/level at the very start, ~32
+// min/level by tier 3 (level 40+), up to ~8.3 hours/level in the endgame
+// (tier 7, level 120+) — ~215 hours of active kill-time for the full 1-130
+// run (before the idle-rate split and damage-dealt EXP below further adjust
+// the *effective* time). PLACEHOLDER table, same disclosed-not-final status
+// as every other economy number in this combat system. Doesn't account for
+// the White/Green/Red/Black level-diff EXP multiplier
+// (expMultiplierForLevelDiff in combatResolver.ts) or the damage-dealt EXP
+// below — both still apply on top of this exactly as before, unchanged.
 const PROMOTION_TIER_ANCHORS = [1, 15, 40, 70, 100, 110, 120]
-const KILLS_PER_LEVEL_BY_TIER = [200, 320, 500, 800, 1250, 2000, 3200]
+const KILLS_PER_LEVEL_BY_TIER = [200, 350, 650, 1300, 2600, 5200, 10000]
 
 function killsPerLevelForLevel(level: number): number {
   let tierIndex = 0

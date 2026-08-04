@@ -56,6 +56,12 @@ export interface CombatLogEntry {
 // tracked separately by useProgressionStore.
 const LOG_CAP = 40
 
+// Death timer (confirmed with the user, 2026-08-05 — "enemies don't feel
+// punishing enough") — see the CombatState.reviveAt field comment below for
+// the full mechanic. PLACEHOLDER duration, same disclosed-not-final status as
+// the rest of this combat system.
+const KNOCKOUT_LOCKOUT_MS = 10_000
+
 function appendLog(log: CombatLogEntry[], entry: Omit<CombatLogEntry, 'id' | 'timestamp'>): CombatLogEntry[] {
   const full: CombatLogEntry = {
     ...entry,
@@ -80,6 +86,16 @@ interface CombatState {
   // runTick lazily fills both in from derived.hp the first time it ticks.
   currentPlayerHp: number
   maxPlayerHp: number
+  // Death timer (confirmed with the user, 2026-08-05, replaces the earlier
+  // "instant full heal, fight stops" placeholder). Nonzero while the player
+  // is incapacitated after a knockout: the nowMs timestamp when they can act
+  // again. While incapacitated, runTick skips both the player's own attack
+  // and the monster's attack-back entirely — neither side acts for
+  // KNOCKOUT_LOCKOUT_MS. isFighting stays true and the monster's own
+  // currentHp/maxHp are left untouched throughout, so the fight genuinely
+  // resumes exactly where it was once the player revives (to full HP)
+  // rather than the monster respawning fresh. 0 means "not incapacitated."
+  reviveAt: number
   log: CombatLogEntry[]
   lastAttackAt: number
   lastMonsterAttackAt: number
@@ -123,6 +139,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
   isRareInstance: false,
   currentPlayerHp: 0,
   maxPlayerHp: 0,
+  reviveAt: 0,
   log: [],
   lastAttackAt: 0,
   lastMonsterAttackAt: 0,
@@ -141,6 +158,9 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       isRareInstance: isRare,
       lastAttackAt: 0,
       lastMonsterAttackAt: 0,
+      // Clears any stale death-timer lockout from before a manual Stop —
+      // starting a fresh fight should never inherit an old incapacitation.
+      reviveAt: 0,
       log: appendLog(state.log, {
         kind: 'engage',
         message: isRare ? `A rare ${type.displayName} appears!` : `You engage a ${type.displayName}.`,
@@ -166,6 +186,23 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     const state = get()
 
     if (!state.isFighting || !state.monsterTypeId) {
+      return
+    }
+
+    // Death timer (see the CombatState.reviveAt field comment) — while
+    // incapacitated, neither side acts at all this tick. Once the window
+    // elapses, revive to full HP and let the *next* tick resume normal
+    // combat (deliberately not falling through to attack in this same tick,
+    // so a revive always gets at least one tick's worth of genuine safety).
+    if (state.reviveAt > 0) {
+      if (nowMs < state.reviveAt) {
+        return
+      }
+      set((s) => ({
+        reviveAt: 0,
+        currentPlayerHp: s.maxPlayerHp,
+        log: appendLog(s.log, { kind: 'knockout', message: 'You revive and rejoin the fight!' }),
+      }))
       return
     }
 
@@ -218,13 +255,16 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         }))
 
         if (nextPlayerHp <= 0) {
-          // Knocked out — placeholder no-penalty recovery (stop fighting, full
-          // heal on return) rather than a designed death/respawn mechanic, which
-          // doesn't exist anywhere in this game yet. Revisit if/when that's designed.
+          // Knocked out — a death timer (see CombatState.reviveAt and
+          // KNOCKOUT_LOCKOUT_MS above), confirmed with the user 2026-08-05,
+          // replacing the earlier instant-full-heal-and-stop placeholder.
+          // Neither side can act until it elapses; the monster's own
+          // currentHp/maxHp are deliberately left untouched here (not
+          // reset/respawned), so the fight resumes exactly where it left off
+          // once the player revives.
           set((s) => ({
-            isFighting: false,
-            currentPlayerHp: maxPlayerHp,
-            log: appendLog(s.log, { kind: 'knockout', message: 'You were knocked out! Fully healed — fight stopped.' }),
+            reviveAt: nowMs + KNOCKOUT_LOCKOUT_MS,
+            log: appendLog(s.log, { kind: 'knockout', message: 'You were knocked out! Recovering for 10s...' }),
           }))
           return
         }

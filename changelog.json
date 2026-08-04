@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.60.1",
+    "date": "2026-08-05",
+    "changes": [
+      "Later levels now take noticeably longer than earlier ones — retuned the promotion-tier difficulty jumps to escalate more steeply",
+      "Offline/AFK EXP now earns at half the rate of live play — actually playing is meaningfully faster than leaving the game running",
+      "Getting knocked out no longer instantly heals and stops the fight — you're locked out of attacking for 10 seconds, then revive and the fight picks up where it left off"
+    ]
+  },
+  {
     "version": "1.60.0",
     "date": "2026-08-05",
     "changes": [
