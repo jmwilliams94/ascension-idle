@@ -197,6 +197,7 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Sapling Bow': `${import.meta.env.BASE_URL}item-icons/sapling-bow.png`,
   "Ranger's Bow": `${import.meta.env.BASE_URL}item-icons/rangers-bow.png`,
   'Lucky Bow': `${import.meta.env.BASE_URL}item-icons/lucky-bow.png`,
+  'Thornwood Bow': `${import.meta.env.BASE_URL}item-icons/thornwood-bow.png`,
 }
 
 export function getGearIconSrc(templateName: string | undefined): string | undefined {
