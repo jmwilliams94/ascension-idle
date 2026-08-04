@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.59.20",
+    "date": "2026-08-04",
+    "changes": [
+      "Bumped the Sapling Bow and Ranger's Bow icons to 320×320, matching the rest of the set",
+      "Widened item tooltips so the text column keeps its old width now that the icon is bigger, instead of getting squeezed"
+    ]
+  },
+  {
     "version": "1.59.19",
     "date": "2026-08-04",
     "changes": [

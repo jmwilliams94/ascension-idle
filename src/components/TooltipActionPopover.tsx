@@ -12,7 +12,7 @@ import type { ItemTooltipData } from '../game/items/itemTooltip'
 // click-based deposit path at all before this (drag-to-Storage was the only
 // way), unlike Bank Storage tiles, which already open a detail card
 // defaulting to a one-click free-tier Withdraw.
-const POPOVER_CARD_WIDTH = 208 // matches ItemTooltip's own w-52 (208px)
+const POPOVER_CARD_WIDTH = 256 // matches ItemTooltip's own w-64 (256px)
 const VIEWPORT_MARGIN = 8
 const FLIP_BELOW_THRESHOLD = 160
 

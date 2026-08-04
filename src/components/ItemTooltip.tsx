@@ -36,7 +36,7 @@ export default function ItemTooltip({ title, titleColor, icon, iconSrc, iconColo
   )
 
   return (
-    <div className="w-52 rounded-lg border border-slate-700 bg-slate-950/95 p-2.5 text-left shadow-xl shadow-black/50">
+    <div className="w-64 rounded-lg border border-slate-700 bg-slate-950/95 p-2.5 text-left shadow-xl shadow-black/50">
       {hasIcon ? (
         <div className="flex items-start gap-2">
           <div

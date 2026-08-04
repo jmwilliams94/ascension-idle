@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
-// Matches ItemTooltip's own w-52 (208px) — used only for horizontal clamping math
-// below, not for sizing the tooltip itself.
-const TOOLTIP_WIDTH = 208
+// Matches ItemTooltip's own w-64 (256px, widened 2026-08-04 alongside the
+// doubled tooltip icon to keep the text column's width unchanged) — used
+// only for horizontal clamping math below, not for sizing the tooltip itself.
+const TOOLTIP_WIDTH = 256
 const VIEWPORT_MARGIN = 8
 // Heuristic, not a real measurement (the tooltip's height varies with content and
 // measuring it would need an extra render pass) — if there's less than this much

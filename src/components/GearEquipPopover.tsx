@@ -19,10 +19,10 @@ import type { ItemTooltipData } from '../game/items/itemTooltip'
 // outside it, Escape, or clicking the tile again — reusing HoverTooltip's
 // mouseleave-based dismissal here would close it the instant the pointer
 // left the trigger, before a tap on Equip/Compare could ever land.
-const POPOVER_CARD_WIDTH = 208 // matches ItemTooltip's own w-52 (208px)
+const POPOVER_CARD_WIDTH = 256 // matches ItemTooltip's own w-64 (256px)
 const VIEWPORT_MARGIN = 8
 const FLIP_BELOW_THRESHOLD = 160
-// Below this viewport width, two 208px cards plus their gap won't fit
+// Below this viewport width, two 256px cards plus their gap won't fit
 // side by side — Compare stacks vertically instead (see the render below).
 const SIDE_BY_SIDE_MIN_VIEWPORT = 640
 
