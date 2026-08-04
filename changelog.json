@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.59.19",
+    "date": "2026-08-04",
+    "changes": [
+      "Bumped all 13 recent bow icons from 160×160 to 320×320 — more vibrant/detailed now that they're not being downscaled as hard",
+      "Item tooltip icons are now shown twice as large",
+      "Removed the temporary icon-resolution comparison test from Settings"
+    ]
+  },
+  {
     "version": "1.59.18",
     "date": "2026-08-04",
     "changes": [

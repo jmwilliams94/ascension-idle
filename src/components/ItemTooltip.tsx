@@ -40,7 +40,7 @@ export default function ItemTooltip({ title, titleColor, icon, iconSrc, iconColo
       {hasIcon ? (
         <div className="flex items-start gap-2">
           <div
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-lg"
+            className="flex h-22 w-22 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-lg"
             style={{ borderColor: iconColor ?? '#475569', backgroundColor: iconColor ? `${iconColor}22` : undefined }}
           >
             {iconSrc ? <img src={iconSrc} alt="" className="h-3/5 w-3/5 object-contain" /> : <span>{icon}</span>}
