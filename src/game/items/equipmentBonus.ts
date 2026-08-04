@@ -204,6 +204,10 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Vermil Bow': `${import.meta.env.BASE_URL}item-icons/vermil-bow.png`,
   "Ram's Horn Bow": `${import.meta.env.BASE_URL}item-icons/rams-horn-bow.png`,
   'Sovereign Bow': `${import.meta.env.BASE_URL}item-icons/sovereign-bow.png`,
+  'Farreach Bow': `${import.meta.env.BASE_URL}item-icons/farreach-bow.png`,
+  "Drover's Bow": `${import.meta.env.BASE_URL}item-icons/drovers-bow.png`,
+  'Forgesteel Bow': `${import.meta.env.BASE_URL}item-icons/forgesteel-bow.png`,
+  'Windwing Bow': `${import.meta.env.BASE_URL}item-icons/windwing-bow.png`,
 }
 
 export function getGearIconSrc(templateName: string | undefined): string | undefined {

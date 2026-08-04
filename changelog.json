@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.59.17",
+    "date": "2026-08-04",
+    "changes": [
+      "Added real icons for the Farreach Bow, Drover's Bow, Forgesteel Bow, and Windwing Bow"
+    ]
+  },
+  {
     "version": "1.59.16",
     "date": "2026-08-04",
     "changes": [
