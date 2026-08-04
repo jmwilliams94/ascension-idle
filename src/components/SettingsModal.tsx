@@ -3,6 +3,7 @@ import { changelogNewestFirst } from '../lib/changelog'
 import ChangelogEntries from './ChangelogEntries'
 import DisplaySettingsSection from './DisplaySettingsSection'
 import ItemEffectGallery from './ItemEffectGallery'
+import IconResolutionPreview from './IconResolutionPreview'
 
 interface SettingsSection {
   id: string
@@ -22,6 +23,11 @@ const SECTIONS: SettingsSection[] = [
     id: 'effects',
     label: 'Item Effects',
     content: <ItemEffectGallery />,
+  },
+  {
+    id: 'icon-res',
+    label: 'Icon Res Test',
+    content: <IconResolutionPreview />,
   },
   {
     id: 'changelog',

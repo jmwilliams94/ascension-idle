@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.59.18",
+    "date": "2026-08-04",
+    "changes": [
+      "Added a real icon for the Stripeback Bow (the last of this batch)",
+      "Added a viewing-only \"Icon Res Test\" tab in Settings comparing the standard 160×160 icon size against a 320×320 double-resolution test version, side by side"
+    ]
+  },
+  {
     "version": "1.59.17",
     "date": "2026-08-04",
     "changes": [

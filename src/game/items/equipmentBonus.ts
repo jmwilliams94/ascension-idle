@@ -208,6 +208,7 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   "Drover's Bow": `${import.meta.env.BASE_URL}item-icons/drovers-bow.png`,
   'Forgesteel Bow': `${import.meta.env.BASE_URL}item-icons/forgesteel-bow.png`,
   'Windwing Bow': `${import.meta.env.BASE_URL}item-icons/windwing-bow.png`,
+  'Stripeback Bow': `${import.meta.env.BASE_URL}item-icons/stripeback-bow.png`,
 }
 
 export function getGearIconSrc(templateName: string | undefined): string | undefined {
