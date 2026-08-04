@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.59.22",
+    "date": "2026-08-04",
+    "changes": [
+      "Added real icons for the Wyrmstring, Timeworn, Skyborne, Sorcerous, and Emberwing Bows"
+    ]
+  },
+  {
     "version": "1.59.21",
     "date": "2026-08-04",
     "changes": [
