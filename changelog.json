@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.59.21",
+    "date": "2026-08-04",
+    "changes": [
+      "Added real icons for the Heartwood, Runed, Starfall, Nightglow, and Rosemark Bows"
+    ]
+  },
+  {
     "version": "1.59.20",
     "date": "2026-08-04",
     "changes": [

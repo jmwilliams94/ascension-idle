@@ -209,6 +209,11 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Forgesteel Bow': `${import.meta.env.BASE_URL}item-icons/forgesteel-bow.png`,
   'Windwing Bow': `${import.meta.env.BASE_URL}item-icons/windwing-bow.png`,
   'Stripeback Bow': `${import.meta.env.BASE_URL}item-icons/stripeback-bow.png`,
+  'Heartwood Bow': `${import.meta.env.BASE_URL}item-icons/heartwood-bow.png`,
+  'Runed Bow': `${import.meta.env.BASE_URL}item-icons/runed-bow.png`,
+  'Starfall Bow': `${import.meta.env.BASE_URL}item-icons/starfall-bow.png`,
+  'Nightglow Bow': `${import.meta.env.BASE_URL}item-icons/nightglow-bow.png`,
+  'Rosemark Bow': `${import.meta.env.BASE_URL}item-icons/rosemark-bow.png`,
 }
 
 export function getGearIconSrc(templateName: string | undefined): string | undefined {
