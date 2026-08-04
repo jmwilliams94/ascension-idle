@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.59.23",
+    "date": "2026-08-04",
+    "changes": [
+      "Added a real icon for the Voidcaller Bow — every Bow in the game now has real art"
+    ]
+  },
+  {
     "version": "1.59.22",
     "date": "2026-08-04",
     "changes": [

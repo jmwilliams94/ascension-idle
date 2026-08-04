@@ -219,6 +219,7 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Skyborne Bow': `${import.meta.env.BASE_URL}item-icons/skyborne-bow.png`,
   'Sorcerous Bow': `${import.meta.env.BASE_URL}item-icons/sorcerous-bow.png`,
   'Emberwing Bow': `${import.meta.env.BASE_URL}item-icons/emberwing-bow.png`,
+  'Voidcaller Bow': `${import.meta.env.BASE_URL}item-icons/voidcaller-bow.png`,
 }
 
 export function getGearIconSrc(templateName: string | undefined): string | undefined {
