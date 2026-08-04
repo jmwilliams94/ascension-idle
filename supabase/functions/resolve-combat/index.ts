@@ -364,6 +364,22 @@ function getLevelDiffColor(characterLevel: number, monsterLevel: number): LevelD
 
 const EXP_MULTIPLIER_BY_COLOR: Record<LevelDiffColor, number> = { black: 2, red: 1.5, white: 1, green: 0.5 }
 
+// Level-gap Defense debuff (2026-08-05) — mirrors combatResolver.ts's
+// MONSTER_DEFENSE_MULTIPLIER_BY_COLOR. Outgoing only (player hits monster):
+// a monster the character comfortably outlevels (Green/White) loses some of
+// its own Defense, so it "hits back less" in the sense that it also dies
+// faster — makes farming below your level feel meaningfully easier, not just
+// EXP-discounted. Red/Black (monster outlevels character) are unaffected
+// here — see combatResolver.ts for why the incoming side (player Defense vs.
+// Red/Black monsters) is a separate, asymmetric table, and why incoming
+// player-HP damage is client-only and never mirrored here.
+const MONSTER_DEFENSE_MULTIPLIER_BY_COLOR: Record<LevelDiffColor, number> = {
+  green: 0.5,
+  white: 0.75,
+  red: 1,
+  black: 1,
+}
+
 interface EnemyType {
   level: number
   max_hp: number
@@ -389,8 +405,9 @@ function killRewards(type: EnemyType, isRare: boolean, expMultiplier: number) {
   }
 }
 
-function monsterDefense(type: EnemyType): number {
-  return Math.round(type.level * 1.5)
+function monsterDefense(type: EnemyType, characterLevel: number): number {
+  const base = Math.round(type.level * 1.5)
+  return Math.round(base * MONSTER_DEFENSE_MULTIPLIER_BY_COLOR[getLevelDiffColor(characterLevel, type.level)])
 }
 
 // Mirrors combatResolver.ts's monsterDodge/rollAttackLands (2026-08-02) —
@@ -917,7 +934,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       // a single precomputed value reused every iteration, so the offline/
       // idle simulation matches live combat's per-hit variance exactly
       // instead of falling back to an expected-value approximation.
-      const damage = resolvePhysicalDamage(rollDamageInRange(attackMidpoint), monsterDefense(monster))
+      const damage = resolvePhysicalDamage(rollDamageInRange(attackMidpoint), monsterDefense(monster, character.level))
       hp -= damage
       // Damage-dealt EXP (see damageExpForHit above) — every landed hit earns
       // a slice of this monster's own EXP reward, on top of the full on-kill

@@ -53,6 +53,51 @@ export function expMultiplierForLevelDiff(characterLevel: number, monsterLevel: 
   return EXP_MULTIPLIER_BY_COLOR[getLevelDiffColor(characterLevel, monsterLevel)]
 }
 
+// Level-gap Defense debuff (confirmed with the user, 2026-08-05, matching a
+// real Conquer Online mechanic they recalled: "monsters being able to 1 hit
+// my Trojan but as soon as I got 1 level the monsters then start hitting 1s
+// on me"). Whichever side is actually mismatched in a fight gets its own
+// Defense stripped proportionally — the side that's ahead never gets an
+// extra bonus applied to itself, and the side that's behind never gets extra
+// protection, so an even ("white") matchup stays neutral for *incoming*
+// damage even though it already gives a modest outgoing bonus. Reuses the
+// same White/Green/Red/Black color exactly as expMultiplierForLevelDiff
+// above, just two new multiplier tables instead of a third color scheme.
+// PLACEHOLDER magnitudes, same disclosed-not-final status as every other
+// combat number in this game.
+const MONSTER_DEFENSE_MULTIPLIER_BY_COLOR: Record<LevelDiffColor, number> = {
+  green: 0.5,
+  white: 0.75,
+  red: 1,
+  black: 1,
+}
+
+const PLAYER_DEFENSE_MULTIPLIER_BY_COLOR: Record<LevelDiffColor, number> = {
+  green: 1,
+  white: 1,
+  red: 0.75,
+  black: 0.5,
+}
+
+// Outgoing side — the monster's own Defense (see monsterDefense below) is
+// reduced when the character comfortably outlevels it (Green/White), and
+// left alone when the monster outlevels the character (Red/Black, no bonus
+// for punching up beyond the existing EXP bonus). Mirrored in resolve-combat
+// since this changes real kill rates/rewards, not just client-side feel.
+export function monsterDefenseMultiplierForLevelDiff(characterLevel: number, monsterLevel: number): number {
+  return MONSTER_DEFENSE_MULTIPLIER_BY_COLOR[getLevelDiffColor(characterLevel, monsterLevel)]
+}
+
+// Incoming side — the player's own physicalDefense is reduced when the
+// monster outlevels the character (Red/Black), and left alone otherwise —
+// this is what makes a genuinely stronger monster "hit a lot harder," per
+// the user's own framing, rather than a flat Attack-minus-Defense regardless
+// of level gap. Client-only (see resolvePhysicalDamage's own comment below
+// for why incoming damage was never simulated server-side to begin with).
+export function playerDefenseMultiplierForLevelDiff(characterLevel: number, monsterLevel: number): number {
+  return PLAYER_DEFENSE_MULTIPLIER_BY_COLOR[getLevelDiffColor(characterLevel, monsterLevel)]
+}
+
 // expMultiplier — the White/Green/Red/Black level-diff bonus (see
 // expMultiplierForLevelDiff above), computed once by the caller and shared
 // with damageExpForHit's own per-hit application so a kill's final blow and
@@ -145,8 +190,12 @@ const MIN_DAMAGE_PERCENT_OF_ATTACK = 0.1
 // itself, since it's cheap to compute and keeps zoneData.ts free of yet
 // another hand-tuned field), tied to the same "independently formula-derived,
 // not sourced" convention the rest of each zone's stats already follow.
-export function monsterDefense(type: EnemyTypeDef): number {
-  return Math.round(type.level * 1.5)
+// characterLevel feeds monsterDefenseMultiplierForLevelDiff above (2026-08-05)
+// — a monster the character has comfortably outleveled loses a real chunk of
+// its own Defense, not just a smaller EXP reward.
+export function monsterDefense(type: EnemyTypeDef, characterLevel: number): number {
+  const base = Math.round(type.level * 1.5)
+  return Math.round(base * monsterDefenseMultiplierForLevelDiff(characterLevel, type.level))
 }
 
 // Now that armor slots are functional (2026-07-31), a player's Defense is no

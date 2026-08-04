@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.60.2",
+    "date": "2026-08-05",
+    "changes": [
+      "Monsters below your level now have noticeably weaker Defense, making farming easier ones feel meaningfully faster",
+      "Monsters well above your level now hit you noticeably harder — punching above your level is riskier, matching how tougher fights should feel"
+    ]
+  },
+  {
     "version": "1.60.1",
     "date": "2026-08-05",
     "changes": [

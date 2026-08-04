@@ -17,6 +17,7 @@ import {
   monsterAttackDamage,
   monsterDefense,
   monsterDodge,
+  playerDefenseMultiplierForLevelDiff,
   resolvePhysicalDamage,
   rollAttackLands,
   rollBonusCurrencyDrops,
@@ -208,6 +209,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
 
     const type = ENEMY_TYPES[state.monsterTypeId]
     const { selectedClassId, attributes } = useCharacterStore.getState()
+    const characterLevel = useProgressionStore.getState().level
     const equipmentBonus = computeEquipmentBonus(
       useEquipmentStore.getState().equippedIds,
       useInventoryStore.getState().items,
@@ -240,7 +242,15 @@ export const useCombatStore = create<CombatState>((set, get) => ({
           log: appendLog(s.log, { kind: 'dodge', message: `You dodge ${type.displayName}'s attack!` }),
         }))
       } else {
-        const damage = resolvePhysicalDamage(monsterAttackDamage(type), derived.physicalDefense)
+        // Level-gap Defense debuff (see playerDefenseMultiplierForLevelDiff)
+        // — a monster that outlevels the character (Red/Black) bypasses more
+        // of the player's own physicalDefense, making it "hit a lot harder"
+        // per the user's own framing, rather than a flat Attack-minus-Defense
+        // regardless of how mismatched the fight actually is.
+        const effectivePlayerDefense = Math.round(
+          derived.physicalDefense * playerDefenseMultiplierForLevelDiff(characterLevel, type.level),
+        )
+        const damage = resolvePhysicalDamage(monsterAttackDamage(type), effectivePlayerDefense)
         const nextPlayerHp = Math.max(0, currentPlayerHp - damage)
 
         set((s) => ({
@@ -315,8 +325,12 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     // Simplified Attack-minus-Defense formula (see combatResolver.ts) — closes
     // the previous "Wuxia deals 0 damage" gap by summing physical + magic
     // attack rather than reading physicalAttack alone. Attack is now a rolled
-    // min/max range (see rollDamageInRange), not a flat number.
-    const damage = resolvePhysicalDamage(rollDamageInRange(derived.physicalAttack + derived.magicAttack), monsterDefense(type))
+    // min/max range (see rollDamageInRange), not a flat number. monsterDefense
+    // now also takes characterLevel (level-gap Defense debuff, 2026-08-05).
+    const damage = resolvePhysicalDamage(
+      rollDamageInRange(derived.physicalAttack + derived.magicAttack),
+      monsterDefense(type, characterLevel),
+    )
     const nextHp = Math.max(0, state.currentHp - damage)
 
     set((s) => ({
