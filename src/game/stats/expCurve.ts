@@ -1,0 +1,117 @@
+// Pure EXP-curve module, split out of useProgressionStore.ts (2026-08-05) so
+// combatResolver.ts (a pure, store-free module) can compute monster EXP
+// rewards directly from this same curve without importing the whole
+// Zustand store. useProgressionStore.ts re-exports MAX_CHARACTER_LEVEL/
+// requiredExpForLevel from here for backward compatibility — no external
+// caller needs to change its import.
+
+// Real level cap, confirmed by the user (2026-07-30) alongside the EXP curve
+// below — matches the gear system's own 130 weapon-level cap (see CLAUDE.md).
+export const MAX_CHARACTER_LEVEL = 130
+
+// Real Conquer Online EXP-curve reference data (confirmed 2026-07-30) — the
+// per-level EXP required to advance from that level to the next, at a handful
+// of confirmed anchor levels (total EXP to reach 130 from level 1 sums to
+// ~13.4 billion, matching the source). Levels between anchors don't have
+// confirmed numbers, so they're geometrically interpolated (proportional on a
+// log scale between the two nearest anchors) rather than guessed — an honest
+// curve through real data beats inventing a smooth formula that doesn't
+// actually match any of the confirmed points. The steep jump from level 109 to
+// 110 lines up with a promotion-tier boundary (see the Promotion tiers note in
+// CLAUDE.md), not a data error. Levels 128-130 plateau at the same value,
+// matching the source noting 130's requirement is identical to 128's.
+const EXP_CURVE_ANCHORS: [level: number, required: number][] = [
+  [1, 39],
+  [20, 68_789],
+  [21, 70_451],
+  [80, 15_896_985],
+  [81, 16_163_738],
+  [109, 193_716_061],
+  [110, 408_832_135],
+  [127, 1_011_439_064],
+  [128, 1_073_741_808],
+  [MAX_CHARACTER_LEVEL, 1_073_741_808],
+]
+
+export function requiredExpForLevel(level: number): number {
+  const clampedLevel = Math.min(Math.max(level, 1), MAX_CHARACTER_LEVEL)
+
+  for (let i = 0; i < EXP_CURVE_ANCHORS.length; i += 1) {
+    const [anchorLevel, anchorValue] = EXP_CURVE_ANCHORS[i]
+
+    if (clampedLevel === anchorLevel) {
+      return anchorValue
+    }
+
+    if (clampedLevel < anchorLevel) {
+      const [prevLevel, prevValue] = EXP_CURVE_ANCHORS[i - 1]
+      const t = (clampedLevel - prevLevel) / (anchorLevel - prevLevel)
+      return Math.round(prevValue * (anchorValue / prevValue) ** t)
+    }
+  }
+
+  return EXP_CURVE_ANCHORS[EXP_CURVE_ANCHORS.length - 1][1]
+}
+
+// Monster EXP reward — recalibrated 2026-08-05 (confirmed with the user,
+// reported as "the entire week I've only gotten to level 23"). Previously a
+// hand-placed, roughly-linear-with-level field on each EnemyTypeDef (5 EXP at
+// level 1 up to 110 EXP at level 129, a ~22x range) while requiredExpForLevel
+// above grows ~27,000,000x over the same range (39 to 1.07 billion) — since
+// kill rate is roughly constant across the whole level range (monster HP and
+// player damage were both designed to scale together, ~3 hits/kill at 1
+// attack/sec throughout, per zoneData.ts's own "tied to the bow power curve"
+// convention), that mismatch compounds into a genuine wall: level 80 alone
+// needed ~241 hours of continuous same-level fighting under the old numbers,
+// level 110 needed ~3,960. Formula-derived now instead (same "don't hand-place
+// a stat that can be computed from level" convention as monsterDefense/
+// monsterDodge below) so the reward curve moves in lockstep with the required
+// curve.
+//
+// Deliberately NOT a single flat rate throughout (an earlier same-day pass
+// used one constant kills-per-level everywhere and the user corrected it —
+// "it should feel harder as you level up, I don't want every level to be 30
+// mins"): kills-per-level instead steps up at each of this game's own
+// confirmed promotion tiers (1/15/40/70/100/110/120 — see CLAUDE.md's
+// Progression section), so the grind genuinely escalates at each promotion
+// rather than staying constant or exploding. PLACEHOLDER table, same
+// disclosed-not-final status as every other economy number in this combat
+// system — roughly 10 min/level at the very start up to ~2.5-3 hours/level in
+// the endgame, ~98 hours of active play for the full 1-130 run. Doesn't
+// account for the White/Green/Red/Black level-diff EXP multiplier
+// (expMultiplierForLevelDiff in combatResolver.ts) or the new damage-dealt
+// EXP below — both still apply on top of this exactly as before, unchanged.
+const PROMOTION_TIER_ANCHORS = [1, 15, 40, 70, 100, 110, 120]
+const KILLS_PER_LEVEL_BY_TIER = [200, 320, 500, 800, 1250, 2000, 3200]
+
+function killsPerLevelForLevel(level: number): number {
+  let tierIndex = 0
+  for (let i = 0; i < PROMOTION_TIER_ANCHORS.length; i += 1) {
+    if (level >= PROMOTION_TIER_ANCHORS[i]) {
+      tierIndex = i
+    }
+  }
+  return KILLS_PER_LEVEL_BY_TIER[tierIndex]
+}
+
+export function expRewardForLevel(level: number): number {
+  return Math.max(1, Math.round(requiredExpForLevel(level) / killsPerLevelForLevel(level)))
+}
+
+// Damage-dealt EXP (confirmed with the user, 2026-08-05, matching a real
+// Conquer Online mechanic — damage dealt earns EXP too, not just the killing
+// blow). Deliberately not a 1-for-1 conversion: DAMAGE_EXP_SHARE of a kill's
+// own EXP reward is earned via the hits that landed it, split proportionally
+// by how much of the monster's max HP each hit did — since a full kill's
+// damage sums to ~maxHp, this naturally totals to ~DAMAGE_EXP_SHARE of
+// expRewardForLevel by the time the monster dies, layered ON TOP of (not
+// instead of) the existing full on-kill EXP grant. A full kill nets
+// (1 + DAMAGE_EXP_SHARE) = 150% of the base reward.
+const DAMAGE_EXP_SHARE = 0.5
+
+export function damageExpForHit(damage: number, monsterMaxHp: number, monsterLevel: number): number {
+  if (monsterMaxHp <= 0) {
+    return 0
+  }
+  return Math.round(expRewardForLevel(monsterLevel) * DAMAGE_EXP_SHARE * (damage / monsterMaxHp))
+}

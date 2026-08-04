@@ -1,4 +1,10 @@
 import type { EnemyTypeDef } from '../zones/zoneData'
+import { damageExpForHit, expRewardForLevel } from '../stats/expCurve'
+
+// Re-exported so callers (useCombatStore.ts) can pull every piece of combat
+// math from this one module rather than reaching into expCurve.ts directly
+// too.
+export { damageExpForHit }
 
 // PLACEHOLDER rare-monster odds/multipliers — matches CLAUDE.md's confirmed design
 // (5% chance per monster, 2x HP, 5x gold/EXP) but the underlying zone economy these
@@ -47,12 +53,16 @@ export function expMultiplierForLevelDiff(characterLevel: number, monsterLevel: 
   return EXP_MULTIPLIER_BY_COLOR[getLevelDiffColor(characterLevel, monsterLevel)]
 }
 
-export function killRewards(type: EnemyTypeDef, isRare: boolean, characterLevel: number): { gold: number; exp: number } {
+// expMultiplier — the White/Green/Red/Black level-diff bonus (see
+// expMultiplierForLevelDiff above), computed once by the caller and shared
+// with damageExpForHit's own per-hit application so a kill's final blow and
+// the hits leading up to it get the same bonus/penalty (2026-08-05, matches
+// resolve-combat's own mirror).
+export function killRewards(type: EnemyTypeDef, isRare: boolean, expMultiplier: number): { gold: number; exp: number } {
   const rareMultiplier = isRare ? RARE_REWARD_MULTIPLIER : 1
-  const expMultiplier = expMultiplierForLevelDiff(characterLevel, type.level)
   return {
     gold: type.goldReward * rareMultiplier,
-    exp: Math.round(type.expReward * rareMultiplier * expMultiplier),
+    exp: Math.round(expRewardForLevel(type.level) * rareMultiplier * expMultiplier),
   }
 }
 

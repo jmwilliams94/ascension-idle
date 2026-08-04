@@ -1,52 +1,10 @@
 import { create } from 'zustand'
+import { MAX_CHARACTER_LEVEL, requiredExpForLevel } from './expCurve'
 
-// Real level cap, confirmed by the user (2026-07-30) alongside the EXP curve
-// below — matches the gear system's own 130 weapon-level cap (see CLAUDE.md).
-export const MAX_CHARACTER_LEVEL = 130
-
-// Real Conquer Online EXP-curve reference data (confirmed 2026-07-30) — the
-// per-level EXP required to advance from that level to the next, at a handful
-// of confirmed anchor levels (total EXP to reach 130 from level 1 sums to
-// ~13.4 billion, matching the source). Levels between anchors don't have
-// confirmed numbers, so they're geometrically interpolated (proportional on a
-// log scale between the two nearest anchors) rather than guessed — an honest
-// curve through real data beats inventing a smooth formula that doesn't
-// actually match any of the confirmed points. The steep jump from level 109 to
-// 110 lines up with a promotion-tier boundary (see the Promotion tiers note in
-// CLAUDE.md), not a data error. Levels 128-130 plateau at the same value,
-// matching the source noting 130's requirement is identical to 128's.
-const EXP_CURVE_ANCHORS: [level: number, required: number][] = [
-  [1, 39],
-  [20, 68_789],
-  [21, 70_451],
-  [80, 15_896_985],
-  [81, 16_163_738],
-  [109, 193_716_061],
-  [110, 408_832_135],
-  [127, 1_011_439_064],
-  [128, 1_073_741_808],
-  [MAX_CHARACTER_LEVEL, 1_073_741_808],
-]
-
-export function requiredExpForLevel(level: number): number {
-  const clampedLevel = Math.min(Math.max(level, 1), MAX_CHARACTER_LEVEL)
-
-  for (let i = 0; i < EXP_CURVE_ANCHORS.length; i += 1) {
-    const [anchorLevel, anchorValue] = EXP_CURVE_ANCHORS[i]
-
-    if (clampedLevel === anchorLevel) {
-      return anchorValue
-    }
-
-    if (clampedLevel < anchorLevel) {
-      const [prevLevel, prevValue] = EXP_CURVE_ANCHORS[i - 1]
-      const t = (clampedLevel - prevLevel) / (anchorLevel - prevLevel)
-      return Math.round(prevValue * (anchorValue / prevValue) ** t)
-    }
-  }
-
-  return EXP_CURVE_ANCHORS[EXP_CURVE_ANCHORS.length - 1][1]
-}
+// Re-exported for backward compatibility — moved to expCurve.ts (2026-08-05)
+// so combatResolver.ts (a pure, store-free module) can compute monster EXP
+// rewards from the same curve without importing this whole Zustand store.
+export { MAX_CHARACTER_LEVEL, requiredExpForLevel }
 
 interface ProgressionState {
   level: number

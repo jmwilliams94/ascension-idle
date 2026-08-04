@@ -10,6 +10,9 @@ import { useNoQuiverWarningStore } from '../items/useNoQuiverWarningStore'
 import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
 import {
   MONSTER_ATTACK_INTERVAL_MS,
+  RARE_REWARD_MULTIPLIER,
+  damageExpForHit,
+  expMultiplierForLevelDiff,
   killRewards,
   monsterAttackDamage,
   monsterDefense,
@@ -282,6 +285,19 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       log: appendLog(s.log, { kind: 'damage', message: `You hit ${type.displayName} for ${damage}.`, amount: damage }),
     }))
 
+    // Damage-dealt EXP (2026-08-05, confirmed with the user, matching a real
+    // Conquer Online mechanic — see damageExpForHit) — PREDICTIVE ONLY, same
+    // caveat as the kill-EXP prediction below. state.maxHp is this specific
+    // spawn's own actual max HP (already rare-doubled if applicable), and
+    // rareMultiplier mirrors killRewards' own 5x-for-rare scaling so a rare
+    // monster's damage-EXP total ends up matching its on-kill reward's own
+    // rare bonus — see resolve-combat's own mirror for the full reasoning.
+    const expMultiplier = expMultiplierForLevelDiff(useProgressionStore.getState().level, type.level)
+    const rareMultiplier = state.isRareInstance ? RARE_REWARD_MULTIPLIER : 1
+    useProgressionStore
+      .getState()
+      .addPredictedRewards(0, Math.round(damageExpForHit(damage, state.maxHp, type.level) * expMultiplier * rareMultiplier))
+
     if (nextHp <= 0) {
       // PREDICTIVE ONLY — no real grants happen here anymore. gold/EXP/item/
       // currency rewards are now server-authoritative (see resolveCombat.ts /
@@ -291,7 +307,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       // match what the next resolve confirms a few seconds later — the cost
       // of making rewards genuinely server-verified without adding real
       // per-attack network latency to the fighting itself.
-      const { gold, exp } = killRewards(type, state.isRareInstance, useProgressionStore.getState().level)
+      const { gold, exp } = killRewards(type, state.isRareInstance, expMultiplier)
       // Feeds the visible Gold/EXP bar in real time (see ExpBar.tsx) —
       // previously only the log's text updated
       // instantly, while the actual displayed numbers stayed frozen until the

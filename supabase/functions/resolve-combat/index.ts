@@ -368,7 +368,8 @@ interface EnemyType {
   level: number
   max_hp: number
   gold_reward: number
-  exp_reward: number
+  // exp_reward column still exists on enemy_types but is deliberately not
+  // read here anymore — see expRewardForLevel above.
   attack_damage: number
 }
 
@@ -380,12 +381,11 @@ function spawnMonsterHp(type: EnemyType, isRare: boolean): number {
   return isRare ? type.max_hp * RARE_HP_MULTIPLIER : type.max_hp
 }
 
-function killRewards(type: EnemyType, isRare: boolean, characterLevel: number) {
+function killRewards(type: EnemyType, isRare: boolean, expMultiplier: number) {
   const rareMultiplier = isRare ? RARE_REWARD_MULTIPLIER : 1
-  const expMultiplier = EXP_MULTIPLIER_BY_COLOR[getLevelDiffColor(characterLevel, type.level)]
   return {
     gold: type.gold_reward * rareMultiplier,
-    exp: Math.round(type.exp_reward * rareMultiplier * expMultiplier),
+    exp: Math.round(expRewardForLevel(type.level) * rareMultiplier * expMultiplier),
   }
 }
 
@@ -463,9 +463,63 @@ function requiredExpForLevel(level: number): number {
   return EXP_CURVE_ANCHORS[EXP_CURVE_ANCHORS.length - 1][1]
 }
 
-// Bounded elapsed-time window, shared by live (~15s calls) and offline (up to
-// this cap) resolution — mirrors offlineProgress.ts's MAX_OFFLINE_MS.
-const MAX_RESOLVE_WINDOW_MS = 2 * 60 * 60 * 1000
+// Monster EXP reward — recalibrated 2026-08-05 (confirmed with the user,
+// reported as "the entire week I've only gotten to level 23"). Formula-
+// derived from the monster's own level now, instead of the old hand-placed
+// enemy_types.exp_reward column (still exists in the DB, deliberately no
+// longer read here) — mirrors src/game/stats/expCurve.ts's own
+// expRewardForLevel; see that file's comment for the full "why" and for why
+// this steps up at each promotion tier rather than using one flat rate
+// (confirmed with the user: "it should feel harder as you level up"). Both
+// tables must stay in sync with expCurve.ts.
+const PROMOTION_TIER_ANCHORS = [1, 15, 40, 70, 100, 110, 120]
+const KILLS_PER_LEVEL_BY_TIER = [200, 320, 500, 800, 1250, 2000, 3200]
+
+function killsPerLevelForLevel(level: number): number {
+  let tierIndex = 0
+  for (let i = 0; i < PROMOTION_TIER_ANCHORS.length; i += 1) {
+    if (level >= PROMOTION_TIER_ANCHORS[i]) {
+      tierIndex = i
+    }
+  }
+  return KILLS_PER_LEVEL_BY_TIER[tierIndex]
+}
+
+function expRewardForLevel(level: number): number {
+  return Math.max(1, Math.round(requiredExpForLevel(level) / killsPerLevelForLevel(level)))
+}
+
+// Damage-dealt EXP (confirmed with the user, 2026-08-05, matching a real
+// Conquer Online mechanic) — mirrors expCurve.ts's damageExpForHit. Every
+// landed hit earns a slice of the target's own EXP reward proportional to
+// how much of its max HP that hit did, on top of (not instead of) the full
+// on-kill EXP grant — a full kill nets (1 + DAMAGE_EXP_SHARE) of the base
+// reward. DAMAGE_EXP_SHARE must stay in sync with expCurve.ts.
+const DAMAGE_EXP_SHARE = 0.5
+
+function damageExpForHit(damage: number, monsterMaxHp: number, monsterLevel: number): number {
+  if (monsterMaxHp <= 0) return 0
+  return Math.round(expRewardForLevel(monsterLevel) * DAMAGE_EXP_SHARE * (damage / monsterMaxHp))
+}
+
+// AFK-cap Prestige tier reward (confirmed with the user, 2026-08-05) — the
+// bounded elapsed-time window a single resolve call will simulate (shared by
+// live ~15s calls and the once-at-login offline catch-up) now scales with
+// the highest Prestige tier reached on ANY monster this character has
+// invested in, rather than a flat 2 hours for everyone regardless of
+// progress. PLACEHOLDER tier->hours table, same disclosed-not-final status
+// as the rest of this reward economy — see the query/computation right
+// before the main attack loop below.
+const BASE_AFK_CAP_MS = 2 * 60 * 60 * 1000
+const AFK_CAP_MS_BY_PRESTIGE_TIER: Record<number, number> = {
+  0: 2 * 60 * 60 * 1000,
+  1: 3 * 60 * 60 * 1000,
+  2: 4 * 60 * 60 * 1000,
+  3: 6 * 60 * 60 * 1000,
+  4: 9 * 60 * 60 * 1000,
+  5: 14 * 60 * 60 * 1000,
+  6: 20 * 60 * 60 * 1000,
+}
 
 // Mirrors useInventoryStore.ts's INVENTORY_SLOT_CAP / occupiedSlotCount.
 const INVENTORY_SLOT_CAP = 40
@@ -574,15 +628,18 @@ async function handleResolveCombat(req: Request): Promise<Response> {
 
   const now = Date.now()
   const lastResolvedMs = new Date(character.combat_last_resolved_at).getTime()
-  const elapsedMs = Math.min(Math.max(now - lastResolvedMs, 0), MAX_RESOLVE_WINDOW_MS)
 
   // Nothing selected to fight — just advance the clock so a later resolve
-  // doesn't get an inflated window once a monster IS selected.
+  // doesn't get an inflated window once a monster IS selected. The AFK-cap
+  // Prestige tier bonus (see below) doesn't matter here since nothing is
+  // being simulated either way — a flat base cap is enough for this
+  // cosmetic elapsedMs value.
   if (!character.selected_monster_id) {
+    const provisionalElapsedMs = Math.min(Math.max(now - lastResolvedMs, 0), BASE_AFK_CAP_MS)
     await db.from('characters').update({ combat_last_resolved_at: new Date(now).toISOString() }).eq('id', characterId)
     return json({
       ok: true,
-      elapsedMs,
+      elapsedMs: provisionalElapsedMs,
       gained: { kills: 0, rareKills: 0, gold: 0, exp: 0, comets: 0, fallenStars: 0 },
       character: {
         gold: character.gold,
@@ -608,6 +665,22 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     await db.from('characters').update({ combat_last_resolved_at: new Date(now).toISOString() }).eq('id', characterId)
     return json({ ok: false, error: 'unknown_monster' })
   }
+
+  // AFK cap — Prestige tier reward (see AFK_CAP_MS_BY_PRESTIGE_TIER above):
+  // the highest Prestige tier reached on any monster this character has
+  // unlocked at least one tier on decides how much away-time this call will
+  // credit, capped at BASE_AFK_CAP_MS (2 hours) for a character with no
+  // Prestige investment at all.
+  const { data: bestPrestigeRow } = await db
+    .from('character_monster_kills')
+    .select('unlocked_tier_index')
+    .eq('character_id', characterId)
+    .order('unlocked_tier_index', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const bestPrestigeTier = Math.min(Math.max(bestPrestigeRow?.unlocked_tier_index ?? 0, 0), 6)
+  const afkCapMs = AFK_CAP_MS_BY_PRESTIGE_TIER[bestPrestigeTier] ?? BASE_AFK_CAP_MS
+  const elapsedMs = Math.min(Math.max(now - lastResolvedMs, 0), afkCapMs)
 
   // Character combat stats — derived server-side, never trusted from the
   // request. Attributes are a pure function of (class, level) via
@@ -738,6 +811,11 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // stacked into one combined gold multiplier.
   const achievementGoldMultiplier = prestigeGoldMultiplier(unlockedTierIndex)
   const bonusDropMultiplier = killCountBonusDropMultiplier(characterKillsBefore, monster.level)
+  // Same White/Green/Red/Black level-diff EXP multiplier killRewards already
+  // applies to on-kill EXP (see EXP_MULTIPLIER_BY_COLOR/getLevelDiffColor) —
+  // precomputed once here so the new per-hit damage-dealt EXP below gets the
+  // same bonus/penalty, not just the killing blow.
+  const expMultiplier = EXP_MULTIPLIER_BY_COLOR[getLevelDiffColor(character.level, monster.level)]
   let killsThisWindow = 0
   let petObtained = false
 
@@ -803,6 +881,14 @@ async function handleResolveCombat(req: Request): Promise<Response> {
 
     let isRare = rollIsRare()
     let hp = spawnMonsterHp(monster, isRare)
+    // The current spawn's own actual max HP (already rare-doubled if
+    // applicable) — used as damageExpForHit's denominator below instead of
+    // the monster's own base max_hp, so a rare monster's extra hits (double
+    // real HP) don't each contribute a smaller fraction than intended; the
+    // rareMultiplier applied alongside it is what actually scales a rare
+    // kill's total damage-EXP to match its 5x on-kill reward, mirroring
+    // useCombatStore.runTick's own copy of this same reasoning.
+    let spawnMaxHp = hp
 
     for (let i = 0; i < totalAttacks; i += 1) {
       // Outgoing hit-chance roll (2026-08-02, confirmed design) — mirrors
@@ -820,6 +906,13 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       // instead of falling back to an expected-value approximation.
       const damage = resolvePhysicalDamage(rollDamageInRange(attackMidpoint), monsterDefense(monster))
       hp -= damage
+      // Damage-dealt EXP (see damageExpForHit above) — every landed hit earns
+      // a slice of this monster's own EXP reward, on top of the full on-kill
+      // grant below when hp actually reaches 0. Same level-diff multiplier as
+      // kill EXP (see expMultiplier above), and the same rare 5x multiplier
+      // the on-kill reward gets (see spawnMaxHp's own comment above for why).
+      const hitRareMultiplier = isRare ? RARE_REWARD_MULTIPLIER : 1
+      expGained += Math.round(damageExpForHit(damage, spawnMaxHp, monster.level) * expMultiplier * hitRareMultiplier)
 
       if (hp <= 0) {
         kills += 1
@@ -834,7 +927,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
           petObtained = true
         }
 
-        const rewards = killRewards(monster, isRare, character.level)
+        const rewards = killRewards(monster, isRare, expMultiplier)
         goldGained += rewards.gold
         expGained += rewards.exp
 
@@ -914,6 +1007,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
 
         isRare = rollIsRare()
         hp = spawnMonsterHp(monster, isRare)
+        spawnMaxHp = hp
       }
     }
   }

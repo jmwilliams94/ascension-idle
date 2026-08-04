@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.60.0",
+    "date": "2026-08-05",
+    "changes": [
+      "Fixed leveling being far too slow — monster EXP reward now scales with the required-EXP curve instead of a flat rate that fell way behind at higher levels",
+      "Difficulty still escalates at each promotion tier (1/15/40/70/100/110/120), not a flat rate throughout — early levels stay quick, later levels take meaningfully longer",
+      "Added EXP for damage dealt, not just kills — every hit now earns a slice of EXP, worth 50% extra on top of a full kill",
+      "AFK/offline catch-up time now scales with your best Prestige tier on any monster — up to 20 hours credited instead of a flat 2, as a reward for investing in Prestige"
+    ]
+  },
+  {
     "version": "1.59.23",
     "date": "2026-08-04",
     "changes": [
