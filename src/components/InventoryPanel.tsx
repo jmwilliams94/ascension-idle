@@ -93,8 +93,11 @@ interface InventoryPanelProps {
   // tile's click behavior from "select it, show a detail card below the
   // grid" to "open GearEquipPopover right at the tile," which folds the old
   // card's Equip button plus a new Compare-against-currently-equipped view
-  // directly into the same hover-tooltip-styled card, and drops the plain
-  // hover/long-press peek for these tiles (press is now the only trigger).
+  // directly into the same hover-tooltip-styled card. Originally also
+  // dropped the plain hover/long-press peek for these tiles ("press is now
+  // the only trigger") — reverted (2026-08-04, reported by the user: hover
+  // tooltips stopped working on the Combat page) — the normal hover tooltip
+  // stays on regardless of this flag now, click-for-the-popover is additive.
   // Only CombatPage's two InventoryPanel instances pass this — Forge/
   // Bank/Shop/Marketplace's own embeddings are unaffected, since their
   // click already means something else there (drag source, sell selection,
@@ -951,16 +954,15 @@ export default function InventoryPanel({
               icon,
               iconSrc,
               label,
-              // Omitted only when equipPopoverEnabled (Combat page's gear
-              // tiles) — that mode's whole point is "press is the only
-              // trigger now," so the plain hover/long-press peek this prop
-              // drives is dropped there specifically (native `title` still
-              // works as a bare-bones desktop fallback). enableBankDeposit
-              // (the Bank tab's Inventory grid) keeps the normal hover
-              // tooltip alongside its click-opened Deposit/Bank popover
-              // (confirmed with the user, 2026-08-04) — click for buttons,
-              // hover for a normal peek, not either/or.
-              tooltip: equipPopoverEnabled ? undefined : buildGearTooltip(item, template),
+              // Previously omitted whenever equipPopoverEnabled was on
+              // (Combat page's gear tiles) — "press is the only trigger now"
+              // turned out to be the wrong call in practice (reported by the
+              // user, 2026-08-04): plain mouseover should still show the
+              // normal tooltip everywhere, click-for-buttons is additive, not
+              // a replacement. Matches the same fix already applied to
+              // enableBankDeposit's tiles the same day — hover for a normal
+              // peek, click for the popover, always both now.
+              tooltip: buildGearTooltip(item, template),
               selected: selectedSlot?.kind === 'item' && selectedSlot.id === item.id,
             }
 

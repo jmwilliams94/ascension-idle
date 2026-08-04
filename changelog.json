@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.59.8",
+    "date": "2026-08-04",
+    "changes": [
+      "Fixed gear mouseover tooltips not showing in the Combat tab's Inventory grid"
+    ]
+  },
+  {
     "version": "1.59.7",
     "date": "2026-08-04",
     "changes": [
