@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.59.10",
+    "date": "2026-08-04",
+    "changes": [
+      "Re-processed the Lucky Bow icon — the previous one had a checkerboard pattern baked into it instead of a real transparent background"
+    ]
+  },
+  {
     "version": "1.59.9",
     "date": "2026-08-04",
     "changes": [
