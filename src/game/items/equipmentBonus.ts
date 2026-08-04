@@ -203,6 +203,7 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Gale Bow': `${import.meta.env.BASE_URL}item-icons/gale-bow.png`,
   'Vermil Bow': `${import.meta.env.BASE_URL}item-icons/vermil-bow.png`,
   "Ram's Horn Bow": `${import.meta.env.BASE_URL}item-icons/rams-horn-bow.png`,
+  'Sovereign Bow': `${import.meta.env.BASE_URL}item-icons/sovereign-bow.png`,
 }
 
 export function getGearIconSrc(templateName: string | undefined): string | undefined {
