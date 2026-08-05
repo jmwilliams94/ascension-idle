@@ -1087,7 +1087,7 @@ export default function InventoryPanel({
               <img
                 src={selectedCurrencyType === 'comet' ? COMET_ICON_SRC : FALLEN_STAR_ICON_SRC}
                 alt=""
-                className="h-3/5 w-3/5 object-contain"
+                className="h-4/5 w-4/5 object-contain"
               />
             </div>
             <div>
@@ -1202,7 +1202,7 @@ export default function InventoryPanel({
               style={{ borderColor: getQualityColor(selectedItem.quality_tier) }}
             >
               {getGearIconSrc(selectedTemplate?.name) ? (
-                <img src={getGearIconSrc(selectedTemplate?.name)} alt="" className="h-3/5 w-3/5 object-contain" />
+                <img src={getGearIconSrc(selectedTemplate?.name)} alt="" className="h-4/5 w-4/5 object-contain" />
               ) : (
                 getItemIcon(selectedTemplate?.slot_type)
               )}

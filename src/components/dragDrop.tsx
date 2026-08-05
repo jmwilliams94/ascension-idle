@@ -55,7 +55,7 @@ export function DragDropProvider({ children }: { children: ReactNode }) {
               borderColor: activeDrag.qualityColor,
             }}
           >
-            {activeDrag.iconSrc ? <img src={activeDrag.iconSrc} alt="" className="h-3/5 w-3/5 object-contain" /> : activeDrag.icon}
+            {activeDrag.iconSrc ? <img src={activeDrag.iconSrc} alt="" className="h-4/5 w-4/5 object-contain" /> : activeDrag.icon}
             {activeDrag.badge && (
               <span className="absolute bottom-0.5 right-1 text-[9px] font-semibold text-slate-200">{activeDrag.badge}</span>
             )}

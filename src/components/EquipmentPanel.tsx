@@ -117,7 +117,7 @@ export default function EquipmentPanel() {
               style={{ borderColor: getQualityColor(selected.item.quality_tier) }}
             >
               {getGearIconSrc(selected.template.name) ? (
-                <img src={getGearIconSrc(selected.template.name)} alt="" className="h-3/5 w-3/5 object-contain" />
+                <img src={getGearIconSrc(selected.template.name)} alt="" className="h-4/5 w-4/5 object-contain" />
               ) : (
                 getItemIcon(selected.template.slot_type)
               )}

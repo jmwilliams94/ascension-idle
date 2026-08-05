@@ -109,7 +109,7 @@ function LuckyCard({
               className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border text-[10px]"
               style={{ borderColor: visual.color, backgroundColor: `${visual.color}dd` }}
             >
-              {visual.iconSrc ? <img src={visual.iconSrc} alt="" className="h-3/5 w-3/5 object-contain" /> : visual.icon}
+              {visual.iconSrc ? <img src={visual.iconSrc} alt="" className="h-4/5 w-4/5 object-contain" /> : visual.icon}
             </div>
           </div>
           <p className="text-[9px] font-medium leading-tight text-slate-300">{rewardLabel(reward)}</p>

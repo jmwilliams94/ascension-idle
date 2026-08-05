@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.60.3",
+    "date": "2026-08-05",
+    "changes": [
+      "Item icons now render larger inside their tile/box (less empty margin around gear, currency, and reward art everywhere it appears)"
+    ]
+  },
+  {
     "version": "1.60.2",
     "date": "2026-08-05",
     "changes": [

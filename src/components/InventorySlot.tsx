@@ -170,7 +170,7 @@ export default function InventorySlot({
       style={{ borderColor: qualityColor, backgroundColor: qualityColor ? `${qualityColor}22` : undefined }}
     >
       {emberCount > 0 && <TierEmberEffect color={qualityColor as string} count={emberCount} seed={seedFromId(slotId)} />}
-      {iconSrc ? <img src={iconSrc} alt="" className="relative z-10 h-3/5 w-3/5 object-contain" /> : <span className="relative z-10">{icon}</span>}
+      {iconSrc ? <img src={iconSrc} alt="" className="relative z-10 h-4/5 w-4/5 object-contain" /> : <span className="relative z-10">{icon}</span>}
       {badge && <span className="absolute bottom-0.5 right-1 z-10 text-[9px] font-semibold text-slate-200">{badge}</span>}
     </button>
   )

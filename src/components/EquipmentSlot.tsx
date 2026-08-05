@@ -79,7 +79,7 @@ export default function EquipmentSlot({
       style={filled ? { borderColor: qualityColor, backgroundColor: qualityColor ? `${qualityColor}22` : undefined } : undefined}
     >
       {emberCount > 0 && <TierEmberEffect color={qualityColor as string} count={emberCount} seed={seedFromId(label)} />}
-      {iconSrc ? <img src={iconSrc} alt="" className="relative z-10 h-3/5 w-3/5 object-contain" /> : <span className="relative z-10">{icon}</span>}
+      {iconSrc ? <img src={iconSrc} alt="" className="relative z-10 h-4/5 w-4/5 object-contain" /> : <span className="relative z-10">{icon}</span>}
     </button>
   )
 
