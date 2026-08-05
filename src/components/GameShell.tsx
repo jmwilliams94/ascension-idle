@@ -144,24 +144,67 @@ export default function GameShell({ characterId }: { characterId: string }) {
   // under the player mid-read. Once they've actually dismissed it (result
   // reset to null — see OfflineProgressModal), a genuinely new resume is
   // free to show its own fresh summary again as normal.
+  //
+  // Three independent triggers now, not just one (2026-08-05, reported by
+  // the user: "whenever I have the app minimised [as a Home Screen PWA]...
+  // I don't seem to ever get the idle popup... when I re-open it. I usually
+  // have to kill the app"). `visibilitychange` alone is well known to be
+  // unreliable for iOS/Android standalone home-screen PWAs specifically —
+  // WebKit in particular has long-standing quirks where it simply doesn't
+  // fire (or fires very late) when a standalone PWA resumes from being
+  // backgrounded, unlike an ordinary browser tab, which is exactly the
+  // "kill the app to get it to work" pattern being reported. `focus` is a
+  // second, differently-implemented signal that's historically more
+  // consistent in that exact scenario, so it's added alongside as a fast
+  // path. The real fix is the third one below — a heartbeat that doesn't
+  // depend on any visibility/lifecycle API firing at all.
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState !== 'visible') {
-        return
-      }
+    const checkOfflineProgressOnResume = async () => {
       if (useOfflineProgressStore.getState().result !== null) {
         return
       }
-      void (async () => {
-        const offlineResult = await runOfflineProgressCheck(characterId)
-        if (offlineResult) {
-          useOfflineProgressStore.getState().show(offlineResult)
-        }
-      })()
+      const offlineResult = await runOfflineProgressCheck(characterId)
+      if (offlineResult) {
+        useOfflineProgressStore.getState().show(offlineResult)
+      }
     }
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void checkOfflineProgressOnResume()
+      }
+    }
+    const handleFocus = () => {
+      void checkOfflineProgressOnResume()
+    }
+
+    // Browser-quirk-proof fallback, not dependent on visibilitychange/focus
+    // firing at all: a JS timer that's been suspended while the app was
+    // backgrounded simply doesn't fire while suspended — the moment it
+    // resumes, the gap between when this tick *should* have fired (based on
+    // its own interval) and when it actually did reveals exactly how long
+    // the app was away, using nothing but the wall clock. This is what
+    // actually guarantees the popup shows up on a plain re-open, with no
+    // dependency on iOS/Android correctly reporting the transition.
+    const HEARTBEAT_INTERVAL_MS = 3000
+    const RESUME_GAP_THRESHOLD_MS = 10000
+    let lastHeartbeatAt = Date.now()
+    const heartbeatId = window.setInterval(() => {
+      const now = Date.now()
+      const gap = now - lastHeartbeatAt
+      lastHeartbeatAt = now
+      if (gap > RESUME_GAP_THRESHOLD_MS) {
+        void checkOfflineProgressOnResume()
+      }
+    }, HEARTBEAT_INTERVAL_MS)
+
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
+      window.clearInterval(heartbeatId)
+    }
   }, [characterId])
 
   usePersistGameState(characterId, loaded)

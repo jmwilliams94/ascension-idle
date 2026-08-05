@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.61.3",
+    "date": "2026-08-05",
+    "changes": [
+      "Fixed the idle-rewards popup rarely (or never) appearing after minimizing the app on mobile/Home Screen PWA — no more needing to force-quit and relaunch to catch up"
+    ]
+  },
+  {
     "version": "1.61.2",
     "date": "2026-08-05",
     "changes": [
