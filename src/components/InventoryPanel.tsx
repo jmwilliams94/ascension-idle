@@ -176,6 +176,13 @@ export default function InventoryPanel({
   // instance but shouldn't share a variable name that implies they're the
   // same popover.
   const [bankPopoverAnchorRect, setBankPopoverAnchorRect] = useState<DOMRect | null>(null)
+  // Comet/Fallen Star Bundle popover (every non-Bank instance) — same
+  // click-opened TooltipActionPopover shell as the two above, replacing the
+  // old always-below-the-grid Bundle card (2026-08-05, per the user: "I
+  // would prefer to see it as a smaller option inside of the tooltip"
+  // rather than its own separate card). Scroll's own Unbundle card is
+  // unaffected — only the Comet/Fallen Star Bundle action moved.
+  const [bundlePopoverAnchorRect, setBundlePopoverAnchorRect] = useState<DOMRect | null>(null)
   const [bankDepositBusy, setBankDepositBusy] = useState(false)
   const [bankDepositError, setBankDepositError] = useState<string | null>(null)
   const [sellBusy, setSellBusy] = useState(false)
@@ -319,6 +326,13 @@ export default function InventoryPanel({
   const closeBankPopover = () => {
     setSelectedSlot(null)
     setBankPopoverAnchorRect(null)
+  }
+
+  // Bundle popover-only — dismiss action, also used after a successful
+  // Bundle from inside the popover.
+  const closeBundlePopover = () => {
+    setSelectedSlot(null)
+    setBundlePopoverAnchorRect(null)
   }
 
   // Every enableBankDeposit handler below follows the same shape: deposit,
@@ -597,7 +611,7 @@ export default function InventoryPanel({
       return
     }
 
-    setSelectedSlot(null)
+    closeBundlePopover()
   }
 
   const handleUnbundle = async (currencyType: 'comet' | 'fallen_star') => {
@@ -691,6 +705,8 @@ export default function InventoryPanel({
           {enableBankDeposit && bankDepositError && (
             <span className="text-xs text-amber-400">{bankDepositError}</span>
           )}
+
+          {!enableBankDeposit && scrollError && <span className="text-xs text-amber-400">{scrollError}</span>}
         </div>
 
         {/* overflow-x-auto is a defensive backstop, not the primary fix — the
@@ -803,7 +819,15 @@ export default function InventoryPanel({
             )
 
             if (!enableBankDeposit) {
-              return cometSlot
+              return (
+                <div
+                  key={dragId}
+                  data-tooltip-action-anchor
+                  onClick={(event) => setBundlePopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
+                >
+                  {cometSlot}
+                </div>
+              )
             }
 
             return (
@@ -851,7 +875,15 @@ export default function InventoryPanel({
             )
 
             if (!enableBankDeposit) {
-              return fallenStarSlot
+              return (
+                <div
+                  key={dragId}
+                  data-tooltip-action-anchor
+                  onClick={(event) => setBundlePopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
+                >
+                  {fallenStarSlot}
+                </div>
+              )
             }
 
             return (
@@ -1074,52 +1106,19 @@ export default function InventoryPanel({
         </div>
       )}
 
-      {selectedCurrencyType && !enableBankDeposit && (
-        <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
-          <div className="flex items-center gap-3">
-            <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg"
-              style={{
-                borderColor: selectedCurrencyType === 'comet' ? MATERIAL_COLOR : FALLEN_STAR_COLOR,
-                backgroundColor: `${selectedCurrencyType === 'comet' ? MATERIAL_COLOR : FALLEN_STAR_COLOR}22`,
-              }}
-            >
-              <img
-                src={selectedCurrencyType === 'comet' ? COMET_ICON_SRC : FALLEN_STAR_ICON_SRC}
-                alt=""
-                className="h-4/5 w-4/5 object-contain"
-              />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-200">{selectedCurrencyType === 'comet' ? 'Comet' : 'Fallen Star'}</p>
-              <p className="text-xs text-slate-500">
-                {selectedCurrencyType === 'comet' ? comets : fallenStars} owned total
-              </p>
-            </div>
-          </div>
-
-          {(() => {
-            const owned = selectedCurrencyType === 'comet' ? comets : fallenStars
-            const disabled = owned < 10 || scrollBusy
-
-            return (
-              <button
-                type="button"
-                disabled={disabled}
-                title={owned < 10 ? 'Need 10 to bundle' : undefined}
-                onClick={() => void handleBundle(selectedCurrencyType)}
-                className={`mt-3 w-full rounded-lg border px-3 py-1.5 text-xs font-medium ${
-                  disabled
-                    ? 'cursor-not-allowed border-slate-800 text-slate-600'
-                    : 'border-sky-500 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'
-                }`}
-              >
-                {scrollBusy ? 'Bundling…' : 'Bundle (10 → 1 Scroll)'}
-              </button>
-            )
-          })()}
-          {scrollError && <p className="mt-2 text-xs text-amber-400">{scrollError}</p>}
-        </div>
+      {!enableBankDeposit && selectedCurrencyType && bundlePopoverAnchorRect && (
+        <TooltipActionPopover
+          anchorRect={bundlePopoverAnchorRect}
+          tooltip={selectedCurrencyType === 'comet' ? buildCometTooltip() : buildFallenStarTooltip()}
+          actions={[
+            {
+              label: scrollBusy ? 'Bundling…' : 'Bundle (10 → 1 Scroll)',
+              onClick: () => void handleBundle(selectedCurrencyType),
+              disabled: (selectedCurrencyType === 'comet' ? comets : fallenStars) < 10 || scrollBusy,
+            },
+          ]}
+          onClose={closeBundlePopover}
+        />
       )}
 
       {selectedScrollType && (

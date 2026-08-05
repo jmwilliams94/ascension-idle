@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.60.4",
+    "date": "2026-08-05",
+    "changes": [
+      "Bundling Comets/Fallen Stars into Scrolls now opens as a small tooltip popover right at the tile instead of a separate card below the Inventory grid"
+    ]
+  },
+  {
     "version": "1.60.3",
     "date": "2026-08-05",
     "changes": [
