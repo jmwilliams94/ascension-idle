@@ -41,6 +41,36 @@ interface LevelUpgradeResult {
   socket_gained?: boolean
 }
 
+// Shape returned by master_forge_upgrade (2026-08-05, see migration
+// 20260805030000) — guaranteed success on either upgrade type, priced at
+// 1.5x the expected manual cost (see forgeCosts.ts's previewMasterForgeCost,
+// which mirrors this for the pre-commit cost preview). exceeds_character_level
+// is Master-Forge-specific — manual level_upgrade has no equivalent check.
+interface MasterForgeUpgradeResult {
+  ok: boolean
+  error?:
+    | 'item_not_found'
+    | 'not_owner'
+    | 'invalid_upgrade_type'
+    | 'already_max_quality'
+    | 'already_max_level'
+    | 'no_upgrade_path'
+    | 'exceeds_character_level'
+    | 'not_enough_fallen_stars'
+    | 'not_enough_comets'
+  upgrade_type?: 'quality' | 'level'
+  cost?: number
+  quality_tier?: string
+  level?: number
+  template_id?: string
+  fallen_stars_remaining?: number | null
+  comets_remaining?: number | null
+  result_level?: number
+  character_level?: number
+  sockets?: ItemInstance['sockets']
+  socket_gained?: boolean
+}
+
 // Shape returned by unlock_weapon_socket (guaranteed, player-paid — weapons
 // only, see CLAUDE.md's Sockets section for why this is asymmetric with
 // armor's RNG-on-upgrade path above).
@@ -89,6 +119,9 @@ interface ForgeState {
   // Sockets section). Armor gets sockets as a side effect of qualityUpgrade/
   // levelUpgrade above instead, not through this action.
   unlockWeaponSocket: (itemId: string) => Promise<UnlockWeaponSocketResult>
+  // Master Forge (2026-08-05) — guaranteed success on either upgrade type,
+  // priced dynamically (see MasterForgeUpgradeResult's own comment).
+  masterForgeUpgrade: (itemId: string, upgradeType: 'quality' | 'level') => Promise<MasterForgeUpgradeResult>
 }
 
 export const useForgeStore = create<ForgeState>((set) => ({
@@ -205,6 +238,42 @@ export const useForgeStore = create<ForgeState>((set) => ({
     }
     if (result.ok && typeof result.fallen_stars_remaining === 'number') {
       useCurrencyStore.getState().setFallenStars(result.fallen_stars_remaining)
+    }
+
+    return result
+  },
+
+  masterForgeUpgrade: async (itemId, upgradeType) => {
+    set({ busy: true })
+
+    const { data, error } = await supabase.rpc('master_forge_upgrade', { item_id: itemId, upgrade_type: upgradeType })
+
+    set({ busy: false })
+
+    if (error) {
+      console.error('Master Forge upgrade call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as MasterForgeUpgradeResult
+
+    if (result.ok && result.upgrade_type === 'quality' && result.quality_tier) {
+      useInventoryStore.getState().patchItem(itemId, { quality_tier: result.quality_tier })
+    }
+    if (result.ok && result.upgrade_type === 'level' && typeof result.level === 'number') {
+      useInventoryStore.getState().patchItem(itemId, {
+        level: result.level,
+        ...(result.template_id ? { template_id: result.template_id } : {}),
+      })
+    }
+    if (result.ok && result.sockets) {
+      useInventoryStore.getState().patchItem(itemId, { sockets: result.sockets })
+    }
+    if (result.ok && typeof result.fallen_stars_remaining === 'number') {
+      useCurrencyStore.getState().setFallenStars(result.fallen_stars_remaining)
+    }
+    if (result.ok && typeof result.comets_remaining === 'number') {
+      useCurrencyStore.getState().setComets(result.comets_remaining)
     }
 
     return result

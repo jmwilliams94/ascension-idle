@@ -4,6 +4,7 @@ import ForgeCompositionPanel from './ForgeCompositionPanel'
 import ForgeMaterialSlot, { MAX_MATERIAL_ENTRIES, type MaterialEntry } from './ForgeMaterialSlot'
 import ForgeSocketsPanel from './ForgeSocketsPanel'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
+import MasterForgePanel from './MasterForgePanel'
 import { DragDropProvider } from './dragDrop'
 import InventoryPanel from './InventoryPanel'
 import InventorySlot, { SLOT_LABEL_HEIGHT_CLASS, SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
@@ -209,6 +210,16 @@ export default function ForgePanel() {
   const qualityUpgrade = useForgeStore((state) => state.qualityUpgrade)
   const levelUpgrade = useForgeStore((state) => state.levelUpgrade)
   const compositionFeed = useForgeStore((state) => state.compositionFeed)
+
+  // Sub-tab (2026-08-05, confirmed with the user) — Master Forge is a
+  // fundamentally different flow (pick Quality/Level FIRST, then supply the
+  // item — the opposite order from the drag-driven mode-picking below), so
+  // it lives in its own component (MasterForgePanel.tsx) reached via a
+  // simple toggle here, same page-local sub-navigation convention as
+  // ShopPanel's own Weapons/Armor/Potions tabs (local state, not
+  // useTabStore — this is a sub-navigation inside the Forge tab, not a
+  // sibling of it).
+  const [forgeMode, setForgeMode] = useState<'standard' | 'master'>('standard')
 
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [materialEntries, setMaterialEntries] = useState<MaterialEntry[]>([])
@@ -451,118 +462,145 @@ export default function ForgePanel() {
   const showCompositionBar = materialMode === 'composition' && Boolean(selectedItem)
 
   return (
-    <DragDropProvider>
-      {/* Single centered column at every viewport size — the row of three
-          equal squares (Upgrade/Material/Preview) is centered as a group via
-          justify-center, which naturally puts the middle (Material) square
-          at the center of the row; the Inventory grid below is centered the
-          same way (see InventoryPanel's own drop-zone wrapper). */}
-      <div className="flex flex-col items-center gap-6">
-        <div className="flex flex-col items-center gap-3">
-          <div className="flex items-start justify-center gap-6">
-            {/* Upgrade + Material paired so the composition load bar (below)
-                can stretch to exactly their combined width, per the "load bar
-                stretching underneath the upgrade and material slots" ask. */}
-            <div className="flex flex-col items-center gap-2">
-              <div className="flex gap-6">
-                <ForgeUpgradeSlot item={selectedItem} template={selectedTemplate} onRemove={handleRemove} />
-                <ForgeMaterialSlot entries={materialEntries} templates={templates} onRemoveEntry={handleRemoveMaterial} />
+    <div className="space-y-6">
+      <div className="flex justify-center gap-2">
+        <button
+          type="button"
+          onClick={() => setForgeMode('standard')}
+          className={`rounded-lg border px-4 py-1.5 text-xs font-medium ${
+            forgeMode === 'standard' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-400 hover:border-slate-500'
+          }`}
+        >
+          Forge
+        </button>
+        <button
+          type="button"
+          onClick={() => setForgeMode('master')}
+          className={`rounded-lg border px-4 py-1.5 text-xs font-medium ${
+            forgeMode === 'master' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-400 hover:border-slate-500'
+          }`}
+        >
+          Master Forge
+        </button>
+      </div>
+
+      {forgeMode === 'master' ? (
+        <MasterForgePanel />
+      ) : (
+        <DragDropProvider>
+          {/* Single centered column at every viewport size — the row of three
+              equal squares (Upgrade/Material/Preview) is centered as a group via
+              justify-center, which naturally puts the middle (Material) square
+              at the center of the row; the Inventory grid below is centered the
+              same way (see InventoryPanel's own drop-zone wrapper). */}
+          <div className="flex flex-col items-center gap-6">
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex items-start justify-center gap-6">
+                {/* Upgrade + Material paired so the composition load bar (below)
+                    can stretch to exactly their combined width, per the "load bar
+                    stretching underneath the upgrade and material slots" ask. */}
+                <div className="flex flex-col items-center gap-2">
+                  <div className="flex gap-6">
+                    <ForgeUpgradeSlot item={selectedItem} template={selectedTemplate} onRemove={handleRemove} />
+                    <ForgeMaterialSlot entries={materialEntries} templates={templates} onRemoveEntry={handleRemoveMaterial} />
+                  </div>
+
+                  {showCompositionBar && selectedItem && (
+                    <CompositionLoadBar item={selectedItem} addedPoints={compositionAddedPoints} preview={compositionPreview} />
+                  )}
+                </div>
+
+                <PreviewSquare previewItem={previewItem} previewTemplate={previewTemplate} />
               </div>
 
-              {showCompositionBar && selectedItem && (
-                <CompositionLoadBar item={selectedItem} addedPoints={compositionAddedPoints} preview={compositionPreview} />
-              )}
-            </div>
-
-            <PreviewSquare previewItem={previewItem} previewTemplate={previewTemplate} />
-          </div>
-
-          <div className="w-full max-w-xs space-y-2">
-            {!selectedItem ? (
-              <p className="text-center text-[11px] text-slate-600">Drag an item into the Upgrade Slot.</p>
-            ) : !materialMode ? (
-              <p className="text-center text-[11px] text-slate-600">
-                Drag a Comet, Fallen Star, Stone, or gear item into the Material slot.
-              </p>
-            ) : materialMode === 'composition' ? (
-              <ForgeCompositionPanel
-                item={selectedItem}
-                entries={materialEntries}
-                busy={busy}
-                onFeed={() => void handleFeed()}
-                feedError={feedError}
-              />
-            ) : (
-              <>
-                {attemptResult && (
-                  <div
-                    className={`rounded-xl border p-3 text-center text-sm ${
-                      attemptResult.success
-                        ? 'forge-success-flash border-emerald-600 bg-emerald-500/10 text-emerald-300'
-                        : 'border-red-800 bg-red-500/10 text-red-300'
-                    }`}
-                  >
-                    {attemptResult.message}
-                  </div>
-                )}
-
-                {previewItem ? (
-                  // Deliberately no name/quality/level repeated here — the
-                  // Preview square's own tooltip (hover it) already shows the
-                  // full would-be item, so this is just a plain yes/no.
-                  <div className="flex justify-center gap-2">
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void handleConfirm()}
-                      className="rounded-lg border border-emerald-600 bg-emerald-500/10 px-4 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {busy ? 'Working…' : 'Confirm'}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => setMaterialEntries([])}
-                      className="rounded-lg border border-slate-700 px-4 py-1.5 text-xs font-medium text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <p className="rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-3 text-center text-[11px] text-slate-600">
-                    {materialMode === 'quality' ? qualityDisabledReason : levelDisabledReason}
+              <div className="w-full max-w-xs space-y-2">
+                {!selectedItem ? (
+                  <p className="text-center text-[11px] text-slate-600">Drag an item into the Upgrade Slot.</p>
+                ) : !materialMode ? (
+                  <p className="text-center text-[11px] text-slate-600">
+                    Drag a Comet, Fallen Star, Stone, or gear item into the Material slot.
                   </p>
+                ) : materialMode === 'composition' ? (
+                  <ForgeCompositionPanel
+                    item={selectedItem}
+                    entries={materialEntries}
+                    busy={busy}
+                    onFeed={() => void handleFeed()}
+                    feedError={feedError}
+                  />
+                ) : (
+                  <>
+                    {attemptResult && (
+                      <div
+                        className={`rounded-xl border p-3 text-center text-sm ${
+                          attemptResult.success
+                            ? 'forge-success-flash border-emerald-600 bg-emerald-500/10 text-emerald-300'
+                            : 'border-red-800 bg-red-500/10 text-red-300'
+                        }`}
+                      >
+                        {attemptResult.message}
+                      </div>
+                    )}
+
+                    {previewItem ? (
+                      // Deliberately no name/quality/level repeated here — the
+                      // Preview square's own tooltip (hover it) already shows the
+                      // full would-be item, so this is just a plain yes/no.
+                      <div className="flex justify-center gap-2">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void handleConfirm()}
+                          className="rounded-lg border border-emerald-600 bg-emerald-500/10 px-4 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {busy ? 'Working…' : 'Confirm'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => setMaterialEntries([])}
+                          className="rounded-lg border border-slate-700 px-4 py-1.5 text-xs font-medium text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-3 text-center text-[11px] text-slate-600">
+                        {materialMode === 'quality' ? qualityDisabledReason : levelDisabledReason}
+                      </p>
+                    )}
+                  </>
                 )}
-              </>
-            )}
-          </div>
+              </div>
 
-          {selectedItem && (
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => setSocketsOpen((open) => !open)}
-                className="text-[10px] text-slate-500 underline hover:text-slate-300"
-              >
-                {socketsOpen ? 'Hide Sockets' : 'Sockets'}
-              </button>
+              {selectedItem && (
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => setSocketsOpen((open) => !open)}
+                    className="text-[10px] text-slate-500 underline hover:text-slate-300"
+                  >
+                    {socketsOpen ? 'Hide Sockets' : 'Sockets'}
+                  </button>
 
-              {socketsOpen && (
-                <div className="mt-2 w-full max-w-xs rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-left">
-                  <ForgeSocketsPanel item={selectedItem} template={selectedTemplate} />
+                  {socketsOpen && (
+                    <div className="mt-2 w-full max-w-xs rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-left">
+                      <ForgeSocketsPanel item={selectedItem} template={selectedTemplate} />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          )}
-        </div>
 
-        {/* Draggable only here — opting into onTileDrop is what enables it. */}
-        <InventoryPanel
-          columns={5}
-          reservedItemIds={[...(selectedItemId ? [selectedItemId] : []), ...materialEntries.map((entry) => entry.id)]}
-          onTileDrop={handleTileDrop}
-        />
-      </div>
-    </DragDropProvider>
+            {/* Draggable only here — opting into onTileDrop is what enables it. */}
+            <InventoryPanel
+              columns={5}
+              reservedItemIds={[...(selectedItemId ? [selectedItemId] : []), ...materialEntries.map((entry) => entry.id)]}
+              onTileDrop={handleTileDrop}
+            />
+          </div>
+        </DragDropProvider>
+      )}
+    </div>
   )
 }

@@ -16,6 +16,60 @@ export function previewLevelUpgradeCost(): number {
   return 1
 }
 
+// Dynamic success chance (2026-08-05, confirmed with the user — mirrors
+// compute_upgrade_success_chance_pct in migration
+// 20260805030000_dynamic_upgrade_chance_and_master_forge.sql, must stay in
+// sync). Supersedes the old flat 70%/80% — the real roll (in
+// quality_upgrade/level_upgrade) is always server-side and this mirror is
+// never itself authoritative; it exists purely so Master Forge can preview a
+// cost client-side without a network round trip (regular Forge still shows
+// no odds at all, per the existing "no success rate is ever shown" design —
+// this mirror is Master-Forge-only).
+//
+// Level Upgrade: 90% (item's own level is the lowest in its family chain) to
+// 60% (highest), halved again for every quality tier above Normal. Quality
+// Upgrade: 85% to 75% by the same level-position logic, x0.58 per quality
+// tier above Normal (retuned same day from x0.65 — the user asked for
+// Radiant->Ascended specifically to land "closer to the 15% mark," which
+// x0.58 does almost exactly: ~14.6-16.6%). Both PLACEHOLDER curves, same
+// disclosed-not-final status as every other economy number in this game —
+// Level Upgrade's is grounded in a real reference point the user supplied
+// ("upgrading super gear from level 100 to 110 used to cost about 20-40
+// comets," i.e. ~2.5-5% near max level/quality); Quality Upgrade's has no
+// such anchor beyond the Radiant target above.
+const QUALITY_TIER_INDEX: Record<string, number> = { normal: 0, tempered: 1, infused: 2, radiant: 3, ascended: 4 }
+
+export function computeUpgradeSuccessChancePct(
+  templates: ItemTemplate[],
+  itemFamily: string | null,
+  requiredLevel: number,
+  qualityTier: string,
+  upgradeType: 'level' | 'quality',
+): number {
+  const familyTemplates = itemFamily ? templates.filter((template) => template.item_family === itemFamily) : []
+  const levels = familyTemplates.map((template) => template.required_level)
+  const minLevel = levels.length > 0 ? Math.min(...levels) : requiredLevel
+  const maxLevel = levels.length > 0 ? Math.max(...levels) : requiredLevel
+
+  const t = maxLevel > minLevel ? Math.min(1, Math.max(0, (requiredLevel - minLevel) / (maxLevel - minLevel))) : 0
+
+  const qualityIndex = QUALITY_TIER_INDEX[qualityTier] ?? 0
+  const [baseMin, baseMax, tierMultiplier] = upgradeType === 'level' ? [90, 60, 0.5] : [85, 75, 0.58]
+
+  const chance = (baseMin - t * (baseMin - baseMax)) * tierMultiplier ** qualityIndex
+  return Math.min(99, Math.max(1, chance))
+}
+
+// Master Forge (2026-08-05, confirmed with the user: "a Forge master will
+// offer to 100% upgrade a piece of gear but it costs 150% of whatever the
+// on-rate success rate would be for doing it manually") — 1.5x the expected
+// manual cost (1 / success_chance, since a manual attempt costs 1 currency
+// regardless of outcome), rounded up. Mirrors master_forge_upgrade's own
+// cost formula exactly — must stay in sync.
+export function previewMasterForgeCost(successChancePct: number): number {
+  return Math.ceil((1 / (successChancePct / 100)) * 1.5)
+}
+
 // Client-side mirror of level_upgrade's next-template lookup (see
 // 20260730020000_level_upgrade_next_tier.sql) — the next template sharing this
 // one's item_family with the lowest required_level above it, or null if this is
