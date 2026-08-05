@@ -155,7 +155,15 @@ export const useProgressionStore = create<ProgressionState>((set, get) => ({
       exp: saved.exp,
       predictedGold: 0,
       predictedLevel: saved.level,
-      predictedExp: 0,
+      // Bug fix (2026-08-05): this was 0, not saved.exp — predictedExp is the
+      // sole source ExpBar reads for the fraction/bar-fill display now (see
+      // predictedLevel's own comment), not something added on top of a
+      // separately-displayed confirmed exp the way predictedGold still is.
+      // Resetting it to 0 here (and in applyServerCombatResult below) meant
+      // the bar visibly dropped to 0 and had to reclimb from scratch on
+      // every load/confirmation, reported by the user as EXP "flicking back
+      // to 0" every few seconds.
+      predictedExp: saved.exp,
       lastLevelUp: null,
       lastLevelUpNotified: saved.level,
     }),
@@ -184,7 +192,12 @@ export const useProgressionStore = create<ProgressionState>((set, get) => ({
       level: values.level,
       predictedGold: 0,
       predictedLevel: values.level,
-      predictedExp: 0,
+      // Bug fix (2026-08-05) — see hydrate's own comment: this was 0, not
+      // values.exp, dropping the visible bar to 0 on every confirmation
+      // (every RESOLVE_INTERVAL_MS while fighting) before it climbed back up
+      // from scratch as new predicted kills came in — a real regression from
+      // the predictive-leveling change, not a pre-existing issue.
+      predictedExp: values.exp,
       lastLevelUp: showToast ? values.level : state.lastLevelUp,
       lastLevelUpNotified: Math.max(state.lastLevelUpNotified, values.level),
     })

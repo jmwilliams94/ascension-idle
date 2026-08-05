@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.61.2",
+    "date": "2026-08-05",
+    "changes": [
+      "Fixed the EXP bar visibly dropping to 0 and reclimbing every few seconds during combat — a regression from the recent predictive-leveling change, gold was unaffected"
+    ]
+  },
+  {
     "version": "1.61.1",
     "date": "2026-08-05",
     "changes": [
