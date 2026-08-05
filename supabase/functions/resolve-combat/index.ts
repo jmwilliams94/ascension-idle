@@ -792,6 +792,28 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   let inventoryFull = false
   const droppedTemplates: { id: string; required_level: number; qualityTier: string }[] = []
 
+  // Excludes equipped and Bank-Storage gear from the room-fit baseline below
+  // (fixed 2026-08-05, reported by the user via unbundle_currency_scroll's
+  // own copy of this same bug — see that migration's comment for the full
+  // writeup). Matches useInventoryStore.occupiedSlotCount's client-side
+  // formula exactly: neither an equipped item (shown only on the paper doll)
+  // nor a Bank-Storage item (shown only in Bank Storage) occupies a real
+  // Inventory slot, but the query below used to count both anyway.
+  const equippedIdsForRoomCheck = [
+    character.equipped_weapon_id,
+    character.equipped_ring_id,
+    character.equipped_necklace_id,
+    character.equipped_boots_id,
+    character.equipped_hat_id,
+    character.equipped_coat_id,
+    character.equipped_quiver_id,
+  ].filter((id): id is string => Boolean(id))
+
+  let gearCountQuery = db.from('item_instances').select('id', { count: 'exact', head: true }).eq('owner_id', characterId).neq('location', 'bank')
+  if (equippedIdsForRoomCheck.length > 0) {
+    gearCountQuery = gearCountQuery.not('id', 'in', `(${equippedIdsForRoomCheck.join(',')})`)
+  }
+
   // Inventory-full handling baseline — fetched BEFORE the loop now (used to
   // be after), so live mode can check fit live, kill by kill, as the window
   // is simulated. Functionally identical for offline mode either way, since
@@ -805,7 +827,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     { data: accountKillsRow },
     { data: petRow },
   ] = await Promise.all([
-    db.from('item_instances').select('id', { count: 'exact', head: true }).eq('owner_id', characterId),
+    gearCountQuery,
     db.from('characters').select('composition_stones').eq('id', characterId).maybeSingle(),
     db.from('loot_holding').select('id', { count: 'exact', head: true }).eq('character_id', characterId),
     db.from('potion_stacks').select('id', { count: 'exact', head: true }).eq('character_id', characterId).gt('count', 0),
