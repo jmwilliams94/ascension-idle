@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.61.4",
+    "date": "2026-08-05",
+    "changes": [
+      "Fixed Comet/Fallen Star Scroll bundling (and gold/Comet/Fallen Star gains generally) sometimes reverting shortly after — a background sync could occasionally undo an action that happened right before it landed"
+    ]
+  },
+  {
     "version": "1.61.3",
     "date": "2026-08-05",
     "changes": [

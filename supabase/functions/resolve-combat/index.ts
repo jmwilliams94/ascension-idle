@@ -1249,20 +1249,45 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     }
   }
 
-  const newComets = character.comet_count + cometsToGrant
-  const newFallenStars = character.fallen_star_count + fallenStarsToGrant
-
-  await db
-    .from('characters')
-    .update({
-      gold: character.gold + goldGained,
-      exp,
-      level,
-      comet_count: newComets,
-      fallen_star_count: newFallenStars,
-      combat_last_resolved_at: new Date(now).toISOString(),
+  // Atomic, not a read-modify-write blanket overwrite (fixed 2026-08-05,
+  // reported by the user: "I tried to Bundle some comets in the shop
+  // interface. They bundled but then the action reversed"). The old version
+  // of this wrote `character.gold + goldGained`/`character.comet_count +
+  // cometsToGrant` — plain JS-computed values from the `character` row read
+  // once at the very start of this call — via a single `.update({...})`. If
+  // anything else touched gold/comet_count/fallen_star_count on this same
+  // row in between (bundle_currency_scroll, sell_item, a Forge upgrade's
+  // comet/fallen-star cost, ...), that change was silently clobbered back to
+  // this stale snapshot the moment this call's own write landed — a lost
+  // update, not a display glitch. `resolve_combat_apply_rewards` (see its
+  // own migration) does the increment as a single `column = column + delta`
+  // SQL statement instead, which Postgres guarantees is safe against any
+  // concurrent writer to the same row, no matter how the two calls interleave.
+  const { data: rewardRow, error: rewardError } = await db
+    .rpc('resolve_combat_apply_rewards', {
+      p_character_id: characterId,
+      p_gold_delta: goldGained,
+      p_exp: exp,
+      p_level: level,
+      p_comet_delta: cometsToGrant,
+      p_fallen_star_delta: fallenStarsToGrant,
+      p_resolved_at: new Date(now).toISOString(),
     })
-    .eq('id', characterId)
+    .single()
+
+  if (rewardError || !rewardRow) {
+    console.error('resolve-combat resolve_combat_apply_rewards call failed:', rewardError?.message)
+  }
+
+  // Falls back to the old (racy) JS-computed values only if the RPC itself
+  // somehow failed to return a row — keeps the response shape intact rather
+  // than crashing, at the cost of reintroducing the race for just this one
+  // call; the RPC's own row-not-found case would mean characterId itself was
+  // bad, which every earlier query in this function would already have
+  // caught.
+  const newGold = rewardRow?.gold ?? character.gold + goldGained
+  const newComets = rewardRow?.comet_count ?? character.comet_count + cometsToGrant
+  const newFallenStars = rewardRow?.fallen_star_count ?? character.fallen_star_count + fallenStarsToGrant
 
   return json({
     ok: true,
@@ -1276,7 +1301,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     // its local state to (replace, not add — see useProgressionStore's
     // applyServerCombatResult).
     character: {
-      gold: character.gold + goldGained,
+      gold: newGold,
       exp,
       level,
       comets: newComets,
