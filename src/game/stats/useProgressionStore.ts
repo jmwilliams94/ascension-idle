@@ -6,6 +6,23 @@ import { MAX_CHARACTER_LEVEL, requiredExpForLevel } from './expCurve'
 // rewards from the same curve without importing this whole Zustand store.
 export { MAX_CHARACTER_LEVEL, requiredExpForLevel }
 
+// Deliberate under-prediction margin (2026-08-05, confirmed with the user:
+// "can we always have it slightly under predict exp? That way if it ever
+// has to make an adjustment it's always an adjustment upwards and never
+// downwards"). The client's own tick loop and resolve-combat's server-side
+// simulation roll dodge/hit/rare chances independently, so over a short
+// window the two can genuinely disagree by a kill or two either way — a
+// window where the server resolved slightly *fewer* kills than the client
+// predicted would otherwise show the EXP bar visibly drop right when the
+// next confirmation lands (see predictedLevel's own comment on this
+// already-accepted divergence). Shaving every predicted EXP gain down by
+// this factor before it's added builds in enough slack that a confirmation
+// almost always corrects upward instead of down. PLACEHOLDER margin, same
+// disclosed-not-final status as every other economy number — 5% is a guess
+// at "enough slack to absorb normal divergence, not so much it visibly lags
+// behind real progress."
+const PREDICTED_EXP_SAFETY_FACTOR = 0.95
+
 interface ProgressionState {
   // Confirmed/authoritative — only ever set by applyServerCombatResult,
   // hydrate, or addRewards (the gold-only sell-item path). Everything that
@@ -42,7 +59,9 @@ interface ProgressionState {
   // independent RNG/kill-timing simulated slightly fewer kills than the
   // client predicted — the same already-accepted divergence risk
   // predictedGold/predictedExp already had, just now also affecting the
-  // level number, not only the numbers within it).
+  // level number, not only the numbers within it). See
+  // PREDICTED_EXP_SAFETY_FACTOR below for how addPredictedRewards guards
+  // against this specifically for EXP — gold has no equivalent margin.
   predictedLevel: number
   predictedExp: number
   // The level just reached, shown as a one-off toast by the UI, or null if there's
@@ -123,7 +142,7 @@ export const useProgressionStore = create<ProgressionState>((set, get) => ({
       let expInLevel = state.predictedExp
 
       if (level < MAX_CHARACTER_LEVEL) {
-        expInLevel += exp
+        expInLevel += Math.floor(exp * PREDICTED_EXP_SAFETY_FACTOR)
       }
 
       let leveledUpTo: number | null = null

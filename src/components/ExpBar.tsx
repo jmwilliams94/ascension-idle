@@ -39,13 +39,24 @@ export default function ExpBar() {
   // the log instead of sitting frozen until the next server confirmation.
   const predictedGold = useProgressionStore((state) => state.predictedGold)
   // predictedLevel/predictedExp (not the confirmed level/exp) drive the
-  // whole Lv/bar/fraction display now (2026-08-05) — see
+  // whole Lv/bar/percentage display now (2026-08-05) — see
   // useProgressionStore's own comment on predictedLevel for why: the old
   // exp+predictedExp display was clamped at 100% of the *confirmed* level's
   // requirement, so it visually froze full for up to RESOLVE_INTERVAL_MS
   // once a player got close to leveling, reading as "no reward." These two
   // already roll all the way over into the next level locally, so there's
-  // nothing left to clamp.
+  // nothing left to clamp. Also deliberately underpredicted by a small
+  // safety margin (see PREDICTED_EXP_SAFETY_FACTOR in useProgressionStore.ts)
+  // so a server confirmation almost always corrects this percentage upward,
+  // never down.
+  //
+  // Shown as a plain percentage (2026-08-05, confirmed with the user: "can
+  // we also change the exp to show the percentage to the next level instead
+  // of the existing long number? It should just read whatever it's at
+  // 93.55%") — supersedes the earlier `${predictedExp} / ${required}`
+  // fraction text. predictedExp/required are still computed below (needed
+  // for the bar's own width via `percent`), just no longer shown as raw
+  // numbers.
   const predictedLevel = useProgressionStore((state) => state.predictedLevel)
   const predictedExp = useProgressionStore((state) => state.predictedExp)
   const lastLevelUp = useProgressionStore((state) => state.lastLevelUp)
@@ -72,7 +83,7 @@ export default function ExpBar() {
       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800 lg:h-2">
         <div className={`h-full rounded-full ${isMaxLevel ? 'bg-amber-400' : 'bg-emerald-500'}`} style={{ width: `${percent}%` }} />
       </div>
-      <span className="shrink-0 text-slate-500">{isMaxLevel ? 'MAX' : `${predictedExp} / ${required}`}</span>
+      <span className="shrink-0 text-slate-500">{isMaxLevel ? 'MAX' : `${percent.toFixed(2)}%`}</span>
       <span className="shrink-0 border-l border-slate-700 pl-2 font-semibold text-amber-300 lg:pl-3">
         {displayedGold.toLocaleString()}g
       </span>

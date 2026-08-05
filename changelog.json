@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.61.6",
+    "date": "2026-08-05",
+    "changes": [
+      "Equipment screen: Necklace/Ring and Off-hand/Main Hand now sit staggered between Head/Armor/Boots instead of lined up with them, with a bit more vertical breathing room",
+      "The EXP readout now shows a plain percentage to your next level (e.g. 93.55%) instead of the old raw fraction",
+      "Predicted EXP now runs slightly under the real value on purpose, so when it syncs up with the server it only ever corrects upward, never back down"
+    ]
+  },
+  {
     "version": "1.61.5",
     "date": "2026-08-05",
     "changes": [
