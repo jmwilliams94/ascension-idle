@@ -7,25 +7,57 @@ import { MAX_CHARACTER_LEVEL, requiredExpForLevel } from './expCurve'
 export { MAX_CHARACTER_LEVEL, requiredExpForLevel }
 
 interface ProgressionState {
+  // Confirmed/authoritative — only ever set by applyServerCombatResult,
+  // hydrate, or addRewards (the gold-only sell-item path). Everything that
+  // needs the character's *real* level for a gameplay effect (attribute
+  // auto-allotment, combat's level-diff color/Defense math, Shop/equip level
+  // gates) must keep reading this field, not predictedLevel below — only
+  // predictedLevel is allowed to run ahead of the server.
   level: number
   exp: number
   gold: number
-  // Local-only running total from combat log predictions since the last
-  // resolve-combat confirmation (see useCombatStore.runTick's kill branch) —
-  // added on top of gold/exp for display (ExpBar) so the
-  // visible counters move in real time with the log instead of sitting frozen
-  // for ~15s and then jumping all at once. Reset to 0 whenever
-  // applyServerCombatResult lands, since the confirmed totals already include
-  // whatever was predicted (closes a UX gap reported 2026-07-31 — the log
-  // text updated instantly, the actual displayed numbers didn't).
+  // Local-only running total of gold predicted since the last resolve-combat
+  // confirmation (see useCombatStore.runTick's kill branch), added on top of
+  // gold for display (ExpBar) so the visible counter moves in real time with
+  // the log instead of sitting frozen until the next confirmation lands.
+  // Reset to 0 whenever applyServerCombatResult lands, since the confirmed
+  // total already includes whatever was predicted.
   predictedGold: number
+  // Predictive level system (2026-08-05, confirmed with the user — "I
+  // dislike the huge delays and no exp reward when something dies").
+  // Previously predictedExp was just added on top of the confirmed exp for
+  // display, clamped at 100% of the *current confirmed* level's requirement
+  // — so once a player got close to leveling, the bar visually capped out
+  // and just sat there (reading as "no reward") until the next resolve-
+  // combat confirmation actually crossed the threshold, up to
+  // RESOLVE_INTERVAL_MS (see CombatEngine.tsx) later. predictedLevel/
+  // predictedExp now roll over locally using the exact same level-up loop
+  // addRewards uses below (just against these fields instead of the
+  // confirmed level/exp), so the bar keeps climbing — and a "Level up!"
+  // toast fires — immediately, well before the server confirms it. This is
+  // display-only prediction, same trust tier as predictedGold: nothing here
+  // is itself authoritative, and applyServerCombatResult always resyncs both
+  // fields to the server's real values once it lands (which can occasionally
+  // mean predictedLevel visibly steps back down a notch if the server's own
+  // independent RNG/kill-timing simulated slightly fewer kills than the
+  // client predicted — the same already-accepted divergence risk
+  // predictedGold/predictedExp already had, just now also affecting the
+  // level number, not only the numbers within it).
+  predictedLevel: number
   predictedExp: number
   // The level just reached, shown as a one-off toast by the UI, or null if there's
   // nothing new to show (cleared once the UI has displayed it).
   lastLevelUp: number | null
+  // Highest level a toast has already been shown for, predictively or
+  // confirmed — prevents applyServerCombatResult from re-firing a toast for
+  // a level-up addPredictedRewards already announced a few seconds earlier,
+  // and prevents addPredictedRewards from re-announcing one after a
+  // predictedLevel rollback (see predictedLevel's own comment) re-crosses
+  // the same threshold a second time.
+  lastLevelUpNotified: number
   addRewards: (gold: number, exp: number) => void
   // Accumulates a local prediction only — never itself grants anything real,
-  // see the predictedGold/predictedExp field comments.
+  // see the predictedGold/predictedLevel/predictedExp field comments.
   addPredictedRewards: (gold: number, exp: number) => void
   clearLevelUpNotice: () => void
   // Sets saved values loaded from persistence directly, bypassing the level-up loop
@@ -40,8 +72,10 @@ interface ProgressionState {
   setGold: (value: number) => void
   // Reconciles local state with the resolve-combat Edge Function's authoritative
   // response (see resolveCombat.ts) — gold/exp/level are now granted server-side,
-  // so this replaces rather than adds. Shows the level-up toast if the server's
-  // level is higher than what was already shown.
+  // so this replaces rather than adds. Also resyncs predictedLevel/predictedExp
+  // back to this real level/exp (see their own comments) and shows the level-up
+  // toast if the server's level is higher than what was already shown (skipped
+  // if the predictive path already announced this exact level-up itself).
   applyServerCombatResult: (values: { gold: number; exp: number; level: number }) => void
 }
 
@@ -50,8 +84,10 @@ export const useProgressionStore = create<ProgressionState>((set, get) => ({
   exp: 0,
   gold: 0,
   predictedGold: 0,
+  predictedLevel: 1,
   predictedExp: 0,
   lastLevelUp: null,
+  lastLevelUpNotified: 1,
 
   addRewards: (goldReward, expReward) => {
     const state = get()
@@ -82,13 +118,47 @@ export const useProgressionStore = create<ProgressionState>((set, get) => ({
   },
 
   addPredictedRewards: (gold, exp) => {
-    set((state) => ({ predictedGold: state.predictedGold + gold, predictedExp: state.predictedExp + exp }))
+    set((state) => {
+      let level = state.predictedLevel
+      let expInLevel = state.predictedExp
+
+      if (level < MAX_CHARACTER_LEVEL) {
+        expInLevel += exp
+      }
+
+      let leveledUpTo: number | null = null
+
+      while (level < MAX_CHARACTER_LEVEL && expInLevel >= requiredExpForLevel(level)) {
+        expInLevel -= requiredExpForLevel(level)
+        level += 1
+        leveledUpTo = level
+      }
+
+      const showToast = leveledUpTo !== null && leveledUpTo > state.lastLevelUpNotified
+
+      return {
+        predictedGold: state.predictedGold + gold,
+        predictedLevel: level,
+        predictedExp: expInLevel,
+        lastLevelUp: showToast ? leveledUpTo : state.lastLevelUp,
+        lastLevelUpNotified: showToast ? (leveledUpTo as number) : state.lastLevelUpNotified,
+      }
+    })
   },
 
   clearLevelUpNotice: () => set({ lastLevelUp: null }),
 
   hydrate: (saved) =>
-    set({ level: saved.level, gold: saved.gold, exp: saved.exp, predictedGold: 0, predictedExp: 0, lastLevelUp: null }),
+    set({
+      level: saved.level,
+      gold: saved.gold,
+      exp: saved.exp,
+      predictedGold: 0,
+      predictedLevel: saved.level,
+      predictedExp: 0,
+      lastLevelUp: null,
+      lastLevelUpNotified: saved.level,
+    }),
 
   spendGold: (amount) => {
     const { gold } = get()
@@ -104,14 +174,19 @@ export const useProgressionStore = create<ProgressionState>((set, get) => ({
   setGold: (value) => set({ gold: value }),
 
   applyServerCombatResult: (values) => {
-    const previousLevel = get().level
+    const state = get()
+    const alreadyNotified = state.lastLevelUpNotified >= values.level
+    const showToast = values.level > state.level && !alreadyNotified
+
     set({
       gold: values.gold,
       exp: values.exp,
       level: values.level,
       predictedGold: 0,
+      predictedLevel: values.level,
       predictedExp: 0,
-      lastLevelUp: values.level > previousLevel ? values.level : get().lastLevelUp,
+      lastLevelUp: showToast ? values.level : state.lastLevelUp,
+      lastLevelUpNotified: Math.max(state.lastLevelUpNotified, values.level),
     })
   },
 }))

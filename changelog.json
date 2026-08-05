@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.61.0",
+    "date": "2026-08-05",
+    "changes": [
+      "Leveling up now happens instantly when you get the killing blow, instead of waiting several seconds for confirmation — no more EXP bar sitting stuck at full",
+      "Background reward confirmation now runs about 4x more often, so real gold/EXP/loot catch up to what you see on screen much faster"
+    ]
+  },
+  {
     "version": "1.60.4",
     "date": "2026-08-05",
     "changes": [

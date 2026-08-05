@@ -12,7 +12,15 @@ const TICK_INTERVAL_MS = 100
 // currency rewards server-side (see resolveCombat.ts), a few seconds behind
 // the predicted numbers the log already showed. No perceptible combat lag:
 // the fighting itself never waits on this.
-const RESOLVE_INTERVAL_MS = 15000
+//
+// Shortened from 15000 to 4000 (2026-08-05, confirmed with the user — "I
+// dislike the huge delays and no exp reward when something dies"), alongside
+// making the level bar itself predictive (see useProgressionStore's
+// predictedLevel) — the two together close most of the gap between "you see
+// a kill happen" and "the real numbers are confirmed." Costs more frequent
+// Edge Function calls while actively fighting; worth it for how much
+// snappier this feels.
+const RESOLVE_INTERVAL_MS = 4000
 
 // Non-visual driver — mounted unconditionally in GameShell (not inside CombatPage)
 // so the fight keeps advancing while the player is on another tab. An idle game

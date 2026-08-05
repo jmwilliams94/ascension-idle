@@ -13,22 +13,27 @@ import { MAX_CHARACTER_LEVEL, requiredExpForLevel, useProgressionStore } from '.
 // a distinct celebratory moment, not just another restatement of the level
 // number.
 export default function ExpBar() {
-  const level = useProgressionStore((state) => state.level)
-  const exp = useProgressionStore((state) => state.exp)
   const gold = useProgressionStore((state) => state.gold)
-  // Local combat-log predictions layered on top of the confirmed exp/gold
-  // (see useProgressionStore's predictedExp/predictedGold) so this bar moves
-  // in real time with the log instead of sitting frozen until the next
-  // server confirmation.
-  const predictedExp = useProgressionStore((state) => state.predictedExp)
+  // Local combat-log predictions layered on top of the confirmed gold (see
+  // useProgressionStore's predictedGold) so this bar moves in real time with
+  // the log instead of sitting frozen until the next server confirmation.
   const predictedGold = useProgressionStore((state) => state.predictedGold)
+  // predictedLevel/predictedExp (not the confirmed level/exp) drive the
+  // whole Lv/bar/fraction display now (2026-08-05) — see
+  // useProgressionStore's own comment on predictedLevel for why: the old
+  // exp+predictedExp display was clamped at 100% of the *confirmed* level's
+  // requirement, so it visually froze full for up to RESOLVE_INTERVAL_MS
+  // once a player got close to leveling, reading as "no reward." These two
+  // already roll all the way over into the next level locally, so there's
+  // nothing left to clamp.
+  const predictedLevel = useProgressionStore((state) => state.predictedLevel)
+  const predictedExp = useProgressionStore((state) => state.predictedExp)
   const lastLevelUp = useProgressionStore((state) => state.lastLevelUp)
   const clearLevelUpNotice = useProgressionStore((state) => state.clearLevelUpNotice)
-  const isMaxLevel = level >= MAX_CHARACTER_LEVEL
-  const required = requiredExpForLevel(level)
-  const displayedExp = isMaxLevel ? exp : exp + predictedExp
+  const isMaxLevel = predictedLevel >= MAX_CHARACTER_LEVEL
+  const required = requiredExpForLevel(predictedLevel)
   const displayedGold = gold + predictedGold
-  const percent = isMaxLevel ? 100 : required > 0 ? Math.min(100, (displayedExp / required) * 100) : 100
+  const percent = isMaxLevel ? 100 : required > 0 ? Math.min(100, (predictedExp / required) * 100) : 100
 
   useEffect(() => {
     if (lastLevelUp === null) {
@@ -43,11 +48,11 @@ export default function ExpBar() {
     <div className="relative flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950/80 px-2 py-1 text-[10px] text-slate-300 backdrop-blur lg:gap-3 lg:px-3 lg:py-2 lg:text-sm">
       {/* Larger than its siblings even at desktop — this is the number the
           user specifically flagged as too small to read at a glance. */}
-      <span className="shrink-0 text-xs font-semibold lg:text-lg">Lv {level}</span>
+      <span className="shrink-0 text-xs font-semibold lg:text-lg">Lv {predictedLevel}</span>
       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800 lg:h-2">
         <div className={`h-full rounded-full ${isMaxLevel ? 'bg-amber-400' : 'bg-emerald-500'}`} style={{ width: `${percent}%` }} />
       </div>
-      <span className="shrink-0 text-slate-500">{isMaxLevel ? 'MAX' : `${displayedExp} / ${required}`}</span>
+      <span className="shrink-0 text-slate-500">{isMaxLevel ? 'MAX' : `${predictedExp} / ${required}`}</span>
       <span className="shrink-0 border-l border-slate-700 pl-2 font-semibold text-amber-300 lg:pl-3">
         {displayedGold.toLocaleString()}g
       </span>
