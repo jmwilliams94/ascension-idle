@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.61.8",
+    "date": "2026-08-05",
+    "changes": [
+      "Fixed a dead end where a full Inventory made it impossible to claim pending Comets/Fallen Stars — you can now Bank them straight to your account instead, one at a time or all at once"
+    ]
+  },
+  {
     "version": "1.61.7",
     "date": "2026-08-05",
     "changes": [

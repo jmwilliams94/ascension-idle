@@ -13,7 +13,14 @@ import {
 } from '../game/items/equipmentBonus'
 import type { ItemInstance } from '../game/items/useInventoryStore'
 import type { ItemTemplate } from '../game/items/useItemTemplatesStore'
-import { FALLEN_STAR_COLOR, FALLEN_STAR_ICON_SRC, MATERIAL_COLOR, COMET_ICON_SRC } from '../game/items/forgeCosts'
+import {
+  FALLEN_STAR_COLOR,
+  FALLEN_STAR_ICON_SRC,
+  MATERIAL_COLOR,
+  COMET_ICON_SRC,
+  buildCometTooltip,
+  buildFallenStarTooltip,
+} from '../game/items/forgeCosts'
 
 // Loot Holding (confirmed with the user, 2026-07-30): where a server-resolved
 // kill's item drop lands when Inventory is full — see useLootHoldingStore and
@@ -35,8 +42,22 @@ import { FALLEN_STAR_COLOR, FALLEN_STAR_ICON_SRC, MATERIAL_COLOR, COMET_ICON_SRC
 // during the idle... can be sold on that pop up") after finding "Sell All
 // Normal" alone wasn't enough — a non-Normal item had no sell path at all
 // from here, which meant it always had to be claimed (needing Inventory
-// room) or left to resurface later. Currency tiles (Comet/Fallen Star) stay
-// non-interactive — nothing to sell, only Claim, which is the modal's job.
+// room) or left to resurface later.
+//
+// Currency tiles (Comet/Fallen Star) gained the mirror-image Bank popover
+// the same day (2026-08-05), reported by the user as a real dead end: "I
+// just got to one of the claim screens and I couldn't claim my comets cause
+// of a full inventory. Since I couldn't claim I couldn't get passed that
+// screen." A claimed Comet/Fallen Star becomes its own non-stacking
+// Inventory tile (see CLAUDE.md's Loot section), so claiming one needs a
+// free slot exactly like gear does — and unlike gear, there was no sell
+// path for currency at all (sell_loot_holding rejects it server-side), so a
+// genuinely full Inventory left no way off this screen whatsoever, since
+// OfflineProgressModal deliberately stays open on any claim failure rather
+// than silently closing (see that file's own note). Banking routes the
+// entry straight into the account-wide swap-model Bank instead
+// (bank_loot_holding — see useLootHoldingStore.ts), which never touches
+// Inventory at all.
 //
 // Grid width bug fix (2026-08-03): this was hardcoded to 8 columns, wider
 // than a phone viewport even at the smaller mobile tile size — the same
@@ -73,11 +94,14 @@ export default function LootHoldingCard() {
   const entries = useLootHoldingStore((state) => state.entries)
   const busy = useLootHoldingStore((state) => state.busy)
   const sell = useLootHoldingStore((state) => state.sell)
+  const bank = useLootHoldingStore((state) => state.bank)
   const templates = useItemTemplatesStore((state) => state.templates)
 
   const [error, setError] = useState<string | null>(null)
   const [sellPopoverEntryId, setSellPopoverEntryId] = useState<string | null>(null)
   const [sellPopoverAnchorRect, setSellPopoverAnchorRect] = useState<DOMRect | null>(null)
+  const [bankPopoverEntryId, setBankPopoverEntryId] = useState<string | null>(null)
+  const [bankPopoverAnchorRect, setBankPopoverAnchorRect] = useState<DOMRect | null>(null)
 
   if (entries.length === 0) {
     return null
@@ -88,6 +112,7 @@ export default function LootHoldingCard() {
     const template = templates.find((t) => t.id === entry.template_id)
     return sum + (template ? previewSellPrice(template.price, 'normal') : 0)
   }, 0)
+  const currencyEntries = entries.filter((entry) => entry.currency_type)
 
   const handleSellAllNormal = async () => {
     setError(null)
@@ -101,9 +126,26 @@ export default function LootHoldingCard() {
     }
   }
 
+  // Bulk unblock for the reported stuck scenario — one click clears every
+  // Comet/Fallen Star at once, regardless of type, rather than needing one
+  // tap per entry via the popover below.
+  const handleBankAllCurrency = async () => {
+    setError(null)
+    const results = await Promise.all(currencyEntries.map((entry) => bank(entry.id)))
+    const failures = results.filter((result) => !result.ok).length
+    if (failures > 0) {
+      setError(`Couldn't bank ${failures} item${failures === 1 ? '' : 's'}.`)
+    }
+  }
+
   const closeSellPopover = () => {
     setSellPopoverEntryId(null)
     setSellPopoverAnchorRect(null)
+  }
+
+  const closeBankPopover = () => {
+    setBankPopoverEntryId(null)
+    setBankPopoverAnchorRect(null)
   }
 
   const handleSellOne = async (entryId: string) => {
@@ -116,6 +158,16 @@ export default function LootHoldingCard() {
     closeSellPopover()
   }
 
+  const handleBankOne = async (entryId: string) => {
+    setError(null)
+    const result = await bank(entryId)
+    if (!result.ok) {
+      setError("Couldn't bank that item.")
+      return
+    }
+    closeBankPopover()
+  }
+
   const sellPopoverEntry = sellPopoverEntryId ? entries.find((entry) => entry.id === sellPopoverEntryId) : undefined
   const sellPopoverTemplate = sellPopoverEntry?.template_id
     ? templates.find((t) => t.id === sellPopoverEntry.template_id)
@@ -124,6 +176,7 @@ export default function LootHoldingCard() {
     sellPopoverEntry && sellPopoverTemplate
       ? previewSellPrice(sellPopoverTemplate.price, sellPopoverEntry.quality_tier ?? 'normal')
       : 0
+  const bankPopoverEntry = bankPopoverEntryId ? entries.find((entry) => entry.id === bankPopoverEntryId) : undefined
 
   return (
     <div className="space-y-3 rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900/80 to-slate-950/80 p-4">
@@ -139,20 +192,33 @@ export default function LootHoldingCard() {
         </div>
       </div>
       <p className="text-[11px] text-slate-500">
-        Drops that couldn't fit while you were away land here — tap an item to sell it, or Sell All Normal for junk, then Claim
-        below to bring the rest into your Inventory.
+        Drops that couldn't fit while you were away land here — tap an item to sell or bank it, or use the buttons below, then
+        Claim to bring the rest into your Inventory.
       </p>
 
-      {normalEntries.length > 0 && (
+      {(normalEntries.length > 0 || currencyEntries.length > 0) && (
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void handleSellAllNormal()}
-            className="rounded-lg border border-amber-600 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Sell All Normal ({normalSellTotal.toLocaleString()} gold)
-          </button>
+          {normalEntries.length > 0 && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void handleSellAllNormal()}
+              className="rounded-lg border border-amber-600 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Sell All Normal ({normalSellTotal.toLocaleString()} gold)
+            </button>
+          )}
+          {currencyEntries.length > 0 && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void handleBankAllCurrency()}
+              title="Sends every Comet/Fallen Star here straight to your account-wide Bank — doesn't need Inventory room."
+              className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Bank All Comets/Fallen Stars ({currencyEntries.length})
+            </button>
+          )}
         </div>
       )}
       {error && <p className="text-[11px] text-amber-400">{error}</p>}
@@ -177,13 +243,14 @@ export default function LootHoldingCard() {
               : getGearIconSrc(template?.name)
 
             // Hover/long-press peek is suppressed specifically while this
-            // tile's own Sell popover is open (2026-08-05, reported by the
-            // user: "I'm seeing normal tooltip and the press and hold
+            // tile's own Sell/Bank popover is open (2026-08-05, reported by
+            // the user: "I'm seeing normal tooltip and the press and hold
             // tooltips at the same time") — the popover already renders the
-            // same buildGearTooltip content itself, so leaving the peek
-            // active too let it visibly overlap the popover once opened.
-            // Same fix as InventoryPanel's own isPopoverOpenForSelection.
+            // same tooltip content itself, so leaving the peek active too let
+            // it visibly overlap the popover once opened. Same fix as
+            // InventoryPanel's own isPopoverOpenForSelection.
             const isSellPopoverOpenForThisEntry = sellPopoverEntryId === entry.id
+            const isBankPopoverOpenForThisEntry = bankPopoverEntryId === entry.id
 
             const slot = (
               <InventorySlot
@@ -194,18 +261,34 @@ export default function LootHoldingCard() {
                 icon={icon}
                 iconSrc={iconSrc}
                 label={label}
-                selected={isSellPopoverOpenForThisEntry}
+                selected={isSellPopoverOpenForThisEntry || isBankPopoverOpenForThisEntry}
                 tooltip={
-                  !isCurrency && template && !isSellPopoverOpenForThisEntry
-                    ? buildGearTooltip(previewInstanceForEntry(entry, template), template)
-                    : undefined
+                  isBankPopoverOpenForThisEntry || isSellPopoverOpenForThisEntry
+                    ? undefined
+                    : isCurrency
+                      ? entry.currency_type === 'comet'
+                        ? buildCometTooltip()
+                        : buildFallenStarTooltip()
+                      : template
+                        ? buildGearTooltip(previewInstanceForEntry(entry, template), template)
+                        : undefined
                 }
                 onClick={
-                  !isCurrency && template
+                  isCurrency
                     ? () => {
-                        setSellPopoverEntryId(entry.id)
+                        // Mutually exclusive with the Sell popover — without
+                        // clearing the other one's id here, clicking a gear
+                        // tile then a currency tile (without dismissing the
+                        // first) could leave both popovers rendered at once.
+                        setSellPopoverEntryId(null)
+                        setBankPopoverEntryId(entry.id)
                       }
-                    : undefined
+                    : template
+                      ? () => {
+                          setBankPopoverEntryId(null)
+                          setSellPopoverEntryId(entry.id)
+                        }
+                      : undefined
                 }
                 qualityColor={
                   isCurrency
@@ -217,12 +300,13 @@ export default function LootHoldingCard() {
               />
             )
 
-            // Gear tiles only — currency tiles have nothing to sell (Claim,
-            // via the modal's own button, is their only action). Captures
-            // the tile's own bounding rect on click so TooltipActionPopover
-            // can anchor to it, same data-tooltip-action-anchor convention
-            // InventoryPanel's own Bank/Bundle popovers already use.
-            if (isCurrency || !template) {
+            // Captures the tile's own bounding rect on click so
+            // TooltipActionPopover can anchor to it, same
+            // data-tooltip-action-anchor convention InventoryPanel's own
+            // Bank/Bundle popovers already use — one anchor state for Sell
+            // (gear), a separate one for Bank (currency), since a tile is
+            // only ever one kind or the other.
+            if (!template && !isCurrency) {
               return slot
             }
 
@@ -230,7 +314,16 @@ export default function LootHoldingCard() {
               <div
                 key={entry.id}
                 data-tooltip-action-anchor
-                onClick={(event) => setSellPopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
+                onClick={(event) => {
+                  const rect = event.currentTarget.getBoundingClientRect()
+                  if (isCurrency) {
+                    setSellPopoverAnchorRect(null)
+                    setBankPopoverAnchorRect(rect)
+                  } else {
+                    setBankPopoverAnchorRect(null)
+                    setSellPopoverAnchorRect(rect)
+                  }
+                }}
               >
                 {slot}
               </div>
@@ -251,6 +344,21 @@ export default function LootHoldingCard() {
             },
           ]}
           onClose={closeSellPopover}
+        />
+      )}
+
+      {bankPopoverEntry && bankPopoverAnchorRect && (
+        <TooltipActionPopover
+          anchorRect={bankPopoverAnchorRect}
+          tooltip={bankPopoverEntry.currency_type === 'comet' ? buildCometTooltip() : buildFallenStarTooltip()}
+          actions={[
+            {
+              label: busy ? 'Banking…' : 'Bank',
+              onClick: () => void handleBankOne(bankPopoverEntry.id),
+              disabled: busy,
+            },
+          ]}
+          onClose={closeBankPopover}
         />
       )}
     </div>

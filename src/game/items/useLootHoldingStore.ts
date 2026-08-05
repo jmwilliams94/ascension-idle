@@ -47,6 +47,23 @@ interface SellResult {
   ascension_points?: number
 }
 
+// bank_loot_holding (2026-08-05) — routes a pending Comet/Fallen Star
+// straight into the account-wide swap-model Bank (players.bank_comets/
+// bank_fallen_stars), bypassing the character's own comet_count/
+// fallen_star_count entirely — the point being it never needs a free
+// Inventory slot the way claim does (a claimed unit becomes its own
+// non-stacking Inventory tile). Confirmed with the user after a full
+// Inventory left them stuck on a claim screen unable to progress: "let's
+// add a bank button for comets and fallen stars so if our inventory is full
+// we have the option to bank them." Gear entries are rejected server-side
+// with 'not_bankable' — the UI only ever offers this on currency entries.
+interface BankResult {
+  ok: boolean
+  error?: 'not_found' | 'not_owner' | 'not_bankable'
+  currency_type?: 'comet' | 'fallen_star'
+  new_bank_balance?: number
+}
+
 interface LootHoldingState {
   entries: LootHoldingEntry[]
   loaded: boolean
@@ -56,6 +73,7 @@ interface LootHoldingState {
   addEntries: (entries: LootHoldingEntry[]) => void
   claim: (holdingId: string) => Promise<ClaimResult>
   sell: (holdingId: string) => Promise<SellResult>
+  bank: (holdingId: string) => Promise<BankResult>
 }
 
 export const useLootHoldingStore = create<LootHoldingState>((set) => ({
@@ -84,9 +102,12 @@ export const useLootHoldingStore = create<LootHoldingState>((set) => ({
   },
 
   claim: async (holdingId) => {
-    // A currency-type entry doesn't need this pre-check (it doesn't call
-    // through here — see below) since claiming it doesn't create an
-    // item_instances row; only gear claims need the room check up front.
+    // Applies to currency entries too, not just gear (comment corrected
+    // 2026-08-05 — this used to claim otherwise, which was already stale:
+    // a claimed Comet/Fallen Star has been its own non-stacking Inventory
+    // tile since 2026-07-31, so it needs a free slot exactly like gear
+    // does). A player whose Inventory is genuinely full has no way to claim
+    // either kind here — see the bank() action below for the way out.
     if (occupiedSlotCount(useInventoryStore.getState().items) >= INVENTORY_SLOT_CAP) {
       return { ok: false }
     }
@@ -136,6 +157,32 @@ export const useLootHoldingStore = create<LootHoldingState>((set) => ({
       if (typeof result.ap_gained === 'number' && result.ap_gained > 0) {
         usePlayerRecordStore.getState().addAscensionPoints(result.ap_gained)
       }
+      set((state) => ({ entries: state.entries.filter((entry) => entry.id !== holdingId) }))
+    }
+
+    return result
+  },
+
+  bank: async (holdingId) => {
+    set({ busy: true })
+    const { data, error } = await supabase.rpc('bank_loot_holding', { holding_id: holdingId })
+    set({ busy: false })
+
+    if (error) {
+      console.error('Bank loot holding call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as BankResult
+
+    if (result.ok && result.currency_type && typeof result.new_bank_balance === 'number') {
+      usePlayerRecordStore
+        .getState()
+        .setBankBalances(
+          result.currency_type === 'comet'
+            ? { bankComets: result.new_bank_balance }
+            : { bankFallenStars: result.new_bank_balance },
+        )
       set((state) => ({ entries: state.entries.filter((entry) => entry.id !== holdingId) }))
     }
 
