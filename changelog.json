@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.61.5",
+    "date": "2026-08-05",
+    "changes": [
+      "Ascension Points now show next to Gold in the top bar, with real icon art",
+      "Redesigned the Equipment screen's paper-doll layout — Head/Armor/Boots stacked in the center, Necklace and Off-hand/Shield/Quiver on the left, Ring and Main Hand weapon on the right"
+    ]
+  },
+  {
     "version": "1.61.4",
     "date": "2026-08-05",
     "changes": [

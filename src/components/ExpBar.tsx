@@ -1,7 +1,17 @@
 import { useEffect } from 'react'
 import { MAX_CHARACTER_LEVEL, requiredExpForLevel, useProgressionStore } from '../game/stats/useProgressionStore'
+import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 
-// A persistent, always-visible compact readout of level/EXP/gold, shown in
+// Real art (2026-08-05), a user-supplied golden crystal cluster — Ascension
+// Points had no icon anywhere before this (LuckyPanel/MarketplacePanel both
+// show it as plain purple-tinted text). Same public/item-icons/ convention
+// forgeCosts.ts's COMET_ICON_SRC/FALLEN_STAR_ICON_SRC already use, kept local
+// to this file rather than added there since AP isn't an Inventory/Loot
+// Holding tile the way Comets/Fallen Stars are — nothing else needs this
+// constant yet.
+const AP_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/ascension-points.png`
+
+// A persistent, always-visible compact readout of level/EXP/gold/AP, shown in
 // GameShell's top HUD strip across every tab (desktop and mobile alike).
 //
 // Absorbed ProgressionPanel entirely (confirmed with the user, 2026-08-02) —
@@ -12,8 +22,18 @@ import { MAX_CHARACTER_LEVEL, requiredExpForLevel, useProgressionStore } from '.
 // rather than being silently dropped along with the rest of the card — it's
 // a distinct celebratory moment, not just another restatement of the level
 // number.
+//
+// Ascension Points added (2026-08-05, confirmed with the user — "Can we add
+// AP next to the gold in the same row as the exp bar?"), rightmost, its own
+// border-l divider matching Gold's own. Reads usePlayerRecordStore directly
+// (account-wide, not per-character — see CLAUDE.md's Marketplace section)
+// rather than needing a predicted/local-running-total treatment the way
+// Gold/EXP do, since nothing about live combat grants AP in real time —
+// it's earned only from selling gear (Shop/Loot Holding), which already
+// updates this store's value directly and immediately on its own.
 export default function ExpBar() {
   const gold = useProgressionStore((state) => state.gold)
+  const ascensionPoints = usePlayerRecordStore((state) => state.ascensionPoints)
   // Local combat-log predictions layered on top of the confirmed gold (see
   // useProgressionStore's predictedGold) so this bar moves in real time with
   // the log instead of sitting frozen until the next server confirmation.
@@ -55,6 +75,10 @@ export default function ExpBar() {
       <span className="shrink-0 text-slate-500">{isMaxLevel ? 'MAX' : `${predictedExp} / ${required}`}</span>
       <span className="shrink-0 border-l border-slate-700 pl-2 font-semibold text-amber-300 lg:pl-3">
         {displayedGold.toLocaleString()}g
+      </span>
+      <span className="flex shrink-0 items-center gap-1 border-l border-slate-700 pl-2 font-semibold text-purple-300 lg:pl-3">
+        <img src={AP_ICON_SRC} alt="" className="h-3.5 w-3.5 object-contain lg:h-4 lg:w-4" />
+        {ascensionPoints.toLocaleString()}
       </span>
 
       {lastLevelUp !== null && (

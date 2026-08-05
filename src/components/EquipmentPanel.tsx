@@ -16,11 +16,11 @@ import { useCharacterStore } from '../game/stats/useCharacterStore'
 
 // Slot size for this paper-doll — scaled up from the default h-16 w-16 now that
 // there's no central character placeholder competing for room (see below).
-// Responsive: the fixed 96px size didn't shrink to fit the percentage-based
-// grid columns below (`gridTemplateColumns: '30% 40% 30%'` inside a max-w-sm
-// container), which get tight enough on a phone that a 96px tile would
-// overflow its own column — same fixed-size-tile pattern that broke the
-// Inventory grid before. Unchanged 96px at `lg`+.
+// Responsive: the fixed 96px size didn't shrink to fit the grid columns below
+// (three equal `1fr` tracks inside a max-w-sm container), which get tight
+// enough on a phone that a 96px tile would overflow its own column — same
+// fixed-size-tile pattern that broke the Inventory grid before. Unchanged
+// 96px at `lg`+.
 const SLOT_SIZE = 'h-16 w-16 lg:h-24 lg:w-24'
 
 // Multi-slot equipping (confirmed, 2026-07-31 — supersedes the earlier
@@ -39,17 +39,24 @@ const SLOTS: { slot: EquipSlot; label: string; icon: string; gridArea: string }[
 
 const QUIVER_SLOT_CONFIG = { slot: 'quiver' as EquipSlot, label: 'Quiver', icon: '🏹', gridArea: 'offhand' }
 
-// Paper-doll layout. Right column, top to bottom: Head, Necklace, Ring, Main
-// Hand. Bottom row lines up Boots (left), Off-hand/Shield (center), and Armor
-// (right, below Main Hand). Off-hand/Shield is the one remaining non-clickable,
-// greyed-out placeholder — no shield item_family exists in the catalog at all
-// (see CLAUDE.md's Gear slots note).
+// Paper-doll layout (2026-08-05, confirmed with the user from a hand-drawn
+// reference: Head/Chest(Armor)/Boots stacked in a center column, Necklace
+// above Off-hand/Shield/Quiver on the left, Ring above Main Hand weapon on
+// the right — supersedes the earlier "right column of 4 + bottom row of 3"
+// layout, which put every slot along the right/bottom rather than centering
+// the body-shaped silhouette this new layout reads as). Same for all
+// classes, not just Hunter — Off-hand/Shield is the one remaining
+// non-clickable, greyed-out placeholder for every non-Hunter class — no
+// shield item_family exists in the catalog at all (see CLAUDE.md's Gear
+// slots note).
 //
 // The central character placeholder (PaperDollBody, an abstract/geometric
-// segmented rectangle) has been removed — CLAUDE.md flagged its fate as an
-// open decision ("keep the abstract box... or design a real static per-class
-// portrait... Not decided yet"); the decision is now to drop it rather than
-// replace it, freeing room to grow the remaining slot tiles instead.
+// segmented rectangle) was removed in an earlier pass — CLAUDE.md flagged
+// its fate as an open decision ("keep the abstract box... or design a real
+// static per-class portrait... Not decided yet"); the decision was to drop
+// it rather than replace it. This new layout's own silhouette (three slots
+// stacked center, two flanking either side) incidentally reads as a body
+// shape on its own, without needing that placeholder back.
 export default function EquipmentPanel() {
   const equippedIds = useEquipmentStore((state) => state.equippedIds)
   const setEquippedItem = useEquipmentStore((state) => state.setEquippedItem)
@@ -74,8 +81,8 @@ export default function EquipmentPanel() {
       <div
         className="mx-auto grid max-w-sm gap-2 lg:gap-3"
         style={{
-          gridTemplateColumns: '30% 40% 30%',
-          gridTemplateAreas: '". . head" ". . neck" ". . ring" ". . main" "boots offhand armor"',
+          gridTemplateColumns: '1fr 1fr 1fr',
+          gridTemplateAreas: '"neck head ring" "offhand armor main" ". boots ."',
         }}
       >
         {[...SLOTS, ...(isHunter ? [QUIVER_SLOT_CONFIG] : [])].map(({ slot, label, icon, gridArea }) => {
