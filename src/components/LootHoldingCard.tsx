@@ -176,6 +176,15 @@ export default function LootHoldingCard() {
                 : FALLEN_STAR_ICON_SRC
               : getGearIconSrc(template?.name)
 
+            // Hover/long-press peek is suppressed specifically while this
+            // tile's own Sell popover is open (2026-08-05, reported by the
+            // user: "I'm seeing normal tooltip and the press and hold
+            // tooltips at the same time") — the popover already renders the
+            // same buildGearTooltip content itself, so leaving the peek
+            // active too let it visibly overlap the popover once opened.
+            // Same fix as InventoryPanel's own isPopoverOpenForSelection.
+            const isSellPopoverOpenForThisEntry = sellPopoverEntryId === entry.id
+
             const slot = (
               <InventorySlot
                 key={entry.id}
@@ -185,8 +194,12 @@ export default function LootHoldingCard() {
                 icon={icon}
                 iconSrc={iconSrc}
                 label={label}
-                selected={sellPopoverEntryId === entry.id}
-                tooltip={!isCurrency && template ? buildGearTooltip(previewInstanceForEntry(entry, template), template) : undefined}
+                selected={isSellPopoverOpenForThisEntry}
+                tooltip={
+                  !isCurrency && template && !isSellPopoverOpenForThisEntry
+                    ? buildGearTooltip(previewInstanceForEntry(entry, template), template)
+                    : undefined
+                }
                 onClick={
                   !isCurrency && template
                     ? () => {

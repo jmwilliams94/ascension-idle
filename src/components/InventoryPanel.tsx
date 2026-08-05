@@ -195,6 +195,27 @@ export default function InventoryPanel({
   const [scrollBusy, setScrollBusy] = useState(false)
   const [scrollError, setScrollError] = useState<string | null>(null)
 
+  // Suppresses a tile's own hover/long-press tooltip peek specifically while
+  // its own click-opened popover (GearEquipPopover, or a TooltipActionPopover
+  // for Bank/Bundle/Sell) is showing (2026-08-05, reported by the user: "I'm
+  // seeing normal tooltip and the press and hold tooltips at the same time
+  // ... I think the hover ones can go now probably"). Root cause: a popover
+  // already renders the exact same ItemTooltip content itself, so leaving the
+  // peek active too let it visibly overlap the newly-opened popover — most
+  // reliably for a mouse (hovering shows the peek, then clicking opens the
+  // popover without the cursor ever leaving the tile, so the peek's own
+  // onMouseLeave never fires to dismiss it). Deliberately scoped to only the
+  // one tile whose popover is currently open, not a blanket removal — every
+  // other tile's hover/long-press peek is unaffected, and this same tile's
+  // own peek still works normally whenever its popover isn't open (keeps the
+  // 2026-08-04 fix — "mouseover should still show the normal tooltip" — for
+  // the common case where nothing is clicked).
+  const isPopoverOpenForSelection = (matchesSelection: boolean) =>
+    matchesSelection &&
+    ((equipPopoverEnabled && popoverAnchorRect !== null) ||
+      (enableBankDeposit && bankPopoverAnchorRect !== null) ||
+      (!enableBankDeposit && bundlePopoverAnchorRect !== null))
+
   const visiblePotionStacks = potionStacks.filter((stack) => stack.count > 0)
 
   // The equipped item (if any) no longer shows here at all — once worn, it's
@@ -750,6 +771,8 @@ export default function InventoryPanel({
               return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
             }
 
+            const isSelected = selectedSlot?.kind === 'stone' && selectedSlot.dragId === dragId
+
             const commonProps = {
               slotId: dragId,
               filled: true as const,
@@ -757,8 +780,8 @@ export default function InventoryPanel({
               icon: '🔷',
               qualityColor: MATERIAL_COLOR,
               label: `+${tier} Stone — ${compositionPointValue(tier)} pts`,
-              tooltip: buildStoneTooltip(tier),
-              selected: selectedSlot?.kind === 'stone' && selectedSlot.dragId === dragId,
+              tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildStoneTooltip(tier),
+              selected: isSelected,
             }
 
             const stoneSlot = onTileDrop ? (
@@ -794,6 +817,8 @@ export default function InventoryPanel({
               return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
             }
 
+            const isSelected = selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId
+
             const commonProps = {
               slotId: dragId,
               filled: true as const,
@@ -801,8 +826,8 @@ export default function InventoryPanel({
               iconSrc: COMET_ICON_SRC,
               qualityColor: MATERIAL_COLOR,
               label: 'Comet',
-              tooltip: buildCometTooltip(),
-              selected: selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId,
+              tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildCometTooltip(),
+              selected: isSelected,
             }
 
             const cometSlot = onTileDrop ? (
@@ -846,6 +871,8 @@ export default function InventoryPanel({
               return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
             }
 
+            const isSelected = selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId
+
             const commonProps = {
               slotId: dragId,
               filled: true as const,
@@ -853,8 +880,8 @@ export default function InventoryPanel({
               iconSrc: FALLEN_STAR_ICON_SRC,
               qualityColor: FALLEN_STAR_COLOR,
               label: 'Fallen Star',
-              tooltip: buildFallenStarTooltip(),
-              selected: selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId,
+              tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildFallenStarTooltip(),
+              selected: isSelected,
             }
 
             const fallenStarSlot = onTileDrop ? (
@@ -978,6 +1005,8 @@ export default function InventoryPanel({
             const icon = getItemIcon(template?.slot_type)
             const iconSrc = getGearIconSrc(template?.name)
 
+            const isSelected = selectedSlot?.kind === 'item' && selectedSlot.id === item.id
+
             const commonProps = {
               slotId: item.id,
               filled: true as const,
@@ -986,16 +1015,13 @@ export default function InventoryPanel({
               icon,
               iconSrc,
               label,
-              // Previously omitted whenever equipPopoverEnabled was on
-              // (Combat page's gear tiles) — "press is the only trigger now"
-              // turned out to be the wrong call in practice (reported by the
-              // user, 2026-08-04): plain mouseover should still show the
-              // normal tooltip everywhere, click-for-buttons is additive, not
-              // a replacement. Matches the same fix already applied to
-              // enableBankDeposit's tiles the same day — hover for a normal
-              // peek, click for the popover, always both now.
-              tooltip: buildGearTooltip(item, template),
-              selected: selectedSlot?.kind === 'item' && selectedSlot.id === item.id,
+              // Hover/long-press peek works normally (2026-08-04 fix: "plain
+              // mouseover should still show the normal tooltip") except while
+              // this exact tile's own popover is open, where it would just
+              // duplicate the popover's own tooltip (2026-08-05 fix — see
+              // isPopoverOpenForSelection's own comment).
+              tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildGearTooltip(item, template),
+              selected: isSelected,
             }
 
             // Merged (2026-08-03, was two separate early-return branches) so

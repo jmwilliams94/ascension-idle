@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.61.7",
+    "date": "2026-08-05",
+    "changes": [
+      "Fixed the normal hover tooltip sometimes overlapping a tile's own popover (Equip/Compare, Bank Deposit, Bundle, Sell) — the peek now steps aside while that tile's popover is open, but still works normally everywhere else"
+    ]
+  },
+  {
     "version": "1.61.6",
     "date": "2026-08-05",
     "changes": [
