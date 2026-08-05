@@ -3,6 +3,7 @@ import CountUp from './CountUpNumber'
 import LootHoldingCard from './LootHoldingCard'
 import { useOfflineProgressStore } from '../game/combat/useOfflineProgressStore'
 import { useLootHoldingStore } from '../game/items/useLootHoldingStore'
+import { useLootHoldingModalStore } from '../game/items/useLootHoldingModalStore'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { ENEMY_TYPES } from '../game/zones/zoneData'
 
@@ -13,60 +14,80 @@ function formatDuration(ms: number): string {
   return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
 }
 
-// Shown once after a load resolves a nonzero offline-progress result (see
-// runOfflineProgressCheck, called from GameShell). Renders nothing when
-// there's no pending result AND no outstanding Loot Holding entries, so it's
-// safe to mount unconditionally.
+// Shown after a load resolves a nonzero offline-progress result (see
+// runOfflineProgressCheck, called from GameShell) — the "Welcome back"
+// mode — or when UnclaimedLootBadge's fallback button is tapped (the
+// "Unclaimed rewards" mode). Renders nothing otherwise, so it's safe to
+// mount unconditionally.
 // Loot Holding moved here entirely (2026-07-31, per the user's request) —
 // it's no longer a persistent Warehouse card, it's exclusively an "idle
 // rewards" interface now (see LootHoldingCard's own note, and CLAUDE.md's
 // Loot section). Live play never populates it at all anymore (a full
 // Inventory during active combat stops the fight instead — see
 // useCombatStore.stopForInventoryFull/InventoryFullWarningHud); the offline/
-// idle-progress simulator is its only remaining source. Since there's no
-// other UI surface for it now, this modal shows itself even when there's no
-// fresh offline gain worth a "Welcome back" summary, as long as unclaimed
-// entries exist (e.g. left over from a previous session) — otherwise they'd
-// never be reachable again.
+// idle-progress simulator is its only remaining source.
 //
-// Bottom button simplified (2026-08-03, per the user's request): the old
-// per-item detail card, checkbox multi-select, and "Claim All" button inside
-// LootHoldingCard are gone (see that file's own note) — this modal's own
-// bottom button now does the claiming. It reads "Claim" (and claims every
-// remaining entry, one at a time so each honors the live Inventory-room
-// check rather than racing it) whenever Loot Holding has anything left,
-// falling back to the plain "Got it" label/behavior when it's already empty.
-// Still a deliberately simple, non-blocking dismiss either way — closes
-// regardless of whether every claim actually succeeded (e.g. Inventory
-// filled up partway through); anything left unclaimed resurfaces the same
-// way next time the app loads, rather than this modal staying permanently
-// un-dismissable until every last entry is dealt with.
+// Reworked (2026-08-05, confirmed with the user: "I need it to prompt first
+// with hey welcome back... anything after that is likely not necessary" /
+// "make sure the first thing that pops up is the correct idle rewards popup
+// and no other nonsense") — supersedes both the "shows itself automatically
+// whenever any unclaimed entries exist" behavior and the old "closes
+// regardless of whether every claim actually succeeded" dismiss:
+// - Visibility is now driven by two explicit signals only — a fresh
+//   `result`, or useLootHoldingModalStore's own `open` flag (set by
+//   UnclaimedLootBadge) — never just "entries happen to exist." That auto-
+//   show was the actual source of the reported "a similar or exact same
+//   popup happens again": if Claim partially failed (Inventory full — see
+//   useLootHoldingStore.claim's own room pre-check) the modal used to close
+//   anyway, and the very next GameShell mount would auto-reopen it, showing
+//   the same leftover entries as if it were a brand new prompt.
+// - Claiming now tracks failures. If everything claims cleanly, the modal
+//   dismisses as before. If some entries couldn't fit, it stays open and
+//   says so plainly instead of silently closing and resurfacing later —
+//   sell them right here (see LootHoldingCard's own per-item Sell) or make
+//   room and hit Claim again.
 export default function OfflineProgressModal() {
   const result = useOfflineProgressStore((state) => state.result)
   const dismissResult = useOfflineProgressStore((state) => state.dismiss)
   const selectedMonsterId = useZoneStore((state) => state.selectedMonsterId)
   const lootHoldingCount = useLootHoldingStore((state) => state.entries.length)
   const claim = useLootHoldingStore((state) => state.claim)
-  const [closed, setClosed] = useState(false)
+  const manuallyOpened = useLootHoldingModalStore((state) => state.open)
+  const closeManualModal = useLootHoldingModalStore((state) => state.closeModal)
   const [claiming, setClaiming] = useState(false)
+  const [claimError, setClaimError] = useState<string | null>(null)
 
-  if (closed || (!result && lootHoldingCount === 0)) {
+  if (!result && !manuallyOpened) {
     return null
   }
 
   const type = result && selectedMonsterId ? ENEMY_TYPES[selectedMonsterId] : null
 
   const handleClose = async () => {
+    setClaimError(null)
+
     if (useLootHoldingStore.getState().entries.length > 0) {
       setClaiming(true)
       const ids = useLootHoldingStore.getState().entries.map((entry) => entry.id)
+      let failures = 0
       for (const id of ids) {
-        await claim(id)
+        const claimResult = await claim(id)
+        if (!claimResult.ok) failures += 1
       }
       setClaiming(false)
+
+      if (failures > 0) {
+        setClaimError(
+          `${failures} item${failures === 1 ? '' : 's'} couldn't fit in your Inventory — sell ${
+            failures === 1 ? 'it' : 'them'
+          } here, or free up space and hit Claim again.`,
+        )
+        return
+      }
     }
+
     dismissResult()
-    setClosed(true)
+    closeManualModal()
   }
 
   return (
@@ -151,6 +172,8 @@ export default function OfflineProgressModal() {
         )}
 
         {lootHoldingCount > 0 && <LootHoldingCard />}
+
+        {claimError && <p className="text-xs text-amber-400">{claimError}</p>}
 
         <button
           type="button"

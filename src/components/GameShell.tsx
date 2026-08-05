@@ -10,6 +10,7 @@ import ForgePanel from './ForgePanel'
 import InventoryFullModal from './InventoryFullModal'
 import MarketplacePanel from './MarketplacePanel'
 import OfflineProgressModal from './OfflineProgressModal'
+import UnclaimedLootBadge from './UnclaimedLootBadge'
 import SettingsModal from './SettingsModal'
 import ShopPanel from './ShopPanel'
 import TabNav from './TabNav'
@@ -134,9 +135,21 @@ export default function GameShell({ characterId }: { characterId: string }) {
   // when visibility comes back. runOfflineProgressCheck's own
   // OFFLINE_SUMMARY_THRESHOLD_MS guard means a brief app-switcher glance
   // just quietly returns null here — safe to call on every resume.
+  //
+  // Guarded against stacking a second "Welcome back" on top of one the
+  // player hasn't dismissed yet (2026-08-05, confirmed with the user — "make
+  // sure the first thing that pops up is the correct idle rewards popup and
+  // no other nonsense") — without this, a brief app-switcher glance while
+  // reviewing the first summary could quietly swap its numbers out from
+  // under the player mid-read. Once they've actually dismissed it (result
+  // reset to null — see OfflineProgressModal), a genuinely new resume is
+  // free to show its own fresh summary again as normal.
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState !== 'visible') {
+        return
+      }
+      if (useOfflineProgressStore.getState().result !== null) {
         return
       }
       void (async () => {
@@ -252,6 +265,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       <InventoryFullModal />
       <OfflineProgressModal />
+      <UnclaimedLootBadge />
       <CombatEngine />
 
       {/* pb-24 (was pb-6, matched by py-6 on lg): clearance for

@@ -1,8 +1,18 @@
 import { useState } from 'react'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
-import { LOOT_HOLDING_CAP, useLootHoldingStore } from '../game/items/useLootHoldingStore'
+import TooltipActionPopover from './TooltipActionPopover'
+import { LOOT_HOLDING_CAP, useLootHoldingStore, type LootHoldingEntry } from '../game/items/useLootHoldingStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
-import { formatItemDisplayName, getGearIconSrc, getItemIcon, getQualityColor, previewSellPrice } from '../game/items/equipmentBonus'
+import {
+  buildGearTooltip,
+  formatItemDisplayName,
+  getGearIconSrc,
+  getItemIcon,
+  getQualityColor,
+  previewSellPrice,
+} from '../game/items/equipmentBonus'
+import type { ItemInstance } from '../game/items/useInventoryStore'
+import type { ItemTemplate } from '../game/items/useItemTemplatesStore'
 import { FALLEN_STAR_COLOR, FALLEN_STAR_ICON_SRC, MATERIAL_COLOR, COMET_ICON_SRC } from '../game/items/forgeCosts'
 
 // Loot Holding (confirmed with the user, 2026-07-30): where a server-resolved
@@ -12,16 +22,21 @@ import { FALLEN_STAR_COLOR, FALLEN_STAR_ICON_SRC, MATERIAL_COLOR, COMET_ICON_SRC
 // the offline/idle-progress simulator; live play stops the fight outright on
 // a full Inventory instead (see useCombatStore.stopForInventoryFull).
 //
-// Simplified (2026-08-03, per the user's request): this card used to have its
-// own click-to-select detail card, a checkbox multi-select + bulk action bar,
-// a "Claim All" button, and a "Select individually…" toggle. All of that is
-// gone — the only remaining action here is "Sell All Normal" (unloading
-// Normal-tier junk for gold before claiming the rest). Claiming everything
-// that's left is now the modal's own "Claim" button (see
-// OfflineProgressModal.tsx), not a separate control in here — "since they
-// will all be claimed after selling anyway," per the user's own reasoning,
-// there's no need for granular per-item claim/select. The grid below is
-// purely a visual preview of what's pending now, not interactive.
+// Simplified (2026-08-03, per the user's request), then reopened (2026-08-05,
+// see the per-item Sell popover below): this card used to have its own
+// click-to-select detail card, a checkbox multi-select + bulk action bar, a
+// "Claim All" button, and a "Select individually…" toggle. Most of that is
+// still gone — Claiming everything that's left is still the modal's own
+// "Claim" button (see OfflineProgressModal.tsx), and there's still no
+// checkbox multi-select — but the grid is interactive again for one specific
+// action: gear tiles are clickable, opening a small Sell popover (any
+// quality tier, not just Normal). Triggered by the user directly asking for
+// this ("I need it to prompt first with hey welcome back... items obtained
+// during the idle... can be sold on that pop up") after finding "Sell All
+// Normal" alone wasn't enough — a non-Normal item had no sell path at all
+// from here, which meant it always had to be claimed (needing Inventory
+// room) or left to resurface later. Currency tiles (Comet/Fallen Star) stay
+// non-interactive — nothing to sell, only Claim, which is the modal's job.
 //
 // Grid width bug fix (2026-08-03): this was hardcoded to 8 columns, wider
 // than a phone viewport even at the smaller mobile tile size — the same
@@ -29,6 +44,31 @@ import { FALLEN_STAR_COLOR, FALLEN_STAR_ICON_SRC, MATERIAL_COLOR, COMET_ICON_SRC
 // Forge/Bank's own InventoryPanel usages), just never caught here since it
 // only ever renders inside this one modal. Now 5, matching that established
 // convention, and centered like every other grid that got the same fix.
+
+// Synthetic ItemInstance for buildGearTooltip/previewSellPrice, mirroring
+// ShopPanel.tsx's own previewInstance — a Loot Holding entry isn't a real
+// item_instances row yet (it only stores template_id/quality_tier, not
+// level/composition/sockets — those get set fresh at claim time, see
+// CLAUDE.md's Level Upgrade note on claim_loot_holding), so this fills in
+// the same "Normal-equivalent, no composition/sockets" defaults Shop's own
+// preview already established for a not-yet-owned item, just using the
+// entry's own real quality_tier instead of always 'normal'.
+function previewInstanceForEntry(entry: LootHoldingEntry, template: ItemTemplate): ItemInstance {
+  return {
+    id: entry.id,
+    template_id: template.id,
+    owner_id: '',
+    quality_tier: entry.quality_tier ?? 'normal',
+    level: template.required_level,
+    composition_level: 0,
+    composition_points: 0,
+    sockets: [],
+    enchant: null,
+    created_at: entry.created_at,
+    location: 'inventory',
+  }
+}
+
 export default function LootHoldingCard() {
   const entries = useLootHoldingStore((state) => state.entries)
   const busy = useLootHoldingStore((state) => state.busy)
@@ -36,6 +76,8 @@ export default function LootHoldingCard() {
   const templates = useItemTemplatesStore((state) => state.templates)
 
   const [error, setError] = useState<string | null>(null)
+  const [sellPopoverEntryId, setSellPopoverEntryId] = useState<string | null>(null)
+  const [sellPopoverAnchorRect, setSellPopoverAnchorRect] = useState<DOMRect | null>(null)
 
   if (entries.length === 0) {
     return null
@@ -59,6 +101,30 @@ export default function LootHoldingCard() {
     }
   }
 
+  const closeSellPopover = () => {
+    setSellPopoverEntryId(null)
+    setSellPopoverAnchorRect(null)
+  }
+
+  const handleSellOne = async (entryId: string) => {
+    setError(null)
+    const result = await sell(entryId)
+    if (!result.ok) {
+      setError("Couldn't sell that item.")
+      return
+    }
+    closeSellPopover()
+  }
+
+  const sellPopoverEntry = sellPopoverEntryId ? entries.find((entry) => entry.id === sellPopoverEntryId) : undefined
+  const sellPopoverTemplate = sellPopoverEntry?.template_id
+    ? templates.find((t) => t.id === sellPopoverEntry.template_id)
+    : undefined
+  const sellPopoverPrice =
+    sellPopoverEntry && sellPopoverTemplate
+      ? previewSellPrice(sellPopoverTemplate.price, sellPopoverEntry.quality_tier ?? 'normal')
+      : 0
+
   return (
     <div className="space-y-3 rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900/80 to-slate-950/80 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -73,8 +139,8 @@ export default function LootHoldingCard() {
         </div>
       </div>
       <p className="text-[11px] text-slate-500">
-        Drops that couldn't fit while you were away land here — sell off Normal-tier junk now if you want, then Claim below to
-        bring the rest into your Inventory.
+        Drops that couldn't fit while you were away land here — tap an item to sell it, or Sell All Normal for junk, then Claim
+        below to bring the rest into your Inventory.
       </p>
 
       {normalEntries.length > 0 && (
@@ -110,7 +176,7 @@ export default function LootHoldingCard() {
                 : FALLEN_STAR_ICON_SRC
               : getGearIconSrc(template?.name)
 
-            return (
+            const slot = (
               <InventorySlot
                 key={entry.id}
                 slotId={entry.id}
@@ -119,6 +185,15 @@ export default function LootHoldingCard() {
                 icon={icon}
                 iconSrc={iconSrc}
                 label={label}
+                selected={sellPopoverEntryId === entry.id}
+                tooltip={!isCurrency && template ? buildGearTooltip(previewInstanceForEntry(entry, template), template) : undefined}
+                onClick={
+                  !isCurrency && template
+                    ? () => {
+                        setSellPopoverEntryId(entry.id)
+                      }
+                    : undefined
+                }
                 qualityColor={
                   isCurrency
                     ? entry.currency_type === 'comet'
@@ -128,9 +203,43 @@ export default function LootHoldingCard() {
                 }
               />
             )
+
+            // Gear tiles only — currency tiles have nothing to sell (Claim,
+            // via the modal's own button, is their only action). Captures
+            // the tile's own bounding rect on click so TooltipActionPopover
+            // can anchor to it, same data-tooltip-action-anchor convention
+            // InventoryPanel's own Bank/Bundle popovers already use.
+            if (isCurrency || !template) {
+              return slot
+            }
+
+            return (
+              <div
+                key={entry.id}
+                data-tooltip-action-anchor
+                onClick={(event) => setSellPopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
+              >
+                {slot}
+              </div>
+            )
           })}
         </div>
       </div>
+
+      {sellPopoverEntry && sellPopoverTemplate && sellPopoverAnchorRect && (
+        <TooltipActionPopover
+          anchorRect={sellPopoverAnchorRect}
+          tooltip={buildGearTooltip(previewInstanceForEntry(sellPopoverEntry, sellPopoverTemplate), sellPopoverTemplate)}
+          actions={[
+            {
+              label: busy ? 'Selling…' : `Sell (${sellPopoverPrice.toLocaleString()}g)`,
+              onClick: () => void handleSellOne(sellPopoverEntry.id),
+              disabled: busy,
+            },
+          ]}
+          onClose={closeSellPopover}
+        />
+      )}
     </div>
   )
 }

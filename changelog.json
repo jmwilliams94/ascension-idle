@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.61.1",
+    "date": "2026-08-05",
+    "changes": [
+      "Fixed the idle-rewards popup sometimes reappearing after you'd already dealt with it — it now stays open with a clear message if an item couldn't fit, instead of silently closing and coming back later",
+      "You can now sell any item (not just Normal-tier) straight from the idle-rewards popup by tapping it",
+      "Added a small unclaimed-loot button in the bottom-left corner as a fallback way to reach leftover rewards, so the popup no longer needs to reopen on its own"
+    ]
+  },
+  {
     "version": "1.61.0",
     "date": "2026-08-05",
     "changes": [
