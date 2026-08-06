@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.64.4",
+    "date": "2026-08-07",
+    "changes": [
+      "Added real icons for Sunmetal, Whitesteel, Obsidian, Serpent's, and Reliquary Necklace"
+    ]
+  },
+  {
     "version": "1.64.3",
     "date": "2026-08-07",
     "changes": [

@@ -247,6 +247,11 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Locket Necklace': `${import.meta.env.BASE_URL}item-icons/locket-necklace.png`,
   'Emerald Necklace': `${import.meta.env.BASE_URL}item-icons/emerald-necklace.png`,
   'Quartz Necklace': `${import.meta.env.BASE_URL}item-icons/quartz-necklace.png`,
+  'Sunmetal Necklace': `${import.meta.env.BASE_URL}item-icons/sunmetal-necklace.png`,
+  'Whitesteel Necklace': `${import.meta.env.BASE_URL}item-icons/whitesteel-necklace.png`,
+  'Obsidian Necklace': `${import.meta.env.BASE_URL}item-icons/obsidian-necklace.png`,
+  "Serpent's Necklace": `${import.meta.env.BASE_URL}item-icons/serpents-necklace.png`,
+  'Reliquary Necklace': `${import.meta.env.BASE_URL}item-icons/reliquary-necklace.png`,
 }
 
 export function getGearIconSrc(templateName: string | undefined): string | undefined {
