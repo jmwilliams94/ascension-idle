@@ -220,6 +220,17 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Sorcerous Bow': `${import.meta.env.BASE_URL}item-icons/sorcerous-bow.png`,
   'Emberwing Bow': `${import.meta.env.BASE_URL}item-icons/emberwing-bow.png`,
   'Voidcaller Bow': `${import.meta.env.BASE_URL}item-icons/voidcaller-bow.png`,
+  'Mole Hat': `${import.meta.env.BASE_URL}item-icons/mole-hat.png`,
+  'Lynx Hat': `${import.meta.env.BASE_URL}item-icons/lynx-hat.png`,
+  'Coyote Hat': `${import.meta.env.BASE_URL}item-icons/coyote-hat.png`,
+  'Ocelot Hat': `${import.meta.env.BASE_URL}item-icons/ocelot-hat.png`,
+  'Simian Hat': `${import.meta.env.BASE_URL}item-icons/simian-hat.png`,
+  'Ferret Hat': `${import.meta.env.BASE_URL}item-icons/ferret-hat.png`,
+  'Stag Hat': `${import.meta.env.BASE_URL}item-icons/stag-hat.png`,
+  'Bullhide Hat': `${import.meta.env.BASE_URL}item-icons/bullhide-hat.png`,
+  'Talon Hat': `${import.meta.env.BASE_URL}item-icons/talon-hat.png`,
+  'Finhead Hat': `${import.meta.env.BASE_URL}item-icons/finhead-hat.png`,
+  'Cinderplume Hat': `${import.meta.env.BASE_URL}item-icons/cinderplume-hat.png`,
 }
 
 export function getGearIconSrc(templateName: string | undefined): string | undefined {

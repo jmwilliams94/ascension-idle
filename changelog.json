@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.64.1",
+    "date": "2026-08-07",
+    "changes": [
+      "Added real icons for all 11 Archer Hats (Mole, Lynx, Coyote, Ocelot, Simian, Ferret, Stag, Bullhide, Talon, Finhead, and Cinderplume Hat)"
+    ]
+  },
+  {
     "version": "1.64.0",
     "date": "2026-08-07",
     "changes": [
