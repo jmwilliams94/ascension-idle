@@ -440,13 +440,26 @@ function damageExpForHit(damage: number, monsterMaxHp: number, monsterLevel: num
 // Prestige is gone — see the achievements-rework migration) — the bounded
 // elapsed-time window a single resolve call will simulate (shared by live
 // ~15s calls and the once-at-login offline catch-up) scales with the
-// highest Kill Count tier this character has *claimed* on any monster,
+// highest Achievements tier this account has *claimed* on any monster,
 // rather than a flat 2 hours for everyone regardless of progress.
 // PLACEHOLDER tier->hours table, same disclosed-not-final status as the
 // rest of this reward economy — see the query/computation right before the
 // main attack loop below.
+//
+// Rebased onto the ACCOUNT track (2026-08-07, reported by the user: a
+// same-day-reachable 9-hour idle window felt broken). Originally scaled off
+// the per-character Kill Count claim (character_monster_kills.
+// claimed_tier_index) — that made sense back when the analogous claim was
+// paid, escalating-cost Prestige, but the achievements rework replaced it
+// with a *free* claim gated only on kills, so tier 4 (1000 kills on one
+// monster) became trivially reachable in a single normal session, handing
+// out a 9h cap far earlier than intended. The account track's own
+// thresholds are 5x the character ones (500/1250/2500/5000/25000/50000,
+// summed across all 5 character slots) and still require an explicit claim
+// — a meaningfully slower, harder-to-snowball basis for a reward this
+// large, closer to the original "significant investment" intent.
 const BASE_AFK_CAP_MS = 2 * 60 * 60 * 1000
-const AFK_CAP_MS_BY_KILL_COUNT_TIER: Record<number, number> = {
+const AFK_CAP_MS_BY_ACCOUNT_TIER: Record<number, number> = {
   0: 2 * 60 * 60 * 1000,
   1: 3 * 60 * 60 * 1000,
   2: 4 * 60 * 60 * 1000,
@@ -601,19 +614,21 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     return json({ ok: false, error: 'unknown_monster' })
   }
 
-  // AFK cap — Kill Count tier reward (see AFK_CAP_MS_BY_KILL_COUNT_TIER
-  // above): the highest Kill Count tier this character has *claimed* on any
-  // monster decides how much away-time this call will credit, capped at
-  // BASE_AFK_CAP_MS (2 hours) for a character with no claims at all.
+  // AFK cap — Achievements tier reward (see AFK_CAP_MS_BY_ACCOUNT_TIER
+  // above): the highest tier this ACCOUNT has *claimed* on any monster's
+  // account-wide ladder decides how much away-time this call will credit,
+  // capped at BASE_AFK_CAP_MS (2 hours) for an account with no claims at
+  // all. Queries account_monster_kills (not character_monster_kills) — see
+  // this constant's own header comment for why.
   const { data: bestClaimedTierRow } = await db
-    .from('character_monster_kills')
+    .from('account_monster_kills')
     .select('claimed_tier_index')
-    .eq('character_id', characterId)
+    .eq('account_id', character.account_id)
     .order('claimed_tier_index', { ascending: false })
     .limit(1)
     .maybeSingle()
   const bestClaimedTier = Math.min(Math.max(bestClaimedTierRow?.claimed_tier_index ?? 0, 0), 6)
-  const afkCapMs = AFK_CAP_MS_BY_KILL_COUNT_TIER[bestClaimedTier] ?? BASE_AFK_CAP_MS
+  const afkCapMs = AFK_CAP_MS_BY_ACCOUNT_TIER[bestClaimedTier] ?? BASE_AFK_CAP_MS
   const elapsedMs = Math.min(Math.max(now - lastResolvedMs, 0), afkCapMs)
 
   // Character combat stats — derived server-side, never trusted from the

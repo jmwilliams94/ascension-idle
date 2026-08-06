@@ -95,6 +95,7 @@ export default function LootHoldingCard() {
   const busy = useLootHoldingStore((state) => state.busy)
   const sell = useLootHoldingStore((state) => state.sell)
   const bank = useLootHoldingStore((state) => state.bank)
+  const liquidateAll = useLootHoldingStore((state) => state.liquidateAll)
   const templates = useItemTemplatesStore((state) => state.templates)
 
   const [error, setError] = useState<string | null>(null)
@@ -102,6 +103,10 @@ export default function LootHoldingCard() {
   const [sellPopoverAnchorRect, setSellPopoverAnchorRect] = useState<DOMRect | null>(null)
   const [bankPopoverEntryId, setBankPopoverEntryId] = useState<string | null>(null)
   const [bankPopoverAnchorRect, setBankPopoverAnchorRect] = useState<DOMRect | null>(null)
+  // Confirm-gated (2026-08-07) — this can sell valuable non-Normal gear
+  // indiscriminately, unlike the tier-scoped "Sell All Normal" shortcut, so
+  // it needs an explicit second tap rather than firing on the first click.
+  const [confirmingLiquidate, setConfirmingLiquidate] = useState(false)
 
   if (entries.length === 0) {
     return null
@@ -135,6 +140,22 @@ export default function LootHoldingCard() {
     const failures = results.filter((result) => !result.ok).length
     if (failures > 0) {
       setError(`Couldn't bank ${failures} item${failures === 1 ? '' : 's'}.`)
+    }
+  }
+
+  // Guaranteed escape hatch (2026-08-07, reported by the user: a single
+  // leftover non-Normal item with a full Inventory left them with no
+  // obvious way forward — Claim always needs Inventory room, and the only
+  // sell path for a non-Normal item was clicking its own tile, easy to miss
+  // once it's the last thing on screen). Always available, not conditioned
+  // on a failed Claim — sells every gear entry (any tier) and banks every
+  // currency entry currently present, in one confirmed action.
+  const handleLiquidateAll = async () => {
+    setError(null)
+    setConfirmingLiquidate(false)
+    const result = await liquidateAll()
+    if (!result.ok) {
+      setError(`Couldn't clear ${result.failures} item${result.failures === 1 ? '' : 's'}.`)
     }
   }
 
@@ -196,31 +217,67 @@ export default function LootHoldingCard() {
         Claim to bring the rest into your Inventory.
       </p>
 
-      {(normalEntries.length > 0 || currencyEntries.length > 0) && (
-        <div className="flex flex-wrap items-center gap-2">
-          {normalEntries.length > 0 && (
+      <div className="flex flex-wrap items-center gap-2">
+        {normalEntries.length > 0 && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void handleSellAllNormal()}
+            className="rounded-lg border border-amber-600 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Sell All Normal ({normalSellTotal.toLocaleString()} gold)
+          </button>
+        )}
+        {currencyEntries.length > 0 && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void handleBankAllCurrency()}
+            title="Sends every Comet/Fallen Star here straight to your account-wide Bank — doesn't need Inventory room."
+            className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Bank All Comets/Fallen Stars ({currencyEntries.length})
+          </button>
+        )}
+        {!confirmingLiquidate && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setConfirmingLiquidate(true)}
+            title="Sells every gear item here (any quality tier) and banks every Comet/Fallen Star — use this if you're stuck with nowhere for something to go."
+            className="rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-300 hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Clear Everything ({entries.length})
+          </button>
+        )}
+      </div>
+
+      {confirmingLiquidate && (
+        <div className="rounded-lg border border-amber-600 bg-amber-500/10 p-2.5">
+          <p className="text-[11px] text-amber-300">
+            This sells every gear item here — including anything above Normal quality — and banks every Comet/Fallen Star. Are you sure?
+          </p>
+          <div className="mt-2 flex gap-2">
             <button
               type="button"
               disabled={busy}
-              onClick={() => void handleSellAllNormal()}
-              className="rounded-lg border border-amber-600 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => void handleLiquidateAll()}
+              className="flex-1 rounded-lg border border-amber-500 bg-amber-500/20 px-3 py-1 text-xs font-medium text-amber-200 hover:bg-amber-500/30 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Sell All Normal ({normalSellTotal.toLocaleString()} gold)
+              {busy ? 'Clearing…' : 'Confirm'}
             </button>
-          )}
-          {currencyEntries.length > 0 && (
             <button
               type="button"
               disabled={busy}
-              onClick={() => void handleBankAllCurrency()}
-              title="Sends every Comet/Fallen Star here straight to your account-wide Bank — doesn't need Inventory room."
-              className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => setConfirmingLiquidate(false)}
+              className="flex-1 rounded-lg border border-slate-600 px-3 py-1 text-xs font-medium text-slate-300 hover:border-slate-400"
             >
-              Bank All Comets/Fallen Stars ({currencyEntries.length})
+              Cancel
             </button>
-          )}
+          </div>
         </div>
       )}
+
       {error && <p className="text-[11px] text-amber-400">{error}</p>}
 
       <div className="flex justify-center overflow-x-auto">

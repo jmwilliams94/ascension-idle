@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.63.2",
+    "date": "2026-08-07",
+    "changes": [
+      "Fixed idle rewards granting an unexpectedly huge time window from claiming an easy, free Achievement tier — the bonus now scales with the much harder account-wide Achievements ladder instead",
+      "Fixed a Loot Holding item being unclaimable with no way forward when your Inventory was full — added a \"Clear Everything\" option that sells/banks everything left, no matter the quality tier"
+    ]
+  },
+  {
     "version": "1.63.1",
     "date": "2026-08-06",
     "changes": [

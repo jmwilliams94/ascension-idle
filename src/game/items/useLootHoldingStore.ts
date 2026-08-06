@@ -74,9 +74,19 @@ interface LootHoldingState {
   claim: (holdingId: string) => Promise<ClaimResult>
   sell: (holdingId: string) => Promise<SellResult>
   bank: (holdingId: string) => Promise<BankResult>
+  // Guaranteed escape hatch (2026-08-07, reported by the user: a full
+  // Inventory left a single non-Normal item with genuinely no obvious way
+  // forward — claim needs Inventory room and always will, and the only way
+  // to sell a non-Normal item was clicking its tile, easy to miss when it's
+  // the one lone item left after clearing everything else). Sells every
+  // gear entry present (any quality tier, not just Normal) and banks every
+  // currency entry present, regardless of what triggered the call — a
+  // blunter, always-available sibling to "Sell All Normal"/"Bank All ..."
+  // rather than a replacement for either.
+  liquidateAll: () => Promise<{ ok: boolean; failures: number }>
 }
 
-export const useLootHoldingStore = create<LootHoldingState>((set) => ({
+export const useLootHoldingStore = create<LootHoldingState>((set, get) => ({
   entries: [],
   loaded: false,
   busy: false,
@@ -187,5 +197,19 @@ export const useLootHoldingStore = create<LootHoldingState>((set) => ({
     }
 
     return result
+  },
+
+  liquidateAll: async () => {
+    const { entries, sell, bank } = get()
+    const gearEntries = entries.filter((entry) => entry.template_id)
+    const currencyEntries = entries.filter((entry) => entry.currency_type)
+
+    const results = await Promise.all([
+      ...gearEntries.map((entry) => sell(entry.id)),
+      ...currencyEntries.map((entry) => bank(entry.id)),
+    ])
+
+    const failures = results.filter((result) => !result.ok).length
+    return { ok: failures === 0, failures }
   },
 }))
