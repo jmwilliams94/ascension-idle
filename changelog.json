@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.64.3",
+    "date": "2026-08-07",
+    "changes": [
+      "Reordered the early Necklace lineup: Twine Necklace is now the first (level 7), followed by Wisp (17) and Locket (27)",
+      "Added real icons for Twine, Wisp, Locket, Emerald, and Quartz Necklace"
+    ]
+  },
+  {
     "version": "1.64.2",
     "date": "2026-08-07",
     "changes": [

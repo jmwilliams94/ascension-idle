@@ -242,6 +242,11 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Skyfeather Coat': `${import.meta.env.BASE_URL}item-icons/skyfeather-coat.png`,
   'Wyrmhide Coat': `${import.meta.env.BASE_URL}item-icons/wyrmhide-coat.png`,
   'Emberplate Coat': `${import.meta.env.BASE_URL}item-icons/emberplate-coat.png`,
+  'Twine Necklace': `${import.meta.env.BASE_URL}item-icons/twine-necklace.png`,
+  'Wisp Necklace': `${import.meta.env.BASE_URL}item-icons/wisp-necklace.png`,
+  'Locket Necklace': `${import.meta.env.BASE_URL}item-icons/locket-necklace.png`,
+  'Emerald Necklace': `${import.meta.env.BASE_URL}item-icons/emerald-necklace.png`,
+  'Quartz Necklace': `${import.meta.env.BASE_URL}item-icons/quartz-necklace.png`,
 }
 
 export function getGearIconSrc(templateName: string | undefined): string | undefined {
