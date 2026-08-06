@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import CountUp from './CountUpNumber'
 import LootHoldingCard from './LootHoldingCard'
 import { useOfflineProgressStore } from '../game/combat/useOfflineProgressStore'
@@ -30,32 +29,31 @@ function formatDuration(ms: number): string {
 // Reworked (2026-08-05, confirmed with the user: "I need it to prompt first
 // with hey welcome back... anything after that is likely not necessary" /
 // "make sure the first thing that pops up is the correct idle rewards popup
-// and no other nonsense") — supersedes both the "shows itself automatically
-// whenever any unclaimed entries exist" behavior and the old "closes
-// regardless of whether every claim actually succeeded" dismiss:
-// - Visibility is now driven by two explicit signals only — a fresh
-//   `result`, or useLootHoldingModalStore's own `open` flag (set by
+// and no other nonsense") — supersedes the earlier "shows itself
+// automatically whenever any unclaimed entries exist" behavior:
+// - Visibility is driven by two explicit signals only — a fresh `result`,
+//   or useLootHoldingModalStore's own `open` flag (set by
 //   UnclaimedLootBadge) — never just "entries happen to exist." That auto-
-//   show was the actual source of the reported "a similar or exact same
-//   popup happens again": if Claim partially failed (Inventory full — see
-//   useLootHoldingStore.claim's own room pre-check) the modal used to close
-//   anyway, and the very next GameShell mount would auto-reopen it, showing
-//   the same leftover entries as if it were a brand new prompt.
-// - Claiming now tracks failures. If everything claims cleanly, the modal
-//   dismisses as before. If some entries couldn't fit, it stays open and
-//   says so plainly instead of silently closing and resurfacing later —
-//   sell them right here (see LootHoldingCard's own per-item Sell) or make
-//   room and hit Claim again.
+//   show was the actual source of a previously-reported "a similar or exact
+//   same popup happens again" bug.
+//
+// Bottom button simplified back to a plain, always-available dismiss
+// (2026-08-07) — supersedes the 2026-08-05 "stays open and loops Claim on
+// every remaining entry, forcing the player to resolve everything before
+// closing" behavior. That forcing was a workaround for Claim being the only
+// way off this screen; now that LootHoldingCard's own staged Claim/Store/
+// Sell flow (see that file) guarantees a real, always-available way to
+// resolve anything left (Store bypasses Inventory's cap entirely), the
+// modal no longer needs to hold the player hostage to a bulk claim
+// succeeding — "Got it" just closes, and UnclaimedLootBadge's 🎁 button
+// remains the way back to anything still unresolved.
 export default function OfflineProgressModal() {
   const result = useOfflineProgressStore((state) => state.result)
   const dismissResult = useOfflineProgressStore((state) => state.dismiss)
   const selectedMonsterId = useZoneStore((state) => state.selectedMonsterId)
   const lootHoldingCount = useLootHoldingStore((state) => state.entries.length)
-  const claim = useLootHoldingStore((state) => state.claim)
   const manuallyOpened = useLootHoldingModalStore((state) => state.open)
   const closeManualModal = useLootHoldingModalStore((state) => state.closeModal)
-  const [claiming, setClaiming] = useState(false)
-  const [claimError, setClaimError] = useState<string | null>(null)
 
   if (!result && !manuallyOpened) {
     return null
@@ -63,29 +61,7 @@ export default function OfflineProgressModal() {
 
   const type = result && selectedMonsterId ? ENEMY_TYPES[selectedMonsterId] : null
 
-  const handleClose = async () => {
-    setClaimError(null)
-
-    if (useLootHoldingStore.getState().entries.length > 0) {
-      setClaiming(true)
-      const ids = useLootHoldingStore.getState().entries.map((entry) => entry.id)
-      let failures = 0
-      for (const id of ids) {
-        const claimResult = await claim(id)
-        if (!claimResult.ok) failures += 1
-      }
-      setClaiming(false)
-
-      if (failures > 0) {
-        setClaimError(
-          `${failures} item${failures === 1 ? '' : 's'} couldn't fit in your Inventory — sell ${
-            failures === 1 ? 'it' : 'them'
-          } here, or free up space and hit Claim again.`,
-        )
-        return
-      }
-    }
-
+  const handleClose = () => {
     dismissResult()
     closeManualModal()
   }
@@ -173,15 +149,12 @@ export default function OfflineProgressModal() {
 
         {lootHoldingCount > 0 && <LootHoldingCard />}
 
-        {claimError && <p className="text-xs text-amber-400">{claimError}</p>}
-
         <button
           type="button"
-          disabled={claiming}
-          onClick={() => void handleClose()}
-          className="w-full rounded-lg border border-sky-500 bg-sky-500/10 py-2 text-sm font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+          onClick={handleClose}
+          className="w-full rounded-lg border border-sky-500 bg-sky-500/10 py-2 text-sm font-medium text-sky-300 hover:bg-sky-500/20"
         >
-          {claiming ? 'Claiming…' : lootHoldingCount > 0 ? 'Claim' : 'Got it'}
+          Got it
         </button>
       </div>
     </div>

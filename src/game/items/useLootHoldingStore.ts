@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '../../lib/supabaseClient'
 import { useInventoryStore, occupiedSlotCount, INVENTORY_SLOT_CAP, type ItemInstance } from './useInventoryStore'
+import { useBankStore, BANK_SLOT_CAP } from './useBankStore'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
 import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
@@ -27,7 +28,10 @@ export interface LootHoldingEntry {
 
 interface ClaimResult {
   ok: boolean
-  error?: 'not_found' | 'not_owner'
+  // 'inventory_full' is a client-only synthetic error (same convention as
+  // useBankStore's own pre-checks) — the pre-check below never reaches the
+  // server when it fires.
+  error?: 'not_found' | 'not_owner' | 'inventory_full'
   item?: ItemInstance
   currency_type?: 'comet' | 'fallen_star'
   new_count?: number
@@ -57,11 +61,27 @@ interface SellResult {
 // add a bank button for comets and fallen stars so if our inventory is full
 // we have the option to bank them." Gear entries are rejected server-side
 // with 'not_bankable' — the UI only ever offers this on currency entries.
+// UI-labeled "Store" now (2026-08-07 redesign, see below) — same action,
+// unified terminology with storeGear's own "Store" for gear.
 interface BankResult {
   ok: boolean
   error?: 'not_found' | 'not_owner' | 'not_bankable'
   currency_type?: 'comet' | 'fallen_star'
   new_bank_balance?: number
+}
+
+// store_loot_holding_to_bank (2026-08-07) — the gear equivalent of bank()
+// above: inserts straight into item_instances with location='bank' (account-
+// wide Bank Storage), bypassing Inventory entirely. Currency entries are
+// rejected server-side with 'not_storable_here' — they already have their
+// own route via bank() above, into the liquid currency Bank rather than a
+// physical Storage tile.
+interface StoreGearResult {
+  ok: boolean
+  // 'storage_full' is a client-only synthetic error (same convention as
+  // claim's own 'inventory_full' pre-check) — never reaches the server.
+  error?: 'not_found' | 'not_owner' | 'not_storable_here' | 'storage_full'
+  item?: ItemInstance
 }
 
 interface LootHoldingState {
@@ -74,19 +94,10 @@ interface LootHoldingState {
   claim: (holdingId: string) => Promise<ClaimResult>
   sell: (holdingId: string) => Promise<SellResult>
   bank: (holdingId: string) => Promise<BankResult>
-  // Guaranteed escape hatch (2026-08-07, reported by the user: a full
-  // Inventory left a single non-Normal item with genuinely no obvious way
-  // forward — claim needs Inventory room and always will, and the only way
-  // to sell a non-Normal item was clicking its tile, easy to miss when it's
-  // the one lone item left after clearing everything else). Sells every
-  // gear entry present (any quality tier, not just Normal) and banks every
-  // currency entry present, regardless of what triggered the call — a
-  // blunter, always-available sibling to "Sell All Normal"/"Bank All ..."
-  // rather than a replacement for either.
-  liquidateAll: () => Promise<{ ok: boolean; failures: number }>
+  storeGear: (holdingId: string) => Promise<StoreGearResult>
 }
 
-export const useLootHoldingStore = create<LootHoldingState>((set, get) => ({
+export const useLootHoldingStore = create<LootHoldingState>((set) => ({
   entries: [],
   loaded: false,
   busy: false,
@@ -119,7 +130,7 @@ export const useLootHoldingStore = create<LootHoldingState>((set, get) => ({
     // does). A player whose Inventory is genuinely full has no way to claim
     // either kind here — see the bank() action below for the way out.
     if (occupiedSlotCount(useInventoryStore.getState().items) >= INVENTORY_SLOT_CAP) {
-      return { ok: false }
+      return { ok: false, error: 'inventory_full' }
     }
 
     set({ busy: true })
@@ -199,17 +210,31 @@ export const useLootHoldingStore = create<LootHoldingState>((set, get) => ({
     return result
   },
 
-  liquidateAll: async () => {
-    const { entries, sell, bank } = get()
-    const gearEntries = entries.filter((entry) => entry.template_id)
-    const currencyEntries = entries.filter((entry) => entry.currency_type)
+  storeGear: async (holdingId) => {
+    // Bank Storage's own 40-slot cap (BANK_SLOT_CAP) has no server-side
+    // enforcement — same established trust model as depositItemToStorage
+    // (see useBankStore.ts) — so this pre-check is the only thing standing
+    // between a Store click and an over-cap Storage.
+    if (useBankStore.getState().occupiedSlotCount() >= BANK_SLOT_CAP) {
+      return { ok: false, error: 'storage_full' }
+    }
 
-    const results = await Promise.all([
-      ...gearEntries.map((entry) => sell(entry.id)),
-      ...currencyEntries.map((entry) => bank(entry.id)),
-    ])
+    set({ busy: true })
+    const { data, error } = await supabase.rpc('store_loot_holding_to_bank', { holding_id: holdingId })
+    set({ busy: false })
 
-    const failures = results.filter((result) => !result.ok).length
-    return { ok: failures === 0, failures }
+    if (error) {
+      console.error('Store loot holding to bank call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as StoreGearResult
+
+    if (result.ok && result.item) {
+      useBankStore.getState().addBankedItem(result.item)
+      set((state) => ({ entries: state.entries.filter((entry) => entry.id !== holdingId) }))
+    }
+
+    return result
   },
 }))

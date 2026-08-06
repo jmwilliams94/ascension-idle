@@ -20,6 +20,12 @@ export interface TooltipActionPopoverAction {
   label: string
   onClick: () => void
   disabled?: boolean
+  // 'warning' renders the button red instead of the default sky-blue — used
+  // when it's disabled specifically because its destination is full
+  // (2026-08-07, confirmed with the user: "maybe turn it red if inventory
+  // is full"), so the reason is visible at a glance rather than only in a
+  // hover title.
+  tone?: 'default' | 'warning'
 }
 
 interface TooltipActionPopoverProps {
@@ -74,7 +80,11 @@ export default function TooltipActionPopover({ anchorRect, tooltip, actions, onC
             type="button"
             disabled={action.disabled}
             onClick={action.onClick}
-            className="flex-1 rounded-md border border-sky-500 bg-sky-500/10 px-2 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+            className={`flex-1 rounded-md border px-2 py-1 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
+              action.tone === 'warning'
+                ? 'border-red-600 bg-red-500/10 text-red-400 hover:bg-red-500/20'
+                : 'border-sky-500 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'
+            }`}
           >
             {action.label}
           </button>

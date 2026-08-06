@@ -64,9 +64,15 @@ interface TransferStoneResult {
 
 interface TransferCurrencyResult {
   ok: boolean
-  error?: 'invalid_currency' | 'invalid_direction' | 'invalid_amount' | 'not_owner' | 'not_enough_balance'
+  // 'not_enough_room' (2026-08-07) — withdrawing comets/fallen_stars is
+  // capped at however many actually fit as Inventory tiles (each withdrawn
+  // unit becomes its own non-stacking tile, same as a claimed one) —
+  // reported by the user: withdrawing more than fit left "invisible" comets
+  // that existed server-side but had nowhere to render. Gold is unaffected.
+  error?: 'invalid_currency' | 'invalid_direction' | 'invalid_amount' | 'not_owner' | 'not_enough_balance' | 'not_enough_room'
   character_balance?: number
   bank_balance?: number
+  max_withdrawable?: number
   // Set only for comets/fallen_stars — a deposit that couldn't be covered by
   // loose units alone auto-unbundles however many Scrolls it needed (see
   // migration 20260731090000_smart_scroll_currency_deposit.sql), so the
@@ -112,6 +118,13 @@ interface BankState {
   fullMessage: string | null
   loadBankItems: (accountId: string) => Promise<void>
   occupiedSlotCount: () => number
+  // Appends a freshly-stored item without a refetch — used by
+  // useLootHoldingStore's storeGear (2026-08-07), the Loot Holding "Store"
+  // action, which inserts straight into item_instances with location='bank'
+  // via a dedicated RPC rather than going through depositItemToStorage
+  // (there's no existing owned item to flip location on — the Loot Holding
+  // entry isn't a real item_instances row yet).
+  addBankedItem: (item: ItemInstance) => void
   depositItemAsComposition: (itemId: string) => Promise<DepositItemAsCompositionResult>
   withdrawGearComposition: (
     characterId: string,
@@ -179,6 +192,8 @@ export const useBankStore = create<BankState>((set, get) => ({
     const player = usePlayerRecordStore.getState()
     return get().bankedItems.length + player.cometBankCount + player.fallenStarBankCount
   },
+
+  addBankedItem: (item) => set((state) => ({ bankedItems: [...state.bankedItems, item] })),
 
   depositItemAsComposition: async (itemId) => {
     set({ busy: true })

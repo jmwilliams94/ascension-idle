@@ -9,7 +9,11 @@ import { useInventoryStore, type ItemInstance } from './useInventoryStore'
 // server-side in one transaction — the client only ever reflects the result.
 interface QualityUpgradeResult {
   ok: boolean
-  error?: 'item_not_found' | 'not_owner' | 'already_max_quality' | 'not_enough_fallen_stars'
+  // 'not_enough_room_to_unbundle' (2026-08-07) — the cost would need
+  // auto-unbundling a Scroll to cover (see ensure_loose_currency), but there
+  // isn't Inventory room for the newly-unbundled loose units, so the whole
+  // attempt was refused up front rather than partially completing.
+  error?: 'item_not_found' | 'not_owner' | 'already_max_quality' | 'not_enough_fallen_stars' | 'not_enough_room_to_unbundle'
   upgraded?: boolean
   quality_tier?: string
   cost?: number
@@ -25,7 +29,7 @@ interface QualityUpgradeResult {
 
 interface LevelUpgradeResult {
   ok: boolean
-  error?: 'item_not_found' | 'not_owner' | 'already_max_level' | 'not_enough_comets' | 'no_upgrade_path'
+  error?: 'item_not_found' | 'not_owner' | 'already_max_level' | 'not_enough_comets' | 'no_upgrade_path' | 'not_enough_room_to_unbundle'
   upgraded?: boolean
   level?: number
   // The item's new template on success (Level Upgrade now advances the item to
@@ -58,6 +62,7 @@ interface MasterForgeUpgradeResult {
     | 'exceeds_character_level'
     | 'not_enough_fallen_stars'
     | 'not_enough_comets'
+    | 'not_enough_room_to_unbundle'
   upgrade_type?: 'quality' | 'level'
   cost?: number
   quality_tier?: string
@@ -76,7 +81,7 @@ interface MasterForgeUpgradeResult {
 // armor's RNG-on-upgrade path above).
 interface UnlockWeaponSocketResult {
   ok: boolean
-  error?: 'item_not_found' | 'not_owner' | 'not_a_weapon' | 'max_sockets' | 'not_enough_fallen_stars'
+  error?: 'item_not_found' | 'not_owner' | 'not_a_weapon' | 'max_sockets' | 'not_enough_fallen_stars' | 'not_enough_room_to_unbundle'
   sockets?: ItemInstance['sockets']
   cost?: number
   fallen_stars?: number

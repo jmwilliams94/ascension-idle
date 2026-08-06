@@ -6,6 +6,10 @@ import {
   compositionPointValue,
   formatGearSlotLabel,
   type GearSlotType,
+  COMET_ICON_SRC,
+  FALLEN_STAR_ICON_SRC,
+  FALLEN_STAR_COLOR,
+  MATERIAL_COLOR,
 } from '../game/items/forgeCosts'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
@@ -14,6 +18,15 @@ import { useBankStore } from '../game/items/useBankStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 
 type CurrencyId = 'gold' | 'comets' | 'fallen_stars'
+
+// Icon sources for the 3-per-row square redesign below (2026-08-07,
+// confirmed with the user) — Gold has no dedicated icon asset, so it stays
+// label-only, matching the user's own "if there's no icon we can just leave
+// it as text for the moment."
+const CURRENCY_ICON_SRC: Partial<Record<CurrencyId, string>> = {
+  comets: COMET_ICON_SRC,
+  fallen_stars: FALLEN_STAR_ICON_SRC,
+}
 
 const CURRENCIES: { id: CurrencyId; label: string }[] = [
   { id: 'gold', label: 'Gold' },
@@ -97,6 +110,8 @@ export default function BankSquares({ characterId }: { characterId: string }) {
             key={currency.id}
             label={currency.label}
             value={bankFor(currency.id)}
+            iconSrc={CURRENCY_ICON_SRC[currency.id]}
+            accentColor={currency.id === 'comets' ? MATERIAL_COLOR : currency.id === 'fallen_stars' ? FALLEN_STAR_COLOR : undefined}
             selected={selected?.kind === 'currency' && selected.id === currency.id}
             onClick={() => toggle({ kind: 'currency', id: currency.id })}
           />
@@ -106,6 +121,13 @@ export default function BankSquares({ characterId }: { characterId: string }) {
             key={tier}
             label={`Tier ${tier} Stone`}
             value={stonesBanked[String(tier)] ?? 0}
+            // No dedicated stone icon art yet (see forgeCosts.ts's own
+            // buildStoneTooltip, which uses this same emoji) — the corner
+            // "+N" badge is what tells the 4 otherwise-identical stone
+            // squares apart at a glance.
+            icon="🔷"
+            cornerLabel={`+${tier}`}
+            accentColor={MATERIAL_COLOR}
             selected={selected?.kind === 'stoneTier' && selected.tier === tier}
             onClick={() => toggle({ kind: 'stoneTier', tier })}
           />
@@ -167,17 +189,64 @@ export default function BankSquares({ characterId }: { characterId: string }) {
   )
 }
 
-function Square({ label, value, selected, onClick }: { label: string; value: number; selected: boolean; onClick: () => void }) {
+// Icon-based redesign (2026-08-07, confirmed with the user) — Comets/Fallen
+// Stars/Composition Stones now show as an icon with the quantity
+// underneath, replacing the plain text label, matching this game's usual
+// tile convention elsewhere (Inventory, Bank Storage, Loot Holding). Gold
+// and the two points pools (Composition Points, per-slot Gear Points) stay
+// label-only — not currencies in the same "you can hold a physical unit of
+// this" sense, and neither has a dedicated icon.
+function Square({
+  label,
+  value,
+  icon,
+  iconSrc,
+  cornerLabel,
+  accentColor,
+  selected,
+  onClick,
+}: {
+  label: string
+  value: number
+  icon?: string
+  iconSrc?: string
+  cornerLabel?: string
+  accentColor?: string
+  selected: boolean
+  onClick: () => void
+}) {
+  const hasIcon = Boolean(icon || iconSrc)
+  const borderColor = selected ? undefined : accentColor
+  const backgroundColor = selected ? undefined : accentColor ? `${accentColor}14` : undefined
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border p-2 text-center ${
-        selected ? 'border-sky-500 bg-sky-500/10' : 'border-slate-800 bg-slate-950/60 hover:border-slate-600'
+      title={hasIcon ? label : undefined}
+      style={hasIcon ? { borderColor, backgroundColor } : undefined}
+      className={`relative flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border p-2 text-center ${
+        selected
+          ? 'border-sky-500 bg-sky-500/10'
+          : hasIcon
+            ? 'hover:brightness-125'
+            : 'border-slate-800 bg-slate-950/60 hover:border-slate-600'
       }`}
     >
-      <span className="text-[11px] font-medium leading-tight text-slate-300">{label}</span>
-      <span className="text-lg font-semibold text-slate-100">{value.toLocaleString()}</span>
+      {cornerLabel && (
+        <span className="absolute left-1 top-1 rounded bg-slate-950/70 px-1 text-[9px] font-semibold text-slate-300">{cornerLabel}</span>
+      )}
+      {hasIcon ? (
+        <>
+          {iconSrc ? <img src={iconSrc} alt="" className="h-7 w-7 object-contain" /> : <span className="text-2xl leading-none">{icon}</span>}
+          <span className="text-base font-semibold text-slate-100">{value.toLocaleString()}</span>
+        </>
+      ) : (
+        <>
+          <span className="text-[11px] font-medium leading-tight text-slate-300">{label}</span>
+          <span className="text-lg font-semibold text-slate-100">{value.toLocaleString()}</span>
+        </>
+      )}
     </button>
   )
 }
@@ -198,8 +267,8 @@ function CurrencyPanel({
   wallet: number
   bank: number
   busy: boolean
-  onDeposit: (amount: number) => Promise<{ ok: boolean; error?: string }>
-  onWithdraw: (amount: number) => Promise<{ ok: boolean; error?: string }>
+  onDeposit: (amount: number) => Promise<{ ok: boolean; error?: string; max_withdrawable?: number }>
+  onWithdraw: (amount: number) => Promise<{ ok: boolean; error?: string; max_withdrawable?: number }>
 }) {
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit')
   const [amount, setAmount] = useState('')
@@ -214,7 +283,17 @@ function CurrencyPanel({
     setError(null)
     const result = mode === 'deposit' ? await onDeposit(parsedAmount) : await onWithdraw(parsedAmount)
     if (!result.ok) {
-      setError(result.error === 'not_enough_balance' ? "You don't have that much." : 'Something went wrong.')
+      setError(
+        result.error === 'not_enough_balance'
+          ? "You don't have that much."
+          : result.error === 'not_enough_room'
+            ? `Not enough Inventory space${
+                typeof result.max_withdrawable === 'number'
+                  ? ` (only ${result.max_withdrawable} slot${result.max_withdrawable === 1 ? '' : 's'} free)`
+                  : ''
+              }.`
+            : 'Something went wrong.',
+      )
     } else {
       setAmount('')
     }

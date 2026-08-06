@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.64.0",
+    "date": "2026-08-07",
+    "changes": [
+      "Redesigned Loot Holding: sell your Normal-tier junk first, then handle any Comets/Fallen Stars found, and finally decide what to do with any higher-quality gear one at a time (Claim, Store to your account-wide Bank, or Sell)",
+      "Added \"Store\" for gear in Loot Holding — sends an item straight to your account-wide Bank Storage, bypassing a full Inventory entirely, so nothing can get stuck anymore",
+      "Claim/Store buttons now turn red when their destination is full, instead of just failing silently",
+      "Fixed withdrawing more Comets/Fallen Stars from the Bank than your Inventory had room for — withdrawals are now capped at how much space you actually have",
+      "Forge upgrades, Master Forge, and weapon socket unlocks now automatically unbundle a Comet/Fallen Star Scroll if you're short on loose ones and it can afford the cost, refusing the whole action if there's no Inventory room for the leftover change",
+      "Comets, Fallen Stars, and Composition Stones in the Bank now show as icons with their quantity underneath, instead of plain text"
+    ]
+  },
+  {
     "version": "1.63.2",
     "date": "2026-08-07",
     "changes": [

@@ -46,6 +46,8 @@ function describeFailure(error?: string): string {
       return 'Not enough Fallen Stars.'
     case 'not_enough_comets':
       return 'Not enough Comets.'
+    case 'not_enough_room_to_unbundle':
+      return "Would need to unbundle a Scroll for this, but there's no Inventory room for it."
     case 'already_max_quality':
       return 'Already at Ascended quality.'
     case 'already_max_level':

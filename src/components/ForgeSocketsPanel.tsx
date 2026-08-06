@@ -11,6 +11,8 @@ function describeUnlockFailure(error?: string): string {
   switch (error) {
     case 'not_enough_fallen_stars':
       return 'Not enough Fallen Stars.'
+    case 'not_enough_room_to_unbundle':
+      return "Would need to unbundle a Scroll for this, but there's no Inventory room for it."
     case 'max_sockets':
       return 'Already has the max 2 sockets.'
     case 'not_a_weapon':
