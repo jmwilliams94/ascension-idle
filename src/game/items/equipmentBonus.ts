@@ -231,6 +231,17 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Talon Hat': `${import.meta.env.BASE_URL}item-icons/talon-hat.png`,
   'Finhead Hat': `${import.meta.env.BASE_URL}item-icons/finhead-hat.png`,
   'Cinderplume Hat': `${import.meta.env.BASE_URL}item-icons/cinderplume-hat.png`,
+  'Fawnhide Coat': `${import.meta.env.BASE_URL}item-icons/fawnhide-coat.png`,
+  'Vixen Coat': `${import.meta.env.BASE_URL}item-icons/vixen-coat.png`,
+  'Timberwolf Coat': `${import.meta.env.BASE_URL}item-icons/timberwolf-coat.png`,
+  'Dappled Coat': `${import.meta.env.BASE_URL}item-icons/dappled-coat.png`,
+  'Silverback Coat': `${import.meta.env.BASE_URL}item-icons/silverback-coat.png`,
+  'Quilted Coat': `${import.meta.env.BASE_URL}item-icons/quilted-coat.png`,
+  'Finscale Coat': `${import.meta.env.BASE_URL}item-icons/finscale-coat.png`,
+  'Hidebound Coat': `${import.meta.env.BASE_URL}item-icons/hidebound-coat.png`,
+  'Skyfeather Coat': `${import.meta.env.BASE_URL}item-icons/skyfeather-coat.png`,
+  'Wyrmhide Coat': `${import.meta.env.BASE_URL}item-icons/wyrmhide-coat.png`,
+  'Emberplate Coat': `${import.meta.env.BASE_URL}item-icons/emberplate-coat.png`,
 }
 
 export function getGearIconSrc(templateName: string | undefined): string | undefined {
