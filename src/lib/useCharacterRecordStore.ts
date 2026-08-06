@@ -41,6 +41,9 @@ interface CharacterRow {
   fallen_star_count: number
   comet_scroll_count: number
   fallen_star_scroll_count: number
+  // Lottery Ticket (2026-08-06, Achievements rework) — same trust model as
+  // the counts above (server-authoritative, excluded from saveNow below).
+  lottery_ticket_count: number
   composition_stones: CompositionStones
   selected_monster_id: string | null
   last_active_at: string
@@ -79,7 +82,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     const { data, error } = await supabase
       .from('characters')
       .select(
-        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, comet_count, fallen_star_count, comet_scroll_count, fallen_star_scroll_count, composition_stones, selected_monster_id, last_active_at, lucky_free_ticket_claimed_at',
+        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, comet_count, fallen_star_count, comet_scroll_count, fallen_star_scroll_count, lottery_ticket_count, composition_stones, selected_monster_id, last_active_at, lucky_free_ticket_claimed_at',
       )
       .eq('id', characterId)
       .maybeSingle<CharacterRow>()
@@ -112,6 +115,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
       fallenStars: data.fallen_star_count,
       cometScrolls: data.comet_scroll_count,
       fallenStarScrolls: data.fallen_star_scroll_count,
+      lotteryTickets: data.lottery_ticket_count,
     })
     useCompositionStore.getState().hydrate(data.composition_stones)
     useLuckyStore.getState().hydrate(data.lucky_free_ticket_claimed_at)

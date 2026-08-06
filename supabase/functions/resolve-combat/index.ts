@@ -178,8 +178,8 @@ const DAMAGE_ROLL_MAX_RATIO = 1.5
 // Comet/Fallen Star kill-drop odds — confirmed, flat (reverted 2026-08-03: a
 // same-day earlier attempt scaled *this* base rate by monster level, but the
 // user clarified that was the wrong lever — the base rate was never the
-// problem and stays untouched. See killCountBonusDropMultiplier below for
-// the actual fix.).
+// problem and stays untouched. See rollBonusCurrencyDrops's own
+// accountDropMultiplier for the real bonus-drop-chance source now.).
 const COMET_DROP_CHANCE = 1 / 500
 const FALLEN_STAR_DROP_CHANCE = 1 / 20000
 // Gear drop rate + per-drop quality odds (confirmed with the user,
@@ -208,97 +208,27 @@ function rollDroppedQualityTier(): string {
 
 // Achievements & Pets (confirmed shape, see CLAUDE.md — the tracking
 // mechanism is real, the reward VALUES below are a deliberate uniform
-// placeholder until real per-monster/per-zone tier content is designed; do
-// not treat these numbers as final). Mirrors
-// src/game/achievements/achievementData.ts — keep in sync.
+// placeholder). Mirrors src/game/achievements/achievementData.ts — keep in
+// sync.
 const ACHIEVEMENT_TIERS = [100, 250, 500, 1000, 5000, 10000]
 
-// Corrected (2026-08-03, confirmed with the user) — supersedes the previous
-// "Kill Count and Prestige both grant gold, stacking multiplicatively"
-// design. Prestige (renamed from "Unlock") now solely owns the yield/
-// kill-rate reward category — this is the only gold multiplier left. Kill
-// Count's own reward moved to a separate, non-gold category (a bonus-
-// currency-drop-chance multiplier, see KILL_COUNT_BONUS_DROP_MULTIPLIER
-// below) — "other bonuses," per the user's own framing, distinct from
-// Prestige's yield/rate role. Same table (PLACEHOLDER, highest tier reached
-// wins, not cumulative) reused for both, since both still escalate across
-// the same 6 tiers uniformly across every monster.
-const ACHIEVEMENT_GOLD_MULTIPLIER: Record<number, number> = {
-  100: 1.05,
-  250: 1.1,
-  500: 1.2,
-  1000: 1.35,
-  5000: 1.5,
-  10000: 2,
-}
-
-// Kill Count's own reward category — a bonus multiplier on the per-kill
-// Comet/Fallen Star drop chance (see rollBonusCurrencyDrops below), scaled
-// by the highest Kill Count tier reached for the monster being fought.
-// PLACEHOLDER magnitudes, same "highest tier wins" shape as the gold table
-// above. These are the values reached only at the fought monster's *own*
-// level 130 — see killCountBonusDropMultiplier below, which scales this
-// down for lower-level monsters. Corrected 2026-08-03 (confirmed with the
-// user): without that scaling, this multiplier was flat across every
-// monster regardless of level — since it's tied to a *specific monster's*
-// own kill count, and low-level monsters die in far fewer hits, maxing this
-// out on the fastest-to-kill monster in the game (level-1 Quailwing) was
-// strictly optimal, making players never want to fight anything else for
-// Comet/Fallen Star farming. The base per-kill drop chance itself
-// (COMET_DROP_CHANCE/FALLEN_STAR_DROP_CHANCE above) was never the problem
-// and is deliberately untouched — a same-day earlier attempt scaled that
-// instead, which the user corrected.
-const KILL_COUNT_BONUS_DROP_MULTIPLIER: Record<number, number> = {
-  100: 1.1,
-  250: 1.25,
-  500: 1.5,
-  1000: 2,
-  5000: 3,
-  10000: 5,
-}
-
-// A monster's own level scales how much of the table above it can actually
-// reach — level 1 only ever reaches MIN_LEVEL_SCALE_FRACTION (10%) of the
-// full bonus even at Kill Count Tier 10000, level 130 reaches the full
-// 100%. PLACEHOLDER floor/curve, same disclosed-not-final status as every
-// other number here — deliberately not zero at level 1, so a low-level
-// monster's Kill Count ladder isn't rendered completely pointless for this
-// reward category, just far weaker than grinding something harder.
-const MIN_LEVEL_SCALE_FRACTION = 0.1
-const MAX_MONSTER_LEVEL_FOR_BONUS_SCALING = 130
-
-function killCountBonusLevelT(monsterLevel: number): number {
-  const raw = (monsterLevel - 1) / (MAX_MONSTER_LEVEL_FOR_BONUS_SCALING - 1)
-  return MIN_LEVEL_SCALE_FRACTION + (1 - MIN_LEVEL_SCALE_FRACTION) * Math.min(Math.max(raw, 0), 1)
-}
+// Reworked (2026-08-06, confirmed with the user) — supersedes the old
+// dual-track system (an always-on Kill Count bonus-drop multiplier + a paid
+// Prestige gold multiplier, both applied automatically as soon as a tier
+// was reached/bought). Both are gone: Kill Count and Prestige are now a
+// single character-scoped Kill Count ladder with real one-time CLAIMS
+// (claim_kill_count_reward, a separate Postgres RPC — not applied here,
+// since claiming isn't a combat action) instead of a passive multiplier
+// this function used to compute and apply automatically. The account-wide
+// ladder (still tracked below, unchanged) now has its own reward category
+// instead — small permanent combat buffs, read directly from `players`
+// below (accountAttackBonusPct/accountDropBonusPct) rather than derived
+// from anything achievement-tier-shaped here.
 
 // Confirmed, not a placeholder — 1/25000 chance per kill (lowered from the
 // original 1/5000, 2026-08-03), independent of every other roll this
 // function makes. Mirrors achievementData.ts — keep in sync.
 const PET_DROP_CHANCE = 1 / 25000
-
-// Zone 1 (Windhollow) per-monster Kill Count gear rewards (2026-08-03,
-// confirmed with the user) — the first real per-monster tier content (Stage
-// 1 shipped with one uniform placeholder reward only). Reaching 1000 kills
-// (Kill Count Tier 4) on each of Windhollow's 5 monsters grants a specific
-// Tempered gear item once — one slot type per monster, in zone
-// order: armor, weapon, ring, necklace, boots. Only the slot-type order was
-// specified; the exact item within each slot is this pass's own judgment
-// call — level-appropriate picks from the existing catalog (Fawnhide Coat/
-// Ranger's Bow/Pewter Ring/Twine Necklace/Padded Boots), not new items, not
-// final content for the other 7 zones. Granted through the exact same
-// live-mode-room-check/offline-Loot-Holding pipeline a random gear drop
-// already uses (pushed into droppedTemplates below) rather than a
-// special-cased grant path. Mirrors
-// src/game/achievements/monsterGearRewards.ts — keep in sync (that file is
-// display-only today, no client prediction for this specific reward).
-const MONSTER_GEAR_REWARDS: Record<string, { templateId: string; requiredLevel: number; killsRequired: number }> = {
-  quailwing: { templateId: '7b025b99-2a66-43e6-9168-75aae059a267', requiredLevel: 15, killsRequired: 1000 }, // Fawnhide Coat
-  'mourning-dove': { templateId: 'f36c9a78-fcf0-441e-851d-99de940482dd', requiredLevel: 15, killsRequired: 1000 }, // Ranger's Bow
-  redbreast: { templateId: '64dba91d-82cf-4f90-8a73-7dd4270926d8', requiredLevel: 20, killsRequired: 1000 }, // Pewter Ring
-  warshade: { templateId: '8631651a-a59d-449e-b2ae-82e32caace51', requiredLevel: 27, killsRequired: 1000 }, // Twine Necklace
-  'grim-specter': { templateId: '7d6d3f99-44cb-4f89-b2e4-2627e093b4cc', requiredLevel: 30, killsRequired: 1000 }, // Padded Boots
-}
 
 // Zone-level Achievements layer (2026-08-03, confirmed with the user,
 // additive to the per-monster system above, not a replacement — see the
@@ -310,31 +240,6 @@ const MONSTER_GEAR_REWARDS: Record<string, { templateId: string; requiredLevel: 
 // Fallen Star or something," per the user's own framing.
 const ZONE_TIER_COMPLETIONS = [5, 10, 15, 20, 25, 30]
 const ZONE_TIER_FALLEN_STAR_REWARD = [1, 2, 3, 4, 5, 8]
-
-// Every tier now costs something to unlock (confirmed with the user,
-// 2026-08-01 — supersedes the original "first 3 free, pay once for the rest"
-// design), paid one at a time in order via unlock_next_achievement_tier.
-// unlockedTierIndex counts how many of the 6 tiers, in order, have been
-// unlocked so far. Renamed prestigeGoldMultiplier (2026-08-03, "Unlocks" is
-// now called "Prestige" everywhere) — mirrors
-// src/game/achievements/achievementData.ts's own function of the same name.
-function prestigeGoldMultiplier(unlockedTierIndex: number): number {
-  let multiplier = 1
-  for (let i = 0; i < unlockedTierIndex; i += 1) {
-    multiplier = ACHIEVEMENT_GOLD_MULTIPLIER[ACHIEVEMENT_TIERS[i]]
-  }
-  return multiplier
-}
-
-function killCountBonusDropMultiplier(kills: number, monsterLevel: number): number {
-  let fullBonus = 1
-  for (const tier of ACHIEVEMENT_TIERS) {
-    if (kills >= tier) {
-      fullBonus = KILL_COUNT_BONUS_DROP_MULTIPLIER[tier]
-    }
-  }
-  return 1 + (fullBonus - 1) * killCountBonusLevelT(monsterLevel)
-}
 
 // How many of this zone's 30 possible tier-milestones a set of per-monster
 // kill counts has reached in total, and which zone tier (0-6) that maps to.
@@ -439,14 +344,12 @@ function rollDamageInRange(midpoint: number): number {
   return min + Math.floor(Math.random() * (max - min + 1))
 }
 
-// bonusDropMultiplier — Kill Count's own reward (see
-// KILL_COUNT_BONUS_DROP_MULTIPLIER/killCountBonusDropMultiplier above,
-// already scaled by the fought monster's level before being passed in here),
-// applied to both flat base chances alike.
-function rollBonusCurrencyDrops(bonusDropMultiplier: number) {
+// dropMultiplier — the account-wide claimed drop-bonus buff (see
+// accountDropMultiplier above), applied to both flat base chances alike.
+function rollBonusCurrencyDrops(dropMultiplier: number) {
   return {
-    comets: Math.random() < COMET_DROP_CHANCE * bonusDropMultiplier ? 1 : 0,
-    fallenStars: Math.random() < FALLEN_STAR_DROP_CHANCE * bonusDropMultiplier ? 1 : 0,
+    comets: Math.random() < COMET_DROP_CHANCE * dropMultiplier ? 1 : 0,
+    fallenStars: Math.random() < FALLEN_STAR_DROP_CHANCE * dropMultiplier ? 1 : 0,
   }
 }
 
@@ -532,16 +435,18 @@ function damageExpForHit(damage: number, monsterMaxHp: number, monsterLevel: num
   return Math.round(expRewardForLevel(monsterLevel) * DAMAGE_EXP_SHARE * (damage / monsterMaxHp))
 }
 
-// AFK-cap Prestige tier reward (confirmed with the user, 2026-08-05) — the
-// bounded elapsed-time window a single resolve call will simulate (shared by
-// live ~15s calls and the once-at-login offline catch-up) now scales with
-// the highest Prestige tier reached on ANY monster this character has
-// invested in, rather than a flat 2 hours for everyone regardless of
-// progress. PLACEHOLDER tier->hours table, same disclosed-not-final status
-// as the rest of this reward economy — see the query/computation right
-// before the main attack loop below.
+// AFK-cap Kill Count tier reward (confirmed with the user, 2026-08-05,
+// rebased 2026-08-06 onto the reworked single Kill Count track now that
+// Prestige is gone — see the achievements-rework migration) — the bounded
+// elapsed-time window a single resolve call will simulate (shared by live
+// ~15s calls and the once-at-login offline catch-up) scales with the
+// highest Kill Count tier this character has *claimed* on any monster,
+// rather than a flat 2 hours for everyone regardless of progress.
+// PLACEHOLDER tier->hours table, same disclosed-not-final status as the
+// rest of this reward economy — see the query/computation right before the
+// main attack loop below.
 const BASE_AFK_CAP_MS = 2 * 60 * 60 * 1000
-const AFK_CAP_MS_BY_PRESTIGE_TIER: Record<number, number> = {
+const AFK_CAP_MS_BY_KILL_COUNT_TIER: Record<number, number> = {
   0: 2 * 60 * 60 * 1000,
   1: 3 * 60 * 60 * 1000,
   2: 4 * 60 * 60 * 1000,
@@ -696,20 +601,19 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     return json({ ok: false, error: 'unknown_monster' })
   }
 
-  // AFK cap — Prestige tier reward (see AFK_CAP_MS_BY_PRESTIGE_TIER above):
-  // the highest Prestige tier reached on any monster this character has
-  // unlocked at least one tier on decides how much away-time this call will
-  // credit, capped at BASE_AFK_CAP_MS (2 hours) for a character with no
-  // Prestige investment at all.
-  const { data: bestPrestigeRow } = await db
+  // AFK cap — Kill Count tier reward (see AFK_CAP_MS_BY_KILL_COUNT_TIER
+  // above): the highest Kill Count tier this character has *claimed* on any
+  // monster decides how much away-time this call will credit, capped at
+  // BASE_AFK_CAP_MS (2 hours) for a character with no claims at all.
+  const { data: bestClaimedTierRow } = await db
     .from('character_monster_kills')
-    .select('unlocked_tier_index')
+    .select('claimed_tier_index')
     .eq('character_id', characterId)
-    .order('unlocked_tier_index', { ascending: false })
+    .order('claimed_tier_index', { ascending: false })
     .limit(1)
     .maybeSingle()
-  const bestPrestigeTier = Math.min(Math.max(bestPrestigeRow?.unlocked_tier_index ?? 0, 0), 6)
-  const afkCapMs = AFK_CAP_MS_BY_PRESTIGE_TIER[bestPrestigeTier] ?? BASE_AFK_CAP_MS
+  const bestClaimedTier = Math.min(Math.max(bestClaimedTierRow?.claimed_tier_index ?? 0, 0), 6)
+  const afkCapMs = AFK_CAP_MS_BY_KILL_COUNT_TIER[bestClaimedTier] ?? BASE_AFK_CAP_MS
   const elapsedMs = Math.min(Math.max(now - lastResolvedMs, 0), afkCapMs)
 
   // Character combat stats — derived server-side, never trusted from the
@@ -765,7 +669,12 @@ async function handleResolveCombat(req: Request): Promise<Response> {
 
   const derived = computeDerivedStats(attributes, equipmentBonus)
   const attackIntervalMs = 1000 / derived.attackSpeed
-  const attackMidpoint = derived.physicalAttack + derived.magicAttack
+  // Account-wide attack buff (see accountAttackBonusPct below, fetched
+  // further down) is applied once this value is reassigned right after that
+  // fetch completes — declared here (before totalAttacks/the Quiver gate,
+  // which don't depend on it) so the rest of this function reads it in one
+  // place.
+  let attackMidpoint = derived.physicalAttack + derived.magicAttack
 
   // Hunter must have the Quiver equipped to attack at all (confirmed with the
   // user, 2026-07-31 — supersedes the earlier ammo-stack/consumption model
@@ -826,18 +735,22 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     { data: characterKillsRow },
     { data: accountKillsRow },
     { data: petRow },
+    { data: playerRow },
   ] = await Promise.all([
     gearCountQuery,
     db.from('characters').select('composition_stones').eq('id', characterId).maybeSingle(),
     db.from('loot_holding').select('id', { count: 'exact', head: true }).eq('character_id', characterId),
     db.from('potion_stacks').select('id', { count: 'exact', head: true }).eq('character_id', characterId).gt('count', 0),
-    // Achievements & Pets, Stage 1 — this monster's existing kill-count rows
-    // (both ladders) and whether its pet is already obtained account-wide.
+    // Achievements & Pets — this monster's existing kill-count rows (both
+    // ladders) and whether its pet is already obtained account-wide.
     // Fetched here, alongside the other per-request baselines, rather than a
-    // separate round-trip.
+    // separate round-trip. claimed_tier_index is read only for the upsert
+    // below (to preserve it — claiming itself happens in a separate RPC,
+    // never here), not for any reward math anymore (see the achievements
+    // rework note above).
     db
       .from('character_monster_kills')
-      .select('kills, unlocked_tier_index')
+      .select('kills, claimed_tier_index')
       .eq('character_id', characterId)
       .eq('monster_id', character.selected_monster_id)
       .maybeSingle(),
@@ -848,21 +761,23 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       .eq('monster_id', character.selected_monster_id)
       .maybeSingle(),
     db.from('account_pets').select('id').eq('account_id', character.account_id).eq('monster_id', character.selected_monster_id).maybeSingle(),
+    // Achievements rework (2026-08-06) — the account-wide claimed-buff
+    // totals, read fresh every resolve and applied directly below (attack
+    // to the damage roll, drop to both the gear and Comet/Fallen Star
+    // rolls). Permanent once claimed, so no separate "is this active" gate
+    // is needed the way the old per-monster tier lookups needed — just read
+    // and apply.
+    db.from('players').select('account_attack_bonus_pct, account_drop_bonus_pct').eq('id', character.account_id).maybeSingle(),
   ])
 
-  // Gold multiplier is fixed for the whole simulated window, computed from the
-  // tier reached BEFORE this window's kills — same simplification already
-  // established for the level-diff EXP multiplier in the offline simulator,
-  // not a claim of new precision.
   const characterKillsBefore = characterKillsRow?.kills ?? 0
-  const unlockedTierIndex = characterKillsRow?.unlocked_tier_index ?? 0
+  const claimedTierIndex = characterKillsRow?.claimed_tier_index ?? 0
   const accountKillsBefore = accountKillsRow?.kills ?? 0
   const petAlreadyUnlocked = Boolean(petRow)
-  // Prestige owns gold/yield; Kill Count owns its own separate bonus-currency-
-  // drop-chance multiplier (2026-08-03, see the constants above) — no longer
-  // stacked into one combined gold multiplier.
-  const achievementGoldMultiplier = prestigeGoldMultiplier(unlockedTierIndex)
-  const bonusDropMultiplier = killCountBonusDropMultiplier(characterKillsBefore, monster.level)
+  const accountAttackBonusPct = playerRow?.account_attack_bonus_pct ?? 0
+  const accountDropBonusPct = playerRow?.account_drop_bonus_pct ?? 0
+  const accountDropMultiplier = 1 + accountDropBonusPct / 100
+  attackMidpoint *= 1 + accountAttackBonusPct / 100
   // Same White/Green/Red/Black level-diff EXP multiplier killRewards already
   // applies to on-kill EXP (see EXP_MULTIPLIER_BY_COLOR/getLevelDiffColor) —
   // precomputed once here so the new per-hit damage-dealt EXP below gets the
@@ -927,10 +842,6 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       )
     }
 
-    // Looked up once per resolve call (the fought monster never changes
-    // mid-window), not per-kill — see MONSTER_GEAR_REWARDS above.
-    const monsterGearReward = MONSTER_GEAR_REWARDS[character.selected_monster_id]
-
     let isRare = rollIsRare()
     let hp = spawnMonsterHp(monster, isRare)
     // The current spawn's own actual max HP (already rare-doubled if
@@ -983,7 +894,12 @@ async function handleResolveCombat(req: Request): Promise<Response> {
         goldGained += rewards.gold
         expGained += rewards.exp
 
-        if (Math.random() < DROP_CHANCE) {
+        // accountDropMultiplier (see the achievements-rework note above) is
+        // the only bonus-drop source left now that Kill Count's own
+        // automatic multiplier is gone — applies to the gear roll here and
+        // to both Comet/Fallen Star rolls just below, not just currency, per
+        // the user's own generic framing ("drop bonus buff").
+        if (Math.random() < DROP_CHANCE * accountDropMultiplier) {
           const dropped = pickDropTemplate()
           if (dropped) {
             // Quality is rolled once, at drop time, and carried with the
@@ -1003,30 +919,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
           }
         }
 
-        // Zone 1 Kill Count gear reward — fires exactly once, the instant
-        // this specific kill crosses the required threshold (checked against
-        // the pre-window count + how many kills have happened in this window
-        // so far), regardless of whether kills jumped past it in one big
-        // offline catch-up or one at a time live.
-        if (monsterGearReward && characterKillsBefore + killsThisWindow === monsterGearReward.killsRequired) {
-          const withQuality = {
-            id: monsterGearReward.templateId,
-            required_level: monsterGearReward.requiredLevel,
-            qualityTier: 'tempered',
-          }
-          if (mode === 'live') {
-            if (projectedOccupied < INVENTORY_SLOT_CAP) {
-              droppedTemplates.push(withQuality)
-              projectedOccupied += 1
-            } else {
-              inventoryFull = true
-            }
-          } else {
-            droppedTemplates.push(withQuality)
-          }
-        }
-
-        const bonusCurrency = rollBonusCurrencyDrops(bonusDropMultiplier)
+        const bonusCurrency = rollBonusCurrencyDrops(accountDropMultiplier)
         if (mode === 'live') {
           if (bonusCurrency.comets > 0) {
             if (projectedOccupied < INVENTORY_SLOT_CAP) {
@@ -1084,11 +977,6 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     level += 1
   }
 
-  // Achievements & Pets, Stage 1 — the gold multiplier is a constant for the
-  // whole window (computed above from the pre-window kill count), so applying
-  // it once to the total is mathematically identical to applying it per kill.
-  goldGained = Math.round(goldGained * achievementGoldMultiplier)
-
   const characterKillCount = characterKillsBefore + killsThisWindow
   const accountKillCount = accountKillsBefore + killsThisWindow
 
@@ -1101,7 +989,9 @@ async function handleResolveCombat(req: Request): Promise<Response> {
             character_id: characterId,
             monster_id: character.selected_monster_id,
             kills: characterKillCount,
-            unlocked_tier_index: unlockedTierIndex,
+            // Preserves the existing value — claiming a tier only ever
+            // happens through claim_kill_count_reward, never here.
+            claimed_tier_index: claimedTierIndex,
           },
           { onConflict: 'character_id,monster_id' },
         ),

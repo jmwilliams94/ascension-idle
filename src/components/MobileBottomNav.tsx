@@ -4,6 +4,7 @@ import { useCombatStore } from '../game/combat/useCombatStore'
 import { useTabStore, type TabId } from '../game/hud/useTabStore'
 import { TAB_ICONS, useEquippedWeaponIcon } from '../game/hud/navIcons'
 import NavIconGlyph from './NavIconGlyph'
+import { useAchievementsStore, totalClaimableCount } from '../game/achievements/useAchievementsStore'
 
 // Fixed bottom nav bar, mobile-only (`lg:hidden` — desktop keeps TabNav.tsx
 // unchanged, now `hidden lg:grid`). Combat is centered as "Fight"/"Idle" —
@@ -44,7 +45,9 @@ const TOWN_ITEMS: { id: TabId; label: string }[] = [
 
 const RIGHT_ITEMS: { id: TabId; label: string }[] = [{ id: 'achievements', label: 'Achiev.' }]
 
-function NavButton({ id, label }: { id: TabId; label: string }) {
+// badge (2026-08-06, Achievements rework) — a small count bubble, currently
+// only used for the Achievements button (claimable tier count).
+function NavButton({ id, label, badge }: { id: TabId; label: string; badge?: number }) {
   const activeTab = useTabStore((state) => state.activeTab)
   const setActiveTab = useTabStore((state) => state.setActiveTab)
   const active = activeTab === id
@@ -54,12 +57,17 @@ function NavButton({ id, label }: { id: TabId; label: string }) {
     <button
       type="button"
       onClick={() => setActiveTab(id)}
-      className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-medium leading-tight ${
+      className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-medium leading-tight ${
         active ? 'text-sky-300' : 'text-slate-400'
       }`}
     >
       {icon && <NavIconGlyph icon={icon} />}
       <span className="truncate">{label}</span>
+      {Boolean(badge) && (
+        <span className="absolute right-2 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-slate-900 bg-amber-500 px-1 text-[9px] font-bold text-slate-950">
+          {badge! > 99 ? '99+' : badge}
+        </span>
+      )}
     </button>
   )
 }
@@ -170,6 +178,10 @@ function TownNavButton() {
 }
 
 export default function MobileBottomNav() {
+  const characterKills = useAchievementsStore((state) => state.characterKills)
+  const accountKills = useAchievementsStore((state) => state.accountKills)
+  const achievementsBadge = totalClaimableCount(characterKills, accountKills)
+
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-800/80 bg-slate-950/95 backdrop-blur lg:hidden"
@@ -182,7 +194,7 @@ export default function MobileBottomNav() {
         <FightNavButton />
         <TownNavButton />
         {RIGHT_ITEMS.map((item) => (
-          <NavButton key={item.id} {...item} />
+          <NavButton key={item.id} {...item} badge={item.id === 'achievements' ? achievementsBadge : undefined} />
         ))}
       </div>
     </nav>

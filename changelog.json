@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.63.0",
+    "date": "2026-08-06",
+    "changes": [
+      "Reworked Achievements: Prestige is gone — each Kill Count tier is now a real one-time Claim button (with a notification badge showing what's ready), escalating toward a free Infused-quality gear item at the top tier",
+      "The account-wide Achievements ladder (kills summed across all your characters) now grants real, permanent account-wide bonuses to attack and drop chance when claimed",
+      "Added the Lottery Ticket item — a rare Achievements reward that can be spent for a free LuckyLad draw",
+      "Achievements page has a full new look — tier progress, rewards, and claim buttons are all clearer at a glance"
+    ]
+  },
+  {
     "version": "1.62.0",
     "date": "2026-08-06",
     "changes": [

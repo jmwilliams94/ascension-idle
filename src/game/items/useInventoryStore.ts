@@ -136,7 +136,7 @@ interface InventoryState {
   // mirrors this same level-appropriate selection so the prediction is a
   // reasonable (if independently rolled) preview of what the next resolve will
   // actually confirm.
-  rollItemDrop: (monsterLevel: number) => { template: ItemTemplate } | null
+  rollItemDrop: (monsterLevel: number, dropMultiplier?: number) => { template: ItemTemplate } | null
   // Performs the actual DB insert once a ground item pickup is collected. Returns
   // the granted item + its template on success, or null (no active character, an
   // error, or the inventory is full) — lets the caller (the combat scene) know
@@ -194,10 +194,10 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     set({ items: (data ?? []) as ItemInstance[], loaded: true })
   },
 
-  rollItemDrop: (monsterLevel) => {
+  rollItemDrop: (monsterLevel, dropMultiplier = 1) => {
     const templates = useItemTemplatesStore.getState().templates
 
-    if (templates.length === 0 || Math.random() >= DROP_CHANCE) {
+    if (templates.length === 0 || Math.random() >= DROP_CHANCE * dropMultiplier) {
       return null
     }
 

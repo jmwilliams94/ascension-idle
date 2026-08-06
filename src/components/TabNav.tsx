@@ -2,6 +2,7 @@ import { useCombatStore } from '../game/combat/useCombatStore'
 import { useTabStore, type TabId } from '../game/hud/useTabStore'
 import { TAB_ICONS, useEquippedWeaponIcon } from '../game/hud/navIcons'
 import NavIconGlyph from './NavIconGlyph'
+import { useAchievementsStore, totalClaimableCount } from '../game/achievements/useAchievementsStore'
 
 const TAB_ITEMS: { id: TabId; label: string }[] = [
   { id: 'combat', label: 'Combat' },
@@ -52,7 +53,12 @@ function CombatTabButton() {
   )
 }
 
-function TabButton({ id, label }: { id: TabId; label: string }) {
+// badge (2026-08-06, Achievements rework) — a small count bubble in the
+// corner, currently only used for the Achievements tab (claimable tier
+// count) but kept generic in case another tab wants one later, same
+// "relative wrapper + absolute badge" pattern MarketplacePanel's own Mail
+// sub-tab badge already established.
+function TabButton({ id, label, badge }: { id: TabId; label: string; badge?: number }) {
   const activeTab = useTabStore((state) => state.activeTab)
   const setActiveTab = useTabStore((state) => state.setActiveTab)
   const active = activeTab === id
@@ -62,10 +68,15 @@ function TabButton({ id, label }: { id: TabId; label: string }) {
     <button
       type="button"
       onClick={() => setActiveTab(id)}
-      className={`${TAB_BUTTON_CLASS} ${active ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'}`}
+      className={`relative ${TAB_BUTTON_CLASS} ${active ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'}`}
     >
       {icon && <NavIconGlyph icon={icon} sizeClassName="h-8 w-8" />}
       <span>{label}</span>
+      {Boolean(badge) && (
+        <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border border-slate-900 bg-amber-500 px-1 text-[10px] font-bold text-slate-950">
+          {badge! > 99 ? '99+' : badge}
+        </span>
+      )}
     </button>
   )
 }
@@ -77,11 +88,20 @@ function TabButton({ id, label }: { id: TabId; label: string }) {
 // grouping — desktop has the horizontal room mobile doesn't, so the
 // space-saving rollup isn't needed here.
 export default function TabNav() {
+  const characterKills = useAchievementsStore((state) => state.characterKills)
+  const accountKills = useAchievementsStore((state) => state.accountKills)
+  const achievementsBadge = totalClaimableCount(characterKills, accountKills)
+
   return (
     <div className="hidden grid-cols-8 gap-2 lg:grid">
       <CombatTabButton />
       {TAB_ITEMS.filter((item) => item.id !== 'combat').map((item) => (
-        <TabButton key={item.id} id={item.id} label={item.label} />
+        <TabButton
+          key={item.id}
+          id={item.id}
+          label={item.label}
+          badge={item.id === 'achievements' ? achievementsBadge : undefined}
+        />
       ))}
     </div>
   )

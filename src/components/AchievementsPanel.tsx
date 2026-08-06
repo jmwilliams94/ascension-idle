@@ -1,353 +1,298 @@
 import { useState, type ReactNode } from 'react'
 import { ENEMY_TYPES, ZONES, ZONE_ORDER, type EnemyTypeId, type ZoneId } from '../game/zones/zoneData'
-import { useAchievementsStore } from '../game/achievements/useAchievementsStore'
-import { useCurrencyStore } from '../game/stats/useCurrencyStore'
+import { useAchievementsStore, type MonsterKillEntry } from '../game/achievements/useAchievementsStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
+import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 import HoverTooltip from './HoverTooltip'
 import ItemTooltip from './ItemTooltip'
 import { SLOT_SIZE_CLASS } from './InventorySlot'
 import {
-  ACHIEVEMENT_GOLD_MULTIPLIER,
   ACHIEVEMENT_TIERS,
-  MIN_KILLS_FOR_PRESTIGE,
+  ACCOUNT_TIER_THRESHOLDS,
+  CHARACTER_TIER_REWARDS,
+  ACCOUNT_TIER_REWARDS,
+  describeCharacterTierReward,
+  describeAccountTierReward,
+  tierIndexReached,
   PET_DROP_CHANCE,
   ZONE_TIER_COMPLETIONS,
   ZONE_TIER_FALLEN_STAR_REWARD,
   ZONE_TOTAL_TIER_MILESTONES,
-  currentKillCountTier,
-  currentPrestigeTier,
-  killCountBonusMultiplierAtTier,
-  nextTierToUnlock,
   zoneTierCompletions,
 } from '../game/achievements/achievementData'
-import { MONSTER_GEAR_REWARDS } from '../game/achievements/monsterGearRewards'
 
-// Achievements & Pets, Stage 1 (confirmed shape, see CLAUDE.md — added from a
-// mobile session). Grouped by zone (reusing ZONE_ORDER/ZONES the same way
-// CombatPage's picker does) since a flat 40-row list would be unwieldy.
+// Achievements & Pets — full rework (2026-08-06, confirmed with the user).
+// Supersedes the earlier Character/Account/Pets-with-Zones/Quests/Prestige
+// sub-tab layout entirely — see achievementData.ts and useAchievementsStore.ts
+// for the mechanism rewrite this UI is built on top of.
 //
-// Three top-level tabs (confirmed with the user, 2026-08-01 — supersedes an
-// earlier four-tab version that had a standalone "Unlocks" tab):
-//   - {Character name}: this character's own achievements, split into its
-//     own Zones/Quests sub-tabs (see PlayerTabContent).
-//   - Account: the account-wide ladder, split into Zones/Quests/Unlocks
-//     sub-tabs (see AccountTabContent) — Unlocks moved here from its own
-//     top-level tab (it still spends a *character's* own Comets/Fallen Stars
-//     to unlock a *character* tier, see UnlockRow — only where it lives in
-//     the UI changed, not what it does).
-//   - Pets: every monster's pet status (obtained/locked).
+// Three top-level tabs, no sub-tabs anymore (Quests was always an
+// undesigned placeholder with zero content, and Prestige is gone outright —
+// dropping both leaves a genuinely simpler structure, not just a reskin):
+//   - {character name}: this character's own Kill Count ladder per monster,
+//     grouped by zone. Each tier is a real one-time Claim.
+//   - Account: the account-wide ladder (kills summed across all 5 character
+//     slots), same shape, claiming grants a small permanent combat buff
+//     instead of an item/currency bundle.
+//   - Pets: unchanged from before this rework.
 type AchievementsTab = 'player' | 'account' | 'pets'
 
-type TierVisualState = 'active' | 'partial' | 'locked'
+type ChipState = 'claimed' | 'claimable' | 'locked'
 
-// active = reward genuinely live right now. partial = the kill count is
-// there but the reward isn't (character: paid-unlock still pending; account:
-// no reward category exists at all yet, see CLAUDE.md). locked = kill count
-// not reached yet. Three states, one color language, reused by both ladders.
-const TIER_STATE_COLOR: Record<TierVisualState, string> = {
-  active: '#34d399', // emerald-400
-  partial: '#f59e0b', // amber-500
+const CHIP_STATE_COLOR: Record<ChipState, string> = {
+  claimed: '#34d399', // emerald-400
+  claimable: '#f59e0b', // amber-500
   locked: '#475569', // slate-600
 }
 
-function MonsterCard({ displayName, children }: { displayName: string; children: ReactNode }) {
+function chipState(tierIndex: number, claimedTierIndex: number, reachedTierIndex: number): ChipState {
+  if (tierIndex < claimedTierIndex) return 'claimed'
+  if (tierIndex < reachedTierIndex) return 'claimable'
+  return 'locked'
+}
+
+// A small circular count badge — the "notification bubble with a number in
+// it" the user asked for, reused at every level this can matter: a tab
+// button, a zone's collapsed header, and an individual monster card.
+function NotificationBadge({ count }: { count: number }) {
+  if (count <= 0) return null
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-      <p className="text-sm font-medium text-slate-200">{displayName}</p>
-      <div className="mt-2">{children}</div>
+    <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold leading-none text-slate-950">
+      {count}
+    </span>
+  )
+}
+
+// How many tiers, across a zone's 5 monsters, are reached but not yet
+// claimed for a given track (character or account) — feeds the zone header
+// badge in CollapsibleZoneGroups. Computed as a plain function over an
+// already-selected raw record, not inside a Zustand selector itself (see
+// this project's own zustand-selector-pitfall convention).
+function claimableCountsByZone(
+  kills: Record<string, MonsterKillEntry>,
+  thresholds: readonly number[],
+): Partial<Record<ZoneId, number>> {
+  const result: Partial<Record<ZoneId, number>> = {}
+  for (const zoneId of ZONE_ORDER) {
+    let total = 0
+    for (const monsterId of ZONES[zoneId].monsterOrder) {
+      const entry = kills[monsterId]
+      if (!entry) continue
+      total += Math.max(0, tierIndexReached(entry.kills, thresholds) - entry.claimedTierIndex)
+    }
+    if (total > 0) result[zoneId] = total
+  }
+  return result
+}
+
+function totalClaimable(kills: Record<string, MonsterKillEntry>, thresholds: readonly number[]): number {
+  let total = 0
+  for (const entry of Object.values(kills)) {
+    total += Math.max(0, tierIndexReached(entry.kills, thresholds) - entry.claimedTierIndex)
+  }
+  return total
+}
+
+function describeClaimError(error: string | undefined, message: string | undefined): string {
+  switch (error) {
+    case 'already_maxed':
+      return 'All tiers already claimed.'
+    case 'not_reached':
+      return "Kill count requirement not met yet."
+    case 'no_kills_yet':
+      return 'No kills recorded yet for this monster.'
+    case 'no_reward_available':
+      return 'No reward item available right now — try again.'
+    case 'not_owner':
+      return "Couldn't verify ownership — try reloading the page."
+    case 'rpc_failed':
+      return `Request failed: ${message ?? 'unknown error'}`
+    default:
+      return 'Something went wrong (no error detail returned).'
+  }
+}
+
+function MonsterCard({ children, badgeCount }: { children: ReactNode; badgeCount: number }) {
+  return (
+    <div className="relative rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+      {badgeCount > 0 && (
+        <div className="absolute -right-2 -top-2">
+          <NotificationBadge count={badgeCount} />
+        </div>
+      )}
+      {children}
     </div>
   )
 }
 
-// One continuous bar spanning the whole ladder, with a small marker dot at
-// each tier's boundary — reverted (2026-08-01) back to this shape after the
-// proportional-width divided-pill version broke both the visual sense of
-// kill progress (the huge later tiers' ranges dwarfed the early ones, so
-// early kills barely moved anything visible) and the "mouseover points"
-// design the user actually wanted dots for. Every tier still contributes an
-// equal 1/6 share of the overall fill regardless of how far apart its kill
-// thresholds are (100 to 250 vs. 5000 to 10000) — a linear kill-count scale
-// would make that same problem worse, not better. Thicker than the original
-// version per the user's follow-up ("just needed to be a bit of a thicker
-// bar"). Hovering a dot shows that tier's own reward via the same universal
-// ItemTooltip every other tile in this game already uses.
-function TierLadderBar({
-  kills,
-  getState,
-  getTooltipLines,
+// A row of 6 chips, one per tier — claimed (emerald, checkmark), claimable
+// (amber, pulsing), or locked (gray). Reused by both tracks, parametrized by
+// thresholds/reward-describer since the two tracks' reward shapes differ
+// entirely (item/currency bundle vs. a combat-buff percentage).
+function TierChipRow({
+  thresholds,
+  claimedTierIndex,
+  reachedTierIndex,
+  describeReward,
 }: {
-  kills: number
-  getState: (tierIndex: number) => TierVisualState
-  getTooltipLines: (tierIndex: number, state: TierVisualState) => string[]
+  thresholds: readonly number[]
+  claimedTierIndex: number
+  reachedTierIndex: number
+  describeReward: (tierIndex: number) => string
 }) {
-  let filledSegments = 0
-  for (let index = 0; index < ACHIEVEMENT_TIERS.length; index += 1) {
-    const threshold = ACHIEVEMENT_TIERS[index]
-    const prevThreshold = index === 0 ? 0 : ACHIEVEMENT_TIERS[index - 1]
-    filledSegments += Math.max(0, Math.min(1, (kills - prevThreshold) / (threshold - prevThreshold)))
-  }
-  const overallPct = (filledSegments / ACHIEVEMENT_TIERS.length) * 100
-
   return (
-    <div className="relative py-1.5">
-      <div className="h-3 w-full overflow-hidden rounded-full bg-slate-800">
-        <div className="h-full rounded-full bg-sky-500 transition-[width]" style={{ width: `${overallPct}%` }} />
-      </div>
-      <div className="pointer-events-none absolute inset-0 flex items-center">
-        {ACHIEVEMENT_TIERS.map((threshold, index) => {
-          const state = getState(index)
-          const color = TIER_STATE_COLOR[state]
-          const leftPct = ((index + 1) / ACHIEVEMENT_TIERS.length) * 100
-
-          const tooltip = (
-            <ItemTooltip
-              title={`Tier ${index + 1} · ${threshold.toLocaleString()} kills`}
-              titleColor={color}
-              lines={getTooltipLines(index, state)}
-            />
-          )
-
-          return (
-            <div key={threshold} className="pointer-events-auto absolute -translate-x-1/2" style={{ left: `${leftPct}%` }}>
-              <HoverTooltip content={tooltip}>
-                <div
-                  className={`h-3 w-3 rounded-full border-2 ${state === 'active' ? 'accent-glow' : ''}`}
-                  style={{
-                    borderColor: color,
-                    backgroundColor: state === 'locked' ? '#020617' : color,
-                    color,
-                  }}
-                />
-              </HoverTooltip>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-// Two fully independent tracks (confirmed with the user, 2026-08-03 —
-// supersedes the earlier single "reached AND unlocked" gated track, see
-// achievementData.ts's own note). Kill Count is free and only ever
-// active/locked based on kills; Unlock is paid and only ever active/locked
-// based on unlockedTierIndex — neither gates the other anymore, so there's
-// no more 'partial' state for either (still used by AccountProgress below,
-// which is unrelated to this split).
-function killCountTierState(kills: number, tierIndex: number): TierVisualState {
-  return kills >= ACHIEVEMENT_TIERS[tierIndex] ? 'active' : 'locked'
-}
-
-function killCountTierTooltipLines(tierIndex: number, state: TierVisualState, kills: number, monsterId: EnemyTypeId): string[] {
-  const threshold = ACHIEVEMENT_TIERS[tierIndex]
-  // Level-scaled (2026-08-03, confirmed with the user) — this monster's own
-  // level determines how much of the tier's "full" bonus it can actually
-  // reach, so low-level monsters (e.g. Quailwing) show a far smaller number
-  // here than a harder monster would at the same tier.
-  const rewardPct = Math.round((killCountBonusMultiplierAtTier(threshold, ENEMY_TYPES[monsterId].level) - 1) * 100)
-  const rewardLine = `Reward: +${rewardPct}% Comet/Fallen Star drop chance`
-  // Zone 1's per-monster gear rewards (2026-08-03) stack on top of the
-  // ongoing drop-chance bonus above, not instead of it — both apply once
-  // this tier is reached.
-  const gearReward = MONSTER_GEAR_REWARDS[monsterId]
-  const gearLine =
-    gearReward && gearReward.killsRequired === threshold
-      ? `Also grants: Tempered ${gearReward.templateName} (${gearReward.slotLabel}, one-time)`
-      : null
-  return [
-    rewardLine,
-    ...(gearLine ? [gearLine] : []),
-    state === 'active' ? 'Active now' : `${(threshold - kills).toLocaleString()} kills to go`,
-  ]
-}
-
-function unlockTierState(unlockedTierIndex: number, tierIndex: number): TierVisualState {
-  return tierIndex < unlockedTierIndex ? 'active' : 'locked'
-}
-
-function unlockTierTooltipLines(tierIndex: number, state: TierVisualState): string[] {
-  const threshold = ACHIEVEMENT_TIERS[tierIndex]
-  const rewardPct = Math.round((ACHIEVEMENT_GOLD_MULTIPLIER[threshold] - 1) * 100)
-  const rewardLine = `Reward: +${rewardPct}% gold`
-  return [rewardLine, state === 'active' ? 'Active now' : 'Not unlocked yet — see Prestige']
-}
-
-// Pure progress display — no buy button here anymore, see UnlockRow. Kill
-// Count keeps its full ladder (free, automatic, its own bonus-drop-chance
-// reward — see achievementData.ts). Prestige (renamed from "Unlock",
-// 2026-08-03, confirmed with the user) drops its own dot-ladder here in
-// favor of a single line of text — "Instead of the existing Unlock tier bar
-// ... we can change it to just say what Tier it is" — the full ladder still
-// exists over in Prestige's own buy row (UnlockRow), where seeing which
-// tiers are already bought is actually useful context for a purchase
-// decision; here it's just a status readout.
-function CharacterProgress({ monsterId }: { monsterId: EnemyTypeId }) {
-  const characterEntry = useAchievementsStore((state) => state.characterKills[monsterId])
-  const kills = characterEntry?.kills ?? 0
-  const unlockedTierIndex = characterEntry?.unlockedTierIndex ?? 0
-
-  const killTier = currentKillCountTier(kills)
-  const killPct = killTier ? Math.round((killCountBonusMultiplierAtTier(killTier, ENEMY_TYPES[monsterId].level) - 1) * 100) : 0
-  const prestigeTier = currentPrestigeTier(unlockedTierIndex)
-  const prestigePct = prestigeTier ? Math.round((ACHIEVEMENT_GOLD_MULTIPLIER[prestigeTier] - 1) * 100) : 0
-
-  return (
-    <div className="space-y-3">
-      <div>
-        <div className="flex items-center justify-between text-[11px] text-slate-500">
-          <span>Kill Count Reward (free) · {kills.toLocaleString()} kills</span>
-          <span className={killTier ? 'text-emerald-400' : ''}>
-            {killTier ? `+${killPct}% drop chance active` : 'No tier active yet'}
-          </span>
-        </div>
-        <div className="mt-1.5">
-          <TierLadderBar
-            kills={kills}
-            getState={(tierIndex) => killCountTierState(kills, tierIndex)}
-            getTooltipLines={(tierIndex, state) => killCountTierTooltipLines(tierIndex, state, kills, monsterId)}
+    <div className="mt-2 flex items-center gap-1.5">
+      {thresholds.map((threshold, tierIndex) => {
+        const state = chipState(tierIndex, claimedTierIndex, reachedTierIndex)
+        const color = CHIP_STATE_COLOR[state]
+        const tooltip = (
+          <ItemTooltip
+            title={`Tier ${tierIndex + 1} · ${threshold.toLocaleString()} kills`}
+            titleColor={color}
+            lines={[
+              `Reward: ${describeReward(tierIndex)}`,
+              state === 'claimed' ? 'Claimed' : state === 'claimable' ? 'Ready to claim!' : `${threshold.toLocaleString()} kills required`,
+            ]}
           />
-        </div>
-      </div>
-      <div className="flex items-center justify-between text-[11px] text-slate-500">
-        <span>Current Prestige: Tier {unlockedTierIndex}</span>
-        <span className={prestigeTier ? 'text-emerald-400' : ''}>{prestigeTier ? `+${prestigePct}% gold active` : 'No tier active yet'}</span>
-      </div>
+        )
+        return (
+          <HoverTooltip key={threshold} content={tooltip}>
+            <div
+              className={`flex h-6 w-6 items-center justify-center rounded-md border-2 text-[10px] font-semibold ${
+                state === 'claimable' ? 'animate-pulse' : ''
+              }`}
+              style={{ borderColor: color, backgroundColor: state === 'locked' ? '#020617' : `${color}22`, color }}
+            >
+              {state === 'claimed' ? '✓' : tierIndex + 1}
+            </div>
+          </HoverTooltip>
+        )
+      })}
     </div>
   )
 }
 
-function AccountProgress({ monsterId }: { monsterId: EnemyTypeId }) {
-  const kills = useAchievementsStore((state) => state.accountKills[monsterId] ?? 0)
-
-  // The account ladder has no paid tier-2 upgrade built yet, and its reward
-  // category is entirely undecided per CLAUDE.md — every tier a kill count
-  // reaches shows as 'partial' (progress made, nothing to activate), never
-  // 'active'. Tiers past the first 3 (1000/5000/10000) are flagged in their
-  // own tooltip as needing an account-wide upgrade that doesn't exist yet,
-  // matching this game's existing convention for not-yet-built content
-  // (locked classes, locked zones) rather than hiding them outright.
-  const getState = (tierIndex: number): TierVisualState => {
-    const threshold = ACHIEVEMENT_TIERS[tierIndex]
-    return kills >= threshold ? 'partial' : 'locked'
-  }
-
-  const getTooltipLines = (tierIndex: number, state: TierVisualState): string[] => {
-    const threshold = ACHIEVEMENT_TIERS[tierIndex]
-    const lines =
-      tierIndex < 3
-        ? ['Reward: not decided yet']
-        : ['Reward: not decided yet', 'Needs an account-wide upgrade — not built yet']
-    lines.push(state === 'locked' ? `${(threshold - kills).toLocaleString()} kills to go` : 'Reached')
-    return lines
-  }
-
-  return (
-    <div>
-      <div className="flex items-center justify-between text-[11px] text-slate-500">
-        <span>{kills.toLocaleString()} kills</span>
-        <span>Reward: not designed yet</span>
-      </div>
-      <div className="mt-1.5">
-        <TierLadderBar kills={kills} getState={getState} getTooltipLines={getTooltipLines} />
-      </div>
-    </div>
-  )
-}
-
-// Only renders for a monster that actually has a next tier to buy — fully
-// maxed (tier 6) monsters simply don't show up on this tab at all. Shows the
-// full 6-tier TierLadderBar — the Buy button still only ever purchases the
-// next tier in sequence, but the bar gives the same full-ladder context
-// every other tab already shows. Renamed "Unlock" -> **Prestige** everywhere
-// (2026-08-03, confirmed with the user, wording only — same
-// unlocked_tier_index column/RPC). New gate, also confirmed: a monster's
-// Kill Count must reach Tier 1 (MIN_KILLS_FOR_PRESTIGE) before Prestige can
-// buy its first tier at all — "to proceed to the next Prestige you need to
-// complete the 1st round of Kill Count." A one-time requirement (kills only
-// go up), so once satisfied it stays satisfied for every later tier too.
-function UnlockRow({ characterId, monsterId, displayName }: { characterId: string; monsterId: EnemyTypeId; displayName: string }) {
-  const characterEntry = useAchievementsStore((state) => state.characterKills[monsterId])
+// Character track — one card per monster: name, kill count, the 6-chip
+// ladder, and a single Claim button that only ever targets the next tier in
+// sequence (the server won't let you pick which one, see
+// claim_kill_count_reward). No affordability check needed anymore — unlike
+// the old paid Prestige unlock, a Kill Count claim is free, the kills
+// already paid for it.
+function CharacterMonsterCard({ characterId, monsterId, displayName }: { characterId: string; monsterId: EnemyTypeId; displayName: string }) {
+  const entry = useAchievementsStore((state) => state.characterKills[monsterId])
   const busy = useAchievementsStore((state) => state.busy)
-  const unlockNextTier = useAchievementsStore((state) => state.unlockNextTier)
-  const comets = useCurrencyStore((state) => state.comets)
-  const fallenStars = useCurrencyStore((state) => state.fallenStars)
-
+  const claimCharacterTier = useAchievementsStore((state) => state.claimCharacterTier)
   const [error, setError] = useState<string | null>(null)
 
-  const kills = characterEntry?.kills ?? 0
-  const unlockedTierIndex = characterEntry?.unlockedTierIndex ?? 0
-  const toUnlock = nextTierToUnlock(unlockedTierIndex)
-  const affordable = toUnlock ? (toUnlock.cost.currency === 'comet' ? comets : fallenStars) >= toUnlock.cost.amount : false
-  const meetsKillGate = kills >= MIN_KILLS_FOR_PRESTIGE
+  const kills = entry?.kills ?? 0
+  const claimedTierIndex = entry?.claimedTierIndex ?? 0
+  const reachedTierIndex = tierIndexReached(kills, ACHIEVEMENT_TIERS)
+  const claimable = reachedTierIndex > claimedTierIndex
+  const maxed = claimedTierIndex >= ACHIEVEMENT_TIERS.length
+  const nextThreshold = ACHIEVEMENT_TIERS[claimedTierIndex]
+  const nextReward = CHARACTER_TIER_REWARDS[claimedTierIndex]
 
-  if (!toUnlock) {
-    return null
-  }
-
-  const getState = (tierIndex: number) => unlockTierState(unlockedTierIndex, tierIndex)
-  const getTooltipLines = (tierIndex: number, state: TierVisualState) => unlockTierTooltipLines(tierIndex, state)
-
-  const handleUnlock = async () => {
+  const handleClaim = async () => {
     setError(null)
-    const result = await unlockNextTier(characterId, monsterId)
+    const result = await claimCharacterTier(characterId, monsterId)
     if (!result.ok) {
-      setError(
-        result.error === 'not_enough_comets'
-          ? "You don't have enough Comets."
-          : result.error === 'not_enough_fallen_stars'
-            ? "You don't have enough Fallen Stars."
-            : result.error === 'kill_count_tier_required'
-              ? `Reach ${MIN_KILLS_FOR_PRESTIGE.toLocaleString()} kills on this monster first.`
-              : result.error === 'already_maxed'
-                ? 'All tiers already unlocked.'
-                : result.error === 'not_owner'
-                  ? "Couldn't verify this character owns that — try reloading the page."
-                  : result.error === 'rpc_failed'
-                    ? `Request failed: ${result.message ?? 'unknown error'}`
-                    : 'Something went wrong (no error detail returned).',
-      )
+      setError(describeClaimError(result.error, result.message))
     }
   }
 
-  const disabled = busy || !affordable || !meetsKillGate
-  const disabledReason = !meetsKillGate
-    ? `Reach ${MIN_KILLS_FOR_PRESTIGE.toLocaleString()} kills (Kill Count Tier 1) first`
-    : !affordable
-      ? `Need ${toUnlock.cost.amount} ${toUnlock.cost.currency === 'comet' ? 'Comets' : 'Fallen Stars'}`
-      : undefined
-
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <MonsterCard badgeCount={claimable ? 1 : 0}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-sm font-medium text-slate-200">{displayName}</p>
           <p className="text-[11px] text-slate-500">{kills.toLocaleString()} kills</p>
         </div>
-        <div className="text-right">
+        {maxed ? (
+          <span className="text-[11px] font-medium text-emerald-400">All tiers claimed</span>
+        ) : (
           <button
             type="button"
-            disabled={disabled}
-            onClick={() => void handleUnlock()}
-            title={disabledReason}
-            className="rounded-lg border border-purple-600 bg-purple-500/10 px-2.5 py-1 text-[11px] font-medium text-purple-300 hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={busy || !claimable}
+            onClick={() => void handleClaim()}
+            title={!claimable ? `Reach ${nextThreshold.toLocaleString()} kills` : undefined}
+            className="rounded-lg border border-amber-500 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-transparent disabled:text-slate-500"
           >
-            Prestige tier {unlockedTierIndex + 1} ({toUnlock.cost.amount} {toUnlock.cost.currency === 'comet' ? 'Comets' : 'Fallen Stars'})
+            {claimable ? `Claim Tier ${claimedTierIndex + 1}` : `Tier ${claimedTierIndex + 1} at ${nextThreshold.toLocaleString()}`}
           </button>
-          {disabledReason && !error && <p className="mt-1 text-[11px] text-slate-500">{disabledReason}</p>}
-          {error && <p className="mt-1 text-[11px] text-amber-400">{error}</p>}
+        )}
+      </div>
+      {!maxed && <p className="mt-1 text-[11px] text-slate-500">Next: {describeCharacterTierReward(nextReward)}</p>}
+      <TierChipRow
+        thresholds={ACHIEVEMENT_TIERS}
+        claimedTierIndex={claimedTierIndex}
+        reachedTierIndex={reachedTierIndex}
+        describeReward={(tierIndex) => describeCharacterTierReward(CHARACTER_TIER_REWARDS[tierIndex])}
+      />
+      {error && <p className="mt-1.5 text-[11px] text-amber-400">{error}</p>}
+    </MonsterCard>
+  )
+}
+
+// Account track — mirrors CharacterMonsterCard, but the ladder is the
+// account-wide one (kills summed across all 5 character slots, 5x the
+// character thresholds) and the reward is a permanent attack/drop combat
+// buff rather than an item/currency bundle. accountId undefined means the
+// session hasn't resolved yet (a brief, disclosed edge case, same guard
+// GameShell already uses before calling loadAchievements) — claiming is
+// simply disabled until then.
+function AccountMonsterCard({ accountId, monsterId, displayName }: { accountId: string | undefined; monsterId: EnemyTypeId; displayName: string }) {
+  const entry = useAchievementsStore((state) => state.accountKills[monsterId])
+  const busy = useAchievementsStore((state) => state.busy)
+  const claimAccountTier = useAchievementsStore((state) => state.claimAccountTier)
+  const [error, setError] = useState<string | null>(null)
+
+  const kills = entry?.kills ?? 0
+  const claimedTierIndex = entry?.claimedTierIndex ?? 0
+  const reachedTierIndex = tierIndexReached(kills, ACCOUNT_TIER_THRESHOLDS)
+  const claimable = reachedTierIndex > claimedTierIndex
+  const maxed = claimedTierIndex >= ACCOUNT_TIER_THRESHOLDS.length
+  const nextThreshold = ACCOUNT_TIER_THRESHOLDS[claimedTierIndex]
+  const nextReward = ACCOUNT_TIER_REWARDS[claimedTierIndex]
+
+  const handleClaim = async () => {
+    if (!accountId) return
+    setError(null)
+    const result = await claimAccountTier(accountId, monsterId)
+    if (!result.ok) {
+      setError(describeClaimError(result.error, result.message))
+    }
+  }
+
+  return (
+    <MonsterCard badgeCount={claimable ? 1 : 0}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-sm font-medium text-slate-200">{displayName}</p>
+          <p className="text-[11px] text-slate-500">{kills.toLocaleString()} kills (all characters)</p>
         </div>
+        {maxed ? (
+          <span className="text-[11px] font-medium text-emerald-400">All tiers claimed</span>
+        ) : (
+          <button
+            type="button"
+            disabled={busy || !claimable || !accountId}
+            onClick={() => void handleClaim()}
+            title={!claimable ? `Reach ${nextThreshold.toLocaleString()} kills` : undefined}
+            className="rounded-lg border border-amber-500 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-transparent disabled:text-slate-500"
+          >
+            {claimable ? `Claim Tier ${claimedTierIndex + 1}` : `Tier ${claimedTierIndex + 1} at ${nextThreshold.toLocaleString()}`}
+          </button>
+        )}
       </div>
-      <div className="mt-2">
-        {/* Fill is driven by unlockedTierIndex, not raw kills, since this
-            ladder is showing paid-Prestige progress specifically — see
-            CharacterProgress's own identical trick. */}
-        <TierLadderBar
-          kills={unlockedTierIndex > 0 ? ACHIEVEMENT_TIERS[unlockedTierIndex - 1] : 0}
-          getState={getState}
-          getTooltipLines={getTooltipLines}
-        />
-      </div>
-    </div>
+      {!maxed && <p className="mt-1 text-[11px] text-slate-500">Next: {describeAccountTierReward(nextReward)}</p>}
+      <TierChipRow
+        thresholds={ACCOUNT_TIER_THRESHOLDS}
+        claimedTierIndex={claimedTierIndex}
+        reachedTierIndex={reachedTierIndex}
+        describeReward={(tierIndex) => describeAccountTierReward(ACCOUNT_TIER_REWARDS[tierIndex])}
+      />
+      {error && <p className="mt-1.5 text-[11px] text-amber-400">{error}</p>}
+    </MonsterCard>
   )
 }
 
@@ -356,6 +301,7 @@ function UnlockRow({ characterId, monsterId, displayName }: { characterId: strin
 // convention (same SLOT_SIZE_CLASS, same universal hover tooltip) rather than
 // a plain list — an obtained pet gets a colored, glowing tile; a locked one
 // stays dim, same "special vs. mundane" visual language as gear quality tiers.
+// Unaffected by the 2026-08-06 rework.
 function PetTile({ monsterId, displayName }: { monsterId: EnemyTypeId; displayName: string }) {
   const hasPet = useAchievementsStore((state) => state.pets.has(monsterId))
   const color = hasPet ? '#F0B87A' : '#475569'
@@ -385,34 +331,9 @@ function PetTile({ monsterId, displayName }: { monsterId: EnemyTypeId; displayNa
   )
 }
 
-function PlaceholderCard({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 p-6 text-center">
-      <p className="text-sm font-medium text-slate-300">{title}</p>
-      <p className="mt-1 text-xs text-slate-500">{description}</p>
-    </div>
-  )
-}
-
-// Zone-level Achievements milestone bar (2026-08-04, confirmed with the
-// user — "I need a bar on each zone indicating those milestones and the
-// rewards") — supersedes the plain-text ZoneAchievementSummary this used to
-// be (a "X/30 tiers completed" line with no reward visibility at all).
-// Modeled directly on TierLadderBar above (same track/fill/dot-marker
-// structure), just driven by ZONE_TIER_COMPLETIONS/completions (out of
-// ZONE_TOTAL_TIER_MILESTONES = 30) instead of ACHIEVEMENT_TIERS/kills, and
-// each dot's tooltip pulls its reward from ZONE_TIER_FALLEN_STAR_REWARD
-// instead of a per-monster gold multiplier. Shown on the zone's own
-// collapsed accordion header ("when the zone is collapsed maybe it can
-// display its zone rewards"), so its status is visible without expanding to
-// see the 5 individual monster rows. Purely a display computation off
-// useAchievementsStore's already-loaded characterKills (see
-// zoneTierCompletions in achievementData.ts) — the real Fallen Star grant
-// only ever happens server-side, tracked via character_zone_progress, which
-// the client never reads; a dot showing 'active' here means the threshold
-// has been crossed, which in practice means the reward already granted
-// itself automatically (no separate manual-claim step exists for this
-// ladder, unlike Prestige).
+// Zone-level Achievements milestone bar — unaffected by the 2026-08-06
+// rework (this is the additive per-zone Fallen Star ladder, separate from
+// the per-monster Kill Count ladder above; see achievementData.ts).
 function ZoneMilestoneBar({ zoneId }: { zoneId: ZoneId }) {
   const characterKills = useAchievementsStore((state) => state.characterKills)
   const zoneMonsterKills = ZONES[zoneId].monsterOrder.map((monsterId) => characterKills[monsterId]?.kills ?? 0)
@@ -420,9 +341,6 @@ function ZoneMilestoneBar({ zoneId }: { zoneId: ZoneId }) {
   const overallPct = (completions / ZONE_TOTAL_TIER_MILESTONES) * 100
 
   return (
-    // Swallows clicks so tapping a dot (or the bar's own empty track) doesn't
-    // also bubble up to the accordion header's onClick and toggle the zone
-    // open/closed — this bar is an info display, not another toggle target.
     <div className="w-40" onClick={(event) => event.stopPropagation()}>
       <div className="flex items-center justify-between text-[11px] text-slate-500">
         <span>
@@ -436,8 +354,8 @@ function ZoneMilestoneBar({ zoneId }: { zoneId: ZoneId }) {
         </div>
         <div className="pointer-events-none absolute inset-0 flex items-center">
           {ZONE_TIER_COMPLETIONS.map((threshold, index) => {
-            const state: TierVisualState = completions >= threshold ? 'active' : 'locked'
-            const color = TIER_STATE_COLOR[state]
+            const state: ChipState = completions >= threshold ? 'claimed' : 'locked'
+            const color = CHIP_STATE_COLOR[state]
             const leftPct = (threshold / ZONE_TOTAL_TIER_MILESTONES) * 100
 
             const tooltip = (
@@ -446,7 +364,7 @@ function ZoneMilestoneBar({ zoneId }: { zoneId: ZoneId }) {
                 titleColor={color}
                 lines={[
                   `Reward: ${ZONE_TIER_FALLEN_STAR_REWARD[index]} Fallen Star${ZONE_TIER_FALLEN_STAR_REWARD[index] === 1 ? '' : 's'}`,
-                  state === 'active' ? 'Granted' : `${(threshold - completions).toLocaleString()} to go`,
+                  state === 'claimed' ? 'Granted' : `${(threshold - completions).toLocaleString()} to go`,
                 ]}
               />
             )
@@ -455,7 +373,7 @@ function ZoneMilestoneBar({ zoneId }: { zoneId: ZoneId }) {
               <div key={threshold} className="pointer-events-auto absolute -translate-x-1/2" style={{ left: `${leftPct}%` }}>
                 <HoverTooltip content={tooltip}>
                   <div
-                    className={`h-3 w-3 rounded-full border-2 ${state === 'active' ? 'accent-glow' : ''}`}
+                    className="h-3 w-3 rounded-full border-2"
                     style={{
                       borderColor: color,
                       backgroundColor: state === 'locked' ? '#020617' : color,
@@ -472,25 +390,23 @@ function ZoneMilestoneBar({ zoneId }: { zoneId: ZoneId }) {
   )
 }
 
-// Same per-zone monster data as ZoneGroups, but each zone starts collapsed
-// and only shows its monster rows once selected — confirmed with the user
-// (2026-08-01), an accordion (one zone open at a time, selecting another
-// collapses the previous one) rather than the always-expanded list every
-// other tab still uses, since this is the sub-tab most likely to be scrolled
-// through repeatedly.
+// Each zone starts collapsed and only shows its monster rows once selected
+// — an accordion (one zone open at a time). Now also shows a claimable-count
+// notification badge next to the zone name when it has any pending claims.
 function CollapsibleZoneGroups({
   expandedZoneId,
   onToggleZone,
   renderMonster,
   showZoneSummary,
+  claimableByZone,
 }: {
   expandedZoneId: ZoneId | null
   onToggleZone: (zoneId: ZoneId) => void
   renderMonster: (monsterId: EnemyTypeId, displayName: string) => ReactNode
-  // Only the Character tab's own Zones sub-tab passes this — Account's Zones/
-  // Unlocks reuse of this same component shouldn't show a per-zone
-  // Achievements milestone bar that's actually scoped to one character.
+  // Only the Character tab's own Zones passes this — the Fallen Star zone
+  // ladder is scoped to one character, so Account shouldn't show it.
   showZoneSummary?: boolean
+  claimableByZone?: Partial<Record<ZoneId, number>>
 }) {
   return (
     <>
@@ -509,12 +425,16 @@ function CollapsibleZoneGroups({
         }
 
         const expanded = expandedZoneId === zoneId
+        const zoneBadgeCount = claimableByZone?.[zoneId] ?? 0
 
         return (
           <div key={zoneId} className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/80">
             <button type="button" onClick={() => onToggleZone(zoneId)} className="flex w-full items-center justify-between p-4 text-left">
               <div>
-                <p className="text-sm font-medium text-slate-200">{zone.displayName}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-slate-200">{zone.displayName}</p>
+                  <NotificationBadge count={zoneBadgeCount} />
+                </div>
                 {showZoneSummary && (
                   <div className="mt-1">
                     <ZoneMilestoneBar zoneId={zoneId} />
@@ -537,77 +457,9 @@ function CollapsibleZoneGroups({
   )
 }
 
-// The Character top-level tab's own sub-navigation (confirmed with the user,
-// 2026-08-01) — Zones/Quests, a page-local sub-tab state (not useTabStore)
-// matching the same "sub-navigation inside one top-level tab" pattern
-// ShopPanel's own Weapons/Armor/Potions tabs already established. An earlier
-// version of this also had a third "Character" sub-tab, dropped after the
-// user felt it was redundant (it duplicated the identity of the top-level tab
-// it lived inside, which is already named after this character, and had no
-// content of its own yet anyway). "Zones" has real content (the per-monster
-// kill ladder that used to be this whole top-level tab's only view, now
-// collapsible by zone — see CollapsibleZoneGroups); "Quests" (named per the
-// user, 2026-08-01 — a brand-new, entirely undesigned concept as of this
-// pass) is a placeholder pending design — don't invent content for it.
-type PlayerSubTab = 'zones' | 'quests'
-
-const PLAYER_SUB_TAB_DESCRIPTIONS: Record<PlayerSubTab, string> = {
-  zones:
-    'Kill a monster repeatedly to climb its personal ladder. Hover a tier segment to see its reward. Each zone also tracks its own total across all 5 monsters — shown on the zone header — and pays out its own Fallen Star reward at milestones. Tap a zone to expand it.',
-  quests: 'Quests aren’t designed yet.',
-}
-
-function PlayerTabContent() {
-  const [subTab, setSubTab] = useState<PlayerSubTab>('zones')
-  const [expandedZoneId, setExpandedZoneId] = useState<ZoneId | null>(null)
-
-  const SUB_TABS: { id: PlayerSubTab; label: string }[] = [
-    { id: 'zones', label: 'Zones' },
-    { id: 'quests', label: 'Quests' },
-  ]
-
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
-        {SUB_TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => setSubTab(item.id)}
-            className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${
-              subTab === item.id ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-400 hover:border-slate-500'
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-
-      <p className="text-xs text-slate-500">{PLAYER_SUB_TAB_DESCRIPTIONS[subTab]}</p>
-
-      {subTab === 'zones' && (
-        <CollapsibleZoneGroups
-          expandedZoneId={expandedZoneId}
-          onToggleZone={(zoneId) => setExpandedZoneId((current) => (current === zoneId ? null : zoneId))}
-          showZoneSummary
-          renderMonster={(monsterId, displayName) => (
-            <MonsterCard displayName={displayName}>
-              <CharacterProgress monsterId={monsterId} />
-            </MonsterCard>
-          )}
-        />
-      )}
-
-      {subTab === 'quests' && <PlaceholderCard title="Coming soon" description="Quests aren't designed yet." />}
-    </div>
-  )
-}
-
 // Grid-only zone shell for Pets — the one remaining always-expanded (not
-// collapsible) zone grouping, since every other zone-grouped view (Character
-// Zones, Account Zones, Account Unlocks) now collapses via
-// CollapsibleZoneGroups above. Pets doesn't need collapsing the same way —
-// its tile grid is compact enough per zone not to need hiding.
+// collapsible) zone grouping, since its tile grid is compact enough per zone
+// not to need hiding.
 function PetZoneGroups({ renderMonster }: { renderMonster: (monsterId: EnemyTypeId, displayName: string) => ReactNode }) {
   return (
     <>
@@ -640,99 +492,101 @@ function PetZoneGroups({ renderMonster }: { renderMonster: (monsterId: EnemyType
   )
 }
 
-// The Account top-level tab's own sub-navigation (confirmed with the user,
-// 2026-08-01) — mirrors the Character tab's Zones/Quests split, plus a third
-// Prestige sub-tab (renamed from "Unlocks," 2026-08-03, confirmed with the
-// user, wording only) moved here from what used to be its own top-level tab
-// (buying a Prestige tier still spends a *character's* own Comets/
-// Fallen Stars, and now also requires that monster's own Kill Count to have
-// reached Tier 1 first — see UnlockRow — only where it lives in the UI
-// changed). All three zone-grouped sections here collapse per zone
-// independently (their own expanded-zone state each), matching the
-// Character tab's Zones behavior.
-type AccountSubTab = 'zones' | 'quests' | 'prestige'
-
-const ACCOUNT_SUB_TAB_DESCRIPTIONS: Record<AccountSubTab, string> = {
-  zones:
-    'Every character on this account contributes to the same account-wide ladder per monster — its own reward category is still being designed. Tap a zone to expand it.',
-  quests: 'Quests aren’t designed yet.',
-  prestige:
-    'Spend Comets/Fallen Stars to advance a monster’s Prestige — a paid gold bonus, separate from Kill Count’s own free reward. Reaching Kill Count Tier 1 on a monster is required before its Prestige can advance at all.',
-}
-
-function AccountTabContent({ characterId }: { characterId: string }) {
-  const [subTab, setSubTab] = useState<AccountSubTab>('zones')
-  const [zonesExpandedZoneId, setZonesExpandedZoneId] = useState<ZoneId | null>(null)
-  const [prestigeExpandedZoneId, setPrestigeExpandedZoneId] = useState<ZoneId | null>(null)
-
-  const SUB_TABS: { id: AccountSubTab; label: string }[] = [
-    { id: 'zones', label: 'Zones' },
-    { id: 'quests', label: 'Quests' },
-    { id: 'prestige', label: 'Prestige' },
-  ]
+function PlayerTabContent({ characterId }: { characterId: string }) {
+  const [expandedZoneId, setExpandedZoneId] = useState<ZoneId | null>(null)
+  const characterKills = useAchievementsStore((state) => state.characterKills)
+  const claimableByZone = claimableCountsByZone(characterKills, ACHIEVEMENT_TIERS)
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
-        {SUB_TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => setSubTab(item.id)}
-            className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${
-              subTab === item.id ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-400 hover:border-slate-500'
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
+      <p className="text-xs text-slate-500">
+        Kill a monster to climb its personal ladder — each of the 6 tiers is a real, one-time claim. Tap a zone to expand it.
+      </p>
+      <CollapsibleZoneGroups
+        expandedZoneId={expandedZoneId}
+        onToggleZone={(zoneId) => setExpandedZoneId((current) => (current === zoneId ? null : zoneId))}
+        showZoneSummary
+        claimableByZone={claimableByZone}
+        renderMonster={(monsterId, displayName) => (
+          <CharacterMonsterCard characterId={characterId} monsterId={monsterId} displayName={displayName} />
+        )}
+      />
+    </div>
+  )
+}
+
+function AccountTabContent({ accountId }: { accountId: string | undefined }) {
+  const [expandedZoneId, setExpandedZoneId] = useState<ZoneId | null>(null)
+  const accountKills = useAchievementsStore((state) => state.accountKills)
+  const accountAttackBonusPct = usePlayerRecordStore((state) => state.accountAttackBonusPct)
+  const accountDropBonusPct = usePlayerRecordStore((state) => state.accountDropBonusPct)
+  const claimableByZone = claimableCountsByZone(accountKills, ACCOUNT_TIER_THRESHOLDS)
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-slate-500">
+        Every character on this account contributes to the same ladder per monster (thresholds are 5x the character track's own). Claiming
+        grants a small, permanent account-wide combat buff.
+      </p>
+      <div className="flex flex-wrap gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-xs">
+        <span className="text-slate-400">
+          Total Attack Bonus: <span className="font-semibold text-emerald-400">+{Math.round(accountAttackBonusPct * 100)}%</span>
+        </span>
+        <span className="text-slate-400">
+          Total Drop Bonus: <span className="font-semibold text-emerald-400">+{Math.round(accountDropBonusPct * 100)}%</span>
+        </span>
       </div>
-
-      <p className="text-xs text-slate-500">{ACCOUNT_SUB_TAB_DESCRIPTIONS[subTab]}</p>
-
-      {subTab === 'zones' && (
-        <CollapsibleZoneGroups
-          expandedZoneId={zonesExpandedZoneId}
-          onToggleZone={(zoneId) => setZonesExpandedZoneId((current) => (current === zoneId ? null : zoneId))}
-          renderMonster={(monsterId, displayName) => (
-            <MonsterCard displayName={displayName}>
-              <AccountProgress monsterId={monsterId} />
-            </MonsterCard>
-          )}
-        />
-      )}
-
-      {subTab === 'quests' && <PlaceholderCard title="Coming soon" description="Quests aren't designed yet." />}
-
-      {subTab === 'prestige' && (
-        <CollapsibleZoneGroups
-          expandedZoneId={prestigeExpandedZoneId}
-          onToggleZone={(zoneId) => setPrestigeExpandedZoneId((current) => (current === zoneId ? null : zoneId))}
-          renderMonster={(monsterId, displayName) => <UnlockRow characterId={characterId} monsterId={monsterId} displayName={displayName} />}
-        />
-      )}
+      <CollapsibleZoneGroups
+        expandedZoneId={expandedZoneId}
+        onToggleZone={(zoneId) => setExpandedZoneId((current) => (current === zoneId ? null : zoneId))}
+        claimableByZone={claimableByZone}
+        renderMonster={(monsterId, displayName) => <AccountMonsterCard accountId={accountId} monsterId={monsterId} displayName={displayName} />}
+      />
     </div>
   )
 }
 
 const TAB_DESCRIPTIONS: Record<AchievementsTab, string> = {
-  player: 'This character’s own achievements, organized into sub-tabs below.',
-  account: 'Progress shared across every character on this account, organized into sub-tabs below.',
+  player: 'This character’s own Kill Count achievements.',
+  account: 'Progress shared across every character on this account.',
   pets: `Every monster has a 1 in ${(1 / PET_DROP_CHANCE).toLocaleString()} chance per kill to drop its pet — account-wide, one per monster, forever.`,
 }
 
-export default function AchievementsPanel({ characterId }: { characterId: string }) {
+export default function AchievementsPanel({ characterId, accountId }: { characterId: string; accountId?: string }) {
   const characterName = useCharacterRecordStore((state) => state.characterName)
+  const characterKills = useAchievementsStore((state) => state.characterKills)
+  const accountKills = useAchievementsStore((state) => state.accountKills)
+  const pets = useAchievementsStore((state) => state.pets)
   const [tab, setTab] = useState<AchievementsTab>('player')
 
-  const TABS: { id: AchievementsTab; label: string }[] = [
-    { id: 'player', label: characterName || 'Character' },
-    { id: 'account', label: 'Account' },
-    { id: 'pets', label: 'Pets' },
+  const characterClaimable = totalClaimable(characterKills, ACHIEVEMENT_TIERS)
+  const accountClaimable = totalClaimable(accountKills, ACCOUNT_TIER_THRESHOLDS)
+
+  const TABS: { id: AchievementsTab; label: string; badge: number }[] = [
+    { id: 'player', label: characterName || 'Character', badge: characterClaimable },
+    { id: 'account', label: 'Account', badge: accountClaimable },
+    { id: 'pets', label: 'Pets', badge: 0 },
   ]
 
   return (
     <div className="space-y-4">
+      <div className="rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900/80 to-slate-950/80 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-200">Achievements</p>
+            <p className="mt-0.5 text-xs text-slate-500">Track progress and claim one-time rewards for grinding a monster.</p>
+          </div>
+          <div className="flex gap-4 text-xs text-slate-400">
+            <span>
+              Pets: <span className="font-semibold text-amber-300">{pets.size}</span> / 40
+            </span>
+            <span>
+              Claimable: <span className="font-semibold text-amber-300">{characterClaimable + accountClaimable}</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
       <p className="text-xs text-slate-500">{TAB_DESCRIPTIONS[tab]}</p>
 
       <div className="flex flex-wrap gap-2">
@@ -741,18 +595,19 @@ export default function AchievementsPanel({ characterId }: { characterId: string
             key={item.id}
             type="button"
             onClick={() => setTab(item.id)}
-            className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${
+            className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium ${
               tab === item.id ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
             }`}
           >
             {item.label}
+            <NotificationBadge count={item.badge} />
           </button>
         ))}
       </div>
 
-      {tab === 'player' && <PlayerTabContent />}
+      {tab === 'player' && <PlayerTabContent characterId={characterId} />}
 
-      {tab === 'account' && <AccountTabContent characterId={characterId} />}
+      {tab === 'account' && <AccountTabContent accountId={accountId} />}
 
       {tab === 'pets' && <PetZoneGroups renderMonster={(monsterId, displayName) => <PetTile monsterId={monsterId} displayName={displayName} />} />}
     </div>

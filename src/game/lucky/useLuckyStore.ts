@@ -4,6 +4,8 @@ import { useProgressionStore } from '../stats/useProgressionStore'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 
+export const LUCKY_TICKET_ITEM_COST = 1
+
 // LuckyLad's ticket draw — Stage 1 (see CLAUDE.md's Lucky section, and the
 // migration's own header for the full write-up). The tab/mascot is named
 // "LuckyLad" (renamed from the plain "Lucky" label, 2026-08-03, confirmed
@@ -38,17 +40,18 @@ interface LuckyCharacterTotals {
   fallen_star_count: number
   comet_scroll_count: number
   fallen_star_scroll_count: number
+  lottery_ticket_count: number
 }
 
 export interface DrawLuckyTicketResult {
   ok: boolean
-  error?: 'invalid_card_index' | 'not_owner' | 'not_enough_ap' | 'rpc_failed'
+  error?: 'invalid_card_index' | 'not_owner' | 'not_enough_ap' | 'not_enough_lottery_tickets' | 'rpc_failed'
   cost?: number
   ascension_points?: number
   next_free_ticket_at?: string | null
   board?: LuckyReward[]
   won_index?: number
-  payment?: 'free' | 'ascension_points'
+  payment?: 'free' | 'ascension_points' | 'lottery_ticket'
   character?: LuckyCharacterTotals
 }
 
@@ -58,7 +61,11 @@ interface LuckyState {
   nextFreeTicketAt: number | null
   busy: boolean
   hydrate: (claimedAt: string | null) => void
-  draw: (characterId: string, cardIndex: number) => Promise<DrawLuckyTicketResult>
+  // useTicket (2026-08-06, Achievements rework) — a third, independent
+  // payment path alongside the free 6h cooldown and the 20-AP paid draw:
+  // consumes 1 Lottery Ticket instead, bypassing both the cooldown and AP
+  // entirely. See draw_lucky_ticket's own p_use_ticket parameter.
+  draw: (characterId: string, cardIndex: number, useTicket?: boolean) => Promise<DrawLuckyTicketResult>
 }
 
 export const useLuckyStore = create<LuckyState>((set, get) => ({
@@ -69,7 +76,7 @@ export const useLuckyStore = create<LuckyState>((set, get) => ({
     set({ nextFreeTicketAt: claimedAt ? new Date(claimedAt).getTime() + LUCKY_FREE_TICKET_COOLDOWN_MS : null })
   },
 
-  draw: async (characterId, cardIndex) => {
+  draw: async (characterId, cardIndex, useTicket = false) => {
     if (get().busy) {
       return { ok: false, error: 'rpc_failed' }
     }
@@ -78,6 +85,7 @@ export const useLuckyStore = create<LuckyState>((set, get) => ({
     const { data, error } = await supabase.rpc('draw_lucky_ticket', {
       p_character_id: characterId,
       p_card_index: cardIndex,
+      p_use_ticket: useTicket,
     })
     set({ busy: false })
 
@@ -101,6 +109,7 @@ export const useLuckyStore = create<LuckyState>((set, get) => ({
       useCurrencyStore.getState().setFallenStars(result.character.fallen_star_count)
       useCurrencyStore.getState().setCometScrolls(result.character.comet_scroll_count)
       useCurrencyStore.getState().setFallenStarScrolls(result.character.fallen_star_scroll_count)
+      useCurrencyStore.getState().setLotteryTickets(result.character.lottery_ticket_count)
     }
 
     if (result.ok && typeof result.ascension_points === 'number') {

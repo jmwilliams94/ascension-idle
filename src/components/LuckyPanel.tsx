@@ -10,6 +10,7 @@ import {
   type LuckyReward,
 } from '../game/lucky/useLuckyStore'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
+import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { FALLEN_STAR_COLOR, FALLEN_STAR_ICON_SRC, MATERIAL_COLOR, COMET_ICON_SRC } from '../game/items/forgeCosts'
 
 // Lucky — Stage 1 (confirmed design, see CLAUDE.md's Lucky section and the
@@ -127,11 +128,16 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   const busy = useLuckyStore((state) => state.busy)
   const draw = useLuckyStore((state) => state.draw)
   const ascensionPoints = usePlayerRecordStore((state) => state.ascensionPoints)
+  const lotteryTickets = useCurrencyStore((state) => state.lotteryTickets)
 
   const [armedIndex, setArmedIndex] = useState<number | null>(null)
+  // Lottery Ticket (2026-08-06, Achievements rework) — a third payment
+  // option the player can toggle on, independent of free/AP eligibility;
+  // only offered when at least one is owned. Reset alongside armedIndex.
+  const [useTicketPayment, setUseTicketPayment] = useState(false)
   const [board, setBoard] = useState<LuckyReward[] | null>(null)
   const [wonIndex, setWonIndex] = useState<number | null>(null)
-  const [paymentUsed, setPaymentUsed] = useState<'free' | 'ascension_points' | null>(null)
+  const [paymentUsed, setPaymentUsed] = useState<'free' | 'ascension_points' | 'lottery_ticket' | null>(null)
   const [error, setError] = useState<string | null>(null)
   // Free-ticket countdown only needs to be roughly live, not to-the-second —
   // a 30s re-render is enough to keep the displayed "Xh Ym" honest. Reading
@@ -146,8 +152,8 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   }, [])
 
   const freeAvailable = !nextFreeTicketAt || nextFreeTicketAt <= now
-  const cost = freeAvailable ? 0 : LUCKY_TICKET_AP_COST
-  const canAffordArmed = freeAvailable || ascensionPoints >= LUCKY_TICKET_AP_COST
+  const cost = useTicketPayment ? 0 : freeAvailable ? 0 : LUCKY_TICKET_AP_COST
+  const canAffordArmed = useTicketPayment ? lotteryTickets >= 1 : freeAvailable || ascensionPoints >= LUCKY_TICKET_AP_COST
 
   const handlePick = (index: number) => {
     if (board || busy) return
@@ -158,17 +164,20 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   const handleConfirm = async () => {
     if (armedIndex === null) return
     setError(null)
-    const result = await draw(characterId, armedIndex)
+    const result = await draw(characterId, armedIndex, useTicketPayment)
 
     if (!result.ok || !result.board || typeof result.won_index !== 'number') {
       setError(
         result.error === 'not_enough_ap'
           ? `Not enough Ascension Points (need ${LUCKY_TICKET_AP_COST}).`
-          : result.error === 'not_owner'
-            ? "Couldn't verify this character owns that — try reloading the page."
-            : "Couldn't draw a ticket — try again.",
+          : result.error === 'not_enough_lottery_tickets'
+            ? "Not enough Lottery Tickets."
+            : result.error === 'not_owner'
+              ? "Couldn't verify this character owns that — try reloading the page."
+              : "Couldn't draw a ticket — try again.",
       )
       setArmedIndex(null)
+      setUseTicketPayment(false)
       return
     }
 
@@ -176,12 +185,14 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
     setWonIndex(result.won_index)
     setPaymentUsed(result.payment ?? null)
     setArmedIndex(null)
+    setUseTicketPayment(false)
   }
 
   const handleReset = () => {
     setBoard(null)
     setWonIndex(null)
     setPaymentUsed(null)
+    setUseTicketPayment(false)
     setError(null)
   }
 
@@ -198,6 +209,9 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
           <span>
             Ascension Points: <span className="font-semibold text-purple-300">{ascensionPoints.toLocaleString()}</span>
+          </span>
+          <span>
+            Lottery Tickets: <span className="font-semibold text-sky-300">{lotteryTickets.toLocaleString()}</span>
           </span>
           <span>
             {freeAvailable ? (
@@ -230,8 +244,23 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
       {!board && armedIndex !== null && (
         <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
           <p className="text-xs text-slate-400">
-            {freeAvailable ? 'This draw uses your free ticket.' : `This draw costs ${LUCKY_TICKET_AP_COST} Ascension Points.`}
+            {useTicketPayment
+              ? 'This draw consumes 1 Lottery Ticket.'
+              : freeAvailable
+                ? 'This draw uses your free ticket.'
+                : `This draw costs ${LUCKY_TICKET_AP_COST} Ascension Points.`}
           </p>
+          {lotteryTickets >= 1 && (
+            <label className="mt-2 flex items-center gap-2 text-xs text-slate-400">
+              <input
+                type="checkbox"
+                checked={useTicketPayment}
+                onChange={(event) => setUseTicketPayment(event.target.checked)}
+                className="h-3.5 w-3.5 rounded border-slate-600 bg-slate-800 text-sky-500"
+              />
+              Pay with a Lottery Ticket instead ({lotteryTickets} owned)
+            </label>
+          )}
           <div className="mt-2 flex gap-2">
             <button
               type="button"
@@ -239,12 +268,15 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
               onClick={() => void handleConfirm()}
               className="flex-1 rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {busy ? 'Drawing…' : `Confirm (${cost === 0 ? 'Free' : `${cost} AP`})`}
+              {busy ? 'Drawing…' : `Confirm (${useTicketPayment ? '1 Ticket' : cost === 0 ? 'Free' : `${cost} AP`})`}
             </button>
             <button
               type="button"
               disabled={busy}
-              onClick={() => setArmedIndex(null)}
+              onClick={() => {
+                setArmedIndex(null)
+                setUseTicketPayment(false)
+              }}
               className="flex-1 rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-300 hover:border-slate-400"
             >
               Cancel
@@ -257,7 +289,11 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
         <div className="rounded-xl border border-amber-600 bg-amber-500/10 p-3 text-center">
           <p className="text-xs text-slate-300">
             You won <span className="font-semibold text-amber-300">{rewardLabel(board[wonIndex])}</span>
-            {paymentUsed === 'ascension_points' ? ` (paid ${LUCKY_TICKET_AP_COST} AP)` : ' (free ticket)'}
+            {paymentUsed === 'ascension_points'
+              ? ` (paid ${LUCKY_TICKET_AP_COST} AP)`
+              : paymentUsed === 'lottery_ticket'
+                ? ' (paid 1 Lottery Ticket)'
+                : ' (free ticket)'}
           </p>
           <button
             type="button"

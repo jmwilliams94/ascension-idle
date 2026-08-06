@@ -7,6 +7,7 @@ import { useEquipmentStore } from '../items/useEquipmentStore'
 import { useInventoryStore } from '../items/useInventoryStore'
 import { useItemTemplatesStore } from '../items/useItemTemplatesStore'
 import { useNoQuiverWarningStore } from '../items/useNoQuiverWarningStore'
+import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
 import {
   MONSTER_ATTACK_INTERVAL_MS,
@@ -218,6 +219,17 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     const derived = computeDerivedStats(attributes, equipmentBonus)
     const attackIntervalMs = 1000 / derived.attackSpeed
 
+    // Account-wide Achievements combat buffs (2026-08-06, Achievements
+    // rework) — PREDICTIVE ONLY, same caveat as the rest of this file's
+    // kill-branch numbers: mirrors resolve-combat's own
+    // accountAttackBonusPct/accountDropBonusPct application exactly
+    // (attackMidpoint *= 1 + pct/100, drop chances scaled by the same
+    // 1 + pct/100 multiplier) so the log/preview stays consistent with what
+    // the next server reconciliation will actually confirm.
+    const { accountAttackBonusPct, accountDropBonusPct } = usePlayerRecordStore.getState()
+    const accountDropMultiplier = 1 + accountDropBonusPct / 100
+    const attackMidpoint = (derived.physicalAttack + derived.magicAttack) * (1 + accountAttackBonusPct / 100)
+
     // Lazy-init the player's HP the first time combat ever ticks (0/0 sentinel —
     // see the CombatState field comments) rather than resetting it on every
     // start(), so it stays continuous across monster respawns/zone switches.
@@ -325,12 +337,11 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     // Simplified Attack-minus-Defense formula (see combatResolver.ts) — closes
     // the previous "Wuxia deals 0 damage" gap by summing physical + magic
     // attack rather than reading physicalAttack alone. Attack is now a rolled
-    // min/max range (see rollDamageInRange), not a flat number. monsterDefense
-    // now also takes characterLevel (level-gap Defense debuff, 2026-08-05).
-    const damage = resolvePhysicalDamage(
-      rollDamageInRange(derived.physicalAttack + derived.magicAttack),
-      monsterDefense(type, characterLevel),
-    )
+    // min/max range (see rollDamageInRange), not a flat number, off
+    // attackMidpoint (already scaled by the account attack buff above).
+    // monsterDefense now also takes characterLevel (level-gap Defense
+    // debuff, 2026-08-05).
+    const damage = resolvePhysicalDamage(rollDamageInRange(attackMidpoint), monsterDefense(type, characterLevel))
     const nextHp = Math.max(0, state.currentHp - damage)
 
     set((s) => ({
@@ -378,14 +389,14 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         }),
       }))
 
-      const drop = useInventoryStore.getState().rollItemDrop(type.level)
+      const drop = useInventoryStore.getState().rollItemDrop(type.level, accountDropMultiplier)
       if (drop) {
         set((s) => ({
           log: appendLog(s.log, { kind: 'item', message: `You found: ${drop.template.name}` }),
         }))
       }
 
-      const bonusCurrency = rollBonusCurrencyDrops()
+      const bonusCurrency = rollBonusCurrencyDrops(accountDropMultiplier)
       if (bonusCurrency.comets > 0 || bonusCurrency.fallenStars > 0) {
         const parts = [
           bonusCurrency.comets > 0 ? `+${bonusCurrency.comets} Comet` : null,
