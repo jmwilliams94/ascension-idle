@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.63.1",
+    "date": "2026-08-06",
+    "changes": [
+      "Fixed Lottery Ticket rewards showing as \"+1 Lottery Ticket\" — it now just reads \"Lottery Ticket\" (or \"Lottery Tickets\" if you're ever awarded more than one at once)"
+    ]
+  },
+  {
     "version": "1.63.0",
     "date": "2026-08-06",
     "changes": [

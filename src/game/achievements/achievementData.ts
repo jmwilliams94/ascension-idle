@@ -85,7 +85,12 @@ export const CHARACTER_TIER_REWARDS: readonly CharacterTierReward[] = [
 export function describeCharacterTierReward(reward: CharacterTierReward): string {
   const parts: string[] = []
   if (reward.comets) parts.push(`+${reward.comets} Comet${reward.comets > 1 ? 's' : ''}`)
-  if (reward.lotteryTickets) parts.push(`+${reward.lotteryTickets} Lottery Ticket${reward.lotteryTickets > 1 ? 's' : ''}`)
+  // No "+N" prefix for Lottery Ticket specifically (unlike the count-based
+  // currencies above) — confirmed with the user, 2026-08-06: it reads as a
+  // single item, not a stackable amount, so "Lottery Ticket" (or "Lottery
+  // Tickets" if a future tier ever grants more than one) is the natural
+  // phrasing rather than "+1 Lottery Ticket".
+  if (reward.lotteryTickets) parts.push(reward.lotteryTickets > 1 ? `${reward.lotteryTickets} Lottery Tickets` : 'Lottery Ticket')
   if (reward.fallenStars) parts.push(`+${reward.fallenStars} Fallen Star${reward.fallenStars > 1 ? 's' : ''}`)
   if (reward.infusedGear) parts.push('1 Infused gear item')
   return parts.join(' + ')
