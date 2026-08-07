@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.68.1",
+    "date": "2026-08-08",
+    "changes": [
+      "Drake Gem now has real icon art for all 3 tiers (still not obtainable in-game)"
+    ]
+  },
+  {
     "version": "1.68.0",
     "date": "2026-08-08",
     "changes": [

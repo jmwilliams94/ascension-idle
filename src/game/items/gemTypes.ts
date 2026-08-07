@@ -89,10 +89,11 @@ export function gemCount(counts: GemCounts, gemId: GemTypeId, tier: GemTier): nu
 
 // User-supplied art only (existing item icons are polished/painterly
 // renders, outside what the Aseprite pixel-art tool can match) — points at
-// the expected filename for whenever the real PNG lands. One icon per gem
-// type; tier is conveyed via getGemTierColor's border/glow, not separate art.
-export function getGemIconSrc(gemId: GemTypeId): string {
-  return `${import.meta.env.BASE_URL}item-icons/gem-${gemId}.png`
+// the expected filename for whenever the real PNG lands. Real distinct art
+// per tier (revised 2026-08-08 — supersedes the original one-icon-per-gem-
+// type/color-only design), still paired with getGemTierColor's border/glow.
+export function getGemIconSrc(gemId: GemTypeId, tier: GemTier): string {
+  return `${import.meta.env.BASE_URL}item-icons/gem-${gemId}-${tier}.png`
 }
 
 // Universal Diablo/PoE-style tooltip content for a single gem tile — see
@@ -103,7 +104,7 @@ export function buildGemTooltip(gemId: GemTypeId, tier: GemTier): ItemTooltipDat
   return {
     title: `${formatGemTierLabel(tier)} ${gem.displayName}`,
     titleColor: color,
-    iconSrc: getGemIconSrc(gemId),
+    iconSrc: getGemIconSrc(gemId, tier),
     iconColor: color,
     lines: ['Socket material'],
     stats: [`${gem.effectLabel} +${gem.percentByTier[tier]}%`],
