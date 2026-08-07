@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.64.8",
+    "date": "2026-08-07",
+    "changes": [
+      "Corrected the Ring icon lineup again: Pewter Ring has its real icon back, Violet Ring has its real icon, and the incorrect Bonewhite/Verdant Ring icons from the previous fix were removed"
+    ]
+  },
+  {
     "version": "1.64.7",
     "date": "2026-08-07",
     "changes": [
