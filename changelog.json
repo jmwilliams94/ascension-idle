@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.64.5",
+    "date": "2026-08-07",
+    "changes": [
+      "Added real icons for Umbral, Reverie, and Cyclone Necklace, completing the full Necklace catalog"
+    ]
+  },
+  {
     "version": "1.64.4",
     "date": "2026-08-07",
     "changes": [
