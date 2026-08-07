@@ -34,12 +34,22 @@ function previewInstance(template: ItemTemplate): ItemInstance {
   }
 }
 
-type ShopTab = 'weapons' | 'armor' | 'potions'
+type ShopTab = 'weapons' | 'armor' | 'jeweller' | 'potions'
 
 // 'quiver' rides along here (not a dedicated tab) so a Hunter can
 // re-purchase one through the same generic GearRow/grantItemDrop path if
-// they ever sell or lose their starter Quiver.
-const ARMOR_SLOTS = ['ring', 'necklace', 'boots', 'hat', 'coat', 'quiver']
+// they ever sell or lose their starter Quiver. Rings/Necklaces split out
+// into their own Jeweller tab (2026-08-07, confirmed with the user) — Armor
+// keeps boots/hats/coats/quiver.
+const ARMOR_SLOTS = ['boots', 'hat', 'coat', 'quiver']
+const JEWELLER_SLOTS = ['ring', 'necklace']
+
+const SHOP_TABS: { id: ShopTab; label: string; icon: string }[] = [
+  { id: 'weapons', label: 'Weapons', icon: '🗡️' },
+  { id: 'armor', label: 'Armor', icon: '🛡️' },
+  { id: 'jeweller', label: 'Jeweller', icon: '💍' },
+  { id: 'potions', label: 'Potions', icon: '🧪' },
+]
 
 // A template is available to the current class if it has no class restriction
 // at all (required_class null — bows/rings/necklaces/boots today) or matches
@@ -136,45 +146,45 @@ export default function ShopPanel() {
     void buyPotions(characterId, typeId, type.stackSize)
   }
 
+  // Wooden Sword is a class-agnostic legacy freebie item kept around for
+  // classes with no real starter weapon of their own — Hunter has its own
+  // Lucky Bow (auto-granted/auto-equipped) and the full Bow chain, so it
+  // never needs to appear in a Hunter's Shop (confirmed with the user,
+  // 2026-08-07).
   const weaponTemplates = templates
     .filter((t) => t.slot_type === 'weapon' && availableToClass(t, selectedClassId))
+    .filter((t) => !(selectedClassId === 'hunter' && t.name === 'Wooden Sword'))
     .sort((a, b) => a.required_level - b.required_level)
 
   const armorTemplates = templates
     .filter((t) => ARMOR_SLOTS.includes(t.slot_type) && availableToClass(t, selectedClassId))
     .sort((a, b) => a.required_level - b.required_level)
 
+  const jewellerTemplates = templates
+    .filter((t) => JEWELLER_SLOTS.includes(t.slot_type) && availableToClass(t, selectedClassId))
+    .sort((a, b) => a.required_level - b.required_level)
+
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="space-y-3">
-        <div className="grid grid-cols-3 gap-2">
-          <button
-            type="button"
-            onClick={() => setTab('weapons')}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
-              tab === 'weapons' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-            }`}
-          >
-            Weapons
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab('armor')}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
-              tab === 'armor' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-            }`}
-          >
-            Armor
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab('potions')}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
-              tab === 'potions' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-            }`}
-          >
-            Potions
-          </button>
+        <div className="grid grid-cols-2 grid-rows-2 gap-3">
+          {SHOP_TABS.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              onClick={() => setTab(entry.id)}
+              className={`flex aspect-square flex-col items-center justify-center gap-1.5 rounded-xl border text-sm font-medium transition-colors ${
+                tab === entry.id
+                  ? 'border-amber-500/70 bg-amber-500/10 text-amber-300'
+                  : 'border-slate-700 bg-slate-900/60 text-slate-300 hover:border-slate-500 hover:bg-slate-900'
+              }`}
+            >
+              <span className="text-2xl" aria-hidden="true">
+                {entry.icon}
+              </span>
+              {entry.label}
+            </button>
+          ))}
         </div>
 
         <p className="text-xs text-slate-500">Gold: {gold}</p>
@@ -195,6 +205,16 @@ export default function ShopPanel() {
               <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">Nothing available yet</p>
             ) : (
               armorTemplates.map((template) => <GearRow key={template.id} template={template} />)
+            )}
+          </div>
+        )}
+
+        {tab === 'jeweller' && (
+          <div className="max-h-96 space-y-2 overflow-y-auto">
+            {jewellerTemplates.length === 0 ? (
+              <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">Nothing available yet</p>
+            ) : (
+              jewellerTemplates.map((template) => <GearRow key={template.id} template={template} />)
             )}
           </div>
         )}

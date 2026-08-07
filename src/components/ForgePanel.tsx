@@ -5,6 +5,7 @@ import ForgeMaterialSlot, { MAX_MATERIAL_ENTRIES, type MaterialEntry } from './F
 import ForgeSocketsPanel from './ForgeSocketsPanel'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import MasterForgePanel from './MasterForgePanel'
+import SalvagePanel from './SalvagePanel'
 import { DragDropProvider } from './dragDrop'
 import InventoryPanel from './InventoryPanel'
 import InventorySlot, { SLOT_LABEL_HEIGHT_CLASS, SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
@@ -221,7 +222,7 @@ export default function ForgePanel() {
   // ShopPanel's own Weapons/Armor/Potions tabs (local state, not
   // useTabStore — this is a sub-navigation inside the Forge tab, not a
   // sibling of it).
-  const [forgeMode, setForgeMode] = useState<'standard' | 'master'>('standard')
+  const [forgeMode, setForgeMode] = useState<'standard' | 'master' | 'salvage'>('standard')
 
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [materialEntries, setMaterialEntries] = useState<MaterialEntry[]>([])
@@ -484,10 +485,21 @@ export default function ForgePanel() {
         >
           Master Forge
         </button>
+        <button
+          type="button"
+          onClick={() => setForgeMode('salvage')}
+          className={`rounded-lg border px-4 py-1.5 text-xs font-medium ${
+            forgeMode === 'salvage' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-400 hover:border-slate-500'
+          }`}
+        >
+          Salvage
+        </button>
       </div>
 
       {forgeMode === 'master' ? (
         <MasterForgePanel />
+      ) : forgeMode === 'salvage' ? (
+        <SalvagePanel />
       ) : (
         <DragDropProvider>
           {/* Single centered column at every viewport size — the row of three

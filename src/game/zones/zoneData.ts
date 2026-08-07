@@ -241,3 +241,16 @@ export const ZONE_ORDER: ZoneId[] = [
 ]
 
 export const DEFAULT_ZONE_ID: ZoneId = 'windhollow'
+
+// Reverse lookup (2026-08-07, added for the per-zone Achievements drop-bonus
+// feature — see achievementData.ts/useCombatStore.ts's own predictive
+// mirror of resolve-combat's zone-scoped accountDropMultiplier) — which
+// zone a given monster belongs to, or null for an unrecognized id.
+export function zoneIdForMonster(monsterId: EnemyTypeId): ZoneId | null {
+  for (const zoneId of ZONE_ORDER) {
+    if (ZONES[zoneId].monsterOrder.includes(monsterId)) {
+      return zoneId
+    }
+  }
+  return null
+}

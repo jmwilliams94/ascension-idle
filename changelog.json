@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.65.0",
+    "date": "2026-08-07",
+    "changes": [
+      "Account Achievements now grant a per-zone bonus to the chance a dropped item is higher quality (instead of boosting how often items drop at all) — later zones grant a bigger bonus per claim than earlier ones",
+      "Bank tab renamed to 'Account Bank', and tapping a Bank square now opens a proper pop-up with a slider for depositing/withdrawing — withdrawing a lot of Comets or Fallen Stars now bundles them into Scrolls automatically to save inventory space",
+      "Added a Salvage tab to the Forge — trade in unwanted gear for Ascension Points",
+      "Gaining Bank currency, Salvage AP, or Shop gold now shows a small floating '+amount' notification",
+      "The Lucky Bow can now be Level Upgraded into the Sapling Bow, continuing up the Bow chain",
+      "Removed the Wooden Sword from the Hunter's Shop (Hunters already start with the Lucky Bow)",
+      "Redesigned the Shop into four square buttons — Weapons, Armor, Jeweller (new — Rings and Necklaces), and Potions",
+      "Restyled scrollbars to be slimmer and match the game's theme",
+      "Fixed a bug where buying or reclaiming a Marketplace listing didn't show up in Mail until you refreshed the page"
+    ]
+  },
+  {
     "version": "1.64.14",
     "date": "2026-08-07",
     "changes": [

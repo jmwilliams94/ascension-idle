@@ -6,6 +6,7 @@ import CombatPage from './CombatPage'
 import EquipmentTabPage from './EquipmentTabPage'
 import ExpBar from './ExpBar'
 import PetToast from './PetToast'
+import GainToastHost from './GainToastHost'
 import ForgePanel from './ForgePanel'
 import InventoryFullModal from './InventoryFullModal'
 import MarketplacePanel from './MarketplacePanel'
@@ -309,6 +310,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <InventoryFullModal />
       <OfflineProgressModal />
       <UnclaimedLootBadge />
+      <GainToastHost />
       <CombatEngine />
 
       {/* pb-24 (was pb-6, matched by py-6 on lg): clearance for

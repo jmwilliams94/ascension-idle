@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
+import BankActionModal from './BankActionModal'
 import {
   COMPOSITION_STONE_TIERS,
   GEAR_SLOT_TYPES,
@@ -16,6 +17,17 @@ import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useBankStore } from '../game/items/useBankStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
+// The per-action floating "+gained" toast (2026-08-07, confirmed with the
+// user) — fired for every deliberate Bank deposit/withdraw here, mirroring
+// the same call ShopPanel/SalvagePanel's own sell/salvage flows make.
+import { useGainToastStore } from '../game/hud/useGainToastStore'
+
+// Per-transaction slider cap (2026-08-07, confirmed with the user) — the
+// slider always runs 0-40 regardless of how much is actually banked/owned,
+// clamped further down by whatever's actually available to move. Matches
+// the Inventory slot cap so a single Bank action never asks for more than
+// could ever be held as tiles anyway.
+const BANK_ACTION_SLIDER_CAP = 40
 
 type CurrencyId = 'gold' | 'comets' | 'fallen_stars'
 
@@ -100,9 +112,11 @@ export default function BankSquares({ characterId }: { characterId: string }) {
   const walletFor = (id: CurrencyId) => (id === 'gold' ? gold : id === 'comets' ? comets : fallenStars)
   const bankFor = (id: CurrencyId) => (id === 'gold' ? bankGold : id === 'comets' ? bankComets : bankFallenStars)
 
+  const closeModal = () => setSelected(null)
+
   return (
     <div className="h-fit space-y-3 rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-      <p className="text-xs uppercase tracking-wide text-slate-500">Bank</p>
+      <p className="text-xs uppercase tracking-wide text-slate-500">Account Bank</p>
 
       <div className="grid grid-cols-3 gap-2">
         {CURRENCIES.map((currency) => (
@@ -150,40 +164,62 @@ export default function BankSquares({ characterId }: { characterId: string }) {
       </div>
 
       {selected?.kind === 'currency' && (
-        <CurrencyPanel
-          label={CURRENCIES.find((c) => c.id === selected.id)!.label}
-          wallet={walletFor(selected.id)}
-          bank={bankFor(selected.id)}
-          busy={busy}
-          onDeposit={(amount) => depositCurrency(characterId, selected.id, amount)}
-          onWithdraw={(amount) => withdrawCurrency(characterId, selected.id, amount)}
-        />
+        <BankActionModal
+          title={CURRENCIES.find((c) => c.id === selected.id)!.label}
+          subtitle="Move currency between your Wallet and the account Bank."
+          onClose={closeModal}
+        >
+          <CurrencyPanel
+            currencyId={selected.id}
+            label={CURRENCIES.find((c) => c.id === selected.id)!.label}
+            wallet={walletFor(selected.id)}
+            bank={bankFor(selected.id)}
+            iconSrc={CURRENCY_ICON_SRC[selected.id]}
+            busy={busy}
+            onDeposit={(amount) => depositCurrency(characterId, selected.id, amount)}
+            onWithdraw={(amount) => withdrawCurrency(characterId, selected.id, amount)}
+            onDone={closeModal}
+          />
+        </BankActionModal>
       )}
 
       {selected?.kind === 'stoneTier' && (
-        <StoneTierPanel
-          tier={selected.tier}
-          owned={stonesBanked[String(selected.tier)] ?? 0}
-          busy={busy}
-          onWithdraw={(amount) => withdrawStoneItem(characterId, selected.tier, amount)}
-        />
+        <BankActionModal title={`Tier ${selected.tier} Stone`} subtitle="Withdraw one physically-banked stone at a time." onClose={closeModal}>
+          <StoneTierPanel
+            tier={selected.tier}
+            owned={stonesBanked[String(selected.tier)] ?? 0}
+            busy={busy}
+            onWithdraw={() => withdrawStoneItem(characterId, selected.tier, 1)}
+            onDone={closeModal}
+          />
+        </BankActionModal>
       )}
 
       {selected?.kind === 'compositionPoints' && (
-        <CompositionPointsPanel
-          points={bankPoints}
-          busy={busy}
-          onWithdraw={(tier, amount) => withdrawStone(characterId, tier, amount)}
-        />
+        <BankActionModal title="Composition Points" subtitle="Spend points for one stone at a chosen tier." onClose={closeModal}>
+          <CompositionPointsPanel
+            points={bankPoints}
+            busy={busy}
+            onWithdraw={(tier) => withdrawStone(characterId, tier, 1)}
+            onDone={closeModal}
+          />
+        </BankActionModal>
       )}
 
       {selected?.kind === 'gearSlot' && (
-        <GearSlotPanel
-          slotType={selected.slotType}
-          points={gearCompositionPoints[selected.slotType]}
-          busy={busy}
-          onWithdraw={(templateId, tier) => withdrawGearComposition(characterId, templateId, tier)}
-        />
+        <BankActionModal
+          title={`${formatGearSlotLabel(selected.slotType)} Points`}
+          subtitle="Spend points for one fresh item at a chosen tier."
+          onClose={closeModal}
+        >
+          <GearSlotPanel
+            slotType={selected.slotType}
+            points={gearCompositionPoints[selected.slotType]}
+            busy={busy}
+            onWithdraw={(templateId, tier) => withdrawGearComposition(characterId, templateId, tier)}
+            onDone={closeModal}
+          />
+        </BankActionModal>
       )}
     </div>
   )
@@ -255,33 +291,51 @@ function Square({
 // both directions stay, unlike the other squares below (which only ever
 // withdraw, since deposit for those now happens via the per-item Bank/
 // Deposit popover in Inventory).
+//
+// Redesigned (2026-08-07, confirmed with the user) — a single-unit slider
+// (0-BANK_ACTION_SLIDER_CAP, clamped further by whatever's actually
+// available) replaces the old plain number input with its native up/down
+// spinner arrows. Withdrawing Comets/Fallen Stars auto-bundles into Scrolls
+// server-side now (see transfer_currency's SQL) — this panel just previews
+// what that split will look like before confirming, purely informational.
 function CurrencyPanel({
+  currencyId,
   label,
   wallet,
   bank,
+  iconSrc,
   busy,
   onDeposit,
   onWithdraw,
+  onDone,
 }: {
+  currencyId: CurrencyId
   label: string
   wallet: number
   bank: number
+  iconSrc?: string
   busy: boolean
   onDeposit: (amount: number) => Promise<{ ok: boolean; error?: string; max_withdrawable?: number }>
   onWithdraw: (amount: number) => Promise<{ ok: boolean; error?: string; max_withdrawable?: number }>
+  onDone: () => void
 }) {
+  const showGainToast = useGainToastStore((state) => state.show)
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit')
-  const [amount, setAmount] = useState('')
+  const [amount, setAmount] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
-  const parsedAmount = Math.floor(Number(amount))
-  const validAmount = amount.trim() !== '' && Number.isFinite(parsedAmount) && parsedAmount > 0
   const available = mode === 'deposit' ? wallet : bank
+  const sliderMax = Math.max(0, Math.min(BANK_ACTION_SLIDER_CAP, available))
+  const validAmount = amount > 0
+
+  const bundlesIntoScrolls = currencyId !== 'gold' && mode === 'withdraw' && amount >= 10
+  const scrollsForAmount = Math.floor(amount / 10)
+  const remainderForAmount = amount % 10
 
   const handleConfirm = async () => {
     if (!validAmount) return
     setError(null)
-    const result = mode === 'deposit' ? await onDeposit(parsedAmount) : await onWithdraw(parsedAmount)
+    const result = mode === 'deposit' ? await onDeposit(amount) : await onWithdraw(amount)
     if (!result.ok) {
       setError(
         result.error === 'not_enough_balance'
@@ -289,25 +343,35 @@ function CurrencyPanel({
           : result.error === 'not_enough_room'
             ? `Not enough Inventory space${
                 typeof result.max_withdrawable === 'number'
-                  ? ` (only ${result.max_withdrawable} slot${result.max_withdrawable === 1 ? '' : 's'} free)`
+                  ? ` (only ${result.max_withdrawable} unit${result.max_withdrawable === 1 ? '' : 's'} fit)`
                   : ''
               }.`
             : 'Something went wrong.',
       )
-    } else {
-      setAmount('')
+      return
     }
+
+    showGainToast({
+      label: `${label} ${mode === 'deposit' ? 'Banked' : 'Withdrawn'}`,
+      amount,
+      iconSrc,
+      icon: iconSrc ? undefined : '💰',
+      color: mode === 'deposit' ? '#38bdf8' : '#fbbf24',
+    })
+    onDone()
   }
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-      <p className="text-sm font-medium text-slate-200">{label}</p>
-      <p className="text-[11px] text-slate-500">Wallet: {wallet.toLocaleString()}</p>
-      <div className="mt-2 flex gap-1.5">
+    <div className="space-y-3">
+      <div className="flex gap-1.5">
         <button
           type="button"
-          onClick={() => setMode('deposit')}
-          className={`rounded-lg border px-3 py-1 text-xs font-medium ${
+          onClick={() => {
+            setMode('deposit')
+            setAmount(0)
+            setError(null)
+          }}
+          className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium ${
             mode === 'deposit' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
           }`}
         >
@@ -315,132 +379,156 @@ function CurrencyPanel({
         </button>
         <button
           type="button"
-          onClick={() => setMode('withdraw')}
-          className={`rounded-lg border px-3 py-1 text-xs font-medium ${
+          onClick={() => {
+            setMode('withdraw')
+            setAmount(0)
+            setError(null)
+          }}
+          className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium ${
             mode === 'withdraw' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
           }`}
         >
           Withdraw
         </button>
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <input
-          type="number"
-          min={1}
-          value={amount}
-          onChange={(event) => setAmount(event.target.value)}
-          placeholder="Amount"
-          className="w-24 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200"
-        />
-        <button
-          type="button"
-          disabled={busy || !validAmount || available < parsedAmount}
-          onClick={() => void handleConfirm()}
-          className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Confirm {mode === 'deposit' ? 'Deposit' : 'Withdraw'}
-        </button>
+
+      <div className="flex items-center justify-between text-[11px] text-slate-500">
+        <span>Wallet: {wallet.toLocaleString()}</span>
+        <span>Bank: {bank.toLocaleString()}</span>
       </div>
-      {error && <p className="mt-2 text-xs text-amber-400">{error}</p>}
+
+      <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-slate-500">Amount</span>
+          <span className="text-lg font-semibold text-slate-100">{amount.toLocaleString()}</span>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={sliderMax}
+          value={Math.min(amount, sliderMax)}
+          disabled={sliderMax === 0}
+          onChange={(event) => setAmount(Number(event.target.value))}
+          className="mt-2 w-full accent-sky-500 disabled:opacity-40"
+        />
+        <div className="mt-1 flex justify-between text-[10px] text-slate-600">
+          <span>0</span>
+          <span>{sliderMax.toLocaleString()}</span>
+        </div>
+
+        {bundlesIntoScrolls && (
+          <p className="mt-2 text-[11px] text-slate-500">
+            → {scrollsForAmount > 0 && `${scrollsForAmount} Scroll${scrollsForAmount === 1 ? '' : 's'}`}
+            {scrollsForAmount > 0 && remainderForAmount > 0 && ' + '}
+            {remainderForAmount > 0 && `${remainderForAmount} loose`}
+            {' '}(saves Inventory space vs. {amount} loose tiles)
+          </p>
+        )}
+      </div>
+
+      <button
+        type="button"
+        disabled={busy || !validAmount}
+        onClick={() => void handleConfirm()}
+        className="w-full rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-2 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        {busy ? 'Working…' : `Confirm ${mode === 'deposit' ? 'Deposit' : 'Withdraw'}`}
+      </button>
+      {error && <p className="text-xs text-amber-400">{error}</p>}
     </div>
   )
 }
 
 // Deposit for a physically-banked stone tier happens via the per-tile Bank
 // popover in Inventory now (bank_stone_item) — this panel only withdraws.
+// Single-item only (2026-08-07, confirmed with the user: "withdrawing
+// composition stones or gear will not have this option [bundling] and will
+// be single items only") — no amount slider/input, just a plain "Withdraw
+// 1" action, mirroring gear's own always-one-at-a-time withdrawal.
 function StoneTierPanel({
   tier,
   owned,
   busy,
   onWithdraw,
+  onDone,
 }: {
   tier: number
   owned: number
   busy: boolean
-  onWithdraw: (amount: number) => Promise<{ ok: boolean; error?: string }>
+  onWithdraw: () => Promise<{ ok: boolean; error?: string }>
+  onDone: () => void
 }) {
-  const [amount, setAmount] = useState('')
+  const showGainToast = useGainToastStore((state) => state.show)
   const [error, setError] = useState<string | null>(null)
 
-  const parsedAmount = Math.floor(Number(amount))
-  const validAmount = amount.trim() !== '' && Number.isFinite(parsedAmount) && parsedAmount > 0
-
   const handleWithdraw = async () => {
-    if (!validAmount) return
     setError(null)
-    const result = await onWithdraw(parsedAmount)
+    const result = await onWithdraw()
     if (!result.ok) {
-      setError("You don't have that many banked.")
-    } else {
-      setAmount('')
+      setError("You don't have one banked.")
+      return
     }
+
+    showGainToast({ label: `Tier ${tier} Stone`, amount: 1, icon: '🔷', color: MATERIAL_COLOR })
+    onDone()
   }
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-      <p className="text-sm font-medium text-slate-200">Tier {tier} Stone</p>
-      <p className="text-[11px] text-slate-500">{owned.toLocaleString()} in Storage — deposit more from Inventory's Bank button.</p>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <input
-          type="number"
-          min={1}
-          value={amount}
-          onChange={(event) => setAmount(event.target.value)}
-          placeholder="Amount"
-          className="w-24 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200"
-        />
-        <button
-          type="button"
-          disabled={busy || !validAmount || owned < parsedAmount}
-          onClick={() => void handleWithdraw()}
-          className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Withdraw
-        </button>
-      </div>
-      {error && <p className="mt-2 text-xs text-amber-400">{error}</p>}
+    <div className="space-y-3">
+      <p className="text-xs text-slate-500">{owned.toLocaleString()} in Storage — deposit more from Inventory's Bank button.</p>
+      <button
+        type="button"
+        disabled={busy || owned <= 0}
+        onClick={() => void handleWithdraw()}
+        className="w-full rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-2 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        {busy ? 'Working…' : 'Withdraw 1'}
+      </button>
+      {error && <p className="text-xs text-amber-400">{error}</p>}
     </div>
   )
 }
 
 // The stone-tier-conversion currency (transfer_stone) — spend points for a
 // stone at a chosen tier. Gaining points happens via the per-stone-tile
-// "Bank" button in Inventory now, not from here.
+// "Bank" button in Inventory now, not from here. Single-item only, same
+// reasoning as StoneTierPanel above — pick a tier, withdraw exactly one.
 function CompositionPointsPanel({
   points,
   busy,
   onWithdraw,
+  onDone,
 }: {
   points: number
   busy: boolean
-  onWithdraw: (tier: number, amount: number) => Promise<{ ok: boolean; error?: string }>
+  onWithdraw: (tier: number) => Promise<{ ok: boolean; error?: string }>
+  onDone: () => void
 }) {
+  const showGainToast = useGainToastStore((state) => state.show)
   const [tier, setTier] = useState<number>(COMPOSITION_STONE_TIERS[0])
-  const [amount, setAmount] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  const parsedAmount = Math.floor(Number(amount))
-  const validAmount = amount.trim() !== '' && Number.isFinite(parsedAmount) && parsedAmount > 0
-  const cost = parsedAmount * compositionPointValue(tier)
+  const cost = compositionPointValue(tier)
+  const canAfford = points >= cost
 
   const handleWithdraw = async () => {
-    if (!validAmount) return
     setError(null)
-    const result = await onWithdraw(tier, parsedAmount)
+    const result = await onWithdraw(tier)
     if (!result.ok) {
       setError("You don't have enough Composition Points.")
-    } else {
-      setAmount('')
+      return
     }
+
+    showGainToast({ label: `Tier ${tier} Stone`, amount: 1, icon: '🔷', color: MATERIAL_COLOR })
+    onDone()
   }
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-      <p className="text-sm font-medium text-slate-200">Composition Points</p>
-      <p className="text-[11px] text-slate-500">
-        Spend points for a stone at a chosen tier — gain points by Banking a stone from Inventory instead.
+    <div className="space-y-3">
+      <p className="text-xs text-slate-500">
+        Spend points for one stone at a chosen tier — gain points by Banking a stone from Inventory instead.
       </p>
-      <div className="mt-2 flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1.5">
         {COMPOSITION_STONE_TIERS.map((stoneTier) => (
           <button
             key={stoneTier}
@@ -454,25 +542,15 @@ function CompositionPointsPanel({
           </button>
         ))}
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <input
-          type="number"
-          min={1}
-          value={amount}
-          onChange={(event) => setAmount(event.target.value)}
-          placeholder="Amount"
-          className="w-24 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200"
-        />
-        <button
-          type="button"
-          disabled={busy || !validAmount || points < cost}
-          onClick={() => void handleWithdraw()}
-          className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Withdraw{validAmount ? ` (${cost} pts)` : ''}
-        </button>
-      </div>
-      {error && <p className="mt-2 text-xs text-amber-400">{error}</p>}
+      <button
+        type="button"
+        disabled={busy || !canAfford}
+        onClick={() => void handleWithdraw()}
+        className="w-full rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-2 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        {busy ? 'Working…' : `Withdraw 1 (${cost} pts)`}
+      </button>
+      {error && <p className="text-xs text-amber-400">{error}</p>}
     </div>
   )
 }
@@ -485,14 +563,17 @@ function GearSlotPanel({
   points,
   busy,
   onWithdraw,
+  onDone,
 }: {
   slotType: GearSlotType
   points: number
   busy: boolean
   onWithdraw: (templateId: string, tier: number) => Promise<{ ok: boolean; error?: string; item?: unknown }>
+  onDone: () => void
 }) {
   const templates = useItemTemplatesStore((state) => state.templates)
   const classId = useCharacterStore((state) => state.selectedClassId)
+  const showGainToast = useGainToastStore((state) => state.show)
 
   const [templateId, setTemplateId] = useState('')
   const [tier, setTier] = useState(0)
@@ -516,16 +597,17 @@ function GearSlotPanel({
             ? "You don't have enough points for this slot."
             : "Couldn't withdraw that item.",
       )
-    } else {
-      setTemplateId('')
-      setTier(0)
+      return
     }
+
+    const templateName = eligibleTemplates.find((template) => template.id === templateId)?.name ?? 'Item'
+    showGainToast({ label: templateName, amount: 1, icon: '🎁', color: '#a855f7' })
+    onDone()
   }
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-      <p className="text-sm font-medium text-slate-200">{formatGearSlotLabel(slotType)} Points</p>
-      <p className="text-[11px] text-slate-500">
+    <div className="space-y-2">
+      <p className="text-xs text-slate-500">
         Spend points for a fresh item at a chosen tier — gain points by Banking a composed {formatGearSlotLabel(slotType).toLowerCase()}{' '}
         from Inventory instead.
       </p>

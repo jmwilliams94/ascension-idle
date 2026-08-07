@@ -30,7 +30,12 @@ interface PlayerRow {
   // real outgoing attack/drop chance server-side; see combatResolver.ts for
   // the client-side predictive mirror.
   account_attack_bonus_pct: number
-  account_drop_bonus_pct: number
+  // Per-zone now (2026-08-07, confirmed with the user) — supersedes the flat
+  // account_drop_bonus_pct scalar. Keyed by zone id (see ZONE_ORDER),
+  // missing key means 0. Only ever boosts quality-tier odds on an
+  // already-happened drop now, never base drop frequency — see
+  // resolve-combat/index.ts's own accountDropMultiplier usage.
+  account_zone_drop_bonus_pct: Record<string, number>
 }
 
 interface PlayerRecordState {
@@ -71,7 +76,7 @@ interface PlayerRecordState {
   stonesBanked: CompositionStones
   // Achievements rework (2026-08-06) — see PlayerRow's own comment above.
   accountAttackBonusPct: number
-  accountDropBonusPct: number
+  accountZoneDropBonusPct: Record<string, number>
   loadPlayerRecord: (userId: string) => Promise<void>
   dismissWhatsNew: (userId: string) => Promise<void>
   // Reflects a successful transfer_currency RPC result in the local cache —
@@ -89,7 +94,7 @@ interface PlayerRecordState {
   setFallenStarBankCount: (value: number) => void
   setStonesBanked: (value: CompositionStones) => void
   setAccountAttackBonusPct: (value: number) => void
-  setAccountDropBonusPct: (value: number) => void
+  setAccountZoneDropBonusPct: (value: Record<string, number>) => void
 }
 
 export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
@@ -106,13 +111,13 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
   fallenStarBankCount: 0,
   stonesBanked: DEFAULT_STONES_BANKED,
   accountAttackBonusPct: 0,
-  accountDropBonusPct: 0,
+  accountZoneDropBonusPct: {},
 
   loadPlayerRecord: async (userId) => {
     const { data, error } = await supabase
       .from('players')
       .select(
-        'last_seen_version, bank_gold, bank_comets, bank_fallen_stars, unlocked_classes, ascension_points, bank_points, gear_composition_points, comet_bank_count, fallen_star_bank_count, composition_stones_banked, account_attack_bonus_pct, account_drop_bonus_pct',
+        'last_seen_version, bank_gold, bank_comets, bank_fallen_stars, unlocked_classes, ascension_points, bank_points, gear_composition_points, comet_bank_count, fallen_star_bank_count, composition_stones_banked, account_attack_bonus_pct, account_zone_drop_bonus_pct',
       )
       .eq('id', userId)
       .maybeSingle<PlayerRow>()
@@ -147,7 +152,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
         fallenStarBankCount: 0,
         stonesBanked: DEFAULT_STONES_BANKED,
         accountAttackBonusPct: 0,
-        accountDropBonusPct: 0,
+        accountZoneDropBonusPct: {},
       })
       return
     }
@@ -164,7 +169,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
       fallenStarBankCount: data.fallen_star_bank_count,
       stonesBanked: data.composition_stones_banked,
       accountAttackBonusPct: data.account_attack_bonus_pct,
-      accountDropBonusPct: data.account_drop_bonus_pct,
+      accountZoneDropBonusPct: data.account_zone_drop_bonus_pct ?? {},
     })
 
     if (!data.last_seen_version) {
@@ -199,5 +204,5 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
   setFallenStarBankCount: (value) => set({ fallenStarBankCount: value }),
   setStonesBanked: (value) => set({ stonesBanked: value }),
   setAccountAttackBonusPct: (value) => set({ accountAttackBonusPct: value }),
-  setAccountDropBonusPct: (value) => set({ accountDropBonusPct: value }),
+  setAccountZoneDropBonusPct: (value) => set({ accountZoneDropBonusPct: value }),
 }))

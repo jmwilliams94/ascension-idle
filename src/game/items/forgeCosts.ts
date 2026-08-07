@@ -70,20 +70,32 @@ export function previewMasterForgeCost(successChancePct: number): number {
   return Math.ceil((1 / (successChancePct / 100)) * 1.5)
 }
 
+// Mirrors upgrade_chain_family in 20260807020000_lucky_bow_chains_into_bow.sql
+// — Lucky Bow is a standalone singleton family (so it stays out of the
+// random kill-drop pool, see NON_DROPPABLE_FAMILIES), but its Level Upgrade
+// target lives in the real 'bow' chain instead of its own single-template
+// family. Every other family chains into itself, unchanged.
+function chainFamily(itemFamily: string): string {
+  return itemFamily === 'lucky-bow' ? 'bow' : itemFamily
+}
+
 // Client-side mirror of level_upgrade's next-template lookup (see
 // 20260730020000_level_upgrade_next_tier.sql) — the next template sharing this
-// one's item_family with the lowest required_level above it, or null if this is
-// already the top of its chain (or has no chain at all, e.g. item_family is
-// null). Used only for the Forge's preview/disabled-state, never to decide the
-// actual outcome — the RPC is still the source of truth.
+// one's item_family (via chainFamily above) with the lowest required_level
+// above it, or null if this is already the top of its chain (or has no chain
+// at all, e.g. item_family is null). Used only for the Forge's
+// preview/disabled-state, never to decide the actual outcome — the RPC is
+// still the source of truth.
 export function findNextTemplateInChain(templates: ItemTemplate[], current: ItemTemplate): ItemTemplate | null {
   if (!current.item_family) {
     return null
   }
 
+  const family = chainFamily(current.item_family)
+
   return (
     templates
-      .filter((template) => template.item_family === current.item_family && template.required_level > current.required_level)
+      .filter((template) => template.item_family === family && template.required_level > current.required_level)
       .sort((a, b) => a.required_level - b.required_level)[0] ?? null
   )
 }

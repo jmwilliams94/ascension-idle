@@ -176,6 +176,10 @@ interface InventoryState {
   // has no client-side delete grant, so this has to go through a SECURITY
   // DEFINER function even though gold itself is otherwise client-authoritative).
   sellItem: (itemId: string) => Promise<{ ok: boolean; error?: string; goldGained?: number; apGained?: number }>
+  // Forge's Salvage tab (see salvage_item) — destroys a gear item for
+  // Ascension Points only, no gold. A separate action from sellItem since
+  // the two have genuinely different payouts, not just different UI.
+  salvageItem: (itemId: string) => Promise<{ ok: boolean; error?: string; apGained?: number }>
 }
 
 export const useInventoryStore = create<InventoryState>((set, get) => ({
@@ -359,5 +363,28 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     }
 
     return { ok: result.ok, error: result.error, goldGained: result.gold_gained, apGained: result.ap_gained }
+  },
+
+  salvageItem: async (itemId) => {
+    const { data, error } = await supabase.rpc('salvage_item', { item_id: itemId })
+
+    if (error) {
+      console.error('Salvage item call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as {
+      ok: boolean
+      error?: string
+      ap_gained?: number
+      ascension_points?: number
+    }
+
+    if (result.ok && typeof result.ap_gained === 'number') {
+      get().removeItems([itemId])
+      usePlayerRecordStore.getState().addAscensionPoints(result.ap_gained)
+    }
+
+    return { ok: result.ok, error: result.error, apGained: result.ap_gained }
   },
 }))

@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabaseClient'
 import type { ItemInstance } from '../items/useInventoryStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
 import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
+import { useMailStore } from './useMailStore'
 
 // Marketplace (see CLAUDE.md's Gear system / Marketplace section and
 // supabase/migrations/20260802050000_add_marketplace.sql). Every mutation
@@ -217,6 +218,12 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
         usePlayerRecordStore.getState().setAscensionPoints(result.ascension_points)
       }
       set((state) => ({ browseListings: state.browseListings.filter((listing) => listing.id !== listingId) }))
+      // The purchased item/currency lands in Mail server-side as part of the
+      // same RPC transaction, but this store's own useMailStore cache has no
+      // way to know that happened — without this, the Mail tab's badge count
+      // and contents stayed stale until the next full page load (reported by
+      // a user as "had to refresh the browser to see the mail popup").
+      await useMailStore.getState().loadMail(characterId)
     }
 
     return result
@@ -239,6 +246,9 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
 
     if (result.ok) {
       await get().loadMyListings(characterId)
+      // A cancelled/expired listing's item is mailed back to the seller in
+      // the same RPC transaction — same staleness issue as buyListing above.
+      await useMailStore.getState().loadMail(characterId)
     }
 
     return result

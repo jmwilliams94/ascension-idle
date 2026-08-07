@@ -93,6 +93,23 @@ export function previewSellPrice(price: number, qualityTier: string): number {
   return Math.round(price * 0.5 * (QUALITY_STAT_MULTIPLIERS[qualityTier] ?? 1))
 }
 
+// Client-side mirror of salvage_item's SQL case statement (see
+// 20260807030000_add_salvage_item.sql) — must stay in sync. Forge's Salvage
+// tab: no gold, roughly double the AP sell_item grants for the same tier,
+// plus a token 1 AP for Normal (sell_item gives 0) since Salvage's whole
+// point is extracting AP value from otherwise-junk gear.
+const SALVAGE_AP_BY_QUALITY: Record<string, number> = {
+  normal: 1,
+  tempered: 2,
+  infused: 4,
+  radiant: 6,
+  ascended: 8,
+}
+
+export function previewSalvageApValue(qualityTier: string): number {
+  return SALVAGE_AP_BY_QUALITY[qualityTier] ?? 1
+}
+
 // Bug fix (2026-07-31): every call site used to pass the template's raw,
 // unscaled base_stats directly, so an item's displayed stats never changed
 // with quality tier even though computeEquipmentBonus already applied

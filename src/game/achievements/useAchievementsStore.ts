@@ -7,7 +7,7 @@ import { characterTierIndexReached, accountTierIndexReached } from './achievemen
 
 // Achievements & Pets — client-side cache of the four server-authoritative
 // tables (character_monster_kills/account_monster_kills/account_pets, plus
-// players.account_attack_bonus_pct/account_drop_bonus_pct read via
+// players.account_attack_bonus_pct/account_zone_drop_bonus_pct read via
 // usePlayerRecordStore). The client never writes kill counts directly (no
 // insert/update grant exists on any of them) — they're only ever incremented
 // inside resolve-combat. Claiming a tier's reward is the one thing the
@@ -51,8 +51,11 @@ interface ClaimAccountTierResult {
   claimed_tier_index?: number
   attack_bonus_gained?: number
   drop_bonus_gained?: number
+  zone_id?: string
   account_attack_bonus_pct?: number
-  account_drop_bonus_pct?: number
+  // Per-zone now (2026-08-07) — the full updated map, same shape as
+  // usePlayerRecordStore's own accountZoneDropBonusPct.
+  account_zone_drop_bonus_pct?: Record<string, number>
 }
 
 interface AchievementsState {
@@ -177,8 +180,8 @@ export const useAchievementsStore = create<AchievementsState>((set, get) => ({
       if (typeof result.account_attack_bonus_pct === 'number') {
         usePlayerRecordStore.getState().setAccountAttackBonusPct(result.account_attack_bonus_pct)
       }
-      if (typeof result.account_drop_bonus_pct === 'number') {
-        usePlayerRecordStore.getState().setAccountDropBonusPct(result.account_drop_bonus_pct)
+      if (result.account_zone_drop_bonus_pct) {
+        usePlayerRecordStore.getState().setAccountZoneDropBonusPct(result.account_zone_drop_bonus_pct)
       }
       set((state) => ({
         accountKills: {

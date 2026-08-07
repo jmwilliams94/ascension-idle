@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { ENEMY_TYPES, ZONES, ZONE_ORDER, type EnemyTypeId, type ZoneId } from '../game/zones/zoneData'
+import { ENEMY_TYPES, ZONES, ZONE_ORDER, zoneIdForMonster, type EnemyTypeId, type ZoneId } from '../game/zones/zoneData'
 import { useAchievementsStore, type MonsterKillEntry } from '../game/achievements/useAchievementsStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
@@ -253,6 +253,7 @@ function AccountMonsterCard({ accountId, monsterId, displayName }: { accountId: 
   const maxed = claimedTierIndex >= ACCOUNT_TIER_THRESHOLDS.length
   const nextThreshold = ACCOUNT_TIER_THRESHOLDS[claimedTierIndex]
   const nextReward = ACCOUNT_TIER_REWARDS[claimedTierIndex]
+  const monsterZoneId = zoneIdForMonster(monsterId)
 
   const handleClaim = async () => {
     if (!accountId) return
@@ -284,12 +285,16 @@ function AccountMonsterCard({ accountId, monsterId, displayName }: { accountId: 
           </button>
         )}
       </div>
-      {!maxed && <p className="mt-1 text-[11px] text-slate-500">Next: {describeAccountTierReward(nextReward)}</p>}
+      {!maxed && (
+        <p className="mt-1 text-[11px] text-slate-500">
+          Next: {describeAccountTierReward(nextReward, monsterZoneId ?? undefined, ZONE_ORDER)}
+        </p>
+      )}
       <TierChipRow
         thresholds={ACCOUNT_TIER_THRESHOLDS}
         claimedTierIndex={claimedTierIndex}
         reachedTierIndex={reachedTierIndex}
-        describeReward={(tierIndex) => describeAccountTierReward(ACCOUNT_TIER_REWARDS[tierIndex])}
+        describeReward={(tierIndex) => describeAccountTierReward(ACCOUNT_TIER_REWARDS[tierIndex], monsterZoneId ?? undefined, ZONE_ORDER)}
       />
       {error && <p className="mt-1.5 text-[11px] text-amber-400">{error}</p>}
     </MonsterCard>
@@ -519,8 +524,13 @@ function AccountTabContent({ accountId }: { accountId: string | undefined }) {
   const [expandedZoneId, setExpandedZoneId] = useState<ZoneId | null>(null)
   const accountKills = useAchievementsStore((state) => state.accountKills)
   const accountAttackBonusPct = usePlayerRecordStore((state) => state.accountAttackBonusPct)
-  const accountDropBonusPct = usePlayerRecordStore((state) => state.accountDropBonusPct)
+  const accountZoneDropBonusPct = usePlayerRecordStore((state) => state.accountZoneDropBonusPct)
   const claimableByZone = claimableCountsByZone(accountKills, ACCOUNT_TIER_THRESHOLDS)
+  // Per-zone now (2026-08-07) — each zone's own quality-drop bonus only
+  // applies while fighting in that zone (see resolve-combat's own
+  // accountDropMultiplier), so this shows a per-zone breakdown instead of a
+  // single flat total. Zones with nothing claimed yet are simply omitted.
+  const zonesWithDropBonus = ZONE_ORDER.filter((zoneId) => (accountZoneDropBonusPct[zoneId] ?? 0) > 0)
 
   return (
     <div className="space-y-3">
@@ -528,13 +538,27 @@ function AccountTabContent({ accountId }: { accountId: string | undefined }) {
         Every character on this account contributes to the same ladder per monster (thresholds are 5x the character track's own). Claiming
         grants a small, permanent account-wide combat buff.
       </p>
-      <div className="flex flex-wrap gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-xs">
+      <div className="space-y-2 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-xs">
         <span className="text-slate-400">
           Total Attack Bonus: <span className="font-semibold text-emerald-400">+{Math.round(accountAttackBonusPct * 100)}%</span>
         </span>
-        <span className="text-slate-400">
-          Total Drop Bonus: <span className="font-semibold text-emerald-400">+{Math.round(accountDropBonusPct * 100)}%</span>
-        </span>
+        <div>
+          <p className="text-slate-500">
+            Higher-Quality Drop Bonus by zone <span className="text-slate-600">(applies only while fighting in that zone)</span>:
+          </p>
+          {zonesWithDropBonus.length === 0 ? (
+            <p className="mt-1 text-slate-600">None claimed yet.</p>
+          ) : (
+            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+              {zonesWithDropBonus.map((zoneId) => (
+                <span key={zoneId} className="text-slate-400">
+                  {ZONES[zoneId].displayName}:{' '}
+                  <span className="font-semibold text-emerald-400">+{Math.round(accountZoneDropBonusPct[zoneId])}%</span>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
       <CollapsibleZoneGroups
         expandedZoneId={expandedZoneId}

@@ -199,9 +199,15 @@ const QUALITY_DROP_CHANCES: [tier: string, chance: number][] = [
   ['tempered', 1 / 500],
 ]
 
-function rollDroppedQualityTier(): string {
+// qualityBonusMultiplier (2026-08-07, confirmed with the user, supersedes
+// the old flat account_drop_bonus_pct's effect on DROP_CHANCE itself below)
+// — the account track's per-zone drop-bonus reward no longer scales how
+// often a normal item drops at all; it scales THIS roll instead, given a
+// drop already happened. See accountDropMultiplier's own new zone-scoped
+// computation further down.
+function rollDroppedQualityTier(qualityBonusMultiplier = 1): string {
   for (const [tier, chance] of QUALITY_DROP_CHANCES) {
-    if (Math.random() < chance) return tier
+    if (Math.random() < chance * qualityBonusMultiplier) return tier
   }
   return 'normal'
 }
@@ -782,7 +788,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     // rolls). Permanent once claimed, so no separate "is this active" gate
     // is needed the way the old per-monster tier lookups needed — just read
     // and apply.
-    db.from('players').select('account_attack_bonus_pct, account_drop_bonus_pct').eq('id', character.account_id).maybeSingle(),
+    db.from('players').select('account_attack_bonus_pct, account_zone_drop_bonus_pct').eq('id', character.account_id).maybeSingle(),
   ])
 
   const characterKillsBefore = characterKillsRow?.kills ?? 0
@@ -790,8 +796,14 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const accountKillsBefore = accountKillsRow?.kills ?? 0
   const petAlreadyUnlocked = Boolean(petRow)
   const accountAttackBonusPct = playerRow?.account_attack_bonus_pct ?? 0
-  const accountDropBonusPct = playerRow?.account_drop_bonus_pct ?? 0
-  const accountDropMultiplier = 1 + accountDropBonusPct / 100
+  // Per-zone now (2026-08-07, confirmed with the user), not a flat
+  // account-wide number — whichever zone the currently-fought monster
+  // belongs to is the only pool that applies, so grinding one zone's own
+  // account-tier claims pays off specifically while farming that zone (and
+  // its own bonus total is deliberately higher for later, harder zones —
+  // see claim_account_achievement_reward's own zone-multiplier comment).
+  const zoneDropBonusPct = (playerRow?.account_zone_drop_bonus_pct as Record<string, number> | null)?.[monster.zone_id ?? ''] ?? 0
+  const accountDropMultiplier = 1 + zoneDropBonusPct / 100
   attackMidpoint *= 1 + accountAttackBonusPct / 100
   // Same White/Green/Red/Black level-diff EXP multiplier killRewards already
   // applies to on-kill EXP (see EXP_MULTIPLIER_BY_COLOR/getLevelDiffColor) —
@@ -909,18 +921,22 @@ async function handleResolveCombat(req: Request): Promise<Response> {
         goldGained += rewards.gold
         expGained += rewards.exp
 
-        // accountDropMultiplier (see the achievements-rework note above) is
-        // the only bonus-drop source left now that Kill Count's own
-        // automatic multiplier is gone — applies to the gear roll here and
-        // to both Comet/Fallen Star rolls just below, not just currency, per
-        // the user's own generic framing ("drop bonus buff").
-        if (Math.random() < DROP_CHANCE * accountDropMultiplier) {
+        // Per-zone quality-only drop bonus (2026-08-07, confirmed with the
+        // user — supersedes the old flat, drop-FREQUENCY-boosting
+        // account_drop_bonus_pct). accountDropMultiplier is now derived from
+        // whichever zone this monster belongs to (see below) and is
+        // deliberately NOT applied to the base drop roll anymore — a claimed
+        // zone's bonus no longer makes a normal item drop more often, only
+        // improves its odds of rolling a higher quality tier once a drop
+        // already happened. Comet/Fallen Star drop chance (just below) still
+        // uses the same multiplier, now zone-scoped instead of flat.
+        if (Math.random() < DROP_CHANCE) {
           const dropped = pickDropTemplate()
           if (dropped) {
             // Quality is rolled once, at drop time, and carried with the
             // template through to whichever table (item_instances or
             // loot_holding) ends up actually receiving it below.
-            const withQuality = { ...dropped, qualityTier: rollDroppedQualityTier() }
+            const withQuality = { ...dropped, qualityTier: rollDroppedQualityTier(accountDropMultiplier) }
             if (mode === 'live') {
               if (projectedOccupied < INVENTORY_SLOT_CAP) {
                 droppedTemplates.push(withQuality)

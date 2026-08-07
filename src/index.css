@@ -143,3 +143,36 @@ img {
 .effect-core-pulse {
   animation: effect-core-pulse 2.2s ease-in-out infinite;
 }
+
+/* Themed scrollbar (2026-08-07, confirmed with the user) — replaces the
+   default chunky light-gray browser scrollbar (jarring against this game's
+   near-black UI) with a slim, mostly-invisible track that only tints up on
+   hover/scroll. Firefox uses the standard scrollbar-width/scrollbar-color
+   properties; Chrome/Edge/Safari use the -webkit-scrollbar pseudo-elements.
+   Applied globally (every overflow-y-auto container in the game — Inventory
+   grids, Shop/Forge lists, Achievements, Mail, etc. — inherits this for
+   free, no per-component change needed) rather than only on scroll, since a
+   thin idle track already reads as "a scrollbar exists here" without the
+   default browser chrome. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(245, 158, 11, 0.55);
+}

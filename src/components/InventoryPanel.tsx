@@ -11,6 +11,7 @@ import {
   getGearIconSrc,
   getItemIcon,
   getQualityColor,
+  previewSalvageApValue,
   previewSellPrice,
 } from '../game/items/equipmentBonus'
 import { EQUIP_SLOTS, useEquipmentStore, type EquipSlot } from '../game/items/useEquipmentStore'
@@ -46,6 +47,7 @@ import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { POTION_TYPES } from '../game/items/potionTypes'
 import { useBankStore } from '../game/items/useBankStore'
+import { useGainToastStore } from '../game/hud/useGainToastStore'
 
 // A single fixed 40-cell grid shared by gear (item_instances), Composition
 // stones, Comets/Fallen Stars (+ their Scrolls), and HP/Mana potion stacks —
@@ -86,6 +88,13 @@ interface InventoryPanelProps {
   // The actual sell logic lives entirely in useInventoryStore.sellItem (removes
   // the item, adds gold) — this is just an opt-in display flag, not a callback.
   enableSelling?: boolean
+  // Present only when rendered inside Forge's Salvage tab (SalvagePanel) —
+  // adds a "Salvage" button to the gear detail card plus the same bulk
+  // checkbox-select flow enableSelling has, calling useInventoryStore.
+  // salvageItem (Ascension Points only, no gold) instead of sellItem.
+  // Independent of enableSelling — no current caller sets both, but nothing
+  // stops a future one from offering both actions side by side.
+  enableSalvaging?: boolean
   // Grid width in columns — defaults to 8 (5 rows) for a wide layout; the Combat
   // page's narrower column passes 5 (8 rows) instead. Always 40 cells total either way.
   columns?: number
@@ -121,12 +130,14 @@ export default function InventoryPanel({
   reservedItemIds = [],
   onTileDrop,
   enableSelling = false,
+  enableSalvaging = false,
   columns = 8,
   equipPopoverEnabled = false,
   enableBankDeposit = false,
 }: InventoryPanelProps) {
   const items = useInventoryStore((state) => state.items)
   const sellItem = useInventoryStore((state) => state.sellItem)
+  const salvageItem = useInventoryStore((state) => state.salvageItem)
   const templates = useItemTemplatesStore((state) => state.templates)
   const setEquippedItem = useEquipmentStore((state) => state.setEquippedItem)
   // Subscribe to equippedIds itself, not the isEquipped function — isEquipped's
@@ -165,6 +176,7 @@ export default function InventoryPanel({
   const depositItemAsComposition = useBankStore((state) => state.depositItemAsComposition)
   const depositStone = useBankStore((state) => state.depositStone)
   const depositCurrency = useBankStore((state) => state.depositCurrency)
+  const showGainToast = useGainToastStore((state) => state.show)
 
   const [selectedSlot, setSelectedSlot] = useState<SelectedSlot>(null)
   // GearEquipPopover-only (equipPopoverEnabled) — the clicked tile's own
@@ -190,6 +202,13 @@ export default function InventoryPanel({
   // Bulk-sell checkbox selection (Shop only, see enableSelling) — independent
   // of selectedSlot, which drives the single-item detail card.
   const [selectedForSale, setSelectedForSale] = useState<Set<string>>(new Set())
+  // Bulk-salvage checkbox selection (Forge's Salvage tab only, see
+  // enableSalvaging) — separate set/busy/error from the Sell trio above,
+  // since the two are independent actions even on an instance that somehow
+  // enabled both.
+  const [selectedForSalvage, setSelectedForSalvage] = useState<Set<string>>(new Set())
+  const [salvageBusy, setSalvageBusy] = useState(false)
+  const [salvageError, setSalvageError] = useState<string | null>(null)
   // Bundle/unbundle busy+error feedback (stage 2, 2026-07-31) — separate from
   // sellBusy/sellError since they're independent actions on different tiles.
   const [scrollBusy, setScrollBusy] = useState(false)
@@ -615,6 +634,12 @@ export default function InventoryPanel({
       return
     }
 
+    if (typeof result.goldGained === 'number') {
+      showGainToast({ label: 'Gold', amount: result.goldGained, icon: '💰', color: '#fbbf24' })
+    }
+    if (typeof result.apGained === 'number' && result.apGained > 0) {
+      showGainToast({ label: 'Ascension Points', amount: result.apGained, icon: '🎖️', color: '#a855f7' })
+    }
     setSelectedSlot(null)
   }
 
@@ -650,6 +675,60 @@ export default function InventoryPanel({
     }
 
     setSelectedSlot(null)
+  }
+
+  const handleSalvage = async (item: ItemInstance) => {
+    setSalvageError(null)
+    setSalvageBusy(true)
+    const result = await salvageItem(item.id)
+    setSalvageBusy(false)
+
+    if (!result.ok) {
+      setSalvageError("Couldn't salvage that item.")
+      return
+    }
+
+    if (typeof result.apGained === 'number') {
+      showGainToast({ label: 'Ascension Points', amount: result.apGained, icon: '🎖️', color: '#a855f7' })
+    }
+    setSelectedSlot(null)
+  }
+
+  const toggleSalvageSelection = (itemId: string) => {
+    setSelectedForSalvage((current) => {
+      const next = new Set(current)
+      if (next.has(itemId)) {
+        next.delete(itemId)
+      } else {
+        next.add(itemId)
+      }
+      return next
+    })
+  }
+
+  const selectAllSalvageable = () => {
+    setSelectedForSalvage(new Set(visibleItems.map((item) => item.id)))
+  }
+
+  const salvageTotal = visibleItems
+    .filter((item) => selectedForSalvage.has(item.id))
+    .reduce((sum, item) => sum + previewSalvageApValue(item.quality_tier), 0)
+
+  const salvageSelected = async () => {
+    setSalvageError(null)
+    setSalvageBusy(true)
+    const results = await Promise.all(Array.from(selectedForSalvage).map((itemId) => salvageItem(itemId)))
+    const failures = results.filter((result) => !result.ok).length
+    setSalvageBusy(false)
+    setSelectedForSalvage(new Set())
+    if (failures > 0) {
+      setSalvageError(`Couldn't salvage ${failures} item${failures === 1 ? '' : 's'}.`)
+    }
+
+    const totalAp = results.reduce((sum, result) => sum + (result.apGained ?? 0), 0)
+    if (totalAp > 0) {
+      showGainToast({ label: 'Ascension Points', amount: totalAp, icon: '🎖️', color: '#a855f7' })
+    }
   }
 
   const toggleSaleSelection = (itemId: string) => {
@@ -692,6 +771,17 @@ export default function InventoryPanel({
     if (failures > 0) {
       setSellError(`Couldn't sell ${failures} item${failures === 1 ? '' : 's'}.`)
     }
+
+    // One aggregate toast per bulk sell, not one per item — avoids a toast
+    // pileup when selling a dozen items at once.
+    const totalGold = results.reduce((sum, result) => sum + (result.goldGained ?? 0), 0)
+    const totalAp = results.reduce((sum, result) => sum + (result.apGained ?? 0), 0)
+    if (totalGold > 0) {
+      showGainToast({ label: 'Gold', amount: totalGold, icon: '💰', color: '#fbbf24' })
+    }
+    if (totalAp > 0) {
+      showGainToast({ label: 'Ascension Points', amount: totalAp, icon: '🎖️', color: '#a855f7' })
+    }
   }
 
   return (
@@ -719,6 +809,27 @@ export default function InventoryPanel({
                 className="rounded border border-amber-600 bg-amber-500/10 px-2 py-1 font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {sellBusy ? 'Selling…' : `Sell Selected (${saleTotal}g)`}
+              </button>
+            </div>
+          )}
+
+          {enableSalvaging && (
+            <div className="flex items-center gap-2 text-xs">
+              {salvageError && <span className="text-amber-400">{salvageError}</span>}
+              <button
+                type="button"
+                onClick={selectAllSalvageable}
+                className="rounded border border-slate-700 px-2 py-1 text-slate-300 hover:border-slate-500"
+              >
+                Select All
+              </button>
+              <button
+                type="button"
+                disabled={selectedForSalvage.size === 0 || salvageBusy}
+                onClick={() => void salvageSelected()}
+                className="rounded border border-purple-600 bg-purple-500/10 px-2 py-1 font-medium text-purple-300 hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {salvageBusy ? 'Salvaging…' : `Salvage Selected (${salvageTotal} AP)`}
               </button>
             </div>
           )}
@@ -1087,23 +1198,41 @@ export default function InventoryPanel({
             // an overlay on top of the tile rather than a change to InventorySlot
             // itself, so every other embedding is unaffected. stopPropagation keeps
             // checking a box from also opening the detail card underneath it.
-            if (!enableSelling) {
-              return slot
+            // Salvage (Forge only, 2026-08-07) reuses the exact same overlay
+            // pattern with its own selection set/accent color.
+            if (enableSelling) {
+              return (
+                <div key={item.id} className="relative">
+                  {slot}
+                  <input
+                    type="checkbox"
+                    checked={selectedForSale.has(item.id)}
+                    onClick={(event) => event.stopPropagation()}
+                    onChange={() => toggleSaleSelection(item.id)}
+                    className="absolute left-1 top-1 h-3.5 w-3.5 cursor-pointer accent-amber-500"
+                    aria-label={`Select ${label} for bulk sale`}
+                  />
+                </div>
+              )
             }
 
-            return (
-              <div key={item.id} className="relative">
-                {slot}
-                <input
-                  type="checkbox"
-                  checked={selectedForSale.has(item.id)}
-                  onClick={(event) => event.stopPropagation()}
-                  onChange={() => toggleSaleSelection(item.id)}
-                  className="absolute left-1 top-1 h-3.5 w-3.5 cursor-pointer accent-amber-500"
-                  aria-label={`Select ${label} for bulk sale`}
-                />
-              </div>
-            )
+            if (enableSalvaging) {
+              return (
+                <div key={item.id} className="relative">
+                  {slot}
+                  <input
+                    type="checkbox"
+                    checked={selectedForSalvage.has(item.id)}
+                    onClick={(event) => event.stopPropagation()}
+                    onChange={() => toggleSalvageSelection(item.id)}
+                    className="absolute left-1 top-1 h-3.5 w-3.5 cursor-pointer accent-purple-500"
+                    aria-label={`Select ${label} for bulk salvage`}
+                  />
+                </div>
+              )
+            }
+
+            return slot
           })}
 
           {Array.from({ length: emptySlotCount }, (_, index) => (
@@ -1291,6 +1420,18 @@ export default function InventoryPanel({
             </button>
           )}
           {sellError && <p className="mt-2 text-xs text-amber-400">{sellError}</p>}
+
+          {enableSalvaging && (
+            <button
+              type="button"
+              disabled={isEquipped(selectedItem.id) || salvageBusy}
+              onClick={() => void handleSalvage(selectedItem)}
+              className="mt-2 w-full rounded-lg border border-purple-600 bg-purple-500/10 px-3 py-1.5 text-xs font-medium text-purple-300 hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {salvageBusy ? 'Salvaging…' : `Salvage (${previewSalvageApValue(selectedItem.quality_tier)} AP)`}
+            </button>
+          )}
+          {salvageError && <p className="mt-2 text-xs text-amber-400">{salvageError}</p>}
         </div>
       )}
 

@@ -127,11 +127,12 @@ export function killRewards(type: EnemyTypeDef, isRare: boolean, expMultiplier: 
 export const COMET_DROP_CHANCE = 1 / 500
 export const FALLEN_STAR_DROP_CHANCE = 1 / 20000
 
-// dropMultiplier (2026-08-06, Achievements rework) — the account-wide
-// Achievements drop-bonus buff (players.account_drop_bonus_pct, see
-// resolve-combat's own accountDropMultiplier), applied identically to both
-// flat base chances here. Defaults to 1 (no bonus) for any caller that
-// doesn't have it handy.
+// dropMultiplier (2026-08-06, Achievements rework; made per-zone 2026-08-07)
+// — the account-wide Achievements drop-bonus buff (players.
+// account_zone_drop_bonus_pct, scoped to whichever zone the fought monster
+// belongs to — see resolve-combat's own accountDropMultiplier), applied
+// identically to both flat base chances here. Defaults to 1 (no bonus) for
+// any caller that doesn't have it handy.
 export function rollBonusCurrencyDrops(dropMultiplier = 1): { comets: number; fallenStars: number } {
   return {
     comets: Math.random() < COMET_DROP_CHANCE * dropMultiplier ? 1 : 0,

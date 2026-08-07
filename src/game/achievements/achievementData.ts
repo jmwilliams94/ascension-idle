@@ -99,35 +99,60 @@ export function describeCharacterTierReward(reward: CharacterTierReward): string
 // ----------------------------------------------------------------------------
 // Account track — one-time claims, tiers 1-6 (matches
 // account_monster_kills.claimed_tier_index). Each claim adds a small,
-// permanent bump to players.account_attack_bonus_pct/account_drop_bonus_pct,
-// cumulative across every monster's own account-tier claims (not
-// highest-wins like the old Prestige gold multiplier was) — the user's own
-// framing for why: "so the next time round when you go to level a character
-// and have to kill the low level mobs again, it's easier and with better
-// rewards."
+// permanent bump to players.account_attack_bonus_pct (flat, account-wide,
+// unchanged) and players.account_zone_drop_bonus_pct (per-zone as of
+// 2026-08-07 — see zoneDropBonusMultiplier below), cumulative across every
+// monster's own account-tier claims (not highest-wins like the old Prestige
+// gold multiplier was) — the user's own framing for why: "so the next time
+// round when you go to level a character and have to kill the low level
+// mobs again, it's easier and with better rewards."
+//
+// Per-zone quality-only drop bonus (2026-08-07, confirmed with the user) —
+// claiming a tier on a monster only grows THAT monster's own zone's pool,
+// and later zones (ZONE_ORDER's own order) grant proportionally more per
+// claim than earlier ones (zoneDropBonusMultiplier below). The bonus itself
+// only affects the odds of a drop rolling a higher quality tier, never how
+// often a plain item drops at all — see resolve-combat/index.ts's own
+// accountDropMultiplier usage.
 // ----------------------------------------------------------------------------
 export interface AccountTierReward {
   attackBonusPct: number
-  dropBonusPct: number
+  // Base per-tier percentage-point increment, BEFORE zone scaling — the
+  // actual bonus a claim grants is this value * zoneDropBonusMultiplier(zone).
+  // Whole percentage points (5 means +5%), not a fraction — deliberately a
+  // different unit convention from attackBonusPct above, since drop bonus is
+  // applied fresh (1 + pct/100) with no pre-existing scale to match.
+  dropBonusPctBase: number
 }
 
 // Indexed 0-5, i.e. ACCOUNT_TIER_REWARDS[tierIndex - 1] for 1-based tier
 // index N. Must match claim_account_achievement_reward's own case statement
-// exactly. Summed across all 40 monsters at full completion this totals
-// roughly +50% attack / +42% drop — a genuine long-term account-wide
-// investment without any single claim ever being "a crazy high percentage
-// buff."
+// exactly.
 export const ACCOUNT_TIER_REWARDS: readonly AccountTierReward[] = [
-  { attackBonusPct: 0.05, dropBonusPct: 0.05 },
-  { attackBonusPct: 0.08, dropBonusPct: 0.08 },
-  { attackBonusPct: 0.12, dropBonusPct: 0.12 },
-  { attackBonusPct: 0.2, dropBonusPct: 0.15 },
-  { attackBonusPct: 0.3, dropBonusPct: 0.25 },
-  { attackBonusPct: 0.5, dropBonusPct: 0.4 },
+  { attackBonusPct: 0.05, dropBonusPctBase: 5 },
+  { attackBonusPct: 0.08, dropBonusPctBase: 8 },
+  { attackBonusPct: 0.12, dropBonusPctBase: 12 },
+  { attackBonusPct: 0.2, dropBonusPctBase: 15 },
+  { attackBonusPct: 0.3, dropBonusPctBase: 25 },
+  { attackBonusPct: 0.5, dropBonusPctBase: 40 },
 ]
 
-export function describeAccountTierReward(reward: AccountTierReward): string {
-  return `+${(reward.attackBonusPct * 100).toFixed(0)}% Attack, +${(reward.dropBonusPct * 100).toFixed(0)}% Drop Chance`
+// Mirrors zone_drop_bonus_multiplier's SQL case statement (see
+// 20260807050000_per_zone_quality_drop_bonus.sql) — keep in sync. A zone
+// further along ZONE_ORDER grants proportionally more drop bonus per claim
+// than an earlier one (+50% more per zone step).
+export function zoneDropBonusMultiplier(zoneId: string, zoneOrder: readonly string[]): number {
+  const index = zoneOrder.indexOf(zoneId)
+  return 1 + Math.max(0, index) * 0.5
+}
+
+// zoneId/zoneOrder are optional so this still works (using the base,
+// unscaled value) anywhere a specific zone isn't known yet — every real call
+// site (AchievementsPanel's per-monster cards) does know the zone, though.
+export function describeAccountTierReward(reward: AccountTierReward, zoneId?: string, zoneOrder?: readonly string[]): string {
+  const dropBonusPct =
+    zoneId && zoneOrder ? reward.dropBonusPctBase * zoneDropBonusMultiplier(zoneId, zoneOrder) : reward.dropBonusPctBase
+  return `+${(reward.attackBonusPct * 100).toFixed(0)}% Attack, +${dropBonusPct.toFixed(0)}% Higher-Quality Drop Chance`
 }
 
 // ----------------------------------------------------------------------------

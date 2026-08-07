@@ -8,7 +8,7 @@ import { useInventoryStore } from '../items/useInventoryStore'
 import { useItemTemplatesStore } from '../items/useItemTemplatesStore'
 import { useNoQuiverWarningStore } from '../items/useNoQuiverWarningStore'
 import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
-import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
+import { ENEMY_TYPES, zoneIdForMonster, type EnemyTypeId } from '../zones/zoneData'
 import {
   MONSTER_ATTACK_INTERVAL_MS,
   RARE_REWARD_MULTIPLIER,
@@ -220,14 +220,17 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     const attackIntervalMs = 1000 / derived.attackSpeed
 
     // Account-wide Achievements combat buffs (2026-08-06, Achievements
-    // rework) — PREDICTIVE ONLY, same caveat as the rest of this file's
-    // kill-branch numbers: mirrors resolve-combat's own
-    // accountAttackBonusPct/accountDropBonusPct application exactly
-    // (attackMidpoint *= 1 + pct/100, drop chances scaled by the same
-    // 1 + pct/100 multiplier) so the log/preview stays consistent with what
-    // the next server reconciliation will actually confirm.
-    const { accountAttackBonusPct, accountDropBonusPct } = usePlayerRecordStore.getState()
-    const accountDropMultiplier = 1 + accountDropBonusPct / 100
+    // rework; drop bonus made per-zone/quality-only 2026-08-07) — PREDICTIVE
+    // ONLY, same caveat as the rest of this file's kill-branch numbers:
+    // mirrors resolve-combat's own accountAttackBonusPct/accountDropMultiplier
+    // application exactly, so the log/preview stays consistent with what the
+    // next server reconciliation will actually confirm. The drop bonus is
+    // now scoped to whichever zone the currently-fought monster belongs to,
+    // not a flat account-wide number.
+    const { accountAttackBonusPct, accountZoneDropBonusPct } = usePlayerRecordStore.getState()
+    const currentZoneId = zoneIdForMonster(state.monsterTypeId)
+    const zoneDropBonusPct = currentZoneId ? (accountZoneDropBonusPct[currentZoneId] ?? 0) : 0
+    const accountDropMultiplier = 1 + zoneDropBonusPct / 100
     const attackMidpoint = (derived.physicalAttack + derived.magicAttack) * (1 + accountAttackBonusPct / 100)
 
     // Lazy-init the player's HP the first time combat ever ticks (0/0 sentinel —
@@ -389,7 +392,11 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         }),
       }))
 
-      const drop = useInventoryStore.getState().rollItemDrop(type.level, accountDropMultiplier)
+      // No longer scaled by accountDropMultiplier (2026-08-07) — the zone
+      // drop bonus only affects quality-tier odds now, not whether a drop
+      // happens at all, and this predictive path never shows/rolls quality
+      // anyway (see useInventoryStore.rollItemDrop's own comment).
+      const drop = useInventoryStore.getState().rollItemDrop(type.level)
       if (drop) {
         set((s) => ({
           log: appendLog(s.log, { kind: 'item', message: `You found: ${drop.template.name}` }),
