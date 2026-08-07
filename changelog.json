@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.69.1",
+    "date": "2026-08-08",
+    "changes": [
+      "No visible change (version bump to test the new update banner)"
+    ]
+  },
+  {
     "version": "1.69.0",
     "date": "2026-08-08",
     "changes": [
