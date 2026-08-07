@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.68.0",
+    "date": "2026-08-08",
+    "changes": [
+      "Added a live \"Players Online\" counter",
+      "Added a global announcement banner that flashes up whenever anyone gets a rare gear socket or wins a Comet/Fallen Star Scroll from Lucky Lad"
+    ]
+  },
+  {
     "version": "1.67.3",
     "date": "2026-08-08",
     "changes": [

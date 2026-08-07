@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import CombatEngine from '../game/combat/CombatEngine'
+import GlobalActivityConnection from './GlobalActivityConnection'
 import QuiverWarningHud from './QuiverWarningHud'
 import InventoryFullWarningHud from './InventoryFullWarningHud'
 import KnockoutHud from './KnockoutHud'
+import PlayersOnlineHud from './PlayersOnlineHud'
+import GlobalAnnouncementTicker from './GlobalAnnouncementTicker'
 import CombatPage from './CombatPage'
 import EquipmentTabPage from './EquipmentTabPage'
 import ExpBar from './ExpBar'
@@ -313,6 +316,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <UnclaimedLootBadge />
       <GainToastHost />
       <CombatEngine />
+      <GlobalActivityConnection accountId={accountId} />
 
       {/* pb-24 (was pb-6, matched by py-6 on lg): clearance for
           MobileBottomNav's fixed bar below `lg` — without it, the bar covers
@@ -326,6 +330,8 @@ export default function GameShell({ characterId }: { characterId: string }) {
           <QuiverWarningHud />
           <InventoryFullWarningHud />
           <KnockoutHud />
+          <PlayersOnlineHud />
+          <GlobalAnnouncementTicker />
         </div>
 
         {/* Renders nothing when there's no pet to celebrate — safe to mount
