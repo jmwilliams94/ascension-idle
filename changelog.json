@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.68.4",
+    "date": "2026-08-08",
+    "changes": [
+      "Ember Gem now has real icon art for all 3 tiers (still not obtainable in-game)"
+    ]
+  },
+  {
     "version": "1.68.3",
     "date": "2026-08-08",
     "changes": [
