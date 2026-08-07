@@ -402,6 +402,7 @@ function CollapsibleZoneGroups({
   renderMonster,
   showZoneSummary,
   claimableByZone,
+  renderZoneExtra,
 }: {
   expandedZoneId: ZoneId | null
   onToggleZone: (zoneId: ZoneId) => void
@@ -410,6 +411,13 @@ function CollapsibleZoneGroups({
   // ladder is scoped to one character, so Account shouldn't show it.
   showZoneSummary?: boolean
   claimableByZone?: Partial<Record<ZoneId, number>>
+  // Only the Account tab passes this (2026-08-07, confirmed with the user:
+  // "display these zones as cards and display the current achieved bonus")
+  // — the zone's own Attack/Quality combat-bonus totals, shown right on the
+  // collapsed card so they're visible without expanding it. Replaces the
+  // old standalone "Combat bonuses by zone" summary block that used to sit
+  // above this whole list.
+  renderZoneExtra?: (zoneId: ZoneId) => ReactNode
 }) {
   return (
     <>
@@ -443,6 +451,7 @@ function CollapsibleZoneGroups({
                     <ZoneMilestoneBar zoneId={zoneId} />
                   </div>
                 )}
+                {renderZoneExtra && <div className="mt-1">{renderZoneExtra(zoneId)}</div>}
               </div>
               <span className={`text-slate-500 transition-transform ${expanded ? 'rotate-180' : ''}`}>▾</span>
             </button>
@@ -518,20 +527,34 @@ function PlayerTabContent({ characterId }: { characterId: string }) {
   )
 }
 
+// The zone card's own "Attack +X% · Quality +Y%" line (2026-08-07, confirmed
+// with the user — replaces the old standalone "Combat bonuses by zone" list
+// that used to sit above the whole card list). Renders nothing for a zone
+// with no claims yet, rather than a "+0%" line for every unclaimed zone.
+function ZoneBonusLine({ zoneId }: { zoneId: ZoneId }) {
+  const attackBonusPct = usePlayerRecordStore((state) => state.accountZoneAttackBonusPct[zoneId] ?? 0)
+  const dropBonusPct = usePlayerRecordStore((state) => state.accountZoneDropBonusPct[zoneId] ?? 0)
+
+  if (attackBonusPct <= 0 && dropBonusPct <= 0) {
+    return null
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 text-[11px] text-slate-400">
+      <span>
+        Attack <span className="font-semibold text-emerald-400">+{attackBonusPct}%</span>
+      </span>
+      <span>
+        Quality <span className="font-semibold text-emerald-400">+{dropBonusPct}%</span>
+      </span>
+    </div>
+  )
+}
+
 function AccountTabContent({ accountId }: { accountId: string | undefined }) {
   const [expandedZoneId, setExpandedZoneId] = useState<ZoneId | null>(null)
   const accountKills = useAchievementsStore((state) => state.accountKills)
-  const accountZoneAttackBonusPct = usePlayerRecordStore((state) => state.accountZoneAttackBonusPct)
-  const accountZoneDropBonusPct = usePlayerRecordStore((state) => state.accountZoneDropBonusPct)
   const claimableByZone = claimableCountsByZone(accountKills, ACCOUNT_TIER_THRESHOLDS)
-  // Both per-zone now (2026-08-07) — Attack and Quality bonuses only apply
-  // while fighting in the zone they were earned in (see resolve-combat's
-  // own accountAttackBonusPct/accountDropMultiplier), so this shows a
-  // per-zone breakdown instead of a single flat total. Zones with nothing
-  // claimed yet are simply omitted.
-  const zonesWithBonus = ZONE_ORDER.filter(
-    (zoneId) => (accountZoneAttackBonusPct[zoneId] ?? 0) > 0 || (accountZoneDropBonusPct[zoneId] ?? 0) > 0,
-  )
 
   return (
     <div className="space-y-3">
@@ -539,30 +562,11 @@ function AccountTabContent({ accountId }: { accountId: string | undefined }) {
         Every character on this account contributes to the same ladder per monster (thresholds are 5x the character track's own). Claiming
         grants a small, permanent combat buff — active only while fighting in that monster's own zone.
       </p>
-      <div className="space-y-1 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-xs">
-        <p className="text-slate-500">Combat bonuses by zone:</p>
-        {zonesWithBonus.length === 0 ? (
-          <p className="mt-1 text-slate-600">None claimed yet.</p>
-        ) : (
-          <div className="mt-1 space-y-1">
-            {zonesWithBonus.map((zoneId) => (
-              <div key={zoneId} className="flex flex-wrap items-center gap-x-3 text-slate-400">
-                <span className="font-medium text-slate-300">{ZONES[zoneId].displayName}</span>
-                <span>
-                  Attack <span className="font-semibold text-emerald-400">+{accountZoneAttackBonusPct[zoneId] ?? 0}%</span>
-                </span>
-                <span>
-                  Quality <span className="font-semibold text-emerald-400">+{accountZoneDropBonusPct[zoneId] ?? 0}%</span>
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
       <CollapsibleZoneGroups
         expandedZoneId={expandedZoneId}
         onToggleZone={(zoneId) => setExpandedZoneId((current) => (current === zoneId ? null : zoneId))}
         claimableByZone={claimableByZone}
+        renderZoneExtra={(zoneId) => <ZoneBonusLine zoneId={zoneId} />}
         renderMonster={(monsterId, displayName) => <AccountMonsterCard accountId={accountId} monsterId={monsterId} displayName={displayName} />}
       />
     </div>

@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.65.2",
+    "date": "2026-08-07",
+    "changes": [
+      "Fixed a bug where Account Achievement zone bonuses didn't count tiers you'd already claimed before this system existed — they're now correctly recalculated from your full claim history",
+      "Account Achievements' zones now show their earned Attack/Quality bonus directly on the zone card, so you don't need to expand it to see — replaces the old separate summary list"
+    ]
+  },
+  {
     "version": "1.65.1",
     "date": "2026-08-07",
     "changes": [
