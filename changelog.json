@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.67.2",
+    "date": "2026-08-07",
+    "changes": [
+      "Fixed the Forge wrongly refusing to unbundle Scrolls for an upgrade cost even when doing so would actually free up Inventory space, not use more"
+    ]
+  },
+  {
     "version": "1.67.1",
     "date": "2026-08-07",
     "changes": [
