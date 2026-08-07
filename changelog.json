@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.69.2",
+    "date": "2026-08-08",
+    "changes": [
+      "Fixed the update banner never appearing in an already-open tab — it now checks for a new version every minute instead of only once at page load"
+    ]
+  },
+  {
     "version": "1.69.1",
     "date": "2026-08-08",
     "changes": [
