@@ -275,6 +275,11 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Padded Boots': `${import.meta.env.BASE_URL}item-icons/padded-boots.png`,
   'Hawkstep Boots': `${import.meta.env.BASE_URL}item-icons/hawkstep-boots.png`,
   'Featherstep Boots': `${import.meta.env.BASE_URL}item-icons/featherstep-boots.png`,
+  'Scalehide Boots': `${import.meta.env.BASE_URL}item-icons/scalehide-boots.png`,
+  'Viperskin Boots': `${import.meta.env.BASE_URL}item-icons/viperskin-boots.png`,
+  'Prowler Boots': `${import.meta.env.BASE_URL}item-icons/prowler-boots.png`,
+  'Spotted Boots': `${import.meta.env.BASE_URL}item-icons/spotted-boots.png`,
+  'Direbeast Boots': `${import.meta.env.BASE_URL}item-icons/direbeast-boots.png`,
 }
 
 export function getGearIconSrc(templateName: string | undefined): string | undefined {
