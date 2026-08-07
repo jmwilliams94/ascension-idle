@@ -228,8 +228,8 @@ const ACHIEVEMENT_TIERS = [100, 250, 500, 1000, 5000, 10000]
 // this function used to compute and apply automatically. The account-wide
 // ladder (still tracked below, unchanged) now has its own reward category
 // instead — small permanent combat buffs, read directly from `players`
-// below (accountAttackBonusPct/accountDropBonusPct) rather than derived
-// from anything achievement-tier-shaped here.
+// below (account_zone_attack_bonus_pct/account_zone_drop_bonus_pct, both
+// per-zone) rather than derived from anything achievement-tier-shaped here.
 
 // Confirmed, not a placeholder — 1/25000 chance per kill (lowered from the
 // original 1/5000, 2026-08-03), independent of every other roll this
@@ -788,21 +788,24 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     // rolls). Permanent once claimed, so no separate "is this active" gate
     // is needed the way the old per-monster tier lookups needed — just read
     // and apply.
-    db.from('players').select('account_attack_bonus_pct, account_zone_drop_bonus_pct').eq('id', character.account_id).maybeSingle(),
+    db.from('players').select('account_zone_attack_bonus_pct, account_zone_drop_bonus_pct').eq('id', character.account_id).maybeSingle(),
   ])
 
   const characterKillsBefore = characterKillsRow?.kills ?? 0
   const claimedTierIndex = characterKillsRow?.claimed_tier_index ?? 0
   const accountKillsBefore = accountKillsRow?.kills ?? 0
   const petAlreadyUnlocked = Boolean(petRow)
-  const accountAttackBonusPct = playerRow?.account_attack_bonus_pct ?? 0
-  // Per-zone now (2026-08-07, confirmed with the user), not a flat
-  // account-wide number — whichever zone the currently-fought monster
-  // belongs to is the only pool that applies, so grinding one zone's own
-  // account-tier claims pays off specifically while farming that zone (and
-  // its own bonus total is deliberately higher for later, harder zones —
-  // see claim_account_achievement_reward's own zone-multiplier comment).
-  const zoneDropBonusPct = (playerRow?.account_zone_drop_bonus_pct as Record<string, number> | null)?.[monster.zone_id ?? ''] ?? 0
+  // Both per-zone now (2026-08-07, confirmed with the user — attack bonus
+  // was previously a flat account-wide number applied to every fight
+  // regardless of zone, "I hope it's not a global attack bonus"), scoped to
+  // whichever zone the currently-fought monster belongs to. Grinding one
+  // zone's own account-tier claims only pays off specifically while
+  // farming that zone. Quality's own bonus total is deliberately higher for
+  // later zones (see claim_account_achievement_reward's own
+  // zone_quality_bonus_per_tier_pct); Attack is flat 1%/tier everywhere.
+  const zoneKey = monster.zone_id ?? ''
+  const accountAttackBonusPct = (playerRow?.account_zone_attack_bonus_pct as Record<string, number> | null)?.[zoneKey] ?? 0
+  const zoneDropBonusPct = (playerRow?.account_zone_drop_bonus_pct as Record<string, number> | null)?.[zoneKey] ?? 0
   const accountDropMultiplier = 1 + zoneDropBonusPct / 100
   attackMidpoint *= 1 + accountAttackBonusPct / 100
   // Same White/Green/Red/Black level-diff EXP multiplier killRewards already

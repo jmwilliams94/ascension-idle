@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.65.1",
+    "date": "2026-08-07",
+    "changes": [
+      "Account Achievements' Attack Bonus is now per-zone (only active while fighting in the zone it was earned in), matching how the Quality Bonus already works — it was accidentally applying everywhere",
+      "Rebalanced Account Achievement rewards: Attack Bonus is now a flat 1% per tier per monster in every zone, and Quality Bonus starts at 1% per tier and increases slightly zone by zone",
+      "Shrank and centered the Shop's 2x2 tab buttons on desktop — they were far too large",
+      "Salvage now costs the same Ascension Points as selling (Tempered 1, Infused 2, Radiant 3, Ascended 4)",
+      "Rebuilt Salvage as a drag-and-drop slot with a 1.5 second salvaging animation, replacing the old checkbox multi-select",
+      "Dragging an item now highlights the box it can be dropped into once you're close enough",
+      "Bank withdrawals of Comets/Fallen Stars now clearly show they land as Scrolls in your Character Inventory (not the Account Storage grid), and switching to the Account view no longer hides a withdrawal that just happened"
+    ]
+  },
+  {
     "version": "1.65.0",
     "date": "2026-08-07",
     "changes": [

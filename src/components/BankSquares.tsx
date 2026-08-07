@@ -85,7 +85,19 @@ function squareKey(square: NonNullable<SelectedSquare>): string {
 // "deposit" directly into a points balance except by spending a stone/gear
 // item via the Bank button — the square only ever spends points, it doesn't
 // mint them).
-export default function BankSquares({ characterId }: { characterId: string }) {
+export default function BankSquares({
+  characterId,
+  onWithdrawLandedInInventory,
+}: {
+  characterId: string
+  // Called after a withdrawal that actually adds something to the
+  // Character Inventory grid (Comets/Fallen Stars, a physical stone, a
+  // Composition-Points stone, or a Gear-Points item) — lets BankPanel
+  // auto-switch its own toggle to the Character view so the result is
+  // immediately visible, rather than staying on "Account" (which never
+  // shows any of these) and looking like nothing happened.
+  onWithdrawLandedInInventory?: () => void
+}) {
   const gold = useProgressionStore((state) => state.gold)
   const comets = useCurrencyStore((state) => state.comets)
   const fallenStars = useCurrencyStore((state) => state.fallenStars)
@@ -179,6 +191,7 @@ export default function BankSquares({ characterId }: { characterId: string }) {
             onDeposit={(amount) => depositCurrency(characterId, selected.id, amount)}
             onWithdraw={(amount) => withdrawCurrency(characterId, selected.id, amount)}
             onDone={closeModal}
+            onLanded={onWithdrawLandedInInventory}
           />
         </BankActionModal>
       )}
@@ -190,7 +203,10 @@ export default function BankSquares({ characterId }: { characterId: string }) {
             owned={stonesBanked[String(selected.tier)] ?? 0}
             busy={busy}
             onWithdraw={() => withdrawStoneItem(characterId, selected.tier, 1)}
-            onDone={closeModal}
+            onDone={() => {
+              closeModal()
+              onWithdrawLandedInInventory?.()
+            }}
           />
         </BankActionModal>
       )}
@@ -201,7 +217,10 @@ export default function BankSquares({ characterId }: { characterId: string }) {
             points={bankPoints}
             busy={busy}
             onWithdraw={(tier) => withdrawStone(characterId, tier, 1)}
-            onDone={closeModal}
+            onDone={() => {
+              closeModal()
+              onWithdrawLandedInInventory?.()
+            }}
           />
         </BankActionModal>
       )}
@@ -217,7 +236,10 @@ export default function BankSquares({ characterId }: { characterId: string }) {
             points={gearCompositionPoints[selected.slotType]}
             busy={busy}
             onWithdraw={(templateId, tier) => withdrawGearComposition(characterId, templateId, tier)}
-            onDone={closeModal}
+            onDone={() => {
+              closeModal()
+              onWithdrawLandedInInventory?.()
+            }}
           />
         </BankActionModal>
       )}
@@ -308,6 +330,7 @@ function CurrencyPanel({
   onDeposit,
   onWithdraw,
   onDone,
+  onLanded,
 }: {
   currencyId: CurrencyId
   label: string
@@ -318,6 +341,10 @@ function CurrencyPanel({
   onDeposit: (amount: number) => Promise<{ ok: boolean; error?: string; max_withdrawable?: number }>
   onWithdraw: (amount: number) => Promise<{ ok: boolean; error?: string; max_withdrawable?: number }>
   onDone: () => void
+  // Called (in addition to onDone) after a successful WITHDRAW of a
+  // currency that actually lands as a tile in the Character Inventory
+  // (Comets/Fallen Stars — Gold has no tile, so this is skipped for Gold).
+  onLanded?: () => void
 }) {
   const showGainToast = useGainToastStore((state) => state.show)
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit')
@@ -351,14 +378,26 @@ function CurrencyPanel({
       return
     }
 
+    // Bundled withdrawals (2026-08-07) land as Scroll tiles, not loose ones —
+    // spelled out explicitly in the toast itself (reported by a user who
+    // withdrew 40 Comets, got 4 Comet Scrolls as designed, and had no way to
+    // tell that's what happened from a toast that just said "+40 Comet").
+    const landsAsScrolls = mode === 'withdraw' && bundlesIntoScrolls
     showGainToast({
-      label: `${label} ${mode === 'deposit' ? 'Banked' : 'Withdrawn'}`,
+      label: landsAsScrolls
+        ? `${label} Withdrawn — as ${scrollsForAmount} Scroll${scrollsForAmount === 1 ? '' : 's'}${
+            remainderForAmount > 0 ? ` + ${remainderForAmount} loose` : ''
+          }, in your Inventory`
+        : `${label} ${mode === 'deposit' ? 'Banked' : 'Withdrawn — in your Inventory'}`,
       amount,
       iconSrc,
       icon: iconSrc ? undefined : '💰',
       color: mode === 'deposit' ? '#38bdf8' : '#fbbf24',
     })
     onDone()
+    if (mode === 'withdraw' && currencyId !== 'gold') {
+      onLanded?.()
+    }
   }
 
   return (
@@ -418,11 +457,14 @@ function CurrencyPanel({
 
         {bundlesIntoScrolls && (
           <p className="mt-2 text-[11px] text-slate-500">
-            → {scrollsForAmount > 0 && `${scrollsForAmount} Scroll${scrollsForAmount === 1 ? '' : 's'}`}
+            → lands in your Character Inventory as {scrollsForAmount > 0 && `${scrollsForAmount} Scroll${scrollsForAmount === 1 ? '' : 's'}`}
             {scrollsForAmount > 0 && remainderForAmount > 0 && ' + '}
             {remainderForAmount > 0 && `${remainderForAmount} loose`}
-            {' '}(saves Inventory space vs. {amount} loose tiles)
+            {' '}(saves space vs. {amount} loose tiles)
           </p>
+        )}
+        {mode === 'withdraw' && currencyId !== 'gold' && !bundlesIntoScrolls && amount > 0 && (
+          <p className="mt-2 text-[11px] text-slate-500">→ lands in your Character Inventory as {amount} loose tile{amount === 1 ? '' : 's'}.</p>
         )}
       </div>
 

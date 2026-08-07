@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import InventorySlot, { SLOT_LABEL_HEIGHT_CLASS, SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
+import { useIsDropTarget } from './dragDropContext'
 import { buildGearTooltip, formatItemDisplayName, getGearIconSrc, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
 import {
   FALLEN_STAR_COLOR,
@@ -42,6 +43,7 @@ interface ForgeMaterialSlotProps {
 // below it (framer-motion's `layout` animates that reflow automatically).
 export default function ForgeMaterialSlot({ entries, templates, onRemoveEntry }: ForgeMaterialSlotProps) {
   const showSecondSlotHint = entries.length === 1 && entries[0].kind !== 'currency'
+  const isDropTarget = useIsDropTarget('material')
 
   return (
     <div className={`flex flex-col items-center gap-2 ${SLOT_WIDTH_CLASS}`}>
@@ -49,7 +51,12 @@ export default function ForgeMaterialSlot({ entries, templates, onRemoveEntry }:
         <p className="text-center text-[10px] uppercase leading-tight tracking-wide text-slate-500">Material</p>
       </div>
 
-      <div data-drop-zone="material" className="flex flex-col items-center gap-1.5">
+      <div
+        data-drop-zone="material"
+        className={`flex flex-col items-center gap-1.5 rounded-lg p-1 transition-shadow ${
+          isDropTarget ? 'ring-2 ring-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.6)]' : ''
+        }`}
+      >
         {entries.length === 0 && (
           <div className={SLOT_SIZE_CLASS}>
             <InventorySlot slotId="forge-material-empty" filled={false} sizeClassName={SLOT_SIZE_CLASS} emptyHint="Drop item here" />

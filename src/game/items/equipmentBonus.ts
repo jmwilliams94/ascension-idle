@@ -94,20 +94,19 @@ export function previewSellPrice(price: number, qualityTier: string): number {
 }
 
 // Client-side mirror of salvage_item's SQL case statement (see
-// 20260807030000_add_salvage_item.sql) — must stay in sync. Forge's Salvage
-// tab: no gold, roughly double the AP sell_item grants for the same tier,
-// plus a token 1 AP for Normal (sell_item gives 0) since Salvage's whole
-// point is extracting AP value from otherwise-junk gear.
+// 20260807060000_salvage_ap_table_and_bonus_rebalance.sql) — must stay in
+// sync. Forge's Salvage tab: no gold, exactly the same per-tier AP as
+// sell_item (Salvage's only difference from Sell is forfeiting the gold).
 const SALVAGE_AP_BY_QUALITY: Record<string, number> = {
-  normal: 1,
-  tempered: 2,
-  infused: 4,
-  radiant: 6,
-  ascended: 8,
+  normal: 0,
+  tempered: 1,
+  infused: 2,
+  radiant: 3,
+  ascended: 4,
 }
 
 export function previewSalvageApValue(qualityTier: string): number {
-  return SALVAGE_AP_BY_QUALITY[qualityTier] ?? 1
+  return SALVAGE_AP_BY_QUALITY[qualityTier] ?? 0
 }
 
 // Bug fix (2026-07-31): every call site used to pass the template's raw,

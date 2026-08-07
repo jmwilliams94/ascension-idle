@@ -55,7 +55,14 @@ export default function BankPanel({ characterId }: { characterId: string }) {
         </div>
 
         <div className="min-w-0">
-          <BankSquares characterId={characterId} />
+          {/* Reported by a user as "I withdrew 40 Comets and have no idea
+              what happened to them" — they were almost certainly still on
+              the Account/Storage toggle (which never shows currency at all,
+              only banked gear) when a withdrawal landed in their Character
+              Inventory instead. Auto-switching to the Character view right
+              when something new lands there makes the result impossible to
+              miss, on top of the clearer toast wording below. */}
+          <BankSquares characterId={characterId} onWithdrawLandedInInventory={() => setView('inventory')} />
         </div>
       </div>
     </div>

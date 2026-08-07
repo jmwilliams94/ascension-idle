@@ -91,6 +91,20 @@ function useDragDropContext(): DragDropContextValue {
   return context
 }
 
+// Snap-highlight feedback (2026-08-07, confirmed with the user: "add a
+// highlight around the box that is being dragged into once the item is
+// close enough so that it can snap into place"). ActiveDrag.overTarget is
+// already recomputed on every pointer move by resolveDropTarget's own
+// ghost-aware hit test — this just exposes "is MY zone the current one" to
+// whichever drop-zone component wants to render a highlight, so nothing
+// about the hit-testing itself needs to change. Returns false (never
+// throws) outside a DragDropProvider, so a component can call this
+// unconditionally even on a page with no active drag session.
+export function useIsDropTarget(zoneKey: string): boolean {
+  const context = useContext(DragDropContext)
+  return context?.activeDrag?.overTarget === zoneKey
+}
+
 interface UseDraggableTileArgs {
   enabled: boolean
   payload: DragPayload | null

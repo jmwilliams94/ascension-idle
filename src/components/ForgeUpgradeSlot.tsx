@@ -1,5 +1,5 @@
 import InventorySlot, { SLOT_LABEL_HEIGHT_CLASS, SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
-import { useDraggableTile } from './dragDropContext'
+import { useDraggableTile, useIsDropTarget } from './dragDropContext'
 import { buildGearTooltip, formatItemDisplayName, formatItemLevel, getGearIconSrc, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
 import type { ItemInstance } from '../game/items/useInventoryStore'
 import type { ItemTemplate } from '../game/items/useItemTemplatesStore'
@@ -27,6 +27,7 @@ export default function ForgeUpgradeSlot({ item, template, onRemove }: ForgeUpgr
     payload: item ? { id: item.id, icon, iconSrc, qualityColor: getQualityColor(item.quality_tier) } : null,
     onDrop: () => onRemove(),
   })
+  const isDropTarget = useIsDropTarget('upgrade')
 
   return (
     <div className={`flex flex-col items-center gap-2 ${SLOT_WIDTH_CLASS}`}>
@@ -34,7 +35,12 @@ export default function ForgeUpgradeSlot({ item, template, onRemove }: ForgeUpgr
         <p className="text-center text-[10px] uppercase leading-tight tracking-wide text-slate-500">Upgrade Slot</p>
       </div>
 
-      <div data-drop-zone="upgrade" className={`${SLOT_SIZE_CLASS} shrink-0`}>
+      <div
+        data-drop-zone="upgrade"
+        className={`${SLOT_SIZE_CLASS} shrink-0 rounded-lg transition-shadow ${
+          isDropTarget ? 'ring-2 ring-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.6)]' : ''
+        }`}
+      >
         <InventorySlot
           slotId="forge-upgrade-slot"
           filled={Boolean(item)}

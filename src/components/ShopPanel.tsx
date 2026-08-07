@@ -167,7 +167,10 @@ export default function ShopPanel() {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="space-y-3">
-        <div className="grid grid-cols-2 grid-rows-2 gap-3">
+        {/* Capped + centered at lg+ only (reported too large on desktop) —
+            below lg the grid stays full-width, unchanged, since only the
+            desktop sizing was flagged. */}
+        <div className="grid grid-cols-2 grid-rows-2 gap-3 lg:mx-auto lg:max-w-[260px]">
           {SHOP_TABS.map((entry) => (
             <button
               key={entry.id}

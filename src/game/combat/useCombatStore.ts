@@ -220,15 +220,17 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     const attackIntervalMs = 1000 / derived.attackSpeed
 
     // Account-wide Achievements combat buffs (2026-08-06, Achievements
-    // rework; drop bonus made per-zone/quality-only 2026-08-07) — PREDICTIVE
-    // ONLY, same caveat as the rest of this file's kill-branch numbers:
-    // mirrors resolve-combat's own accountAttackBonusPct/accountDropMultiplier
-    // application exactly, so the log/preview stays consistent with what the
-    // next server reconciliation will actually confirm. The drop bonus is
-    // now scoped to whichever zone the currently-fought monster belongs to,
-    // not a flat account-wide number.
-    const { accountAttackBonusPct, accountZoneDropBonusPct } = usePlayerRecordStore.getState()
+    // rework; both made per-zone/quality-only 2026-08-07 — attack bonus was
+    // a flat account-wide number applying to every fight, which was never
+    // the intent) — PREDICTIVE ONLY, same caveat as the rest of this file's
+    // kill-branch numbers: mirrors resolve-combat's own accountAttackBonusPct
+    // /accountDropMultiplier application exactly, so the log/preview stays
+    // consistent with what the next server reconciliation will actually
+    // confirm. Both bonuses are scoped to whichever zone the
+    // currently-fought monster belongs to, not a flat account-wide number.
+    const { accountZoneAttackBonusPct, accountZoneDropBonusPct } = usePlayerRecordStore.getState()
     const currentZoneId = zoneIdForMonster(state.monsterTypeId)
+    const accountAttackBonusPct = currentZoneId ? (accountZoneAttackBonusPct[currentZoneId] ?? 0) : 0
     const zoneDropBonusPct = currentZoneId ? (accountZoneDropBonusPct[currentZoneId] ?? 0) : 0
     const accountDropMultiplier = 1 + zoneDropBonusPct / 100
     const attackMidpoint = (derived.physicalAttack + derived.magicAttack) * (1 + accountAttackBonusPct / 100)
