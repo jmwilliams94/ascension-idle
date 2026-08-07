@@ -255,6 +255,11 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Umbral Necklace': `${import.meta.env.BASE_URL}item-icons/umbral-necklace.png`,
   'Reverie Necklace': `${import.meta.env.BASE_URL}item-icons/reverie-necklace.png`,
   'Cyclone Necklace': `${import.meta.env.BASE_URL}item-icons/cyclone-necklace.png`,
+  'Tin Ring': `${import.meta.env.BASE_URL}item-icons/tin-ring.png`,
+  'Brass Ring': `${import.meta.env.BASE_URL}item-icons/brass-ring.png`,
+  'Pewter Ring': `${import.meta.env.BASE_URL}item-icons/pewter-ring.png`,
+  'Gilded Ring': `${import.meta.env.BASE_URL}item-icons/gilded-ring.png`,
+  'Violet Ring': `${import.meta.env.BASE_URL}item-icons/violet-ring.png`,
 }
 
 export function getGearIconSrc(templateName: string | undefined): string | undefined {

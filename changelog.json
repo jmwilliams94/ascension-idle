@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.64.6",
+    "date": "2026-08-07",
+    "changes": [
+      "Added real icons for Tin, Brass, Pewter, Gilded, and Violet Ring"
+    ]
+  },
+  {
     "version": "1.64.5",
     "date": "2026-08-07",
     "changes": [
