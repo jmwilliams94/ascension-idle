@@ -102,9 +102,10 @@ export function findNextTemplateInChain(templates: ItemTemplate[], current: Item
 
 // Composition (see CLAUDE.md's Gear system section) — a points accumulator with
 // guaranteed progress and no RNG, distinct from Quality/Level Upgrade above.
-// Mirrors composition_feed's SQL exactly (supabase/migrations/20260728000000_add_composition.sql)
+// Mirrors composition_feed's SQL exactly (supabase/migrations/20260728000000_add_composition.sql,
+// tier bound raised 4 -> 9 in 20260807080000_expand_composition_stone_tiers_to_9.sql)
 // — keep in sync.
-export const COMPOSITION_STONE_TIERS = [1, 2, 3, 4] as const
+export const COMPOSITION_STONE_TIERS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const
 
 // Confirmed formula: a stone of tier N is worth 10 * 3^(N-1) points (10, 30, 90,
 // 270...); a fuel item's own composition_level values the same way, except Normal
@@ -177,12 +178,32 @@ export function parseStoneDragId(id: string): number | null {
   return (COMPOSITION_STONE_TIERS as readonly number[]).includes(tier) ? tier : null
 }
 
+// Real art (2026-08-07) for all 9 tiers, in ascending order of rarity
+// (rough stone -> clear -> amber -> blue crystal -> red gem -> green gem ->
+// cosmic/starfield orb -> purple crystal -> gold diamond).
+const STONE_ICON_SRC_BY_TIER: Partial<Record<number, string>> = {
+  1: `${import.meta.env.BASE_URL}item-icons/composition-stone-1.png`,
+  2: `${import.meta.env.BASE_URL}item-icons/composition-stone-2.png`,
+  3: `${import.meta.env.BASE_URL}item-icons/composition-stone-3.png`,
+  4: `${import.meta.env.BASE_URL}item-icons/composition-stone-4.png`,
+  5: `${import.meta.env.BASE_URL}item-icons/composition-stone-5.png`,
+  6: `${import.meta.env.BASE_URL}item-icons/composition-stone-6.png`,
+  7: `${import.meta.env.BASE_URL}item-icons/composition-stone-7.png`,
+  8: `${import.meta.env.BASE_URL}item-icons/composition-stone-8.png`,
+  9: `${import.meta.env.BASE_URL}item-icons/composition-stone-9.png`,
+}
+
+export function getStoneIconSrc(tier: number): string | undefined {
+  return STONE_ICON_SRC_BY_TIER[tier]
+}
+
 // Universal Diablo/PoE-style tooltip content for a single stone — see
 // buildGearTooltip in equipmentBonus.ts for the gear equivalent.
 export function buildStoneTooltip(tier: number): ItemTooltipData {
   return {
     title: `+${tier} Stone`,
     icon: '🔷',
+    iconSrc: getStoneIconSrc(tier),
     iconColor: MATERIAL_COLOR,
     lines: ['Composition material'],
     stats: [`${compositionPointValue(tier)} pts`],

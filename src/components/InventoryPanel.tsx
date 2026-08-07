@@ -34,6 +34,7 @@ import {
   fallenStarScrollDragId,
   cometDragId,
   cometScrollDragId,
+  getStoneIconSrc,
   stoneDragId,
 } from '../game/items/forgeCosts'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
@@ -811,6 +812,7 @@ export default function InventoryPanel({
               filled: true as const,
               sizeClassName: SLOT_SIZE_CLASS,
               icon: '🔷',
+              iconSrc: getStoneIconSrc(tier),
               qualityColor: MATERIAL_COLOR,
               label: `+${tier} Stone — ${compositionPointValue(tier)} pts`,
               tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildStoneTooltip(tier),
@@ -822,7 +824,7 @@ export default function InventoryPanel({
                 key={dragId}
                 {...commonProps}
                 dragEnabled
-                dragPayload={{ id: dragId, icon: '🔷' }}
+                dragPayload={{ id: dragId, icon: '🔷', iconSrc: getStoneIconSrc(tier), qualityColor: MATERIAL_COLOR }}
                 onDrop={handleTileDrop}
                 onClick={() => toggleSlot({ kind: 'stone', dragId, tier })}
               />
@@ -1152,10 +1154,14 @@ export default function InventoryPanel({
         <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
           <div className="flex items-center gap-3">
             <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 p-1 text-lg"
               style={{ borderColor: MATERIAL_COLOR, backgroundColor: `${MATERIAL_COLOR}22` }}
             >
-              🔷
+              {getStoneIconSrc(selectedStoneTier) ? (
+                <img src={getStoneIconSrc(selectedStoneTier)} alt="" className="h-full w-full object-contain" />
+              ) : (
+                '🔷'
+              )}
             </div>
             <div>
               <p className="text-sm font-medium text-slate-200">+{selectedStoneTier} Stone</p>

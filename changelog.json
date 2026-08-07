@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.66.0",
+    "date": "2026-08-07",
+    "changes": [
+      "Composition Stones now go up to Tier 9 (was capped at Tier 4), with real icon art for every tier"
+    ]
+  },
+  {
     "version": "1.65.3",
     "date": "2026-08-07",
     "changes": [

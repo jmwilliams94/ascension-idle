@@ -11,6 +11,7 @@ import {
   FALLEN_STAR_ICON_SRC,
   FALLEN_STAR_COLOR,
   MATERIAL_COLOR,
+  getStoneIconSrc,
 } from '../game/items/forgeCosts'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
@@ -147,11 +148,10 @@ export default function BankSquares({
             key={tier}
             label={`Tier ${tier} Stone`}
             value={stonesBanked[String(tier)] ?? 0}
-            // No dedicated stone icon art yet (see forgeCosts.ts's own
-            // buildStoneTooltip, which uses this same emoji) — the corner
-            // "+N" badge is what tells the 4 otherwise-identical stone
-            // squares apart at a glance.
+            // Real art for all 9 tiers (see forgeCosts.ts's getStoneIconSrc) —
+            // the corner "+N" badge still tells them apart at a glance.
             icon="🔷"
+            iconSrc={getStoneIconSrc(tier)}
             cornerLabel={`+${tier}`}
             accentColor={MATERIAL_COLOR}
             selected={selected?.kind === 'stoneTier' && selected.tier === tier}
@@ -511,7 +511,7 @@ function StoneTierPanel({
       return
     }
 
-    showGainToast({ label: `Tier ${tier} Stone`, amount: 1, icon: '🔷', color: MATERIAL_COLOR })
+    showGainToast({ label: `Tier ${tier} Stone`, amount: 1, icon: '🔷', iconSrc: getStoneIconSrc(tier), color: MATERIAL_COLOR })
     onDone()
   }
 
@@ -561,7 +561,7 @@ function CompositionPointsPanel({
       return
     }
 
-    showGainToast({ label: `Tier ${tier} Stone`, amount: 1, icon: '🔷', color: MATERIAL_COLOR })
+    showGainToast({ label: `Tier ${tier} Stone`, amount: 1, icon: '🔷', iconSrc: getStoneIconSrc(tier), color: MATERIAL_COLOR })
     onDone()
   }
 

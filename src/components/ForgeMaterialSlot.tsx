@@ -11,6 +11,7 @@ import {
   buildCometTooltip,
   buildStoneTooltip,
   compositionPointValue,
+  getStoneIconSrc,
 } from '../game/items/forgeCosts'
 import type { ItemInstance } from '../game/items/useInventoryStore'
 import type { ItemTemplate } from '../game/items/useItemTemplatesStore'
@@ -89,6 +90,7 @@ export default function ForgeMaterialSlot({ entries, templates, onRemoveEntry }:
                   filled
                   sizeClassName={SLOT_SIZE_CLASS}
                   icon="🔷"
+                  iconSrc={getStoneIconSrc(entry.tier)}
                   qualityColor={MATERIAL_COLOR}
                   badge={`${compositionPointValue(entry.tier)}`}
                   label={`+${entry.tier} Stone`}
