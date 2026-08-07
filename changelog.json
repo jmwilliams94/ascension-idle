@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.67.3",
+    "date": "2026-08-08",
+    "changes": [
+      "Laid the groundwork for a Gem socketing system (Drake, Ember, Bastion, and Iris Gems) — not yet obtainable in-game"
+    ]
+  },
+  {
     "version": "1.67.2",
     "date": "2026-08-07",
     "changes": [
