@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.68.2",
+    "date": "2026-08-08",
+    "changes": [
+      "Fixed a leftover checkerboard artifact on the Tempered and Ascended Drake Gem icons"
+    ]
+  },
+  {
     "version": "1.68.1",
     "date": "2026-08-08",
     "changes": [
