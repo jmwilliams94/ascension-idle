@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.67.0",
+    "date": "2026-08-07",
+    "changes": [
+      "Fighting monsters well above your level now hits noticeably harder — your Defense counts for a lot less in those fights",
+      "Added a clear on-screen warning while you're knocked out and waiting to revive",
+      "Achievements that used to reward a Fallen Star now reward a Comet Scroll instead",
+      "Comet Scroll and Fallen Star Scroll now have an \"Open\" option right in their tooltip instead of a separate card",
+      "Simplified the Account Bank: Comets/Fallen Stars now just Bundle/Bank/Bank All, and Composition/Gear points use a cleaner tier-picker instead of a wall of squares"
+    ]
+  },
+  {
     "version": "1.66.0",
     "date": "2026-08-07",
     "changes": [

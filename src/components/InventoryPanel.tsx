@@ -162,11 +162,13 @@ export default function InventoryPanel({
   const mailEntries = useMailStore((state) => state.entries)
   const hasUnclaimedMail = (itemId: string) => mailEntries.some((entry) => entry.item_id === itemId)
   const depositItemToStorage = useBankStore((state) => state.depositItemToStorage)
-  const depositStoneItem = useBankStore((state) => state.depositStoneItem)
-  const depositCurrencyItem = useBankStore((state) => state.depositCurrencyItem)
   // "Bank" (liquidate to currency/points), alongside "Deposit" (physical
-  // storage) above — the other half of the Bank tab rework's per-item
-  // Deposit/Bank choice (2026-08-03, confirmed with the user).
+  // storage, gear only now — see below) — the other half of the Bank tab
+  // rework's per-item Deposit/Bank choice (2026-08-03, confirmed with the
+  // user). Stone/Comet/Fallen-Star physical Deposit was retired 2026-08-07
+  // (confirmed with the user) — Bank/Bank All (liquidate to points) plus
+  // Bundle (Comet/Fallen Star only) are now the only ways to move those
+  // through the Bank tab; gear keeps both Deposit and Bank.
   const depositItemAsComposition = useBankStore((state) => state.depositItemAsComposition)
   const depositStone = useBankStore((state) => state.depositStone)
   const depositCurrency = useBankStore((state) => state.depositCurrency)
@@ -194,6 +196,11 @@ export default function InventoryPanel({
   // rather than its own separate card). Scroll's own Unbundle card is
   // unaffected — only the Comet/Fallen Star Bundle action moved.
   const [bundlePopoverAnchorRect, setBundlePopoverAnchorRect] = useState<DOMRect | null>(null)
+  // Comet/Fallen Star Scroll "Open" popover — same click-opened
+  // TooltipActionPopover shell as Bundle above, replacing the old
+  // always-below-the-grid Unbundle card (2026-08-07, per the user: move it
+  // into the tooltip like Bundle already is).
+  const [scrollPopoverAnchorRect, setScrollPopoverAnchorRect] = useState<DOMRect | null>(null)
   const [bankDepositBusy, setBankDepositBusy] = useState(false)
   const [bankDepositError, setBankDepositError] = useState<string | null>(null)
   const [sellBusy, setSellBusy] = useState(false)
@@ -225,7 +232,8 @@ export default function InventoryPanel({
     matchesSelection &&
     ((equipPopoverEnabled && popoverAnchorRect !== null) ||
       (enableBankDeposit && bankPopoverAnchorRect !== null) ||
-      (!enableBankDeposit && bundlePopoverAnchorRect !== null))
+      (!enableBankDeposit && bundlePopoverAnchorRect !== null) ||
+      scrollPopoverAnchorRect !== null)
 
   const visiblePotionStacks = potionStacks.filter((stack) => stack.count > 0)
 
@@ -367,6 +375,13 @@ export default function InventoryPanel({
     setBundlePopoverAnchorRect(null)
   }
 
+  // Scroll popover-only — dismiss action, also used after a successful Open
+  // from inside the popover.
+  const closeScrollPopover = () => {
+    setSelectedSlot(null)
+    setScrollPopoverAnchorRect(null)
+  }
+
   // Every enableBankDeposit handler below follows the same shape: deposit,
   // clear the popover on success, surface an error and leave it open on
   // failure. "All" variants are sequential, not Promise.all (deliberately
@@ -409,85 +424,6 @@ export default function InventoryPanel({
     } else {
       closeBankPopover()
     }
-  }
-
-  const handleBankDepositStone = async (tier: number) => {
-    if (!characterId) {
-      return
-    }
-    setBankDepositError(null)
-    setBankDepositBusy(true)
-    const result = await depositStoneItem(characterId, tier, 1)
-    setBankDepositBusy(false)
-
-    if (!result.ok) {
-      setBankDepositError("Couldn't deposit that stone.")
-      return
-    }
-
-    closeBankPopover()
-  }
-
-  // "Deposit All" from a stone tile only covers stones of that SAME tier —
-  // a deliberate, predictable scoping (matches "every eligible one of this
-  // same kind" from the tile that was actually clicked), not every tier at once.
-  const handleBankDepositAllStone = async (tier: number) => {
-    if (!characterId) {
-      return
-    }
-    const owned = stones[String(tier)] ?? 0
-    if (owned <= 0) {
-      return
-    }
-    setBankDepositError(null)
-    setBankDepositBusy(true)
-    const result = await depositStoneItem(characterId, tier, owned)
-    setBankDepositBusy(false)
-
-    if (!result.ok) {
-      setBankDepositError("Couldn't deposit those stones.")
-      return
-    }
-
-    closeBankPopover()
-  }
-
-  const handleBankDepositCurrency = async (currencyType: 'comet' | 'fallen_star') => {
-    if (!characterId) {
-      return
-    }
-    setBankDepositError(null)
-    setBankDepositBusy(true)
-    const result = await depositCurrencyItem(characterId, currencyType, 1)
-    setBankDepositBusy(false)
-
-    if (!result.ok) {
-      setBankDepositError(`Couldn't deposit that ${currencyType === 'comet' ? 'Comet' : 'Fallen Star'}.`)
-      return
-    }
-
-    closeBankPopover()
-  }
-
-  const handleBankDepositAllCurrency = async (currencyType: 'comet' | 'fallen_star') => {
-    if (!characterId) {
-      return
-    }
-    const owned = currencyType === 'comet' ? comets : fallenStars
-    if (owned <= 0) {
-      return
-    }
-    setBankDepositError(null)
-    setBankDepositBusy(true)
-    const result = await depositCurrencyItem(characterId, currencyType, owned)
-    setBankDepositBusy(false)
-
-    if (!result.ok) {
-      setBankDepositError(`Couldn't deposit your ${currencyType === 'comet' ? 'Comets' : 'Fallen Stars'}.`)
-      return
-    }
-
-    closeBankPopover()
   }
 
   // "Bank" handlers — liquidate into currency/points instead of physical
@@ -635,6 +571,10 @@ export default function InventoryPanel({
     setSelectedSlot(null)
   }
 
+  // Reused inside the Bank tab's currency popover too now (2026-08-07,
+  // confirmed with the user — Bundle/Bank/Bank All replaces the old Deposit/
+  // Deposit All/Bank/Bank All there), so it closes whichever popover state
+  // is actually active rather than always the non-Bank one.
   const handleBundle = async (currencyType: 'comet' | 'fallen_star') => {
     if (!characterId) {
       return
@@ -649,7 +589,11 @@ export default function InventoryPanel({
       return
     }
 
-    closeBundlePopover()
+    if (enableBankDeposit) {
+      closeBankPopover()
+    } else {
+      closeBundlePopover()
+    }
   }
 
   const handleUnbundle = async (currencyType: 'comet' | 'fallen_star') => {
@@ -666,7 +610,7 @@ export default function InventoryPanel({
       return
     }
 
-    setSelectedSlot(null)
+    closeScrollPopover()
   }
 
 
@@ -756,7 +700,7 @@ export default function InventoryPanel({
             <span className="text-xs text-amber-400">{bankDepositError}</span>
           )}
 
-          {!enableBankDeposit && scrollError && <span className="text-xs text-amber-400">{scrollError}</span>}
+          {scrollError && <span className="text-xs text-amber-400">{scrollError}</span>}
         </div>
 
         {/* overflow-x-auto is a defensive backstop, not the primary fix — the
@@ -964,6 +908,8 @@ export default function InventoryPanel({
               return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
             }
 
+            const isSelected = selectedSlot?.kind === 'scroll' && selectedSlot.dragId === dragId
+
             const commonProps = {
               slotId: dragId,
               filled: true as const,
@@ -971,25 +917,31 @@ export default function InventoryPanel({
               iconSrc: COMET_SCROLL_ICON_SRC,
               qualityColor: MATERIAL_COLOR,
               label: 'Comet Scroll',
-              tooltip: buildCometScrollTooltip(),
-              selected: selectedSlot?.kind === 'scroll' && selectedSlot.dragId === dragId,
+              tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildCometScrollTooltip(),
+              selected: isSelected,
             }
 
-            if (onTileDrop) {
-              return (
-                <DraggableInventorySlot
-                  key={dragId}
-                  {...commonProps}
-                  dragEnabled
-                  dragPayload={{ id: dragId, icon: '📜', iconSrc: COMET_SCROLL_ICON_SRC, qualityColor: MATERIAL_COLOR }}
-                  onDrop={handleTileDrop}
-                  onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'comet' })}
-                />
-              )
-            }
+            const scrollSlot = onTileDrop ? (
+              <DraggableInventorySlot
+                key={dragId}
+                {...commonProps}
+                dragEnabled
+                dragPayload={{ id: dragId, icon: '📜', iconSrc: COMET_SCROLL_ICON_SRC, qualityColor: MATERIAL_COLOR }}
+                onDrop={handleTileDrop}
+                onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'comet' })}
+              />
+            ) : (
+              <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'comet' })} />
+            )
 
             return (
-              <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'comet' })} />
+              <div
+                key={dragId}
+                data-tooltip-action-anchor
+                onClick={(event) => setScrollPopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
+              >
+                {scrollSlot}
+              </div>
             )
           })}
 
@@ -998,6 +950,8 @@ export default function InventoryPanel({
               return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
             }
 
+            const isSelected = selectedSlot?.kind === 'scroll' && selectedSlot.dragId === dragId
+
             const commonProps = {
               slotId: dragId,
               filled: true as const,
@@ -1005,29 +959,35 @@ export default function InventoryPanel({
               iconSrc: FALLEN_STAR_SCROLL_ICON_SRC,
               qualityColor: FALLEN_STAR_COLOR,
               label: 'Fallen Star Scroll',
-              tooltip: buildFallenStarScrollTooltip(),
-              selected: selectedSlot?.kind === 'scroll' && selectedSlot.dragId === dragId,
+              tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildFallenStarScrollTooltip(),
+              selected: isSelected,
             }
 
-            if (onTileDrop) {
-              return (
-                <DraggableInventorySlot
-                  key={dragId}
-                  {...commonProps}
-                  dragEnabled
-                  dragPayload={{ id: dragId, icon: '📜', iconSrc: FALLEN_STAR_SCROLL_ICON_SRC, qualityColor: FALLEN_STAR_COLOR }}
-                  onDrop={handleTileDrop}
-                  onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'fallen_star' })}
-                />
-              )
-            }
-
-            return (
+            const scrollSlot = onTileDrop ? (
+              <DraggableInventorySlot
+                key={dragId}
+                {...commonProps}
+                dragEnabled
+                dragPayload={{ id: dragId, icon: '📜', iconSrc: FALLEN_STAR_SCROLL_ICON_SRC, qualityColor: FALLEN_STAR_COLOR }}
+                onDrop={handleTileDrop}
+                onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'fallen_star' })}
+              />
+            ) : (
               <InventorySlot
                 key={dragId}
                 {...commonProps}
                 onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'fallen_star' })}
               />
+            )
+
+            return (
+              <div
+                key={dragId}
+                data-tooltip-action-anchor
+                onClick={(event) => setScrollPopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
+              >
+                {scrollSlot}
+              </div>
             )
           })}
 
@@ -1188,42 +1148,19 @@ export default function InventoryPanel({
         />
       )}
 
-      {selectedScrollType && (
-        <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
-          <div className="flex items-center gap-3">
-            <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 p-1"
-              style={{
-                borderColor: selectedScrollType === 'comet' ? MATERIAL_COLOR : FALLEN_STAR_COLOR,
-                backgroundColor: `${selectedScrollType === 'comet' ? MATERIAL_COLOR : FALLEN_STAR_COLOR}22`,
-              }}
-            >
-              <img
-                src={selectedScrollType === 'comet' ? COMET_SCROLL_ICON_SRC : FALLEN_STAR_SCROLL_ICON_SRC}
-                alt=""
-                className="h-full w-full object-contain"
-              />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-200">
-                {selectedScrollType === 'comet' ? 'Comet Scroll' : 'Fallen Star Scroll'}
-              </p>
-              <p className="text-xs text-slate-500">
-                {selectedScrollType === 'comet' ? cometScrolls : fallenStarScrolls} owned total
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            disabled={scrollBusy}
-            onClick={() => void handleUnbundle(selectedScrollType)}
-            className="mt-3 w-full rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {scrollBusy ? 'Opening…' : 'Open (→ 10 loose)'}
-          </button>
-          {scrollError && <p className="mt-2 text-xs text-amber-400">{scrollError}</p>}
-        </div>
+      {selectedScrollType && scrollPopoverAnchorRect && (
+        <TooltipActionPopover
+          anchorRect={scrollPopoverAnchorRect}
+          tooltip={selectedScrollType === 'comet' ? buildCometScrollTooltip() : buildFallenStarScrollTooltip()}
+          actions={[
+            {
+              label: scrollBusy ? 'Opening…' : 'Open (→ 10 loose)',
+              onClick: () => void handleUnbundle(selectedScrollType),
+              disabled: scrollBusy,
+            },
+          ]}
+          onClose={closeScrollPopover}
+        />
       )}
 
       {selectedPotionStack && (
@@ -1414,16 +1351,6 @@ export default function InventoryPanel({
           tooltip={buildStoneTooltip(selectedStoneTier)}
           actions={[
             {
-              label: bankDepositBusy ? 'Depositing…' : 'Deposit',
-              onClick: () => void handleBankDepositStone(selectedStoneTier),
-              disabled: bankDepositBusy,
-            },
-            {
-              label: 'Deposit All',
-              onClick: () => void handleBankDepositAllStone(selectedStoneTier),
-              disabled: bankDepositBusy,
-            },
-            {
               label: bankDepositBusy ? 'Banking…' : 'Bank',
               onClick: () => void handleBankStone(selectedStoneTier),
               disabled: bankDepositBusy,
@@ -1444,14 +1371,9 @@ export default function InventoryPanel({
           tooltip={selectedCurrencyType === 'comet' ? buildCometTooltip() : buildFallenStarTooltip()}
           actions={[
             {
-              label: bankDepositBusy ? 'Depositing…' : 'Deposit',
-              onClick: () => void handleBankDepositCurrency(selectedCurrencyType),
-              disabled: bankDepositBusy,
-            },
-            {
-              label: 'Deposit All',
-              onClick: () => void handleBankDepositAllCurrency(selectedCurrencyType),
-              disabled: bankDepositBusy,
+              label: scrollBusy ? 'Bundling…' : 'Bundle (10 → 1 Scroll)',
+              onClick: () => void handleBundle(selectedCurrencyType),
+              disabled: (selectedCurrencyType === 'comet' ? comets : fallenStars) < 10 || scrollBusy,
             },
             {
               label: bankDepositBusy ? 'Banking…' : 'Bank',

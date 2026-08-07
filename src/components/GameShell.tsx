@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import CombatEngine from '../game/combat/CombatEngine'
 import QuiverWarningHud from './QuiverWarningHud'
 import InventoryFullWarningHud from './InventoryFullWarningHud'
+import KnockoutHud from './KnockoutHud'
 import CombatPage from './CombatPage'
 import EquipmentTabPage from './EquipmentTabPage'
 import ExpBar from './ExpBar'
@@ -324,6 +325,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
           </div>
           <QuiverWarningHud />
           <InventoryFullWarningHud />
+          <KnockoutHud />
         </div>
 
         {/* Renders nothing when there's no pet to celebrate — safe to mount

@@ -34,10 +34,10 @@ interface ClaimCharacterTierResult {
   kills?: number
   claimed_tier_index?: number
   comets_granted?: number
-  fallen_stars_granted?: number
+  comet_scrolls_granted?: number
   lottery_tickets_granted?: number
   comets_remaining?: number
-  fallen_stars_remaining?: number
+  comet_scrolls_remaining?: number
   lottery_tickets_remaining?: number
   item?: ItemInstance
 }
@@ -138,8 +138,8 @@ export const useAchievementsStore = create<AchievementsState>((set, get) => ({
       if (typeof result.comets_remaining === 'number') {
         useCurrencyStore.getState().setComets(result.comets_remaining)
       }
-      if (typeof result.fallen_stars_remaining === 'number') {
-        useCurrencyStore.getState().setFallenStars(result.fallen_stars_remaining)
+      if (typeof result.comet_scrolls_remaining === 'number') {
+        useCurrencyStore.getState().setCometScrolls(result.comet_scrolls_remaining)
       }
       if (typeof result.lottery_tickets_remaining === 'number') {
         useCurrencyStore.getState().setLotteryTickets(result.lottery_tickets_remaining)

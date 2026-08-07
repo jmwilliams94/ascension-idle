@@ -242,10 +242,14 @@ const PET_DROP_CHANCE = 1 / 25000
 // monsters (confirmed by CLAUDE.md's Zones section), so 5 monsters x 6 tiers
 // = 30 possible tier-milestones per zone, uniformly — this even 6-step
 // ladder (5/10/15/20/25/30) mirrors every other tier system in this game.
-// Fallen Star reward per zone tier, PLACEHOLDER, escalating — "gives you a
-// Fallen Star or something," per the user's own framing.
+// Comet Scroll reward per zone tier, PLACEHOLDER, escalating (was a Fallen
+// Star reward — switched 2026-08-07, confirmed with the user: every Fallen
+// Star reward on the Achievements system moves to a Comet Scroll instead,
+// same quantities). Granted unconditionally (no Inventory-cap gating, no
+// Loot Holding routing) — a rare, one-time milestone crossing, same
+// "shouldn't silently fail" reasoning as the tier-6 Infused gear reward.
 const ZONE_TIER_COMPLETIONS = [5, 10, 15, 20, 25, 30]
-const ZONE_TIER_FALLEN_STAR_REWARD = [1, 2, 3, 4, 5, 8]
+const ZONE_TIER_COMET_SCROLL_REWARD = [1, 2, 3, 4, 5, 8]
 
 // How many of this zone's 30 possible tier-milestones a set of per-monster
 // kill counts has reached in total, and which zone tier (0-6) that maps to.
@@ -1046,12 +1050,13 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // own header). Recomputes this zone's total tier-completions across its
   // whole 5-monster roster (using the just-written characterKillCount for the
   // fought monster, fresh DB reads for the other 4) and grants any newly
-  // crossed zone-tier Fallen Star reward exactly once, tracked via
-  // character_zone_progress. Folded into fallenStarsGained below (right
-  // before the existing per-unit grant loop) rather than granted separately,
-  // so it goes through the exact same live-mode-room-check/offline-Loot-
-  // Holding routing a dropped Fallen Star already does — no special-casing.
-  let zoneFallenStarReward = 0
+  // crossed zone-tier reward exactly once, tracked via
+  // character_zone_progress. Granted as Comet Scrolls (2026-08-07, was
+  // Fallen Stars) straight through the atomic rewards RPC below —
+  // unconditional, no Inventory-cap gating/Loot-Holding routing, same
+  // "rare, deliberate, shouldn't silently fail" reasoning as the tier-6
+  // Infused gear reward.
+  let zoneCometScrollReward = 0
   if (killsThisWindow > 0 && monster.zone_id) {
     const { data: zoneMonsters } = await db.from('enemy_types').select('id').eq('zone_id', monster.zone_id)
     const zoneMonsterIds = (zoneMonsters ?? []).map((row) => row.id as string)
@@ -1095,7 +1100,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
 
       if (zoneTier > highestGranted) {
         for (let tier = highestGranted + 1; tier <= zoneTier; tier += 1) {
-          zoneFallenStarReward += ZONE_TIER_FALLEN_STAR_REWARD[tier - 1]
+          zoneCometScrollReward += ZONE_TIER_COMET_SCROLL_REWARD[tier - 1]
         }
         const { error: zoneProgressWriteError } = await db
           .from('character_zone_progress')
@@ -1104,9 +1109,9 @@ async function handleResolveCombat(req: Request): Promise<Response> {
             { onConflict: 'character_id,zone_id' },
           )
         if (zoneProgressWriteError) {
-          // The reward is already folded into fallenStarsGained below by this
-          // point — logging is what makes a future occurrence of this class
-          // of bug diagnosable via the Dashboard's Logs tab, not silent.
+          // zoneCometScrollReward is already computed by this point — logging
+          // is what makes a future occurrence of this class of bug
+          // diagnosable via the Dashboard's Logs tab, not silent.
           console.error('resolve-combat character_zone_progress write failed:', zoneProgressWriteError.message)
         }
       }
@@ -1166,10 +1171,9 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // roll time — see the mirror-image reasoning above for gear); offline mode
   // always routes to Loot Holding instead, same "never silently rearrange
   // the bag while the player's away" rule the gear loop above now follows.
-  // Zone Achievement Fallen Star reward (if any) folds in here, right before
-  // the grant loop, so it's treated exactly like a dropped Fallen Star for
-  // inventory-cap purposes — see the zoneFallenStarReward computation above.
-  fallenStarsGained += zoneFallenStarReward
+  // (zoneCometScrollReward, if any, is granted separately below via the
+  // atomic rewards RPC — unconditional, not folded into this loop, since
+  // loot_holding's currency_type doesn't model Scrolls.)
 
   let cometsToGrant = 0
   for (let i = 0; i < cometsGained; i += 1) {
@@ -1217,6 +1221,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       p_level: level,
       p_comet_delta: cometsToGrant,
       p_fallen_star_delta: fallenStarsToGrant,
+      p_comet_scroll_delta: zoneCometScrollReward,
       p_resolved_at: new Date(now).toISOString(),
     })
     .single()
@@ -1234,6 +1239,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const newGold = rewardRow?.gold ?? character.gold + goldGained
   const newComets = rewardRow?.comet_count ?? character.comet_count + cometsToGrant
   const newFallenStars = rewardRow?.fallen_star_count ?? character.fallen_star_count + fallenStarsToGrant
+  const newCometScrolls = rewardRow?.comet_scroll_count ?? character.comet_scroll_count + zoneCometScrollReward
 
   return json({
     ok: true,
@@ -1252,6 +1258,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       level,
       comets: newComets,
       fallenStars: newFallenStars,
+      cometScrolls: newCometScrolls,
     },
     leveledUp: level > character.level,
     itemsGranted,

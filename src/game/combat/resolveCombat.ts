@@ -28,7 +28,7 @@ export interface ResolveCombatResult {
   error?: string
   elapsedMs?: number
   gained?: { kills: number; rareKills: number; gold: number; exp: number; comets: number; fallenStars: number }
-  character?: { gold: number; exp: number; level: number; comets: number; fallenStars: number }
+  character?: { gold: number; exp: number; level: number; comets: number; fallenStars: number; cometScrolls: number }
   leveledUp?: boolean
   itemsGranted?: ItemInstance[]
   itemsHeld?: { template_id: string }[]
@@ -65,6 +65,7 @@ export async function resolveCombat(characterId: string, mode: ResolveCombatMode
   useProgressionStore.getState().applyServerCombatResult(result.character)
   useCurrencyStore.getState().setComets(result.character.comets)
   useCurrencyStore.getState().setFallenStars(result.character.fallenStars)
+  useCurrencyStore.getState().setCometScrolls(result.character.cometScrolls)
 
   for (const item of result.itemsGranted ?? []) {
     useInventoryStore.getState().addItem(item)

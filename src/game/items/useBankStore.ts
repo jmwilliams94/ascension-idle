@@ -16,13 +16,6 @@ interface BankItemResult {
   bank_count?: number
 }
 
-interface BankStoneItemResult {
-  ok: boolean
-  error?: 'invalid_tier' | 'invalid_direction' | 'invalid_amount' | 'not_found' | 'not_owner' | 'not_enough_stones'
-  stones?: CompositionStones
-  stones_banked?: CompositionStones
-}
-
 interface DepositItemToStorageResult {
   ok: boolean
   error?: 'item_not_found' | 'not_owner' | 'already_in_bank'
@@ -45,12 +38,16 @@ interface WithdrawItemFromStorageResult {
 //
 // The dead legacy "fungible token" system (warehouse_items, deposit_item/
 // withdraw_item) has been removed entirely — see
-// supabase/migrations/20260803080000_bank_account_wide.sql. What's left is
-// two genuinely different mechanics per bankable type, both real, both
-// still live: physical storage (deposit_item_to_storage/bank_currency_item/
-// bank_stone_item — identity/tier preserved, no points) and liquidation
-// (transfer_stone/deposit_item_as_composition/withdraw_gear_composition —
-// converts into a fungible points pool). See CLAUDE.md's Bank tab section.
+// supabase/migrations/20260803080000_bank_account_wide.sql. Two genuinely
+// different mechanics remain per bankable type: physical storage
+// (deposit_item_to_storage — identity/tier preserved, no points) and
+// liquidation (transfer_stone/deposit_item_as_composition/
+// withdraw_gear_composition — converts into a fungible points pool). See
+// CLAUDE.md's Bank tab section. Physical storage for Comets/Fallen
+// Stars/Stones (bank_currency_item/bank_stone_item) was retired from the UI
+// 2026-08-07 (confirmed with the user) — only Withdraw of already-banked
+// Comet/Fallen Star units survives (withdrawCurrencyItem, still used by
+// BankGrid); stones moved entirely onto the points system.
 export const BANK_SLOT_CAP = 40
 
 type Currency = 'gold' | 'comets' | 'fallen_stars'
@@ -141,10 +138,10 @@ interface BankState {
   // item) — no character-picker UI exists for this pass, matching the
   // confirmed plan scope.
   withdrawItemFromStorage: (itemId: string, characterId: string) => Promise<WithdrawItemFromStorageResult>
-  depositCurrencyItem: (characterId: string, currencyType: BankCurrencyType, amount: number) => Promise<BankItemResult>
+  // Deposit into physical Comet/Fallen Star Bank Storage (bank_currency_item)
+  // was retired 2026-08-07 (confirmed with the user) — Withdraw stays so any
+  // already-banked physical units are still reachable from BankGrid.
   withdrawCurrencyItem: (characterId: string, currencyType: BankCurrencyType, amount: number) => Promise<BankItemResult>
-  depositStoneItem: (characterId: string, tier: number, amount: number) => Promise<BankStoneItemResult>
-  withdrawStoneItem: (characterId: string, tier: number, amount: number) => Promise<BankStoneItemResult>
 }
 
 export const useBankStore = create<BankState>((set, get) => ({
@@ -383,29 +380,6 @@ export const useBankStore = create<BankState>((set, get) => ({
     return result
   },
 
-  depositCurrencyItem: async (characterId, currencyType, amount) => {
-    if (get().occupiedSlotCount() + amount > BANK_SLOT_CAP) {
-      set({ fullMessage: 'Storage is full.' })
-      return { ok: false }
-    }
-
-    set({ busy: true, fullMessage: null })
-    const { data, error } = await supabase.rpc('bank_currency_item', {
-      character_id: characterId,
-      currency_type: currencyType,
-      direction: 'deposit',
-      amount,
-    })
-    set({ busy: false })
-
-    if (error) {
-      console.error('Deposit currency item call failed', error)
-      return { ok: false }
-    }
-
-    return applyBankCurrencyItemResult(currencyType, data as BankItemResult)
-  },
-
   withdrawCurrencyItem: async (characterId, currencyType, amount) => {
     set({ busy: true })
     const { data, error } = await supabase.rpc('bank_currency_item', {
@@ -424,51 +398,6 @@ export const useBankStore = create<BankState>((set, get) => ({
     return applyBankCurrencyItemResult(currencyType, data as BankItemResult)
   },
 
-  depositStoneItem: async (characterId, tier, amount) => {
-    set({ busy: true, fullMessage: null })
-    const { data, error } = await supabase.rpc('bank_stone_item', {
-      character_id: characterId,
-      tier,
-      direction: 'deposit',
-      amount,
-    })
-    set({ busy: false })
-
-    if (error) {
-      console.error('Deposit stone item call failed', error)
-      return { ok: false }
-    }
-
-    const result = data as BankStoneItemResult
-    if (result.ok && result.stones && result.stones_banked) {
-      useCompositionStore.getState().setStones(result.stones)
-      usePlayerRecordStore.getState().setStonesBanked(result.stones_banked)
-    }
-    return result
-  },
-
-  withdrawStoneItem: async (characterId, tier, amount) => {
-    set({ busy: true })
-    const { data, error } = await supabase.rpc('bank_stone_item', {
-      character_id: characterId,
-      tier,
-      direction: 'withdraw',
-      amount,
-    })
-    set({ busy: false })
-
-    if (error) {
-      console.error('Withdraw stone item call failed', error)
-      return { ok: false }
-    }
-
-    const result = data as BankStoneItemResult
-    if (result.ok && result.stones && result.stones_banked) {
-      useCompositionStore.getState().setStones(result.stones)
-      usePlayerRecordStore.getState().setStonesBanked(result.stones_banked)
-    }
-    return result
-  },
 }))
 
 function applyBankCurrencyItemResult(currencyType: BankCurrencyType, result: BankItemResult): BankItemResult {

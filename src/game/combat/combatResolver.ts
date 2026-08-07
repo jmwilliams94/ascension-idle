@@ -75,8 +75,12 @@ const MONSTER_DEFENSE_MULTIPLIER_BY_COLOR: Record<LevelDiffColor, number> = {
 const PLAYER_DEFENSE_MULTIPLIER_BY_COLOR: Record<LevelDiffColor, number> = {
   green: 1,
   white: 1,
-  red: 0.75,
-  black: 0.5,
+  // Steepened 2026-08-07 (confirmed with the user: "a significant enough
+  // reduction to get hit harder by those monsters") — Red halved (was 0.75,
+  // barely a 25% strip) and Black down to a token 10% (was 0.5). May need a
+  // per-class pass later; flat for now.
+  red: 0.5,
+  black: 0.1,
 }
 
 // Outgoing side — the monster's own Defense (see monsterDefense below) is

@@ -23,13 +23,6 @@ import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 // the same call ShopPanel/SalvagePanel's own sell/salvage flows make.
 import { useGainToastStore } from '../game/hud/useGainToastStore'
 
-// Per-transaction slider cap (2026-08-07, confirmed with the user) — the
-// slider always runs 0-40 regardless of how much is actually banked/owned,
-// clamped further down by whatever's actually available to move. Matches
-// the Inventory slot cap so a single Bank action never asks for more than
-// could ever be held as tiles anyway.
-const BANK_ACTION_SLIDER_CAP = 40
-
 type CurrencyId = 'gold' | 'comets' | 'fallen_stars'
 
 // Icon sources for the 3-per-row square redesign below (2026-08-07,
@@ -47,23 +40,16 @@ const CURRENCIES: { id: CurrencyId; label: string }[] = [
   { id: 'fallen_stars', label: 'Fallen Stars' },
 ]
 
-type SelectedSquare =
-  | { kind: 'currency'; id: CurrencyId }
-  | { kind: 'stoneTier'; tier: number }
-  | { kind: 'compositionPoints' }
-  | { kind: 'gearSlot'; slotType: GearSlotType }
-  | null
+type SelectedSquare = { kind: 'currency'; id: CurrencyId } | { kind: 'compositionPoints' } | { kind: 'gearPoints' } | null
 
 function squareKey(square: NonNullable<SelectedSquare>): string {
   switch (square.kind) {
     case 'currency':
       return `currency:${square.id}`
-    case 'stoneTier':
-      return `stoneTier:${square.tier}`
     case 'compositionPoints':
       return 'compositionPoints'
-    case 'gearSlot':
-      return `gearSlot:${square.slotType}`
+    case 'gearPoints':
+      return 'gearPoints'
   }
 }
 
@@ -74,29 +60,37 @@ function squareKey(square: NonNullable<SelectedSquare>): string {
 // BankPanel — these are account-wide totals, independent of which side
 // the main grid is currently showing.
 //
+// Simplified further 2026-08-07 (confirmed with the user) — the individual
+// "Tier N Stone" physical-storage squares (composition_stones_banked) and
+// the six separate per-slot-type "<Slot> Points" squares are gone. Physical
+// stone banking (the "Deposit" side of a stone tile's Bank-tab popover) is
+// retired entirely — Composition Points (a single square, spend-to-withdraw-
+// any-tier via a slider) is now the only way stones move through the Bank.
+// The six gear pools still exist server-side exactly as before (still
+// per-slot-type, still non-fungible across slot types) — "Gear Points" is
+// just one entry point now, a category square with no number of its own
+// that opens a slot-type picker before landing in the same
+// pick-a-tier-with-a-slider withdraw flow Composition Points uses.
+//
 // Each square shows a *different* pool than the physical Bank Storage grid
 // (BankGrid) — these are all liquidated/converted balances (currency
-// Bank balances, banked stone-tile counts, and the two points-conversion
-// pools), not physical item tiles. Depositing into most of these now happens
-// via the per-item "Bank"/"Deposit" popover in the Inventory-side grid
-// (InventoryPanel's enableBankDeposit) instead of from here — clicking a
-// square mostly reveals a Withdraw control, except currency (Gold has no
-// Inventory tile at all, so its own square is the only place to move it
-// either direction) and the two points-conversion pools (nothing to
-// "deposit" directly into a points balance except by spending a stone/gear
-// item via the Bank button — the square only ever spends points, it doesn't
-// mint them).
+// Bank balances and the two points-conversion pools), not physical item
+// tiles. Depositing into most of these now happens via the per-item "Bank"
+// popover in the Inventory-side grid (InventoryPanel's enableBankDeposit)
+// instead of from here — clicking a square only ever reveals a Withdraw
+// control, except currency (Gold has no Inventory tile at all, so its own
+// square is the only place to move it either direction).
 export default function BankSquares({
   characterId,
   onWithdrawLandedInInventory,
 }: {
   characterId: string
   // Called after a withdrawal that actually adds something to the
-  // Character Inventory grid (Comets/Fallen Stars, a physical stone, a
-  // Composition-Points stone, or a Gear-Points item) — lets BankPanel
-  // auto-switch its own toggle to the Character view so the result is
-  // immediately visible, rather than staying on "Account" (which never
-  // shows any of these) and looking like nothing happened.
+  // Character Inventory grid (Comets/Fallen Stars, a Composition-Points
+  // stone, or a Gear-Points item) — lets BankPanel auto-switch its own
+  // toggle to the Character view so the result is immediately visible,
+  // rather than staying on "Account" (which never shows any of these) and
+  // looking like nothing happened.
   onWithdrawLandedInInventory?: () => void
 }) {
   const gold = useProgressionStore((state) => state.gold)
@@ -105,14 +99,12 @@ export default function BankSquares({
   const bankGold = usePlayerRecordStore((state) => state.bankGold)
   const bankComets = usePlayerRecordStore((state) => state.bankComets)
   const bankFallenStars = usePlayerRecordStore((state) => state.bankFallenStars)
-  const stonesBanked = usePlayerRecordStore((state) => state.stonesBanked)
   const bankPoints = usePlayerRecordStore((state) => state.bankPoints)
   const gearCompositionPoints = usePlayerRecordStore((state) => state.gearCompositionPoints)
 
   const busy = useBankStore((state) => state.busy)
   const depositCurrency = useBankStore((state) => state.depositCurrency)
   const withdrawCurrency = useBankStore((state) => state.withdrawCurrency)
-  const withdrawStoneItem = useBankStore((state) => state.withdrawStoneItem)
   const withdrawStone = useBankStore((state) => state.withdrawStone)
   const withdrawGearComposition = useBankStore((state) => state.withdrawGearComposition)
 
@@ -143,36 +135,13 @@ export default function BankSquares({
             onClick={() => toggle({ kind: 'currency', id: currency.id })}
           />
         ))}
-        {COMPOSITION_STONE_TIERS.map((tier) => (
-          <Square
-            key={tier}
-            label={`Tier ${tier} Stone`}
-            value={stonesBanked[String(tier)] ?? 0}
-            // Real art for all 9 tiers (see forgeCosts.ts's getStoneIconSrc) —
-            // the corner "+N" badge still tells them apart at a glance.
-            icon="🔷"
-            iconSrc={getStoneIconSrc(tier)}
-            cornerLabel={`+${tier}`}
-            accentColor={MATERIAL_COLOR}
-            selected={selected?.kind === 'stoneTier' && selected.tier === tier}
-            onClick={() => toggle({ kind: 'stoneTier', tier })}
-          />
-        ))}
         <Square
           label="Composition Points"
           value={bankPoints}
           selected={selected?.kind === 'compositionPoints'}
           onClick={() => toggle({ kind: 'compositionPoints' })}
         />
-        {GEAR_SLOT_TYPES.map((slotType) => (
-          <Square
-            key={slotType}
-            label={`${formatGearSlotLabel(slotType)} Points`}
-            value={gearCompositionPoints[slotType]}
-            selected={selected?.kind === 'gearSlot' && selected.slotType === slotType}
-            onClick={() => toggle({ kind: 'gearSlot', slotType })}
-          />
-        ))}
+        <Square label="Gear Points" selected={selected?.kind === 'gearPoints'} onClick={() => toggle({ kind: 'gearPoints' })} />
       </div>
 
       {selected?.kind === 'currency' && (
@@ -196,21 +165,6 @@ export default function BankSquares({
         </BankActionModal>
       )}
 
-      {selected?.kind === 'stoneTier' && (
-        <BankActionModal title={`Tier ${selected.tier} Stone`} subtitle="Withdraw one physically-banked stone at a time." onClose={closeModal}>
-          <StoneTierPanel
-            tier={selected.tier}
-            owned={stonesBanked[String(selected.tier)] ?? 0}
-            busy={busy}
-            onWithdraw={() => withdrawStoneItem(characterId, selected.tier, 1)}
-            onDone={() => {
-              closeModal()
-              onWithdrawLandedInInventory?.()
-            }}
-          />
-        </BankActionModal>
-      )}
-
       {selected?.kind === 'compositionPoints' && (
         <BankActionModal title="Composition Points" subtitle="Spend points for one stone at a chosen tier." onClose={closeModal}>
           <CompositionPointsPanel
@@ -225,17 +179,12 @@ export default function BankSquares({
         </BankActionModal>
       )}
 
-      {selected?.kind === 'gearSlot' && (
-        <BankActionModal
-          title={`${formatGearSlotLabel(selected.slotType)} Points`}
-          subtitle="Spend points for one fresh item at a chosen tier."
-          onClose={closeModal}
-        >
-          <GearSlotPanel
-            slotType={selected.slotType}
-            points={gearCompositionPoints[selected.slotType]}
+      {selected?.kind === 'gearPoints' && (
+        <BankActionModal title="Gear Points" subtitle="Pick a gear type, then spend its points for one fresh item." onClose={closeModal}>
+          <GearPointsPanel
+            gearCompositionPoints={gearCompositionPoints}
             busy={busy}
-            onWithdraw={(templateId, tier) => withdrawGearComposition(characterId, templateId, tier)}
+            onWithdraw={(_slotType, templateId, tier) => withdrawGearComposition(characterId, templateId, tier)}
             onDone={() => {
               closeModal()
               onWithdrawLandedInInventory?.()
@@ -248,12 +197,14 @@ export default function BankSquares({
 }
 
 // Icon-based redesign (2026-08-07, confirmed with the user) — Comets/Fallen
-// Stars/Composition Stones now show as an icon with the quantity
-// underneath, replacing the plain text label, matching this game's usual
-// tile convention elsewhere (Inventory, Bank Storage, Loot Holding). Gold
-// and the two points pools (Composition Points, per-slot Gear Points) stay
-// label-only — not currencies in the same "you can hold a physical unit of
-// this" sense, and neither has a dedicated icon.
+// Stars show as an icon with the quantity underneath, replacing the plain
+// text label, matching this game's usual tile convention elsewhere
+// (Inventory, Bank Storage, Loot Holding). Gold and the two points pools
+// (Composition Points, Gear Points) stay label-only — not currencies in the
+// same "you can hold a physical unit of this" sense, and neither has a
+// dedicated icon. `value` is optional now (Gear Points has none of its own —
+// it's a category button, not a balance) — omitting it just skips the
+// number line.
 function Square({
   label,
   value,
@@ -265,7 +216,7 @@ function Square({
   onClick,
 }: {
   label: string
-  value: number
+  value?: number
   icon?: string
   iconSrc?: string
   cornerLabel?: string
@@ -297,12 +248,12 @@ function Square({
       {hasIcon ? (
         <>
           {iconSrc ? <img src={iconSrc} alt="" className="h-7 w-7 object-contain" /> : <span className="text-2xl leading-none">{icon}</span>}
-          <span className="text-base font-semibold text-slate-100">{value.toLocaleString()}</span>
+          {value !== undefined && <span className="text-base font-semibold text-slate-100">{value.toLocaleString()}</span>}
         </>
       ) : (
         <>
           <span className="text-[11px] font-medium leading-tight text-slate-300">{label}</span>
-          <span className="text-lg font-semibold text-slate-100">{value.toLocaleString()}</span>
+          {value !== undefined && <span className="text-lg font-semibold text-slate-100">{value.toLocaleString()}</span>}
         </>
       )}
     </button>
@@ -310,9 +261,9 @@ function Square({
 }
 
 // Gold has no Inventory tile at all, so this is Gold's only interaction —
-// both directions stay, unlike the other squares below (which only ever
-// withdraw, since deposit for those now happens via the per-item Bank/
-// Deposit popover in Inventory).
+// both directions stay, unlike the two points-pool squares below (which
+// only ever withdraw, since deposit for those now happens via the per-item
+// Bank popover in Inventory).
 //
 // Redesigned (2026-08-07, confirmed with the user) — a single-unit slider
 // (0-BANK_ACTION_SLIDER_CAP, clamped further by whatever's actually
@@ -320,6 +271,8 @@ function Square({
 // spinner arrows. Withdrawing Comets/Fallen Stars auto-bundles into Scrolls
 // server-side now (see transfer_currency's SQL) — this panel just previews
 // what that split will look like before confirming, purely informational.
+const BANK_ACTION_SLIDER_CAP = 40
+
 function CurrencyPanel({
   currencyId,
   label,
@@ -481,60 +434,41 @@ function CurrencyPanel({
   )
 }
 
-// Deposit for a physically-banked stone tier happens via the per-tile Bank
-// popover in Inventory now (bank_stone_item) — this panel only withdraws.
-// Single-item only (2026-08-07, confirmed with the user: "withdrawing
-// composition stones or gear will not have this option [bundling] and will
-// be single items only") — no amount slider/input, just a plain "Withdraw
-// 1" action, mirroring gear's own always-one-at-a-time withdrawal.
-function StoneTierPanel({
-  tier,
-  owned,
-  busy,
-  onWithdraw,
-  onDone,
-}: {
-  tier: number
-  owned: number
-  busy: boolean
-  onWithdraw: () => Promise<{ ok: boolean; error?: string }>
-  onDone: () => void
-}) {
-  const showGainToast = useGainToastStore((state) => state.show)
-  const [error, setError] = useState<string | null>(null)
-
-  const handleWithdraw = async () => {
-    setError(null)
-    const result = await onWithdraw()
-    if (!result.ok) {
-      setError("You don't have one banked.")
-      return
-    }
-
-    showGainToast({ label: `Tier ${tier} Stone`, amount: 1, icon: '🔷', iconSrc: getStoneIconSrc(tier), color: MATERIAL_COLOR })
-    onDone()
-  }
+// Shared tier-picking slider (2026-08-07, confirmed with the user — "use the
+// slider to select which +n stone you want to withdraw") — used by both
+// CompositionPointsPanel and GearPointsPanel's per-slot-type step below.
+// minTier is 1 for Composition Points (no "Normal stone" concept) and 0 for
+// Gear Points (a Normal/free item is a valid pick there).
+function TierSlider({ tier, setTier, minTier = 1 }: { tier: number; setTier: (tier: number) => void; minTier?: number }) {
+  const maxTier = COMPOSITION_STONE_TIERS[COMPOSITION_STONE_TIERS.length - 1]
+  const cost = compositionPointValue(tier)
 
   return (
-    <div className="space-y-3">
-      <p className="text-xs text-slate-500">{owned.toLocaleString()} in Storage — deposit more from Inventory's Bank button.</p>
-      <button
-        type="button"
-        disabled={busy || owned <= 0}
-        onClick={() => void handleWithdraw()}
-        className="w-full rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-2 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        {busy ? 'Working…' : 'Withdraw 1'}
-      </button>
-      {error && <p className="text-xs text-amber-400">{error}</p>}
+    <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-slate-500">Tier</span>
+        <span className="text-lg font-semibold text-slate-100">{tier <= 0 ? 'Normal' : `+${tier}`}</span>
+      </div>
+      <input
+        type="range"
+        min={minTier}
+        max={maxTier}
+        value={tier}
+        onChange={(event) => setTier(Number(event.target.value))}
+        className="mt-2 w-full accent-sky-500"
+      />
+      <div className="mt-1 flex justify-between text-[10px] text-slate-600">
+        <span>{minTier <= 0 ? 'Normal' : `+${minTier}`}</span>
+        <span>+{maxTier}</span>
+      </div>
+      <p className="mt-2 text-[11px] text-slate-500">{cost > 0 ? `${cost.toLocaleString()} pts` : 'Free'}</p>
     </div>
   )
 }
 
 // The stone-tier-conversion currency (transfer_stone) — spend points for a
 // stone at a chosen tier. Gaining points happens via the per-stone-tile
-// "Bank" button in Inventory now, not from here. Single-item only, same
-// reasoning as StoneTierPanel above — pick a tier, withdraw exactly one.
+// "Bank" button in Inventory now, not from here.
 function CompositionPointsPanel({
   points,
   busy,
@@ -568,22 +502,9 @@ function CompositionPointsPanel({
   return (
     <div className="space-y-3">
       <p className="text-xs text-slate-500">
-        Spend points for one stone at a chosen tier — gain points by Banking a stone from Inventory instead.
+        {points.toLocaleString()} points available — gain more by Banking a stone from Inventory.
       </p>
-      <div className="flex flex-wrap gap-1.5">
-        {COMPOSITION_STONE_TIERS.map((stoneTier) => (
-          <button
-            key={stoneTier}
-            type="button"
-            onClick={() => setTier(stoneTier)}
-            className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${
-              tier === stoneTier ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-            }`}
-          >
-            +{stoneTier} ({compositionPointValue(stoneTier)} pts)
-          </button>
-        ))}
-      </div>
+      <TierSlider tier={tier} setTier={setTier} />
       <button
         type="button"
         disabled={busy || !canAfford}
@@ -597,19 +518,74 @@ function CompositionPointsPanel({
   )
 }
 
-// Unchanged from the old GearCompositionRow — a per-slot-type pool with no
+// Gear Points (2026-08-07 redesign) — a category square, not a balance
+// (see Square's optional value above). Stage 1 picks which of the six
+// per-slot-type pools to spend from; stage 2 reuses the exact same
+// pick-a-tier-with-a-slider interaction Composition Points uses, plus a
+// template picker (a points pool has to buy back a specific item, unlike a
+// stone which has no template of its own).
+function GearPointsPanel({
+  gearCompositionPoints,
+  busy,
+  onWithdraw,
+  onDone,
+}: {
+  gearCompositionPoints: Record<GearSlotType, number>
+  busy: boolean
+  onWithdraw: (slotType: GearSlotType, templateId: string, tier: number) => Promise<{ ok: boolean; error?: string; item?: unknown }>
+  onDone: () => void
+}) {
+  const [slotType, setSlotType] = useState<GearSlotType | null>(null)
+
+  if (!slotType) {
+    return (
+      <div className="space-y-2">
+        <p className="text-xs text-slate-500">Choose a gear type to spend its points pool.</p>
+        <div className="grid grid-cols-2 gap-1.5">
+          {GEAR_SLOT_TYPES.map((type) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => setSlotType(type)}
+              className="rounded-lg border border-slate-700 px-2.5 py-2 text-left text-xs font-medium text-slate-300 hover:border-slate-500"
+            >
+              <span className="block">{formatGearSlotLabel(type)}</span>
+              <span className="block text-[10px] font-normal text-slate-500">{gearCompositionPoints[type].toLocaleString()} pts</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <GearSlotWithdrawPanel
+      slotType={slotType}
+      points={gearCompositionPoints[slotType]}
+      busy={busy}
+      onBack={() => setSlotType(null)}
+      onWithdraw={(templateId, tier) => onWithdraw(slotType, templateId, tier)}
+      onDone={onDone}
+    />
+  )
+}
+
+// Stage 2 of GearPointsPanel above — a per-slot-type pool with no
 // per-template memory, so the player picks any eligible template of the
-// matching slot_type before choosing a tier to pay for.
-function GearSlotPanel({
+// matching slot_type before choosing a tier (via the shared TierSlider) to
+// pay for.
+function GearSlotWithdrawPanel({
   slotType,
   points,
   busy,
+  onBack,
   onWithdraw,
   onDone,
 }: {
   slotType: GearSlotType
   points: number
   busy: boolean
+  onBack: () => void
   onWithdraw: (templateId: string, tier: number) => Promise<{ ok: boolean; error?: string; item?: unknown }>
   onDone: () => void
 }) {
@@ -649,9 +625,13 @@ function GearSlotPanel({
 
   return (
     <div className="space-y-2">
+      <button type="button" onClick={onBack} className="text-[11px] text-slate-500 hover:text-slate-300">
+        ‹ Back to gear types
+      </button>
+
       <p className="text-xs text-slate-500">
-        Spend points for a fresh item at a chosen tier — gain points by Banking a composed {formatGearSlotLabel(slotType).toLowerCase()}{' '}
-        from Inventory instead.
+        {points.toLocaleString()} {formatGearSlotLabel(slotType).toLowerCase()} points available — gain more by Banking a composed{' '}
+        {formatGearSlotLabel(slotType).toLowerCase()} from Inventory.
       </p>
 
       {eligibleTemplates.length === 0 ? (
@@ -671,29 +651,7 @@ function GearSlotPanel({
             ))}
           </select>
 
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            <button
-              type="button"
-              onClick={() => setTier(0)}
-              className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${
-                tier === 0 ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-              }`}
-            >
-              Normal (free)
-            </button>
-            {COMPOSITION_STONE_TIERS.map((stoneTier) => (
-              <button
-                key={stoneTier}
-                type="button"
-                onClick={() => setTier(stoneTier)}
-                className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${
-                  tier === stoneTier ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-                }`}
-              >
-                +{stoneTier} ({compositionPointValue(stoneTier)} pts)
-              </button>
-            ))}
-          </div>
+          <TierSlider tier={tier} setTier={setTier} minTier={0} />
 
           <button
             type="button"

@@ -40,25 +40,29 @@ export const PET_DROP_CHANCE = 1 / 25000
 // many of those 30 has this character reached across the zone's whole
 // roster so far" (e.g. "3/30 tiers completed"), independent of which
 // specific monster they came from. This even 6-step ladder (5/10/15/20/25/30)
-// mirrors every other tier system in this game. Reward is a Fallen Star
-// grant per zone tier, PLACEHOLDER, escalating. The actual grant only ever
-// happens server-side (resolve-combat, tracked via character_zone_progress
-// so it's not re-granted) — these constants exist client-side purely to
-// drive the live display, computed straight from useAchievementsStore's
-// already-loaded characterKills, no separate fetch needed. Unaffected by
-// this rework.
+// mirrors every other tier system in this game. Reward is a Comet Scroll
+// grant per zone tier, PLACEHOLDER, escalating (was a Fallen Star grant —
+// switched 2026-08-07, confirmed with the user: every Fallen Star reward on
+// the Achievements system moves to a Comet Scroll instead, same quantities).
+// The actual grant only ever happens server-side (resolve-combat, tracked
+// via character_zone_progress so it's not re-granted) — these constants
+// exist client-side purely to drive the live display, computed straight
+// from useAchievementsStore's already-loaded characterKills, no separate
+// fetch needed.
 export const ZONE_MONSTER_COUNT = 5
 export const ZONE_TOTAL_TIER_MILESTONES = ZONE_MONSTER_COUNT * ACHIEVEMENT_TIERS.length
 export const ZONE_TIER_COMPLETIONS = [5, 10, 15, 20, 25, 30] as const
-export const ZONE_TIER_FALLEN_STAR_REWARD = [1, 2, 3, 4, 5, 8] as const
+export const ZONE_TIER_COMET_SCROLL_REWARD = [1, 2, 3, 4, 5, 8] as const
 
 // ----------------------------------------------------------------------------
 // Character track — one-time claims, tiers 1-6 (matches
 // character_monster_kills.claimed_tier_index, 0 = nothing claimed yet).
 // Tiers 1-4 grant a small Comet/Lottery-Ticket bundle; tier 5 grants the
-// single, sole Fallen Star reward ("Fallen stars as a reward should be
-// extremely rare final tier kind of reward" — confirmed with the user, no
-// other tier ever grants one); tier 6 grants a real Infused-quality gear
+// single, sole rare-tier reward (originally a Fallen Star — "Fallen stars as
+// a reward should be extremely rare final tier kind of reward," no other
+// tier ever grants one — switched to a Comet Scroll 2026-08-07, confirmed
+// with the user, same "extremely rare final tier" placement); tier 6 grants
+// a real Infused-quality gear
 // item, picked the same "random class-appropriate family, nearest level to
 // the monster" way an ordinary kill-drop already is (see
 // pick_infused_reward_template in the migration) — generalizes the old
@@ -66,7 +70,7 @@ export const ZONE_TIER_FALLEN_STAR_REWARD = [1, 2, 3, 4, 5, 8] as const
 // ----------------------------------------------------------------------------
 export interface CharacterTierReward {
   comets?: number
-  fallenStars?: number
+  cometScrolls?: number
   lotteryTickets?: number
   infusedGear?: boolean
 }
@@ -78,7 +82,7 @@ export const CHARACTER_TIER_REWARDS: readonly CharacterTierReward[] = [
   { comets: 3 },
   { lotteryTickets: 1 },
   { comets: 5, lotteryTickets: 1 },
-  { fallenStars: 1 },
+  { cometScrolls: 1 },
   { infusedGear: true },
 ]
 
@@ -91,7 +95,7 @@ export function describeCharacterTierReward(reward: CharacterTierReward): string
   // Tickets" if a future tier ever grants more than one) is the natural
   // phrasing rather than "+1 Lottery Ticket".
   if (reward.lotteryTickets) parts.push(reward.lotteryTickets > 1 ? `${reward.lotteryTickets} Lottery Tickets` : 'Lottery Ticket')
-  if (reward.fallenStars) parts.push(`+${reward.fallenStars} Fallen Star${reward.fallenStars > 1 ? 's' : ''}`)
+  if (reward.cometScrolls) parts.push(`+${reward.cometScrolls} Comet Scroll${reward.cometScrolls > 1 ? 's' : ''}`)
   if (reward.infusedGear) parts.push('1 Infused gear item')
   return parts.join(' + ')
 }

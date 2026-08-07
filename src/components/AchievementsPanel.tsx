@@ -15,7 +15,7 @@ import {
   tierIndexReached,
   PET_DROP_CHANCE,
   ZONE_TIER_COMPLETIONS,
-  ZONE_TIER_FALLEN_STAR_REWARD,
+  ZONE_TIER_COMET_SCROLL_REWARD,
   ZONE_TOTAL_TIER_MILESTONES,
   zoneTierCompletions,
 } from '../game/achievements/achievementData'
@@ -366,7 +366,7 @@ function ZoneMilestoneBar({ zoneId }: { zoneId: ZoneId }) {
                 title={`Zone Tier ${index + 1} · ${threshold} completions`}
                 titleColor={color}
                 lines={[
-                  `Reward: ${ZONE_TIER_FALLEN_STAR_REWARD[index]} Fallen Star${ZONE_TIER_FALLEN_STAR_REWARD[index] === 1 ? '' : 's'}`,
+                  `Reward: ${ZONE_TIER_COMET_SCROLL_REWARD[index]} Comet Scroll${ZONE_TIER_COMET_SCROLL_REWARD[index] === 1 ? '' : 's'}`,
                   state === 'claimed' ? 'Granted' : `${(threshold - completions).toLocaleString()} to go`,
                 ]}
               />
