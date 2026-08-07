@@ -284,6 +284,7 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Charmed Boots': `${import.meta.env.BASE_URL}item-icons/charmed-boots.png`,
   'Liberty Boots': `${import.meta.env.BASE_URL}item-icons/liberty-boots.png`,
   'Frostbite Boots': `${import.meta.env.BASE_URL}item-icons/frostbite-boots.png`,
+  "Hunter's Quiver": `${import.meta.env.BASE_URL}item-icons/quiver.png`,
 }
 
 export function getGearIconSrc(templateName: string | undefined): string | undefined {

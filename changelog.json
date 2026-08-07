@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.64.14",
+    "date": "2026-08-07",
+    "changes": [
+      "Added a real icon for the Hunter's Quiver (previously just an emoji)",
+      "The Quiver's glow effect on the Equipment screen now matches your equipped Bow's quality tier — a cosmetic-only touch, doesn't change the Quiver itself"
+    ]
+  },
+  {
     "version": "1.64.13",
     "date": "2026-08-07",
     "changes": [

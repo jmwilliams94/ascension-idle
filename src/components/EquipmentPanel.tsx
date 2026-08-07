@@ -103,6 +103,13 @@ export default function EquipmentPanel() {
       >
         {[...SLOTS, ...(isHunter ? [QUIVER_SLOT_CONFIG] : [])].map(({ slot, label, icon, gridArea }) => {
           const equipped = findEquipped(slot)
+          // Cosmetic-only (confirmed with the user, 2026-08-07): the Quiver's
+          // own quality tier is meaningless (it has no stat bonuses and is
+          // never dropped/upgraded), so its glow/ember effect mirrors
+          // whatever Bow is equipped in Main Hand instead — purely a display
+          // match, doesn't touch the Quiver's real tooltip/stats below, and
+          // has no effect on the Quiver's actual (always-Normal) tier.
+          const glowQualityTier = slot === 'quiver' ? findEquipped('weapon')?.item.quality_tier : equipped?.item.quality_tier
 
           return (
             <div key={slot} style={{ gridArea }} className="flex items-center justify-center">
@@ -115,7 +122,7 @@ export default function EquipmentPanel() {
                 icon={equipped ? getItemIcon(equipped.template.slot_type) : icon}
                 iconSrc={equipped ? getGearIconSrc(equipped.template.name) : undefined}
                 filled={Boolean(equipped)}
-                qualityColor={equipped ? getQualityColor(equipped.item.quality_tier) : undefined}
+                qualityColor={equipped ? getQualityColor(glowQualityTier ?? 'normal') : undefined}
                 selected={selectedSlot === slot}
                 onClick={equipped ? () => setSelectedSlot((current) => (current === slot ? null : slot)) : undefined}
                 tooltip={equipped ? buildGearTooltip(equipped.item, equipped.template) : undefined}
