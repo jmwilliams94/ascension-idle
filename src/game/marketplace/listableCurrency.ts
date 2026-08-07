@@ -1,4 +1,11 @@
-import { FALLEN_STAR_COLOR, FALLEN_STAR_ICON_SRC, MATERIAL_COLOR, COMET_ICON_SRC } from '../items/forgeCosts'
+import {
+  FALLEN_STAR_COLOR,
+  FALLEN_STAR_ICON_SRC,
+  FALLEN_STAR_SCROLL_ICON_SRC,
+  MATERIAL_COLOR,
+  COMET_ICON_SRC,
+  COMET_SCROLL_ICON_SRC,
+} from '../items/forgeCosts'
 import type { ListableCurrencyType } from './useMarketplaceStore'
 
 // Small display helpers shared by MarketplaceListingSlot (the "List an Item"
@@ -32,8 +39,8 @@ export function listableCurrencyVisual(type: ListableCurrencyType): ListableCurr
     case 'fallen_star':
       return { iconSrc: FALLEN_STAR_ICON_SRC, qualityColor: FALLEN_STAR_COLOR }
     case 'comet_scroll':
-      return { icon: '📜', qualityColor: MATERIAL_COLOR }
+      return { iconSrc: COMET_SCROLL_ICON_SRC, qualityColor: MATERIAL_COLOR }
     case 'fallen_star_scroll':
-      return { icon: '📜', qualityColor: FALLEN_STAR_COLOR }
+      return { iconSrc: FALLEN_STAR_SCROLL_ICON_SRC, qualityColor: FALLEN_STAR_COLOR }
   }
 }

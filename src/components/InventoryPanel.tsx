@@ -20,8 +20,10 @@ import {
   CONSUMABLE_COLOR,
   FALLEN_STAR_COLOR,
   FALLEN_STAR_ICON_SRC,
+  FALLEN_STAR_SCROLL_ICON_SRC,
   MATERIAL_COLOR,
   COMET_ICON_SRC,
+  COMET_SCROLL_ICON_SRC,
   buildFallenStarScrollTooltip,
   buildFallenStarTooltip,
   buildCometScrollTooltip,
@@ -964,7 +966,8 @@ export default function InventoryPanel({
               slotId: dragId,
               filled: true as const,
               sizeClassName: SLOT_SIZE_CLASS,
-              icon: '📜',
+              iconSrc: COMET_SCROLL_ICON_SRC,
+              qualityColor: MATERIAL_COLOR,
               label: 'Comet Scroll',
               tooltip: buildCometScrollTooltip(),
               selected: selectedSlot?.kind === 'scroll' && selectedSlot.dragId === dragId,
@@ -976,7 +979,7 @@ export default function InventoryPanel({
                   key={dragId}
                   {...commonProps}
                   dragEnabled
-                  dragPayload={{ id: dragId, icon: '📜' }}
+                  dragPayload={{ id: dragId, icon: '📜', iconSrc: COMET_SCROLL_ICON_SRC, qualityColor: MATERIAL_COLOR }}
                   onDrop={handleTileDrop}
                   onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'comet' })}
                 />
@@ -997,7 +1000,8 @@ export default function InventoryPanel({
               slotId: dragId,
               filled: true as const,
               sizeClassName: SLOT_SIZE_CLASS,
-              icon: '📜',
+              iconSrc: FALLEN_STAR_SCROLL_ICON_SRC,
+              qualityColor: FALLEN_STAR_COLOR,
               label: 'Fallen Star Scroll',
               tooltip: buildFallenStarScrollTooltip(),
               selected: selectedSlot?.kind === 'scroll' && selectedSlot.dragId === dragId,
@@ -1009,7 +1013,7 @@ export default function InventoryPanel({
                   key={dragId}
                   {...commonProps}
                   dragEnabled
-                  dragPayload={{ id: dragId, icon: '📜' }}
+                  dragPayload={{ id: dragId, icon: '📜', iconSrc: FALLEN_STAR_SCROLL_ICON_SRC, qualityColor: FALLEN_STAR_COLOR }}
                   onDrop={handleTileDrop}
                   onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'fallen_star' })}
                 />
@@ -1181,8 +1185,18 @@ export default function InventoryPanel({
       {selectedScrollType && (
         <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg">
-              📜
+            <div
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 p-1"
+              style={{
+                borderColor: selectedScrollType === 'comet' ? MATERIAL_COLOR : FALLEN_STAR_COLOR,
+                backgroundColor: `${selectedScrollType === 'comet' ? MATERIAL_COLOR : FALLEN_STAR_COLOR}22`,
+              }}
+            >
+              <img
+                src={selectedScrollType === 'comet' ? COMET_SCROLL_ICON_SRC : FALLEN_STAR_SCROLL_ICON_SRC}
+                alt=""
+                className="h-full w-full object-contain"
+              />
             </div>
             <div>
               <p className="text-sm font-medium text-slate-200">

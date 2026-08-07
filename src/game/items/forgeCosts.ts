@@ -292,10 +292,16 @@ export function isFallenStarScrollDragId(id: string): boolean {
   return id.startsWith(FALLEN_STAR_SCROLL_DRAG_ID_PREFIX)
 }
 
+// Real art (2026-08-07), supersedes the 📜 emoji everywhere a Scroll tile
+// renders — same iconSrc-over-icon priority as COMET_ICON_SRC/
+// FALLEN_STAR_ICON_SRC above.
+export const COMET_SCROLL_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/comet-scroll.png`
+export const FALLEN_STAR_SCROLL_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/fallen-star-scroll.png`
+
 export function buildCometScrollTooltip(): ItemTooltipData {
   return {
     title: 'Comet Scroll',
-    icon: '📜',
+    iconSrc: COMET_SCROLL_ICON_SRC,
     iconColor: MATERIAL_COLOR,
     lines: ['Compact storage'],
     stats: ['Holds 10 Comets — Open to unbundle'],
@@ -305,7 +311,7 @@ export function buildCometScrollTooltip(): ItemTooltipData {
 export function buildFallenStarScrollTooltip(): ItemTooltipData {
   return {
     title: 'Fallen Star Scroll',
-    icon: '📜',
+    iconSrc: FALLEN_STAR_SCROLL_ICON_SRC,
     iconColor: FALLEN_STAR_COLOR,
     lines: ['Compact storage'],
     stats: ['Holds 10 Fallen Stars — Open to unbundle'],

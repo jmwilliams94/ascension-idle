@@ -11,7 +11,14 @@ import {
 } from '../game/lucky/useLuckyStore'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
-import { FALLEN_STAR_COLOR, FALLEN_STAR_ICON_SRC, MATERIAL_COLOR, COMET_ICON_SRC } from '../game/items/forgeCosts'
+import {
+  FALLEN_STAR_COLOR,
+  FALLEN_STAR_ICON_SRC,
+  FALLEN_STAR_SCROLL_ICON_SRC,
+  MATERIAL_COLOR,
+  COMET_ICON_SRC,
+  COMET_SCROLL_ICON_SRC,
+} from '../game/items/forgeCosts'
 
 // Lucky — Stage 1 (confirmed design, see CLAUDE.md's Lucky section and the
 // draw_lucky_ticket migration's own header). A free ticket every 6 hours,
@@ -48,9 +55,9 @@ function rewardVisual(reward: LuckyReward): { icon?: string; iconSrc?: string; c
     case 'fallen_star':
       return { iconSrc: FALLEN_STAR_ICON_SRC, color: FALLEN_STAR_COLOR }
     case 'comet_scroll':
-      return { icon: '📜', color: MATERIAL_COLOR }
+      return { iconSrc: COMET_SCROLL_ICON_SRC, color: MATERIAL_COLOR }
     case 'fallen_star_scroll':
-      return { icon: '📜', color: FALLEN_STAR_COLOR }
+      return { iconSrc: FALLEN_STAR_SCROLL_ICON_SRC, color: FALLEN_STAR_COLOR }
   }
 }
 

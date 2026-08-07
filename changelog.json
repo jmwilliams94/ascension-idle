@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.65.3",
+    "date": "2026-08-07",
+    "changes": [
+      "Comet Scroll and Fallen Star Scroll now show real icon art everywhere they appear (Inventory, Bank, Marketplace, Lucky) instead of a plain scroll emoji"
+    ]
+  },
+  {
     "version": "1.65.2",
     "date": "2026-08-07",
     "changes": [
