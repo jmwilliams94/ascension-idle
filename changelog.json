@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.64.9",
+    "date": "2026-08-07",
+    "changes": [
+      "Added real icons for Bonewhite, Verdant, Opal, Banded, and Glass Ring"
+    ]
+  },
+  {
     "version": "1.64.8",
     "date": "2026-08-07",
     "changes": [
