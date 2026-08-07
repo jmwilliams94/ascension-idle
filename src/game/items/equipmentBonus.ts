@@ -265,6 +265,11 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Opal Ring': `${import.meta.env.BASE_URL}item-icons/opal-ring.png`,
   'Banded Ring': `${import.meta.env.BASE_URL}item-icons/banded-ring.png`,
   'Glass Ring': `${import.meta.env.BASE_URL}item-icons/glass-ring.png`,
+  'Facet Ring': `${import.meta.env.BASE_URL}item-icons/facet-ring.png`,
+  'Wyrmscale Ring': `${import.meta.env.BASE_URL}item-icons/wyrmscale-ring.png`,
+  'Weeping Ring': `${import.meta.env.BASE_URL}item-icons/weeping-ring.png`,
+  'Oathbound Ring': `${import.meta.env.BASE_URL}item-icons/oathbound-ring.png`,
+  'Stormcaller Ring': `${import.meta.env.BASE_URL}item-icons/stormcaller-ring.png`,
 }
 
 export function getGearIconSrc(templateName: string | undefined): string | undefined {

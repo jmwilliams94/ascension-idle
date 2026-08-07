@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.64.10",
+    "date": "2026-08-07",
+    "changes": [
+      "Added real icons for Facet, Wyrmscale, Weeping, Oathbound, and Stormcaller Ring, completing the full Ring catalog"
+    ]
+  },
+  {
     "version": "1.64.9",
     "date": "2026-08-07",
     "changes": [
