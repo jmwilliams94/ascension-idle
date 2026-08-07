@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.64.7",
+    "date": "2026-08-07",
+    "changes": [
+      "Fixed a Ring icon mix-up: Gilded Ring now has its correct gold/sapphire art, and Bonewhite and Verdant Ring picked up the icons that had been misassigned to Gilded and Violet",
+      "Pewter Ring's icon was removed for now until real art arrives for it"
+    ]
+  },
+  {
     "version": "1.64.6",
     "date": "2026-08-07",
     "changes": [
