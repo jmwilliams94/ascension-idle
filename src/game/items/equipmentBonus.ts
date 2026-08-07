@@ -270,6 +270,11 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Weeping Ring': `${import.meta.env.BASE_URL}item-icons/weeping-ring.png`,
   'Oathbound Ring': `${import.meta.env.BASE_URL}item-icons/oathbound-ring.png`,
   'Stormcaller Ring': `${import.meta.env.BASE_URL}item-icons/stormcaller-ring.png`,
+  'Rawhide Boots': `${import.meta.env.BASE_URL}item-icons/rawhide-boots.png`,
+  'Fawnskin Boots': `${import.meta.env.BASE_URL}item-icons/fawnskin-boots.png`,
+  'Padded Boots': `${import.meta.env.BASE_URL}item-icons/padded-boots.png`,
+  'Hawkstep Boots': `${import.meta.env.BASE_URL}item-icons/hawkstep-boots.png`,
+  'Featherstep Boots': `${import.meta.env.BASE_URL}item-icons/featherstep-boots.png`,
 }
 
 export function getGearIconSrc(templateName: string | undefined): string | undefined {

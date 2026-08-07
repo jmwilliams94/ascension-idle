@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.64.11",
+    "date": "2026-08-07",
+    "changes": [
+      "Added real icons for Rawhide, Fawnskin, Padded, Hawkstep, and Featherstep Boots"
+    ]
+  },
+  {
     "version": "1.64.10",
     "date": "2026-08-07",
     "changes": [
