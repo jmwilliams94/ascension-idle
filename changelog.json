@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.64.13",
+    "date": "2026-08-07",
+    "changes": [
+      "Added real icons for Nimble, Charmed, Liberty, and Frostbite Boots, completing the full Boots catalog"
+    ]
+  },
+  {
     "version": "1.64.12",
     "date": "2026-08-07",
     "changes": [

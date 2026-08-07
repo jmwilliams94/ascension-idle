@@ -280,6 +280,10 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Prowler Boots': `${import.meta.env.BASE_URL}item-icons/prowler-boots.png`,
   'Spotted Boots': `${import.meta.env.BASE_URL}item-icons/spotted-boots.png`,
   'Direbeast Boots': `${import.meta.env.BASE_URL}item-icons/direbeast-boots.png`,
+  'Nimble Boots': `${import.meta.env.BASE_URL}item-icons/nimble-boots.png`,
+  'Charmed Boots': `${import.meta.env.BASE_URL}item-icons/charmed-boots.png`,
+  'Liberty Boots': `${import.meta.env.BASE_URL}item-icons/liberty-boots.png`,
+  'Frostbite Boots': `${import.meta.env.BASE_URL}item-icons/frostbite-boots.png`,
 }
 
 export function getGearIconSrc(templateName: string | undefined): string | undefined {
