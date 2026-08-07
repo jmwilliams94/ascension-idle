@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.69.0",
+    "date": "2026-08-08",
+    "changes": [
+      "Added an \"update available\" banner with a Refresh button — new versions used to apply silently on your next reload, now you'll be prompted right away"
+    ]
+  },
+  {
     "version": "1.68.5",
     "date": "2026-08-08",
     "changes": [

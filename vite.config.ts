@@ -17,7 +17,10 @@ export default defineConfig({
     VitePWA({
       // Installable + fast static-asset reloads only — no Supabase/API caching,
       // no offline gameplay. See CLAUDE.md's "PWA & Mobile" section.
-      registerType: 'autoUpdate',
+      // 'prompt' (was 'autoUpdate') — a new build now surfaces an "update
+      // available" banner (UpdateBanner.tsx) with a Refresh button instead of
+      // silently taking over on the next natural reload.
+      registerType: 'prompt',
       includeAssets: ['favicon.svg'],
       manifest: {
         name: 'Ascension Idle',

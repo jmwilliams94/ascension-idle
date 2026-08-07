@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import AuthGate from './components/AuthGate'
 import CharacterSelectScreen from './components/CharacterSelectScreen'
 import GameShell from './components/GameShell'
+import UpdateBanner from './components/UpdateBanner'
 import WhatsNewModal from './components/WhatsNewModal'
 import { useAuthStore } from './lib/useAuthStore'
 import { useActiveCharacterStore, getStoredCharacterId, setStoredCharacterId } from './lib/useActiveCharacterStore'
@@ -69,13 +70,17 @@ function App() {
   }, [userId, characterId, setActiveCharacterId])
 
   return (
-    <AuthGate>
-      {userId && whatsNewEntries && whatsNewEntries.length > 0 && (
-        <WhatsNewModal entries={whatsNewEntries} onDismiss={() => dismissWhatsNew(userId)} />
-      )}
+    <>
+      <UpdateBanner />
 
-      {characterId ? <GameShell characterId={characterId} /> : <CharacterSelectScreen />}
-    </AuthGate>
+      <AuthGate>
+        {userId && whatsNewEntries && whatsNewEntries.length > 0 && (
+          <WhatsNewModal entries={whatsNewEntries} onDismiss={() => dismissWhatsNew(userId)} />
+        )}
+
+        {characterId ? <GameShell characterId={characterId} /> : <CharacterSelectScreen />}
+      </AuthGate>
+    </>
   )
 }
 
