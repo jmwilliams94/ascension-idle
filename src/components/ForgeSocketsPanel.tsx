@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useForgeStore } from '../game/items/useForgeStore'
+import { effectiveCurrencyAvailable } from '../game/items/forgeCosts'
 import type { ItemInstance } from '../game/items/useInventoryStore'
 import type { ItemTemplate } from '../game/items/useItemTemplatesStore'
 
@@ -32,6 +33,7 @@ function describeUnlockFailure(error?: string): string {
 // gems aren't implemented as items yet, so nothing can ever fill one.
 export default function ForgeSocketsPanel({ item, template }: { item: ItemInstance; template: ItemTemplate | null }) {
   const fallenStars = useCurrencyStore((state) => state.fallenStars)
+  const fallenStarScrolls = useCurrencyStore((state) => state.fallenStarScrolls)
   const busy = useForgeStore((state) => state.busy)
   const unlockWeaponSocket = useForgeStore((state) => state.unlockWeaponSocket)
   const [error, setError] = useState<string | null>(null)
@@ -77,9 +79,17 @@ export default function ForgeSocketsPanel({ item, template }: { item: ItemInstan
           ) : (
             <button
               type="button"
-              disabled={busy || fallenStars < cost}
+              disabled={busy || effectiveCurrencyAvailable(fallenStars, fallenStarScrolls) < cost}
               onClick={() => void handleUnlock()}
-              title={fallenStars < cost ? `Need ${cost} Fallen Star${cost === 1 ? '' : 's'} (have ${fallenStars}).` : undefined}
+              title={
+                effectiveCurrencyAvailable(fallenStars, fallenStarScrolls) < cost
+                  ? `Need ${cost} Fallen Star${cost === 1 ? '' : 's'} (${
+                      fallenStarScrolls > 0
+                        ? `have ${fallenStars} + ${fallenStarScrolls} Scroll${fallenStarScrolls === 1 ? '' : 's'}`
+                        : `have ${fallenStars}`
+                    }).`
+                  : undefined
+              }
               className="w-full rounded-lg border border-emerald-600 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy ? 'Working…' : `Unlock Socket ${socketCount + 1} (${cost} Fallen Star${cost === 1 ? '' : 's'})`}

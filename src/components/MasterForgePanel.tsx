@@ -11,7 +11,7 @@ import {
   getQualityColor,
   nextQualityTier,
 } from '../game/items/equipmentBonus'
-import { computeUpgradeSuccessChancePct, findNextTemplateInChain, previewMasterForgeCost } from '../game/items/forgeCosts'
+import { computeUpgradeSuccessChancePct, effectiveCurrencyAvailable, findNextTemplateInChain, previewMasterForgeCost } from '../game/items/forgeCosts'
 import { useForgeStore } from '../game/items/useForgeStore'
 import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
@@ -75,6 +75,8 @@ export default function MasterForgePanel() {
   const equippedIds = useEquipmentStore((state) => state.equippedIds)
   const comets = useCurrencyStore((state) => state.comets)
   const fallenStars = useCurrencyStore((state) => state.fallenStars)
+  const cometScrolls = useCurrencyStore((state) => state.cometScrolls)
+  const fallenStarScrolls = useCurrencyStore((state) => state.fallenStarScrolls)
   const characterLevel = useProgressionStore((state) => state.level)
   const busy = useForgeStore((state) => state.busy)
   const masterForgeUpgrade = useForgeStore((state) => state.masterForgeUpgrade)
@@ -148,8 +150,11 @@ export default function MasterForgePanel() {
     }
     if (cost !== null) {
       const owned = upgradeType === 'quality' ? fallenStars : comets
-      if (owned < cost) {
-        return `Need ${cost} ${upgradeType === 'quality' ? 'Fallen Star' : 'Comet'}${cost === 1 ? '' : 's'} (have ${owned}).`
+      const scrolls = upgradeType === 'quality' ? fallenStarScrolls : cometScrolls
+      if (effectiveCurrencyAvailable(owned, scrolls) < cost) {
+        const label = upgradeType === 'quality' ? 'Fallen Star' : 'Comet'
+        const haveDescription = scrolls > 0 ? `have ${owned} + ${scrolls} Scroll${scrolls === 1 ? '' : 's'}` : `have ${owned}`
+        return `Need ${cost} ${label}${cost === 1 ? '' : 's'} (${haveDescription}).`
       }
     }
     return null

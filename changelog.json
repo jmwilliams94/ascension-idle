@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.67.1",
+    "date": "2026-08-07",
+    "changes": [
+      "Fixed Master Forge (and the regular Forge/Socket unlock) not recognizing Comet/Fallen Star Scrolls when checking if you could afford an upgrade",
+      "Fixed your Scroll count not updating right away after an upgrade automatically used one"
+    ]
+  },
+  {
     "version": "1.67.0",
     "date": "2026-08-07",
     "changes": [

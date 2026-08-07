@@ -20,6 +20,11 @@ interface QualityUpgradeResult {
   fallen_stars?: number
   fallen_stars_spent?: number
   fallen_stars_remaining?: number
+  // Post-unbundle Scroll count (2026-08-07 fix — see migration
+  // 20260808020000_forge_functions_return_scroll_counts.sql) — without this,
+  // a Scroll consumed via ensure_loose_currency's auto-unbundle left the
+  // client's local Scroll count stale until an unrelated full reload.
+  fallen_star_scrolls_remaining?: number
   // Armor-only RNG side effect (see 20260802010000_add_gear_sockets.sql) — the
   // item's full sockets array (unchanged if socket_gained is false) and
   // whether this particular attempt happened to roll a new one.
@@ -40,6 +45,8 @@ interface LevelUpgradeResult {
   comets?: number
   comets_spent?: number
   comets_remaining?: number
+  // Same post-unbundle-Scroll-count fix as Quality Upgrade above (Comet side).
+  comet_scrolls_remaining?: number
   // Same armor-only RNG socket side effect as Quality Upgrade above.
   sockets?: ItemInstance['sockets']
   socket_gained?: boolean
@@ -70,6 +77,10 @@ interface MasterForgeUpgradeResult {
   template_id?: string
   fallen_stars_remaining?: number | null
   comets_remaining?: number | null
+  // Post-unbundle Scroll count for whichever currency this attempt actually
+  // spent (see the fix note on QualityUpgradeResult above) — not split by
+  // currency since only one is ever relevant per call (upgrade_type decides).
+  scrolls_remaining?: number
   result_level?: number
   character_level?: number
   sockets?: ItemInstance['sockets']
@@ -87,6 +98,7 @@ interface UnlockWeaponSocketResult {
   fallen_stars?: number
   fallen_stars_spent?: number
   fallen_stars_remaining?: number
+  fallen_star_scrolls_remaining?: number
 }
 
 // Shape returned by composition_feed (see migration 20260728000000). No RNG and no
@@ -155,6 +167,9 @@ export const useForgeStore = create<ForgeState>((set) => ({
     if (result.ok && typeof result.fallen_stars_remaining === 'number') {
       useCurrencyStore.getState().setFallenStars(result.fallen_stars_remaining)
     }
+    if (result.ok && typeof result.fallen_star_scrolls_remaining === 'number') {
+      useCurrencyStore.getState().setFallenStarScrolls(result.fallen_star_scrolls_remaining)
+    }
 
     return result
   },
@@ -184,6 +199,9 @@ export const useForgeStore = create<ForgeState>((set) => ({
     }
     if (result.ok && typeof result.comets_remaining === 'number') {
       useCurrencyStore.getState().setComets(result.comets_remaining)
+    }
+    if (result.ok && typeof result.comet_scrolls_remaining === 'number') {
+      useCurrencyStore.getState().setCometScrolls(result.comet_scrolls_remaining)
     }
 
     return result
@@ -244,6 +262,9 @@ export const useForgeStore = create<ForgeState>((set) => ({
     if (result.ok && typeof result.fallen_stars_remaining === 'number') {
       useCurrencyStore.getState().setFallenStars(result.fallen_stars_remaining)
     }
+    if (result.ok && typeof result.fallen_star_scrolls_remaining === 'number') {
+      useCurrencyStore.getState().setFallenStarScrolls(result.fallen_star_scrolls_remaining)
+    }
 
     return result
   },
@@ -279,6 +300,13 @@ export const useForgeStore = create<ForgeState>((set) => ({
     }
     if (result.ok && typeof result.comets_remaining === 'number') {
       useCurrencyStore.getState().setComets(result.comets_remaining)
+    }
+    if (result.ok && typeof result.scrolls_remaining === 'number') {
+      if (result.upgrade_type === 'quality') {
+        useCurrencyStore.getState().setFallenStarScrolls(result.scrolls_remaining)
+      } else if (result.upgrade_type === 'level') {
+        useCurrencyStore.getState().setCometScrolls(result.scrolls_remaining)
+      }
     }
 
     return result

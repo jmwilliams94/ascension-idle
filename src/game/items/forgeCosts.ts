@@ -286,6 +286,22 @@ export function buildFallenStarTooltip(): ItemTooltipData {
   }
 }
 
+// Every Forge currency-affordability check (regular Quality/Level Upgrade,
+// Master Forge, weapon Socket unlock) must count Scrolls toward what a
+// player can afford, not just loose units — the server side already does
+// this (quality_upgrade/level_upgrade/master_forge_upgrade/
+// unlock_weapon_socket all call ensure_loose_currency, which auto-unbundles
+// exactly enough Scrolls to cover a shortfall before its cost check runs).
+// A client-side preview that only looks at loose comets/fallenStars blocks
+// the Confirm button on a genuinely affordable action — a real bug, fixed
+// 2026-08-07 (reported by the user: "it's not picking up that I have 4
+// Comet Scrolls... it seems it can only see the 6 individual comets").
+export const SCROLL_UNIT_VALUE = 10
+
+export function effectiveCurrencyAvailable(looseUnits: number, scrollCount: number): number {
+  return looseUnits + scrollCount * SCROLL_UNIT_VALUE
+}
+
 // Comet Scroll / Fallen Star Scroll (stage 2 of the Warehouse economy
 // redesign, 2026-07-31) — a compact-storage bundle of 10 loose units into 1
 // non-stacking Inventory item. Same synthetic-id convention as the units

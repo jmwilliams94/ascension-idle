@@ -15,6 +15,7 @@ import {
   type CompositionSimulation,
   compositionPointValue,
   compositionPointsRequired,
+  effectiveCurrencyAvailable,
   findNextTemplateInChain,
   formatCompositionTier,
   isFallenStarDragId,
@@ -209,6 +210,8 @@ export default function ForgePanel() {
   const templates = useItemTemplatesStore((state) => state.templates)
   const comets = useCurrencyStore((state) => state.comets)
   const fallenStars = useCurrencyStore((state) => state.fallenStars)
+  const cometScrolls = useCurrencyStore((state) => state.cometScrolls)
+  const fallenStarScrolls = useCurrencyStore((state) => state.fallenStarScrolls)
   const busy = useForgeStore((state) => state.busy)
   const qualityUpgrade = useForgeStore((state) => state.qualityUpgrade)
   const levelUpgrade = useForgeStore((state) => state.levelUpgrade)
@@ -379,8 +382,10 @@ export default function ForgePanel() {
     ? null
     : isMaxQuality
       ? 'Already at Ascended quality.'
-      : fallenStars < qualityCost
-        ? `Need ${qualityCost} Fallen Star${qualityCost === 1 ? '' : 's'} (have ${fallenStars}).`
+      : effectiveCurrencyAvailable(fallenStars, fallenStarScrolls) < qualityCost
+        ? `Need ${qualityCost} Fallen Star${qualityCost === 1 ? '' : 's'} (${
+            fallenStarScrolls > 0 ? `have ${fallenStars} + ${fallenStarScrolls} Scroll${fallenStarScrolls === 1 ? '' : 's'}` : `have ${fallenStars}`
+          }).`
         : null
   const levelDisabledReason = !selectedItem
     ? null
@@ -388,8 +393,10 @@ export default function ForgePanel() {
       ? selectedTemplate?.item_family
         ? 'Already at the top tier for this item.'
         : 'This item has no further upgrades.'
-      : comets < levelCost
-        ? `Need ${levelCost} Comet${levelCost === 1 ? '' : 's'} (have ${comets}).`
+      : effectiveCurrencyAvailable(comets, cometScrolls) < levelCost
+        ? `Need ${levelCost} Comet${levelCost === 1 ? '' : 's'} (${
+            cometScrolls > 0 ? `have ${comets} + ${cometScrolls} Scroll${cometScrolls === 1 ? '' : 's'}` : `have ${comets}`
+          }).`
         : null
 
   // The actual would-be item after the staged Material is applied — same
