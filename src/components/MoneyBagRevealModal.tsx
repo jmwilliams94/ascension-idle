@@ -1,16 +1,24 @@
-import { useMemo, type CSSProperties } from 'react'
+import { useEffect, useMemo, type CSSProperties } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useMoneyBagRevealStore } from '../game/items/useMoneyBagRevealStore'
 import { GEM_TYPES, getGemIconSrc, getGemTierColor, formatGemTierLabel } from '../game/items/gemTypes'
 import { buildRadiateEmbers, seedFromId } from '../game/items/tierEffectsData'
 
-// The center-screen "what did I just open" reveal for a Money Bag/Gem Bag's
-// Open action (Lucky Lad rewards expansion, 2026-08-09) — see
-// useMoneyBagRevealStore. Mounted unconditionally in GameShell alongside
-// OfflineProgressModal/InventoryFullModal, renders nothing when idle.
+// The "what did I just open" reveal for a Money Bag/Gem Bag's Open action
+// (Lucky Lad rewards expansion, 2026-08-09) — see useMoneyBagRevealStore.
+// Mounted unconditionally in GameShell alongside OfflineProgressModal/
+// InventoryFullModal, renders nothing when idle.
+//
+// Redesigned 2026-08-10 (confirmed with the user) — no longer a full-screen
+// blocking modal with a "Got it" button. Now a small floating box, centered
+// on screen, that fades in/out on its own (same auto-dismiss idea as
+// GainToastHost's top-right toasts, just centered and bigger, with a gold
+// ember burst around the box itself instead of a big circular icon frame).
 
+const REVEAL_DISPLAY_MS = 2800
 const GOLD_BURST_COLOR = '#FFD700'
-const BURST_EMBER_COUNT = 36
-const BURST_RADIUS = 130
+const BURST_EMBER_COUNT = 28
+const BURST_RADIUS = 90
 
 interface BurstStyle extends CSSProperties {
   '--ember-dx': string
@@ -21,7 +29,7 @@ interface BurstStyle extends CSSProperties {
 // (buildRadiateEmbers), but rendered with the one-shot .effect-ember-burst
 // animation (index.css) instead of the infinite .effect-ember-radiate loop —
 // a burst that plays once on reveal, not ambient tile decoration.
-function GoldEmberBurst({ seed, color }: { seed: number; color: string }) {
+function EmberBurst({ seed, color }: { seed: number; color: string }) {
   const embers = useMemo(() => buildRadiateEmbers(BURST_EMBER_COUNT, seed, BURST_RADIUS), [seed])
 
   return (
@@ -49,50 +57,53 @@ export default function MoneyBagRevealModal() {
   const reveal = useMoneyBagRevealStore((state) => state.reveal)
   const dismiss = useMoneyBagRevealStore((state) => state.dismiss)
 
-  if (!reveal) {
-    return null
-  }
+  useEffect(() => {
+    if (!reveal) {
+      return
+    }
+    const timeout = setTimeout(dismiss, REVEAL_DISPLAY_MS)
+    return () => clearTimeout(timeout)
+  }, [reveal, dismiss])
 
-  const isGem = reveal.kind === 'gem'
-  const color = isGem ? getGemTierColor(reveal.tier) : GOLD_BURST_COLOR
-  const seed = seedFromId(isGem ? `gem:${reveal.gemId}:${reveal.tier}` : `gold:${reveal.amount}`)
-  const title = isGem ? `${formatGemTierLabel(reveal.tier)} ${GEM_TYPES[reveal.gemId].displayName}` : 'Gold'
-  const subtitle = isGem ? `${GEM_TYPES[reveal.gemId].effectLabel} +${GEM_TYPES[reveal.gemId].percentByTier[reveal.tier]}%` : null
+  const isGem = reveal?.kind === 'gem'
+  const color = !reveal ? undefined : isGem ? getGemTierColor(reveal.tier) : GOLD_BURST_COLOR
+  const seed = reveal ? seedFromId(isGem ? `gem:${reveal.gemId}:${reveal.tier}` : `gold:${reveal.amount}`) : 0
+  const title = !reveal ? '' : isGem ? `${formatGemTierLabel(reveal.tier)} ${GEM_TYPES[reveal.gemId].displayName}` : 'Gold'
+  const subtitle = isGem && reveal.kind === 'gem' ? `${GEM_TYPES[reveal.gemId].effectLabel} +${GEM_TYPES[reveal.gemId].percentByTier[reveal.tier]}%` : null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4">
-      <div className="w-full max-w-sm space-y-4 rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900 to-slate-950 p-6 text-center shadow-2xl shadow-black/60">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">You opened it!</p>
-
-        <div className="relative mx-auto flex h-24 w-24 items-center justify-center">
-          <GoldEmberBurst seed={seed} color={color} />
-          <div
-            className="relative flex h-16 w-16 items-center justify-center rounded-full border-2"
-            style={{ borderColor: color, backgroundColor: `${color}22`, boxShadow: `0 0 24px ${color}66` }}
+    <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center">
+      <AnimatePresence>
+        {reveal && (
+          <motion.div
+            key={seed}
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.92 }}
+            transition={{ duration: 0.25 }}
+            className="relative flex items-center gap-3 rounded-xl border bg-slate-900/95 px-4 py-3 shadow-xl backdrop-blur"
+            style={{ borderColor: `${color}80` }}
           >
-            {isGem ? (
-              <img src={getGemIconSrc(reveal.gemId, reveal.tier)} alt="" className="h-4/5 w-4/5 object-contain" />
-            ) : (
-              <span className="text-3xl">💰</span>
-            )}
-          </div>
-        </div>
-
-        <div>
-          <p className="text-lg font-semibold" style={{ color }}>
-            {isGem ? title : `${reveal.amount.toLocaleString()} Gold`}
-          </p>
-          {subtitle && <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p>}
-        </div>
-
-        <button
-          type="button"
-          onClick={dismiss}
-          className="w-full rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1.5 text-sm font-medium text-sky-300 hover:bg-sky-500/20"
-        >
-          Got it
-        </button>
-      </div>
+            <EmberBurst seed={seed} color={color as string} />
+            <div
+              className="relative z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-2"
+              style={{ borderColor: color, backgroundColor: `${color}22` }}
+            >
+              {isGem && reveal.kind === 'gem' ? (
+                <img src={getGemIconSrc(reveal.gemId, reveal.tier)} alt="" className="h-4/5 w-4/5 object-contain" />
+              ) : (
+                <span className="text-2xl">💰</span>
+              )}
+            </div>
+            <div className="relative z-10">
+              <p className="text-sm font-semibold" style={{ color }}>
+                {reveal.kind === 'gold' ? `${reveal.amount.toLocaleString()} Gold` : title}
+              </p>
+              {subtitle && <p className="text-xs text-slate-400">{subtitle}</p>}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

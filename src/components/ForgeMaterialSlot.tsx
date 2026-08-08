@@ -91,6 +91,7 @@ export default function ForgeMaterialSlot({ entries, templates, onRemoveEntry }:
                   sizeClassName={SLOT_SIZE_CLASS}
                   icon="🔷"
                   iconSrc={getStoneIconSrc(entry.tier)}
+                  iconSizeClassName="h-3/5 w-3/5"
                   qualityColor={MATERIAL_COLOR}
                   badge={`${compositionPointValue(entry.tier)}`}
                   label={`+${entry.tier} Stone`}

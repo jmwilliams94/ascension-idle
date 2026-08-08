@@ -145,18 +145,17 @@ function LuckyCard({
           transition={{ duration: 0.25, delay: won ? 0 : 0.15 + index * 0.06 }}
           className="flex flex-col items-center gap-0.5"
         >
-          {/* Opened chest as the reveal backdrop (real art, 2026-08-03) —
-              same for every reward kind, with the reward's own icon overlaid
-              as a small badge so the 9 revealed cards still read apart from
-              each other at a glance. */}
-          <div className="relative flex h-11 w-11 items-center justify-center">
-            <img src={CHEST_OPEN_ICON_SRC} alt="" className="h-full w-full object-contain" />
-            <div
-              className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border text-[10px]"
-              style={{ borderColor: visual.color, backgroundColor: `${visual.color}dd` }}
-            >
-              {visual.iconSrc ? <img src={visual.iconSrc} alt="" className="h-4/5 w-4/5 object-contain" /> : visual.icon}
-            </div>
+          {/* Opened chest as the reveal backdrop (real art, 2026-08-03),
+              same for every reward kind. The reward's own icon renders as a
+              proper item tile underneath it (2026-08-10, confirmed with the
+              user — supersedes the earlier small corner badge) so the 9
+              revealed cards still read apart from each other at a glance. */}
+          <img src={CHEST_OPEN_ICON_SRC} alt="" className="h-8 w-8 object-contain" />
+          <div
+            className="flex h-7 w-7 items-center justify-center rounded-md border-2 text-sm"
+            style={{ borderColor: visual.color, backgroundColor: `${visual.color}22` }}
+          >
+            {visual.iconSrc ? <img src={visual.iconSrc} alt="" className="h-4/5 w-4/5 object-contain" /> : visual.icon}
           </div>
           <p className="text-[9px] font-medium leading-tight text-slate-300">{rewardLabel(reward)}</p>
         </motion.div>

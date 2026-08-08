@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.70.1",
+    "date": "2026-08-10",
+    "changes": [
+      "Lucky Lad polish: Money Bag rewards are much rarer now, gold values have been raised to compensate, and the reveal is a small floating burst instead of a full popup",
+      "Composition Stone icons no longer crowd their Inventory tile"
+    ]
+  },
+  {
     "version": "1.70.0",
     "date": "2026-08-09",
     "changes": [

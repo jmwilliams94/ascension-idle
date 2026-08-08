@@ -48,6 +48,10 @@ interface InventorySlotProps {
   // forgeCosts.ts's COMET_ICON_SRC for the established pattern of exposing
   // one of these as a shared constant per item).
   iconSrc?: string
+  // Overrides the default h-4/5 w-4/5 sizing for the iconSrc image — some art
+  // (e.g. Composition Stones) has little built-in whitespace and reads as too
+  // large/cramped at the default size. Omit to keep the default.
+  iconSizeClassName?: string
   // Plain accessibility label (aria-label). Also used as the native `title` popup,
   // but only when `tooltip` is omitted — otherwise the two would show at once.
   label?: string
@@ -98,6 +102,7 @@ export default function InventorySlot({
   qualityColor,
   icon,
   iconSrc,
+  iconSizeClassName = 'h-4/5 w-4/5',
   label,
   tooltip,
   badge,
@@ -170,7 +175,7 @@ export default function InventorySlot({
       style={{ borderColor: qualityColor, backgroundColor: qualityColor ? `${qualityColor}22` : undefined }}
     >
       {emberCount > 0 && <TierEmberEffect color={qualityColor as string} count={emberCount} seed={seedFromId(slotId)} />}
-      {iconSrc ? <img src={iconSrc} alt="" className="relative z-10 h-4/5 w-4/5 object-contain" /> : <span className="relative z-10">{icon}</span>}
+      {iconSrc ? <img src={iconSrc} alt="" className={`relative z-10 object-contain ${iconSizeClassName}`} /> : <span className="relative z-10">{icon}</span>}
       {badge && <span className="absolute bottom-0.5 right-1 z-10 text-[9px] font-semibold text-slate-200">{badge}</span>}
     </button>
   )

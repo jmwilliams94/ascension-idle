@@ -920,6 +920,7 @@ export default function InventoryPanel({
               sizeClassName: SLOT_SIZE_CLASS,
               icon: '🔷',
               iconSrc: getStoneIconSrc(tier),
+              iconSizeClassName: 'h-3/5 w-3/5',
               qualityColor: MATERIAL_COLOR,
               label: `+${tier} Stone — ${compositionPointValue(tier)} pts`,
               tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildStoneTooltip(tier),
