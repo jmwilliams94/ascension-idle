@@ -262,10 +262,6 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   const lotteryTickets = useCurrencyStore((state) => state.lotteryTickets)
 
   const [armedIndex, setArmedIndex] = useState<number | null>(null)
-  // Lottery Ticket (2026-08-06, Achievements rework) — a third payment
-  // option the player can toggle on, independent of free/AP eligibility;
-  // only offered when at least one is owned. Reset alongside armedIndex.
-  const [useTicketPayment, setUseTicketPayment] = useState(false)
   const [board, setBoard] = useState<LuckyReward[] | null>(null)
   const [wonIndex, setWonIndex] = useState<number | null>(null)
   const [paymentUsed, setPaymentUsed] = useState<'free' | 'ascension_points' | 'lottery_ticket' | null>(null)
@@ -283,8 +279,9 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   }, [])
 
   const freeAvailable = !nextFreeTicketAt || nextFreeTicketAt <= now
-  const cost = useTicketPayment ? 0 : freeAvailable ? 0 : LUCKY_TICKET_AP_COST
-  const canAffordArmed = useTicketPayment ? lotteryTickets >= 1 : freeAvailable || ascensionPoints >= LUCKY_TICKET_AP_COST
+  const pointsCost = freeAvailable ? 0 : LUCKY_TICKET_AP_COST
+  const canAffordTicket = lotteryTickets >= 1
+  const canAffordPoints = freeAvailable || ascensionPoints >= LUCKY_TICKET_AP_COST
 
   const handlePick = (index: number) => {
     if (board || busy) return
@@ -292,10 +289,10 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
     setArmedIndex((current) => (current === index ? null : index))
   }
 
-  const handleConfirm = async () => {
+  const handleConfirm = async (useTicket: boolean) => {
     if (armedIndex === null) return
     setError(null)
-    const result = await draw(characterId, armedIndex, useTicketPayment)
+    const result = await draw(characterId, armedIndex, useTicket)
 
     if (!result.ok || !result.board || typeof result.won_index !== 'number') {
       setError(
@@ -310,7 +307,6 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
                 : "Couldn't draw a ticket — try again.",
       )
       setArmedIndex(null)
-      setUseTicketPayment(false)
       return
     }
 
@@ -318,14 +314,12 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
     setWonIndex(result.won_index)
     setPaymentUsed(result.payment ?? null)
     setArmedIndex(null)
-    setUseTicketPayment(false)
   }
 
   const handleReset = () => {
     setBoard(null)
     setWonIndex(null)
     setPaymentUsed(null)
-    setUseTicketPayment(false)
     setError(null)
   }
 
@@ -376,45 +370,33 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
 
       {!board && armedIndex !== null && (
         <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
-          <p className="text-xs text-slate-400">
-            {useTicketPayment
-              ? 'This draw consumes 1 Lottery Ticket.'
-              : freeAvailable
-                ? 'This draw uses your free ticket.'
-                : `This draw costs ${LUCKY_TICKET_AP_COST} Ascension Points.`}
-          </p>
-          {lotteryTickets >= 1 && (
-            <label className="mt-2 flex items-center gap-2 text-xs text-slate-400">
-              <input
-                type="checkbox"
-                checked={useTicketPayment}
-                onChange={(event) => setUseTicketPayment(event.target.checked)}
-                className="h-3.5 w-3.5 rounded border-slate-600 bg-slate-800 text-sky-500"
-              />
-              Pay with a Lottery Ticket instead ({lotteryTickets} owned)
-            </label>
-          )}
+          <p className="text-xs text-slate-400">Choose how to pay for this draw:</p>
           <div className="mt-2 flex gap-2">
             <button
               type="button"
-              disabled={busy || !canAffordArmed}
-              onClick={() => void handleConfirm()}
+              disabled={busy || !canAffordTicket}
+              onClick={() => void handleConfirm(true)}
               className="flex-1 rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {busy ? 'Drawing…' : `Confirm (${useTicketPayment ? '1 Ticket' : cost === 0 ? 'Free' : `${cost} AP`})`}
+              {busy ? 'Drawing…' : `Lottery Ticket (${lotteryTickets} owned)`}
             </button>
             <button
               type="button"
-              disabled={busy}
-              onClick={() => {
-                setArmedIndex(null)
-                setUseTicketPayment(false)
-              }}
-              className="flex-1 rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-300 hover:border-slate-400"
+              disabled={busy || !canAffordPoints}
+              onClick={() => void handleConfirm(false)}
+              className="flex-1 rounded-lg border border-purple-500 bg-purple-500/10 px-3 py-1.5 text-xs font-medium text-purple-300 hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Cancel
+              {busy ? 'Drawing…' : pointsCost === 0 ? 'Free Ticket' : `${pointsCost} AP`}
             </button>
           </div>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setArmedIndex(null)}
+            className="mt-2 w-full rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-300 hover:border-slate-400"
+          >
+            Cancel
+          </button>
         </div>
       )}
 

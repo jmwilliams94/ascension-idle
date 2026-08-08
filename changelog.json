@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.74.2",
+    "date": "2026-08-11",
+    "changes": [
+      "Lucky Lad's draw screen now shows a separate \"Lottery Ticket\" and \"Ascension Points\" button instead of a checkbox, so you can pick your payment method in one tap",
+      "Rebalanced Lucky Lad's reward odds — the rarest gear rewards are now rarer (0.5% combined down to 0.2%), with the difference going into the most common Money Bag tier"
+    ]
+  },
+  {
     "version": "1.74.1",
     "date": "2026-08-11",
     "changes": [
