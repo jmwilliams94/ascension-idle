@@ -192,6 +192,24 @@ export default function GameShell({ characterId }: { characterId: string }) {
     // the app was away, using nothing but the wall clock. This is what
     // actually guarantees the popup shows up on a plain re-open, with no
     // dependency on iOS/Android correctly reporting the transition.
+    //
+    // Gated on document.visibilityState === 'visible' (2026-08-09, fixed a
+    // bug reported by the user: minimizing to watch a 10-15min YouTube video
+    // and coming back showed no "Welcome back" popup, only a single small
+    // item silently in Loot Holding). A merely-backgrounded tab (as opposed
+    // to a genuinely suspended one) isn't fully paused by most browsers —
+    // this interval keeps firing at a throttled ~once/minute cadence *while
+    // still hidden*, which was tripping RESUME_GAP_THRESHOLD_MS on every
+    // throttled tick and firing checkOfflineProgressOnResume over and over
+    // in the background. Each of those silent calls really did resolve
+    // combat and grant rewards (correctly — that's where the stray item
+    // came from) but only covered ~60s each, chopping a real 10-15 minute
+    // absence into slivers individually too small (or right on the edge) to
+    // clear OFFLINE_SUMMARY_THRESHOLD_MS, so the summary modal rarely if
+    // ever showed even though the underlying rewards were real. Requiring
+    // the tab to actually be visible before treating a gap as a "resume"
+    // means the whole away-window accumulates untouched until the player
+    // actually looks again, at which point one check covers all of it.
     const HEARTBEAT_INTERVAL_MS = 3000
     const RESUME_GAP_THRESHOLD_MS = 10000
     let lastHeartbeatAt = Date.now()
@@ -199,7 +217,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       const now = Date.now()
       const gap = now - lastHeartbeatAt
       lastHeartbeatAt = now
-      if (gap > RESUME_GAP_THRESHOLD_MS) {
+      if (gap > RESUME_GAP_THRESHOLD_MS && document.visibilityState === 'visible') {
         void checkOfflineProgressOnResume()
       }
     }, HEARTBEAT_INTERVAL_MS)
