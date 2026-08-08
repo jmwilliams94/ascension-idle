@@ -46,6 +46,14 @@ export interface DerivedStats {
   // stat, both still fed by the same Agility attribute but gear-boosted
   // independently by different slot types. PLACEHOLDER weighting.
   dexterity: number
+  // Composition ("+N") bonus to physical+magic attack combined — deliberately
+  // kept out of `physicalAttack`/`magicAttack` above and surfaced separately
+  // so callers computing attackMidpoint can add it in *after* applying the
+  // account-wide attack bonus %, not before (see equipmentBonus.ts's
+  // computeEquipmentBonus and useCombatStore.runTick). Composition's
+  // defense/dodge bonus has no equivalent account-wide multiplier, so it's
+  // already folded into physicalDefense/magicDefense/dodge above.
+  compositionAttackBonus: number
 }
 
 // Flat stat bonuses from the currently equipped item(s) — stacks on top of the
@@ -57,6 +65,7 @@ export interface EquipmentBonus {
   magicDefense?: number
   dodge?: number
   dexterity?: number
+  compositionAttackBonus?: number
 }
 
 export function computeDerivedStats(attributes: Attributes, equipmentBonus: EquipmentBonus = {}): DerivedStats {
@@ -87,5 +96,6 @@ export function computeDerivedStats(attributes: Attributes, equipmentBonus: Equi
     magicDefense,
     dodge,
     dexterity,
+    compositionAttackBonus: equipmentBonus.compositionAttackBonus ?? 0,
   }
 }

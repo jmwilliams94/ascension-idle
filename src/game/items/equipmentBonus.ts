@@ -41,6 +41,59 @@ function scaledStat(baseStats: Record<string, number>, key: string, qualityTier:
   return Math.round(base * multiplier)
 }
 
+// Composition ("+N") stat bonus — confirmed 2026-08-11, 5%/tier flat
+// placeholder (see CLAUDE.md's Composition section), tiers currently
+// uncapped. Deliberately computed off the item's raw, unscaled base_stats
+// (not scaledStat's quality-adjusted value) and kept out of
+// computeEquipmentBonus's/resolve-combat's other multipliers entirely — it
+// must not compound with QUALITY_STAT_MULTIPLIERS or the account-wide
+// attack/drop bonus percentages, per the user's explicit "not included in
+// any other scaling" — so it's summed as its own flat addend, not folded
+// into scaledStat.
+//
+// Slot -> stat key mapping mirrors the sourced per-slot-type table in
+// CLAUDE.md; only the base_stats keys this codebase actually reads today are
+// included (Max HP portions of Necklace/Bag aren't itemized on any template
+// yet, and Shield/Bag/Bracelet/Heavy Ring/Taoist Cap/Magic Sword have no
+// implemented slot_type to key off of).
+export const COMPOSITION_BONUS_PCT_PER_TIER = 0.05
+
+export const COMPOSITION_BONUS_STAT_KEYS: Record<string, string[]> = {
+  weapon: ['physical_attack', 'magic_attack'],
+  ring: ['physical_attack'],
+  necklace: ['physical_defense'],
+  hat: ['physical_defense'],
+  coat: ['physical_defense', 'magic_defense'],
+  boots: ['dodge'],
+}
+
+// Returns only keys with a nonzero rounded bonus (a level-1 item's tiny base
+// stat can legitimately round to +0 at low composition levels — omitted
+// rather than shown as a no-op "Bonus: +0").
+export function computeCompositionBonusStats(
+  baseStats: Record<string, number>,
+  slotType: string | undefined,
+  compositionLevel: number,
+): Record<string, number> {
+  if (!slotType || compositionLevel <= 0) {
+    return {}
+  }
+  const keys = COMPOSITION_BONUS_STAT_KEYS[slotType]
+  if (!keys) {
+    return {}
+  }
+  const result: Record<string, number> = {}
+  for (const key of keys) {
+    const base = baseStats[key]
+    if (typeof base !== 'number') continue
+    const bonus = Math.round(base * COMPOSITION_BONUS_PCT_PER_TIER * compositionLevel)
+    if (bonus > 0) {
+      result[key] = bonus
+    }
+  }
+  return result
+}
+
 // Pure function taking explicit snapshots rather than reading the stores itself, so
 // it works both reactively (React components, fed by hooks) and imperatively (Phaser
 // scene code, fed by .getState()) without duplicating the lookup logic.
@@ -63,6 +116,7 @@ export function computeEquipmentBonus(
     magicDefense: 0,
     dodge: 0,
     dexterity: 0,
+    compositionAttackBonus: 0,
   }
 
   for (const slot of EQUIP_SLOTS) {
@@ -79,6 +133,21 @@ export function computeEquipmentBonus(
     bonus.magicDefense += scaledStat(template.base_stats, 'magic_defense', item.quality_tier) ?? 0
     bonus.dodge += scaledStat(template.base_stats, 'dodge', item.quality_tier) ?? 0
     bonus.dexterity += scaledStat(template.base_stats, 'dexterity', item.quality_tier) ?? 0
+
+    // Physical/magic attack composition bonus is tracked separately
+    // (compositionAttackBonus) rather than folded into bonus.physicalAttack/
+    // magicAttack — those two feed attackMidpoint, which the account-wide
+    // attack bonus % then multiplies (see useCombatStore.runTick); the
+    // composition bonus must not be swept into that multiplication (per the
+    // user's "not included in any other scaling"), so it's added back in
+    // unscaled afterward instead. physicalDefense/magicDefense/dodge have no
+    // equivalent account-wide multiplier, so their composition bonus is
+    // folded straight in.
+    const composition = computeCompositionBonusStats(template.base_stats, template.slot_type, item.composition_level)
+    bonus.compositionAttackBonus += (composition.physical_attack ?? 0) + (composition.magic_attack ?? 0)
+    bonus.physicalDefense += composition.physical_defense ?? 0
+    bonus.magicDefense += composition.magic_defense ?? 0
+    bonus.dodge += composition.dodge ?? 0
   }
 
   return bonus
@@ -398,6 +467,11 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
       ? ['Sockets', ...item.sockets.map((socket) => (socket ? (describeSocketedGem(socket) ?? 'Empty') : 'Empty'))]
       : []
 
+  const compositionBonus = template
+    ? computeCompositionBonusStats(template.base_stats, template.slot_type, item.composition_level)
+    : {}
+  const bonusStats = Object.entries(compositionBonus).map(([key, value]) => `Bonus: +${value} ${key.replace(/_/g, ' ')}`)
+
   return {
     title: template
       ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level)
@@ -408,5 +482,6 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
     iconColor: getQualityColor(item.quality_tier),
     lines: [formatItemLevel(item.level), ...(classLine ? [classLine] : []), ...socketLines],
     stats: template ? formatBaseStats(template.base_stats, item.quality_tier).split(', ').filter(Boolean) : [],
+    bonusStats: bonusStats.length > 0 ? bonusStats : undefined,
   }
 }

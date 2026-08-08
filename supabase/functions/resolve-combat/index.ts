@@ -165,6 +165,33 @@ function scaledStat(baseStats: Record<string, number>, key: string, qualityTier:
   return Math.round(base * (QUALITY_STAT_MULTIPLIERS[qualityTier] ?? 1))
 }
 
+// Mirrors src/game/items/equipmentBonus.ts's computeCompositionBonusStats —
+// 5%/tier flat on the item's raw base stat, deliberately kept out of
+// QUALITY_STAT_MULTIPLIERS/the account-wide attack bonus below (summed as
+// its own flat addend, not folded into scaledStat/attackMidpoint's other
+// multipliers). Only physical_attack/magic_attack matter here — defense/
+// dodge composition bonuses aren't simulated server-side at all, same as the
+// rest of incoming mitigation (see the comment above equipmentBonus).
+const COMPOSITION_BONUS_PCT_PER_TIER = 0.05
+
+const COMPOSITION_BONUS_STAT_KEYS: Record<string, string[]> = {
+  weapon: ['physical_attack', 'magic_attack'],
+  ring: ['physical_attack'],
+}
+
+function compositionBonusStat(
+  baseStats: Record<string, number>,
+  key: string,
+  slotType: string | undefined,
+  compositionLevel: number,
+): number {
+  if (!slotType || compositionLevel <= 0) return 0
+  if (!COMPOSITION_BONUS_STAT_KEYS[slotType]?.includes(key)) return 0
+  const base = baseStats[key]
+  if (typeof base !== 'number') return 0
+  return Math.round(base * COMPOSITION_BONUS_PCT_PER_TIER * compositionLevel)
+}
+
 // Mirrors src/game/combat/combatResolver.ts
 const RARE_CHANCE = 0.05
 const RARE_HP_MULTIPLIER = 2
@@ -673,6 +700,11 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     magicAttack: 0,
     dexterity: 0,
   }
+  // Kept out of equipmentBonus.physicalAttack/magicAttack — those feed
+  // attackMidpoint, which the account-wide attack bonus % multiplies below;
+  // composition's attack bonus must not compound with that multiplier (see
+  // compositionBonusStat's comment), so it's added back in unscaled after.
+  let compositionAttackBonus = 0
 
   const equippedItemIds = [
     character.equipped_weapon_id,
@@ -684,12 +716,15 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   ].filter((id): id is string => Boolean(id))
 
   if (equippedItemIds.length > 0) {
-    const { data: equippedItems } = await db.from('item_instances').select('id, quality_tier, template_id').in('id', equippedItemIds)
+    const { data: equippedItems } = await db
+      .from('item_instances')
+      .select('id, quality_tier, template_id, composition_level')
+      .in('id', equippedItemIds)
 
     if (equippedItems && equippedItems.length > 0) {
       const { data: equippedTemplates } = await db
         .from('item_templates')
-        .select('id, base_stats')
+        .select('id, base_stats, slot_type')
         .in(
           'id',
           equippedItems.map((item) => item.template_id),
@@ -701,6 +736,18 @@ async function handleResolveCombat(req: Request): Promise<Response> {
         equipmentBonus.physicalAttack += scaledStat(template.base_stats, 'physical_attack', item.quality_tier) ?? 0
         equipmentBonus.magicAttack += scaledStat(template.base_stats, 'magic_attack', item.quality_tier) ?? 0
         equipmentBonus.dexterity += scaledStat(template.base_stats, 'dexterity', item.quality_tier) ?? 0
+        compositionAttackBonus += compositionBonusStat(
+          template.base_stats,
+          'physical_attack',
+          template.slot_type,
+          item.composition_level,
+        )
+        compositionAttackBonus += compositionBonusStat(
+          template.base_stats,
+          'magic_attack',
+          template.slot_type,
+          item.composition_level,
+        )
       }
     }
   }
@@ -825,6 +872,9 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const zoneDropBonusPct = (playerRow?.account_zone_drop_bonus_pct as Record<string, number> | null)?.[zoneKey] ?? 0
   const accountDropMultiplier = 1 + zoneDropBonusPct / 100
   attackMidpoint *= 1 + accountAttackBonusPct / 100
+  // Added in unscaled, after the account-wide multiplier — see
+  // compositionAttackBonus's declaration above.
+  attackMidpoint += compositionAttackBonus
   // Same White/Green/Red/Black level-diff EXP multiplier killRewards already
   // applies to on-kill EXP (see EXP_MULTIPLIER_BY_COLOR/getLevelDiffColor) —
   // precomputed once here so the new per-hit damage-dealt EXP below gets the

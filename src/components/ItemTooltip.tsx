@@ -4,7 +4,7 @@ import type { ItemTooltipData } from '../game/items/itemTooltip'
 // secondary info lines, then a visually distinct stats block. Used everywhere an
 // item/weapon/stone/arrow tile is shown (see InventorySlot's `tooltip` prop and
 // EquipmentSlot) so hovering any of them looks and reads the same way.
-export default function ItemTooltip({ title, titleColor, icon, iconSrc, iconColor, lines, stats }: ItemTooltipData) {
+export default function ItemTooltip({ title, titleColor, icon, iconSrc, iconColor, lines, stats, bonusStats }: ItemTooltipData) {
   const hasIcon = Boolean(icon || iconSrc)
 
   const body = (
@@ -27,6 +27,11 @@ export default function ItemTooltip({ title, titleColor, icon, iconSrc, iconColo
         <div className="mt-1.5 space-y-0.5 border-t border-slate-800 pt-1.5">
           {stats.map((stat, index) => (
             <p key={index} className="text-[11px] text-sky-300">
+              {stat}
+            </p>
+          ))}
+          {bonusStats?.map((stat, index) => (
+            <p key={`bonus-${index}`} className="text-[11px] text-purple-400">
               {stat}
             </p>
           ))}

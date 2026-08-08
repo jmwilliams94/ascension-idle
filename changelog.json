@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.73.2",
+    "date": "2026-08-11",
+    "changes": [
+      "Gear composition (+N) now actually boosts your stats — Weapons/Rings get Physical/Magic Attack, Necklaces/Hats/Coats get Defense, Boots get Dodge, each scaling with the item's own level. Shows as a purple \"Bonus\" line on the item's tooltip"
+    ]
+  },
+  {
     "version": "1.73.1",
     "date": "2026-08-11",
     "changes": [

@@ -25,4 +25,9 @@ export interface ItemTooltipData {
   lines?: string[]
   // Stat bonus lines, shown in a visually distinct block below `lines`.
   stats?: string[]
+  // Composition ("+N") stat bonus lines (see equipmentBonus.ts's
+  // computeCompositionBonusStats) — rendered directly below `stats` in
+  // purple to read as a distinct bonus source, not part of the item's base
+  // stats block.
+  bonusStats?: string[]
 }

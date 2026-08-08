@@ -233,7 +233,11 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     const accountAttackBonusPct = currentZoneId ? (accountZoneAttackBonusPct[currentZoneId] ?? 0) : 0
     const zoneDropBonusPct = currentZoneId ? (accountZoneDropBonusPct[currentZoneId] ?? 0) : 0
     const accountDropMultiplier = 1 + zoneDropBonusPct / 100
-    const attackMidpoint = (derived.physicalAttack + derived.magicAttack) * (1 + accountAttackBonusPct / 100)
+    // Composition attack bonus is added in unscaled, after the account-wide
+    // attack bonus % — it must not compound with that multiplier (see
+    // derivedStats.ts's compositionAttackBonus comment).
+    const attackMidpoint =
+      (derived.physicalAttack + derived.magicAttack) * (1 + accountAttackBonusPct / 100) + derived.compositionAttackBonus
 
     // Lazy-init the player's HP the first time combat ever ticks (0/0 sentinel —
     // see the CombatState field comments) rather than resetting it on every
