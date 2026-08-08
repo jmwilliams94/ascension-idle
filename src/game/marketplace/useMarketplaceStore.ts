@@ -35,13 +35,28 @@ export interface MarketplaceListing {
   sold_at: string | null
   // Hydrated client-side by a follow-up item_instances fetch, not a DB join
   // (matches this codebase's established "flat selects, join client-side by
-  // id" convention — see useAchievementsStore). Absent for a 'sold' entry in
-  // My Listings history: once ownership moves to the buyer, the seller's own
-  // item_instances RLS no longer matches it (it's not actively listed
-  // anymore either) — a known, disclosed display-only gap, not a bug. Also
-  // absent (deliberately, never fetched) for a currency-type listing —
-  // there's no item_instances row to hydrate.
+  // id" convention — see useAchievementsStore). Absent (deliberately, never
+  // fetched) for a currency-type listing — there's no item_instances row to
+  // hydrate. Also absent once a sale completes and ownership moves to the
+  // buyer — the seller's own item_instances RLS no longer matches it (it's
+  // not actively listed anymore either) — see the item_* snapshot fields
+  // below, which is what MarketplacePanel actually falls back to display for
+  // that case now instead of a dead "Item unavailable."
   item?: ItemInstance
+  // Snapshot of the item's display-relevant fields at the moment it was
+  // listed (2026-08-11, migration 20260811000000_marketplace_listing_item_snapshot.sql)
+  // — an actively-listed item can't be modified (excluded from every
+  // Inventory/Forge grid while status = 'active'), so this is accurate for
+  // the listing's entire lifetime, sold or not. Deliberately NOT kept live
+  // in sync with the item afterward — the seller should see what they
+  // actually sold, not whatever the buyer has since done to it. Null for
+  // currency-type listings and for any listing created before this
+  // migration shipped (no retroactive backfill — see the migration's own
+  // header for why).
+  item_template_id: string | null
+  item_quality_tier: string | null
+  item_level: number | null
+  item_composition_level: number | null
 }
 
 interface CreateListingResult {

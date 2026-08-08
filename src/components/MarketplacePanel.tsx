@@ -4,7 +4,7 @@ import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import MarketplaceListingSlot, { type ListingDraftTarget } from './MarketplaceListingSlot'
 import { DragDropProvider } from './dragDrop'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
-import { useInventoryStore } from '../game/items/useInventoryStore'
+import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemTemplatesStore'
 import {
   useMarketplaceStore,
@@ -74,16 +74,45 @@ function describeBuyError(error?: string): string {
   }
 }
 
-// A listing's own label — a real gear name, or one of the 4 listable
-// currency type labels, or a placeholder for a since-claimed/unavailable
-// gear item (see MarketplaceListing.item's own doc comment).
+// A synthetic ItemInstance built from a listing's own item_* snapshot
+// columns (see useMarketplaceStore's MarketplaceListing doc comment) — used
+// once listing.item is no longer readable (a completed sale), so history can
+// still show exactly what was actually sold instead of "Item unavailable."
+// Mirrors LootHoldingCard.tsx's previewInstanceForEntry — same idea, a
+// different real source (a DB snapshot here, not a not-yet-owned template).
+function snapshotPreviewItem(listing: MarketplaceListing): ItemInstance | null {
+  if (!listing.item_template_id || !listing.item_quality_tier) {
+    return null
+  }
+  return {
+    id: listing.id,
+    template_id: listing.item_template_id,
+    owner_id: '',
+    quality_tier: listing.item_quality_tier,
+    level: listing.item_level ?? 1,
+    composition_level: listing.item_composition_level ?? 0,
+    composition_points: 0,
+    sockets: [],
+    enchant: null,
+    created_at: listing.created_at,
+    location: 'inventory',
+  }
+}
+
+// A listing's own label — a real gear name (from the live item while it's
+// still readable, or the item_* snapshot once it's not), or one of the 4
+// listable currency type labels, or a placeholder only for a currency-less
+// gear listing with no snapshot at all (created before the snapshot
+// migration shipped — see that migration's own header for why this can't be
+// backfilled).
 function listingLabel(listing: MarketplaceListing, templates: ItemTemplate[]): string {
   if (listing.currency_type) {
     return listableCurrencyLabel(listing.currency_type)
   }
-  const template = listing.item ? templates.find((t) => t.id === listing.item!.template_id) : undefined
-  return listing.item
-    ? formatItemDisplayName(template?.name ?? 'Unknown item', listing.item.quality_tier, listing.item.composition_level)
+  const resolved = listing.item ?? snapshotPreviewItem(listing)
+  const template = resolved ? templates.find((t) => t.id === resolved.template_id) : undefined
+  return resolved
+    ? formatItemDisplayName(template?.name ?? 'Unknown item', resolved.quality_tier, resolved.composition_level)
     : 'Item unavailable'
 }
 
@@ -103,7 +132,8 @@ function ListingTile({ listing, templates }: { listing: MarketplaceListing; temp
     )
   }
 
-  const template = listing.item ? templates.find((t) => t.id === listing.item!.template_id) : undefined
+  const resolved = listing.item ?? snapshotPreviewItem(listing)
+  const template = resolved ? templates.find((t) => t.id === resolved.template_id) : undefined
   const label = listingLabel(listing, templates)
   const icon = getItemIcon(template?.slot_type)
   const iconSrc = getGearIconSrc(template?.name)
@@ -111,13 +141,13 @@ function ListingTile({ listing, templates }: { listing: MarketplaceListing; temp
   return (
     <InventorySlot
       slotId={listing.id}
-      filled={Boolean(listing.item)}
+      filled={Boolean(resolved)}
       sizeClassName={SLOT_SIZE_CLASS}
-      icon={listing.item ? icon : undefined}
-      iconSrc={listing.item ? iconSrc : undefined}
-      qualityColor={listing.item ? getQualityColor(listing.item.quality_tier) : undefined}
+      icon={resolved ? icon : undefined}
+      iconSrc={resolved ? iconSrc : undefined}
+      qualityColor={resolved ? getQualityColor(resolved.quality_tier) : undefined}
       label={label}
-      tooltip={listing.item ? buildGearTooltip(listing.item, template) : undefined}
+      tooltip={resolved ? buildGearTooltip(resolved, template) : undefined}
     />
   )
 }
