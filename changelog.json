@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.74.1",
+    "date": "2026-08-11",
+    "changes": [
+      "Fixed a bug from the previous update where gold rewards weren't being rounded to a whole number, which could cause gold/level saving to silently fail"
+    ]
+  },
+  {
     "version": "1.74.0",
     "date": "2026-08-11",
     "changes": [

@@ -1062,7 +1062,16 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     const creditedDamage = totalExpectedDamage * creditedFraction
 
     kills = Math.round(creditedKills)
-    goldGained += creditedKills * monster.gold_reward * RARE_BLENDED_REWARD_FACTOR
+    // Math.round is required here (bug found 2026-08-11, reported by the
+    // user) — unlike expGained below, this was left as a raw fractional
+    // value, which then flowed into resolve_combat_apply_rewards' p_gold_delta
+    // (a Postgres `integer` param). That silently failed the RPC call
+    // (caught by the `if (rewardError || !rewardRow)` fallback below), which
+    // fell back to a JS-computed fractional gold total that was never
+    // actually written to the DB — the client then tried to autosave that
+    // fractional value into characters.gold (also `integer`) via a direct
+    // PATCH, which failed with "invalid input syntax for type integer".
+    goldGained += Math.round(creditedKills * monster.gold_reward * RARE_BLENDED_REWARD_FACTOR)
     const killExp = creditedKills * expRewardForLevel(monster.level) * expMultiplier * RARE_BLENDED_REWARD_FACTOR
     const damageExp =
       creditedDamage *
