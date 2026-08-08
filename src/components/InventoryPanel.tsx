@@ -545,6 +545,50 @@ export default function InventoryPanel({
     closeBankPopover()
   }
 
+  // Banks a Scroll directly at full value (10 units) via the same
+  // transfer_currency RPC the loose-unit Bank action already uses — its
+  // deposit direction already auto-unbundles exactly enough Scrolls to cover
+  // a shortfall in loose units (see 20260807040000_bank_withdraw_bundles_scrolls.sql),
+  // so passing amount=10 (or a multiple, for Bank All) here banks straight
+  // from Scrolls without first unbundling into loose Inventory tiles.
+  const handleBankScroll = async (currencyType: 'comet' | 'fallen_star') => {
+    if (!characterId) {
+      return
+    }
+    setScrollError(null)
+    setScrollBusy(true)
+    const result = await depositCurrency(characterId, currencyType === 'comet' ? 'comets' : 'fallen_stars', 10)
+    setScrollBusy(false)
+
+    if (!result.ok) {
+      setScrollError(`Couldn't bank that ${currencyType === 'comet' ? 'Comet' : 'Fallen Star'} Scroll.`)
+      return
+    }
+
+    closeScrollPopover()
+  }
+
+  const handleBankAllScroll = async (currencyType: 'comet' | 'fallen_star') => {
+    if (!characterId) {
+      return
+    }
+    const scrollCount = currencyType === 'comet' ? cometScrolls : fallenStarScrolls
+    if (scrollCount <= 0) {
+      return
+    }
+    setScrollError(null)
+    setScrollBusy(true)
+    const result = await depositCurrency(characterId, currencyType === 'comet' ? 'comets' : 'fallen_stars', scrollCount * 10)
+    setScrollBusy(false)
+
+    if (!result.ok) {
+      setScrollError(`Couldn't bank your ${currencyType === 'comet' ? 'Comet' : 'Fallen Star'} Scrolls.`)
+      return
+    }
+
+    closeScrollPopover()
+  }
+
   const handleTileDrop = (overTarget: string | null, id: string) => {
     if (overTarget) {
       onTileDrop?.(overTarget, id)
@@ -1158,6 +1202,23 @@ export default function InventoryPanel({
               onClick: () => void handleUnbundle(selectedScrollType),
               disabled: scrollBusy,
             },
+            // Bank/Bank All (Bank-tab-only, mirrors the loose-unit currency
+            // popover's own Bank/Bank All) — banks straight from a Scroll's
+            // full value without unbundling into loose Inventory tiles first.
+            ...(enableBankDeposit
+              ? [
+                  {
+                    label: scrollBusy ? 'Banking…' : 'Bank',
+                    onClick: () => void handleBankScroll(selectedScrollType),
+                    disabled: scrollBusy,
+                  },
+                  {
+                    label: 'Bank All',
+                    onClick: () => void handleBankAllScroll(selectedScrollType),
+                    disabled: scrollBusy,
+                  },
+                ]
+              : []),
           ]}
           onClose={closeScrollPopover}
         />

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.69.4",
+    "date": "2026-08-08",
+    "changes": [
+      "Comet Scrolls and Fallen Star Scrolls can now be Banked directly (or Banked All) from the Bank tab, at their full 10-unit value, without unbundling them into loose Comets/Fallen Stars first"
+    ]
+  },
+  {
     "version": "1.69.3",
     "date": "2026-08-08",
     "changes": [
