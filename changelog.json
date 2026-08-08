@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.70.4",
+    "date": "2026-08-10",
+    "changes": [
+      "Lucky Lad cards are now square with bigger chest art, and a revealed card shows its item centered above the opened chest"
+    ]
+  },
+  {
     "version": "1.70.3",
     "date": "2026-08-10",
     "changes": [
