@@ -63,7 +63,12 @@ export default function ExpBar() {
   const clearLevelUpNotice = useProgressionStore((state) => state.clearLevelUpNotice)
   const isMaxLevel = predictedLevel >= MAX_CHARACTER_LEVEL
   const required = requiredExpForLevel(predictedLevel)
-  const displayedGold = gold + predictedGold
+  // predictedGold is a genuine float now (2026-08-11 expected-value rewrite
+  // — see useProgressionStore's addPredictedRewards) since it accrues in
+  // small per-tick fractions rather than kill-sized lumps; floored here,
+  // display-only, same "floor at render time, not in the accumulator"
+  // pattern the Achievements kill count uses.
+  const displayedGold = Math.floor(gold + predictedGold)
   const percent = isMaxLevel ? 100 : required > 0 ? Math.min(100, (predictedExp / required) * 100) : 100
 
   useEffect(() => {

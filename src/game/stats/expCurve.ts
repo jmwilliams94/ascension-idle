@@ -116,11 +116,11 @@ export function expRewardForLevel(level: number): number {
 // expRewardForLevel by the time the monster dies, layered ON TOP of (not
 // instead of) the existing full on-kill EXP grant. A full kill nets
 // (1 + DAMAGE_EXP_SHARE) = 150% of the base reward.
-const DAMAGE_EXP_SHARE = 0.5
-
-export function damageExpForHit(damage: number, monsterMaxHp: number, monsterLevel: number): number {
-  if (monsterMaxHp <= 0) {
-    return 0
-  }
-  return Math.round(expRewardForLevel(monsterLevel) * DAMAGE_EXP_SHARE * (damage / monsterMaxHp))
-}
+//
+// Exported (2026-08-11) so combatResolver.ts's expectedRewardPerAttack can
+// apply this same share to a continuous expected-damage value directly —
+// the old per-hit damageExpForHit(damage, monsterMaxHp, monsterLevel) helper
+// (which rounded per hit) was removed the same day: nothing calls it
+// anymore once reward math moved to closed-form per-window totals instead
+// of per-attack accumulation (see resolve-combat/index.ts's mirrored math).
+export const DAMAGE_EXP_SHARE = 0.5

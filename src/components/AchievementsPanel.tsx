@@ -183,6 +183,11 @@ function CharacterMonsterCard({ characterId, monsterId, displayName }: { charact
   const claimCharacterTier = useAchievementsStore((state) => state.claimCharacterTier)
   const [error, setError] = useState<string | null>(null)
 
+  // Fractional now (2026-08-11 expected-value rewrite — see CLAUDE.md's
+  // Combat section) since resolve-combat credits partial kill progress every
+  // resolve instead of only whole numbers; threshold comparisons below use
+  // the raw value (crosses the instant enough progress accrues), only the
+  // rendered "N kills" text floors it.
   const kills = entry?.kills ?? 0
   const claimedTierIndex = entry?.claimedTierIndex ?? 0
   const reachedTierIndex = tierIndexReached(kills, ACHIEVEMENT_TIERS)
@@ -204,7 +209,7 @@ function CharacterMonsterCard({ characterId, monsterId, displayName }: { charact
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-sm font-medium text-slate-200">{displayName}</p>
-          <p className="text-[11px] text-slate-500">{kills.toLocaleString()} kills</p>
+          <p className="text-[11px] text-slate-500">{Math.floor(kills).toLocaleString()} kills</p>
         </div>
         {maxed ? (
           <span className="text-[11px] font-medium text-emerald-400">All tiers claimed</span>
@@ -267,7 +272,7 @@ function AccountMonsterCard({ accountId, monsterId, displayName }: { accountId: 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-sm font-medium text-slate-200">{displayName}</p>
-          <p className="text-[11px] text-slate-500">{kills.toLocaleString()} kills (all characters)</p>
+          <p className="text-[11px] text-slate-500">{Math.floor(kills).toLocaleString()} kills (all characters)</p>
         </div>
         {maxed ? (
           <span className="text-[11px] font-medium text-emerald-400">All tiers claimed</span>

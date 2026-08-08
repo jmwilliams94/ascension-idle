@@ -11,9 +11,8 @@ import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 import { ENEMY_TYPES, zoneIdForMonster, type EnemyTypeId } from '../zones/zoneData'
 import {
   MONSTER_ATTACK_INTERVAL_MS,
-  RARE_REWARD_MULTIPLIER,
-  damageExpForHit,
   expMultiplierForLevelDiff,
+  expectedRewardPerAttack,
   killRewards,
   monsterAttackDamage,
   monsterDefense,
@@ -329,6 +328,24 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       return
     }
 
+    // Deterministic expected-value reward accrual (2026-08-11 rewrite, see
+    // combatResolver.ts's expectedRewardPerAttack and CLAUDE.md's Combat
+    // section) — replaces the old per-hit/per-kill RNG-driven
+    // addPredictedRewards calls (damage-dealt EXP on every landed hit, gold+
+    // EXP on every kill). Runs once per attack-interval tick, UNCONDITIONALLY
+    // — before the rollAttackLands miss-check below, not gated behind it —
+    // because expectedRewardPerAttack already bakes hit-chance into its own
+    // expected value; gating this behind the visual roll would double-apply
+    // that chance and systematically under-predict. This is what actually
+    // closes the "predicted then reverts" gap: a smooth, deterministic
+    // estimate that matches resolve-combat's own confirmed result almost
+    // exactly, instead of one keyed to this tick loop's own random outcomes.
+    // The visual layer below (rollAttackLands, the damage roll, "Miss" text,
+    // kill events) is completely unchanged — purely cosmetic now.
+    const expMultiplier = expMultiplierForLevelDiff(characterLevel, type.level)
+    const perAttack = expectedRewardPerAttack(attackMidpoint, derived.dexterity, type, characterLevel)
+    useProgressionStore.getState().addPredictedRewards(perAttack.gold, perAttack.exp)
+
     // Outgoing hit-chance roll (2026-08-02, confirmed design) — the reverse of
     // the incoming dodge check below: monsters now have a real Dodge stat
     // (see combatResolver.ts's monsterDodge), so the player's own attacks can
@@ -359,35 +376,13 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       log: appendLog(s.log, { kind: 'damage', message: `You hit ${type.displayName} for ${damage}.`, amount: damage }),
     }))
 
-    // Damage-dealt EXP (2026-08-05, confirmed with the user, matching a real
-    // Conquer Online mechanic — see damageExpForHit) — PREDICTIVE ONLY, same
-    // caveat as the kill-EXP prediction below. state.maxHp is this specific
-    // spawn's own actual max HP (already rare-doubled if applicable), and
-    // rareMultiplier mirrors killRewards' own 5x-for-rare scaling so a rare
-    // monster's damage-EXP total ends up matching its on-kill reward's own
-    // rare bonus — see resolve-combat's own mirror for the full reasoning.
-    const expMultiplier = expMultiplierForLevelDiff(useProgressionStore.getState().level, type.level)
-    const rareMultiplier = state.isRareInstance ? RARE_REWARD_MULTIPLIER : 1
-    useProgressionStore
-      .getState()
-      .addPredictedRewards(0, Math.round(damageExpForHit(damage, state.maxHp, type.level) * expMultiplier * rareMultiplier))
-
     if (nextHp <= 0) {
-      // PREDICTIVE ONLY — no real grants happen here anymore. gold/EXP/item/
-      // currency rewards are now server-authoritative (see resolveCombat.ts /
-      // supabase/functions/resolve-combat), applied by a periodic background
-      // call (CombatEngine.tsx) rather than instantly per kill. These numbers
-      // are shown purely for immediate visual feedback and may not exactly
-      // match what the next resolve confirms a few seconds later — the cost
-      // of making rewards genuinely server-verified without adding real
-      // per-attack network latency to the fighting itself.
+      // Gold/EXP in this log line are still the old RNG-flavor numbers, kept
+      // purely for the "kill moment" celebratory text — no longer fed into
+      // addPredictedRewards, which now accrues smoothly per attack above
+      // rather than in a lump on the specific attack that happens to roll
+      // the killing blow.
       const { gold, exp } = killRewards(type, state.isRareInstance, expMultiplier)
-      // Feeds the visible Gold/EXP bar in real time (see ExpBar.tsx) —
-      // previously only the log's text updated
-      // instantly, while the actual displayed numbers stayed frozen until the
-      // next resolve-combat confirmation landed, feeling like a sudden lump-
-      // sum jump. Reconciled (reset to 0) by applyServerCombatResult.
-      useProgressionStore.getState().addPredictedRewards(gold, exp)
 
       set((s) => ({
         log: appendLog(s.log, {

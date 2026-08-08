@@ -9,18 +9,16 @@ export { MAX_CHARACTER_LEVEL, requiredExpForLevel }
 // Deliberate under-prediction margin (2026-08-05, confirmed with the user:
 // "can we always have it slightly under predict exp? That way if it ever
 // has to make an adjustment it's always an adjustment upwards and never
-// downwards"). The client's own tick loop and resolve-combat's server-side
-// simulation roll dodge/hit/rare chances independently, so over a short
-// window the two can genuinely disagree by a kill or two either way — a
-// window where the server resolved slightly *fewer* kills than the client
-// predicted would otherwise show the EXP bar visibly drop right when the
-// next confirmation lands (see predictedLevel's own comment on this
-// already-accepted divergence). Shaving every predicted EXP gain down by
-// this factor before it's added builds in enough slack that a confirmation
-// almost always corrects upward instead of down. PLACEHOLDER margin, same
-// disclosed-not-final status as every other economy number — 5% is a guess
-// at "enough slack to absorb normal divergence, not so much it visibly lags
-// behind real progress."
+// downwards"). Kept as a small residual buffer after the 2026-08-11
+// expected-value rewrite (see combatResolver.ts's expectedRewardPerAttack
+// and resolve-combat/index.ts's mirrored server math) — predicted EXP is now
+// computed from the same deterministic formula the server uses, rather than
+// two independent RNG simulations of the same window, so this margin only
+// needs to absorb the tiny remaining clock-skew between this tick loop's own
+// timing and the server's elapsed-window boundary, not several kills' worth
+// of RNG disagreement. PLACEHOLDER magnitude, same disclosed-not-final
+// status as every other economy number — revisit once real-world play shows
+// how tight the match actually is.
 const PREDICTED_EXP_SAFETY_FACTOR = 0.95
 
 interface ProgressionState {
@@ -141,8 +139,15 @@ export const useProgressionStore = create<ProgressionState>((set, get) => ({
       let level = state.predictedLevel
       let expInLevel = state.predictedExp
 
+      // No Math.floor here (2026-08-11) — since the expected-value rewrite
+      // calls this once per attack-interval tick with small fractional
+      // deltas rather than in kill-sized lumps, flooring per-call would
+      // round every single call down to 0 and the bar would never move at
+      // all. predictedExp stays a genuine float; ExpBar.tsx only ever reads
+      // it as a percentage, and predictedGold is floored at display time
+      // instead (see ExpBar.tsx).
       if (level < MAX_CHARACTER_LEVEL) {
-        expInLevel += Math.floor(exp * PREDICTED_EXP_SAFETY_FACTOR)
+        expInLevel += exp * PREDICTED_EXP_SAFETY_FACTOR
       }
 
       let leveledUpTo: number | null = null

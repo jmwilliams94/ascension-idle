@@ -10,9 +10,9 @@
 // server-side code path decides the real economy state either way, rather than
 // two parallel client-side resolvers that used to have to be kept in sync.
 //
-// KNOWN DUPLICATION, ACCEPTED: the math below (rare rolls, HP/reward scaling,
-// the EXP curve, the simplified Attack-vs-Defense damage formula, Comet/
-// Fallen Star odds) mirrors src/game/combat/combatResolver.ts and
+// KNOWN DUPLICATION, ACCEPTED: the math below (HP/reward scaling, the EXP
+// curve, the simplified Attack-vs-Defense damage formula, Comet/Fallen Star
+// odds) mirrors src/game/combat/combatResolver.ts and
 // src/game/stats/{derivedStats,classes,useProgressionStore}.ts and
 // src/game/items/equipmentBonus.ts almost line-for-line. Deno can't cleanly
 // import those files directly (they're resolved by Vite without file
@@ -21,6 +21,15 @@
 // relationship this codebase already has elsewhere (e.g. forgeCosts.ts's
 // preview functions vs. their SQL counterparts). If any of those formulas
 // change, mirror the change here too.
+//
+// Gold/EXP/kill-count reward math (2026-08-11 rewrite, see CLAUDE.md's
+// Combat section) is deterministic closed-form math now, not per-attack RNG
+// simulation — this is what lets the client's own live prediction match
+// this function's confirmed result almost exactly, rather than the two
+// independently rolling hit/dodge/rare/damage-in-range and disagreeing by a
+// kill or two most windows. Item/currency/pet drops and the rare-monster
+// visual flavor still roll real RNG server-side — see the reward-math block
+// itself for which quantities are which.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
@@ -143,7 +152,7 @@ function computeDerivedStats(
   // own dexterity stat (a separate gear pool from dodge, which is Boots-only
   // and not tracked here at all — see the equipmentBonus comment above for
   // why incoming mitigation isn't simulated server-side). Used here for
-  // outgoing hit chance only (see rollAttackLands).
+  // outgoing hit chance only (see the deterministic hitChance calc below).
   const dexterity = attributes.agility * 1 + (equipmentBonus.dexterity ?? 0)
   return { hp, physicalAttack, magicAttack, attackSpeed: BASE_ATTACK_SPEED, dexterity }
 }
@@ -197,13 +206,28 @@ const RARE_CHANCE = 0.05
 const RARE_HP_MULTIPLIER = 2
 const RARE_REWARD_MULTIPLIER = 5
 const MIN_DAMAGE_PERCENT_OF_ATTACK = 0.1
-// Min/max hit range (see combatResolver.ts's mirror) — narrowed 2026-08-11
-// from 0.5/1.5 (±50%, a 3x ratio validated only against the level-1 Iron
-// Ring's tiny-integer rounding) to 0.9/1.1 (a 1.222x ratio), matching real
-// Bows data (reference/conquer-items/bows.md), the primary weapon/damage
-// source today.
-const DAMAGE_ROLL_MIN_RATIO = 0.9
-const DAMAGE_ROLL_MAX_RATIO = 1.1
+
+// Expected-value combat reward rewrite (2026-08-11, see CLAUDE.md's Combat
+// section) — the reward loop below no longer rolls "is this specific spawn
+// rare" per kill for gold/EXP/kill-count purposes (that's still rolled, but
+// only for the cosmetic rare-monster glow/toast/log flavor and the
+// response's informational rareKills count). Reward math instead folds
+// rare's 5% chance / 2x HP / 5x reward into a blended expected-value
+// multiplier, since tying reward math to an individual random roll is
+// exactly the kind of per-window RNG divergence this rewrite removes — a
+// single rare kill landing on one side of a resolve-window boundary but not
+// the other would reintroduce it, worse (a 5x swing instead of a 1x one).
+// Each factor is `(1 - RARE_CHANCE) + RARE_CHANCE * <rare's own multiplier
+// for that quantity>` — the expected value of the rare/not-rare coin flip.
+const RARE_BLENDED_HP_FACTOR = (1 - RARE_CHANCE) + RARE_CHANCE * RARE_HP_MULTIPLIER // 1.05
+const RARE_BLENDED_REWARD_FACTOR = (1 - RARE_CHANCE) + RARE_CHANCE * RARE_REWARD_MULTIPLIER // 1.2
+// Damage-dealt EXP's own blend is different from the other two: a rare
+// spawn's damage-EXP per point of raw damage dealt scales by
+// (RARE_REWARD_MULTIPLIER / RARE_HP_MULTIPLIER) relative to normal, not by
+// RARE_REWARD_MULTIPLIER alone — a rare monster's real HP pool doubles too,
+// which already halves the per-point-of-damage fraction before the 5x
+// reward multiplier is applied on top (see monster.max_hp's use below).
+const RARE_BLENDED_DAMAGE_EXP_FACTOR = (1 - RARE_CHANCE) + RARE_CHANCE * (RARE_REWARD_MULTIPLIER / RARE_HP_MULTIPLIER) // 1.075
 // Comet/Fallen Star kill-drop odds — confirmed, flat (reverted 2026-08-03: a
 // same-day earlier attempt scaled *this* base rate by monster level, but the
 // user clarified that was the wrong lever — the base rate was never the
@@ -350,28 +374,16 @@ function rollIsRare(): boolean {
   return Math.random() < RARE_CHANCE
 }
 
-function spawnMonsterHp(type: EnemyType, isRare: boolean): number {
-  return isRare ? type.max_hp * RARE_HP_MULTIPLIER : type.max_hp
-}
-
-function killRewards(type: EnemyType, isRare: boolean, expMultiplier: number) {
-  const rareMultiplier = isRare ? RARE_REWARD_MULTIPLIER : 1
-  return {
-    gold: type.gold_reward * rareMultiplier,
-    exp: Math.round(expRewardForLevel(type.level) * rareMultiplier * expMultiplier),
-  }
-}
-
 function monsterDefense(type: EnemyType, characterLevel: number): number {
   const base = Math.round(type.level * 1.5)
   return Math.round(base * MONSTER_DEFENSE_MULTIPLIER_BY_COLOR[getLevelDiffColor(characterLevel, type.level)])
 }
 
-// Mirrors combatResolver.ts's monsterDodge/rollAttackLands (2026-08-02) —
-// must stay in sync. This one matters here, unlike incoming dodge/defense:
-// it changes whether a simulated attack actually lands a hit at all, which
-// directly affects kills/rewards for this window, not just player HP (which
-// still isn't simulated server-side).
+// Mirrors combatResolver.ts's monsterDodge (2026-08-02) — must stay in
+// sync. Feeds the deterministic hitChance calc in the main reward math
+// below, which changes how much of a resolve window's expected damage
+// actually lands — still affects real kills/rewards, not just player HP
+// (which isn't simulated server-side).
 //
 // Lowered 2026-08-11 from 0.005 — see combatResolver.ts's comment (Hunter's
 // Agility alone saturated the 50% cap by ~level 45 at the old rate).
@@ -382,21 +394,10 @@ function monsterDodge(type: EnemyType): number {
   return Math.round(type.level * 0.8)
 }
 
-function rollAttackLands(playerDexterity: number, monsterDodgeValue: number): boolean {
-  const missChance = Math.min(Math.max(0, monsterDodgeValue - playerDexterity) * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
-  return Math.random() >= missChance
-}
-
 function resolvePhysicalDamage(attack: number, defense: number): number {
   const mitigated = attack - defense
   const floor = Math.round(attack * MIN_DAMAGE_PERCENT_OF_ATTACK)
   return Math.max(mitigated, floor, 1)
-}
-
-function rollDamageInRange(midpoint: number): number {
-  const min = Math.max(1, Math.round(midpoint * DAMAGE_ROLL_MIN_RATIO))
-  const max = Math.max(min, Math.round(midpoint * DAMAGE_ROLL_MAX_RATIO))
-  return min + Math.floor(Math.random() * (max - min + 1))
 }
 
 // dropMultiplier — the account-wide claimed drop-bonus buff (see
@@ -453,7 +454,7 @@ const PROMOTION_TIER_ANCHORS = [1, 15, 40, 70, 100, 110, 120]
 const KILLS_PER_LEVEL_BY_TIER = [200, 350, 650, 1300, 2600, 5200, 10000]
 
 // Idle/offline EXP rate — confirmed with the user, 2026-08-05: live play
-// keeps the full expRewardForLevel/damageExpForHit rate above; the once-at-
+// keeps the full expRewardForLevel/damage-dealt-EXP rate above; the once-at-
 // login offline catch-up (mode === 'offline') earns EXP at half that rate,
 // so actually playing is meaningfully better than leaving the game running,
 // without making AFK catch-up pointless. Deliberately EXP-only, same as the
@@ -478,17 +479,14 @@ function expRewardForLevel(level: number): number {
 }
 
 // Damage-dealt EXP (confirmed with the user, 2026-08-05, matching a real
-// Conquer Online mechanic) — mirrors expCurve.ts's damageExpForHit. Every
-// landed hit earns a slice of the target's own EXP reward proportional to
-// how much of its max HP that hit did, on top of (not instead of) the full
-// on-kill EXP grant — a full kill nets (1 + DAMAGE_EXP_SHARE) of the base
-// reward. DAMAGE_EXP_SHARE must stay in sync with expCurve.ts.
+// Conquer Online mechanic) — mirrors expCurve.ts's DAMAGE_EXP_SHARE. Every
+// point of expected damage dealt earns a slice of the target's own EXP
+// reward proportional to how much of its max HP it represents, on top of
+// (not instead of) the full kill EXP grant — a full kill nets
+// (1 + DAMAGE_EXP_SHARE) of the base reward. Computed as a closed-form total
+// over the whole window now (see the main reward math below) rather than
+// per individual hit. DAMAGE_EXP_SHARE must stay in sync with expCurve.ts.
 const DAMAGE_EXP_SHARE = 0.5
-
-function damageExpForHit(damage: number, monsterMaxHp: number, monsterLevel: number): number {
-  if (monsterMaxHp <= 0) return 0
-  return Math.round(expRewardForLevel(monsterLevel) * DAMAGE_EXP_SHARE * (damage / monsterMaxHp))
-}
 
 // AFK-cap Kill Count tier reward (confirmed with the user, 2026-08-05,
 // rebased 2026-08-06 onto the reworked single Kill Count track now that
@@ -697,8 +695,8 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // useCombatStore.runTick, an accepted gap) — but dexterity (Bows'/Rings'
   // own accuracy stat, a separate stat from dodge as of 2026-08-02) matters
   // here too, since it drives the player's own outgoing hit chance against
-  // monster Dodge (see rollAttackLands below), which affects real kill
-  // counts/rewards, unlike incoming mitigation.
+  // monster Dodge (see the deterministic hitChance calc below), which
+  // affects real kill counts/rewards, unlike incoming mitigation.
   const attributes = getAttributesForLevel(character.class ?? 'hunter', character.level)
   const equipmentBonus: { physicalAttack: number; magicAttack: number; dexterity: number } = {
     physicalAttack: 0,
@@ -860,8 +858,11 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     db.from('players').select('account_zone_attack_bonus_pct, account_zone_drop_bonus_pct').eq('id', character.account_id).maybeSingle(),
   ])
 
-  const characterKillsBefore = characterKillsRow?.kills ?? 0
-  const accountKillsBefore = accountKillsRow?.kills ?? 0
+  // Number(...) defensively — PostgREST can serialize a `numeric` column as
+  // a JSON string in some client configurations to avoid float precision
+  // loss; a plain number passes through Number() unchanged either way.
+  const characterKillsBefore = Number(characterKillsRow?.kills ?? 0)
+  const accountKillsBefore = Number(accountKillsRow?.kills ?? 0)
   const petAlreadyUnlocked = Boolean(petRow)
   // Both per-zone now (2026-08-07, confirmed with the user — attack bonus
   // was previously a flat account-wide number applied to every fight
@@ -879,10 +880,9 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // Added in unscaled, after the account-wide multiplier — see
   // compositionAttackBonus's declaration above.
   attackMidpoint += compositionAttackBonus
-  // Same White/Green/Red/Black level-diff EXP multiplier killRewards already
-  // applies to on-kill EXP (see EXP_MULTIPLIER_BY_COLOR/getLevelDiffColor) —
-  // precomputed once here so the new per-hit damage-dealt EXP below gets the
-  // same bonus/penalty, not just the killing blow.
+  // Same White/Green/Red/Black level-diff EXP multiplier applied to both
+  // kill EXP and damage-dealt EXP below (see EXP_MULTIPLIER_BY_COLOR/
+  // getLevelDiffColor), precomputed once here.
   const expMultiplier = EXP_MULTIPLIER_BY_COLOR[getLevelDiffColor(character.level, monster.level)]
   let killsThisWindow = 0
   let petObtained = false
@@ -918,92 +918,90 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   let projectedOccupied = occupied
 
   if (totalAttacks > 0) {
-    // Fetched once (not per-roll) and reused for every drop this window rolls
-    // — level-appropriate selection (confirmed with the user, 2026-07-30):
-    // picks a random gear family available to the character's class
-    // (excluding the standalone 'sword' family — the legacy Wooden Sword
-    // freebie isn't meant to drop from monsters — and 'quiver', a starter/
-    // shop-only item for the same reason), then the template in that family
-    // whose required_level is closest to the monster's own level. Mirrors
-    // pickLevelAppropriateTemplate in useInventoryStore.ts — must stay in
-    // sync, same pattern as this file's other client/server mirrors.
-    const { data: dropPool } = await db
-      .from('item_templates')
-      .select('id, required_level, item_family, required_class')
-      .not('item_family', 'in', '("sword","quiver","lucky-bow","money-bag","gem-bag")')
+    // Deterministic expected-value reward math (2026-08-11 rewrite, see
+    // CLAUDE.md's Combat section) — replaces the old per-attack RNG
+    // simulation (roll hit/miss, roll damage-in-range, roll "is this kill
+    // rare" per spawn) with closed-form math computed once for the whole
+    // window. This is what makes the client's own prediction (see
+    // combatResolver.ts's mirrored functions) match this server-confirmed
+    // result almost exactly — two independent RNG simulations of the same
+    // window can disagree by a kill or two, but two evaluations of the same
+    // formula over the same elapsed time cannot.
+    const hitChance =
+      1 - Math.min(Math.max(0, monsterDodge(monster) - derived.dexterity) * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
+    const expectedDamagePerHit = resolvePhysicalDamage(attackMidpoint, monsterDefense(monster, character.level))
+    const totalExpectedDamage = totalAttacks * hitChance * expectedDamagePerHit
+    const expectedKillsThisWindow = totalExpectedDamage / (monster.max_hp * RARE_BLENDED_HP_FACTOR)
 
-    const pickDropTemplate = (): { id: string; required_level: number } | null => {
-      const candidates = (dropPool ?? []).filter((t) => t.required_class === null || t.required_class === character.class)
-      if (candidates.length === 0) return null
-      const families = [...new Set(candidates.map((t) => t.item_family))]
-      const family = families[Math.floor(Math.random() * families.length)]
-      const inFamily = candidates.filter((t) => t.item_family === family)
-      return inFamily.reduce((closest, t) =>
-        Math.abs(t.required_level - monster.level) < Math.abs(closest.required_level - monster.level) ? t : closest,
-      )
-    }
+    // How many WHOLE kills this window actually crosses, combining the
+    // fractional running total already on the row (characterKillsBefore,
+    // now a numeric column — see the migration that widened it) with this
+    // window's own fractional contribution, the same "carry the remainder
+    // forward" idea the EXP level-up loop already uses. Bounded/small (real
+    // kills, not attacks), so looping this many times for drop/currency/pet
+    // rolls only is cheap even though totalAttacks itself can be large for
+    // a fast weak monster.
+    const wholeKillsThisWindow = Math.floor(characterKillsBefore + expectedKillsThisWindow) - Math.floor(characterKillsBefore)
 
-    let isRare = rollIsRare()
-    let hp = spawnMonsterHp(monster, isRare)
-    // The current spawn's own actual max HP (already rare-doubled if
-    // applicable) — used as damageExpForHit's denominator below instead of
-    // the monster's own base max_hp, so a rare monster's extra hits (double
-    // real HP) don't each contribute a smaller fraction than intended; the
-    // rareMultiplier applied alongside it is what actually scales a rare
-    // kill's total damage-EXP to match its 5x on-kill reward, mirroring
-    // useCombatStore.runTick's own copy of this same reasoning.
-    let spawnMaxHp = hp
+    // Fraction of this window's deterministic totals actually credited —
+    // stays 1 unless live mode runs out of Inventory room partway through
+    // the whole-kill loop below, at which point it's trimmed to match "a
+    // kill's own reward still counts, the rest of the window doesn't" (the
+    // same behavior the old per-attack loop had via its early break).
+    let creditedFraction = 1
 
-    for (let i = 0; i < totalAttacks; i += 1) {
-      // Outgoing hit-chance roll (2026-08-02, confirmed design) — mirrors
-      // useCombatStore.runTick's client-side check. A miss consumes this
-      // attack (still counts toward totalAttacks/elapsed time) but deals no
-      // damage — matches the client exactly rather than an expected-value
-      // approximation, same reasoning as the per-attack damage roll below.
-      if (!rollAttackLands(derived.dexterity, monsterDodge(monster))) {
-        continue
+    if (wholeKillsThisWindow > 0) {
+      // Fetched once (not per-roll) and reused for every drop this window
+      // rolls — level-appropriate selection (confirmed with the user,
+      // 2026-07-30): picks a random gear family available to the
+      // character's class (excluding the standalone 'sword' family — the
+      // legacy Wooden Sword freebie isn't meant to drop from monsters —
+      // and 'quiver', a starter/shop-only item for the same reason), then
+      // the template in that family whose required_level is closest to the
+      // monster's own level. Mirrors pickLevelAppropriateTemplate in
+      // useInventoryStore.ts — must stay in sync, same pattern as this
+      // file's other client/server mirrors.
+      const { data: dropPool } = await db
+        .from('item_templates')
+        .select('id, required_level, item_family, required_class')
+        .not('item_family', 'in', '("sword","quiver","lucky-bow","money-bag","gem-bag")')
+
+      const pickDropTemplate = (): { id: string; required_level: number } | null => {
+        const candidates = (dropPool ?? []).filter((t) => t.required_class === null || t.required_class === character.class)
+        if (candidates.length === 0) return null
+        const families = [...new Set(candidates.map((t) => t.item_family))]
+        const family = families[Math.floor(Math.random() * families.length)]
+        const inFamily = candidates.filter((t) => t.item_family === family)
+        return inFamily.reduce((closest, t) =>
+          Math.abs(t.required_level - monster.level) < Math.abs(closest.required_level - monster.level) ? t : closest,
+        )
       }
 
-      // Rolled independently per attack (see rollDamageInRange) rather than
-      // a single precomputed value reused every iteration, so the offline/
-      // idle simulation matches live combat's per-hit variance exactly
-      // instead of falling back to an expected-value approximation.
-      const damage = resolvePhysicalDamage(rollDamageInRange(attackMidpoint), monsterDefense(monster, character.level))
-      hp -= damage
-      // Damage-dealt EXP (see damageExpForHit above) — every landed hit earns
-      // a slice of this monster's own EXP reward, on top of the full on-kill
-      // grant below when hp actually reaches 0. Same level-diff multiplier as
-      // kill EXP (see expMultiplier above), and the same rare 5x multiplier
-      // the on-kill reward gets (see spawnMaxHp's own comment above for why).
-      const hitRareMultiplier = isRare ? RARE_REWARD_MULTIPLIER : 1
-      expGained += Math.round(damageExpForHit(damage, spawnMaxHp, monster.level) * expMultiplier * hitRareMultiplier)
+      let killsProcessed = 0
 
-      if (hp <= 0) {
-        kills += 1
-        if (isRare) rareKills += 1
+      for (let i = 0; i < wholeKillsThisWindow; i += 1) {
+        // Rare status is still rolled per whole kill here — but purely for
+        // the cosmetic rareKills count in the response (e.g. an
+        // offline-summary "X rare kills" callout). It no longer feeds
+        // gold/EXP math at all (see RARE_BLENDED_REWARD_FACTOR above).
+        if (rollIsRare()) rareKills += 1
 
-        // Achievements & Pets, Stage 1 — mode-agnostic (kill counts accrue
-        // identically in live and offline, same as kills/goldGained already
-        // do). Pet roll stops as soon as it hits once per window, matching
-        // "once obtained, no character can ever roll it again."
-        killsThisWindow += 1
+        killsProcessed += 1
+
         if (!petAlreadyUnlocked && !petObtained && Math.random() < PET_DROP_CHANCE) {
           petObtained = true
         }
 
-        const rewards = killRewards(monster, isRare, expMultiplier)
-        goldGained += rewards.gold
-        expGained += rewards.exp
-
         // Per-zone quality-only drop bonus (2026-08-07, confirmed with the
         // user — supersedes the old flat, drop-FREQUENCY-boosting
-        // account_drop_bonus_pct). accountDropMultiplier is now derived from
-        // whichever zone this monster belongs to (see below) and is
-        // deliberately NOT applied to the base drop roll anymore — a claimed
-        // zone's bonus no longer makes a normal item drop more often, only
-        // improves its odds of rolling a higher quality tier once a drop
-        // already happened. Comet/Fallen Star drop chance (just below) still
-        // uses the same multiplier, now zone-scoped instead of flat.
+        // account_drop_bonus_pct). accountDropMultiplier is now derived
+        // from whichever zone this monster belongs to (see below) and is
+        // deliberately NOT applied to the base drop roll anymore — a
+        // claimed zone's bonus no longer makes a normal item drop more
+        // often, only improves its odds of rolling a higher quality tier
+        // once a drop already happened. Comet/Fallen Star drop chance
+        // (just below) still uses the same multiplier, now zone-scoped
+        // instead of flat.
         if (Math.random() < DROP_CHANCE) {
           const dropped = pickDropTemplate()
           if (dropped) {
@@ -1047,19 +1045,35 @@ async function handleResolveCombat(req: Request): Promise<Response> {
           fallenStarsGained += bonusCurrency.fallenStars
         }
 
-        // Live mode stops the whole window right here — this kill's own
-        // gold/EXP still count (already accumulated above), it's just the
-        // rest of the window that never happens, matching "you'd have
+        // Live mode stops the whole window right here — matches "you'd have
         // stopped fighting the moment you couldn't carry any more loot."
+        // creditedFraction below trims gold/EXP/kills to match.
         if (mode === 'live' && inventoryFull) {
           break
         }
+      }
 
-        isRare = rollIsRare()
-        hp = spawnMonsterHp(monster, isRare)
-        spawnMaxHp = hp
+      if (killsProcessed < wholeKillsThisWindow) {
+        creditedFraction = killsProcessed / wholeKillsThisWindow
       }
     }
+
+    const creditedKills = expectedKillsThisWindow * creditedFraction
+    const creditedDamage = totalExpectedDamage * creditedFraction
+
+    kills = Math.round(creditedKills)
+    goldGained += creditedKills * monster.gold_reward * RARE_BLENDED_REWARD_FACTOR
+    const killExp = creditedKills * expRewardForLevel(monster.level) * expMultiplier * RARE_BLENDED_REWARD_FACTOR
+    const damageExp =
+      creditedDamage *
+      ((expRewardForLevel(monster.level) * DAMAGE_EXP_SHARE) / monster.max_hp) *
+      expMultiplier *
+      RARE_BLENDED_DAMAGE_EXP_FACTOR
+    expGained += Math.round(killExp + damageExp)
+    // Feeds resolve_combat_apply_kill_counts as a fractional delta — see the
+    // migration widening character_monster_kills/account_monster_kills.kills
+    // to numeric, and this same value's use in the zone-tier layer below.
+    killsThisWindow = creditedKills
   }
 
   // Idle/offline EXP rate (see IDLE_EXP_MULTIPLIER above) — applied once to
@@ -1116,8 +1130,8 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       characterKillCount = characterKillsBefore + killsThisWindow
       accountKillCount = accountKillsBefore + killsThisWindow
     } else {
-      characterKillCount = killCountRow.character_kills as number
-      accountKillCount = killCountRow.account_kills as number
+      characterKillCount = Number(killCountRow.character_kills)
+      accountKillCount = Number(killCountRow.account_kills)
     }
   }
 

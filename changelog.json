@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.74.0",
+    "date": "2026-08-11",
+    "changes": [
+      "Reworked how combat rewards are calculated behind the scenes so your EXP bar and level no longer occasionally jump up and then revert a few seconds later — gold, EXP, and Achievements kill counts are now calculated the same consistent way locally and on the server instead of two separate random simulations that could disagree",
+      "Achievements kill counts now track fractional progress under the hood so fast-paced fighting no longer loses tiny amounts of progress to rounding"
+    ]
+  },
+  {
     "version": "1.73.5",
     "date": "2026-08-11",
     "changes": [

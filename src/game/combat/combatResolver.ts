@@ -1,10 +1,5 @@
 import type { EnemyTypeDef } from '../zones/zoneData'
-import { damageExpForHit, expRewardForLevel } from '../stats/expCurve'
-
-// Re-exported so callers (useCombatStore.ts) can pull every piece of combat
-// math from this one module rather than reaching into expCurve.ts directly
-// too.
-export { damageExpForHit }
+import { DAMAGE_EXP_SHARE, expRewardForLevel } from '../stats/expCurve'
 
 // PLACEHOLDER rare-monster odds/multipliers — matches CLAUDE.md's confirmed design
 // (5% chance per monster, 2x HP, 5x gold/EXP) but the underlying zone economy these
@@ -103,10 +98,10 @@ export function playerDefenseMultiplierForLevelDiff(characterLevel: number, mons
 }
 
 // expMultiplier — the White/Green/Red/Black level-diff bonus (see
-// expMultiplierForLevelDiff above), computed once by the caller and shared
-// with damageExpForHit's own per-hit application so a kill's final blow and
-// the hits leading up to it get the same bonus/penalty (2026-08-05, matches
-// resolve-combat's own mirror).
+// expMultiplierForLevelDiff above). Visual-log flavor only now (2026-08-11
+// rewrite) — the kill-moment log line's own gold/EXP numbers, no longer fed
+// into any predicted-reward math (see expectedRewardPerAttack below, which
+// computes the real deterministic total independently).
 export function killRewards(type: EnemyTypeDef, isRare: boolean, expMultiplier: number): { gold: number; exp: number } {
   const rareMultiplier = isRare ? RARE_REWARD_MULTIPLIER : 1
   return {
@@ -284,4 +279,59 @@ export function monsterDodge(type: EnemyTypeDef): number {
 export function rollAttackLands(playerDexterity: number, monsterDodgeValue: number): boolean {
   const missChance = Math.min(Math.max(0, monsterDodgeValue - playerDexterity) * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
   return Math.random() >= missChance
+}
+
+// Expected-value reward rate (2026-08-11 rewrite, see resolve-combat/
+// index.ts's mirrored server math and CLAUDE.md's Combat section) — used by
+// useCombatStore's smooth per-tick predictive accumulator instead of the
+// per-hit/per-kill calls the visual tick loop used to trigger directly from
+// rollAttackLands/rollDamageInRange/rollIsRare's own outcomes. Deliberately
+// NOT built from those RNG functions above (they stay, untouched, for the
+// visual log/floating-number layer only) — this is closed-form math so the
+// predicted total can match resolve-combat's own confirmed result almost
+// exactly, instead of the two independently rolling outcomes and
+// disagreeing by a kill or two most windows.
+//
+// Rare-monster status is folded into a blended expected-value multiplier
+// rather than tied to any individual roll, for the same reason the server
+// mirror does — a single rare kill landing on one side of a resolve-window
+// boundary but not the other would reintroduce exactly the divergence this
+// rewrite removes, worse (a 5x swing instead of a 1x one). The visual
+// rare-spawn glow/toast (isRareInstance, rolled by rollIsRare at spawn time)
+// stays a genuine coin flip, unaffected by this.
+const RARE_BLENDED_HP_FACTOR = 1 - RARE_CHANCE + RARE_CHANCE * RARE_HP_MULTIPLIER // 1.05
+const RARE_BLENDED_REWARD_FACTOR = 1 - RARE_CHANCE + RARE_CHANCE * RARE_REWARD_MULTIPLIER // 1.2
+// See resolve-combat/index.ts's own copy of this constant for why damage-EXP
+// gets a different blend than gold/kill-EXP (a rare spawn's real HP pool
+// doubles too, which already halves the per-point-of-damage fraction before
+// the 5x reward multiplier is applied on top).
+const RARE_BLENDED_DAMAGE_EXP_FACTOR = 1 - RARE_CHANCE + RARE_CHANCE * (RARE_REWARD_MULTIPLIER / RARE_HP_MULTIPLIER) // 1.075
+
+export interface ExpectedRewardPerAttack {
+  gold: number
+  exp: number
+}
+
+// attackMidpoint should already include every existing multiplier (quality
+// tier, composition bonus, the account-wide attack buff — i.e. exactly the
+// same value already passed to rollDamageInRange for the visual layer).
+export function expectedRewardPerAttack(
+  attackMidpoint: number,
+  playerDexterity: number,
+  type: EnemyTypeDef,
+  characterLevel: number,
+): ExpectedRewardPerAttack {
+  const hitChance =
+    1 - Math.min(Math.max(0, monsterDodge(type) - playerDexterity) * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
+  const expectedDamagePerHit = resolvePhysicalDamage(attackMidpoint, monsterDefense(type, characterLevel))
+  const expectedDamage = hitChance * expectedDamagePerHit
+  const expectedKills = expectedDamage / (type.maxHp * RARE_BLENDED_HP_FACTOR)
+  const expMultiplier = expMultiplierForLevelDiff(characterLevel, type.level)
+
+  const gold = expectedKills * type.goldReward * RARE_BLENDED_REWARD_FACTOR
+  const killExp = expectedKills * expRewardForLevel(type.level) * expMultiplier * RARE_BLENDED_REWARD_FACTOR
+  const damageExp =
+    expectedDamage * ((expRewardForLevel(type.level) * DAMAGE_EXP_SHARE) / type.maxHp) * expMultiplier * RARE_BLENDED_DAMAGE_EXP_FACTOR
+
+  return { gold, exp: killExp + damageExp }
 }
