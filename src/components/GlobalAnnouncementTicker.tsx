@@ -3,11 +3,20 @@ import { useGlobalActivityStore } from '../game/social/useGlobalActivityStore'
 
 // Extensible by kind (see 20260808050000_global_announcements.sql) --
 // unrecognized future kinds fall back to the generic 📣 rather than needing
-// a code change to render at all.
+// a code change to render at all. The lucky_* set below was expanded
+// 2026-08-10 (20260810020000_expand_lucky_announcements.sql) to cover
+// anything at least as rare as Comet Scroll's own weight -- icons reused
+// from LuckyPanel.tsx's own rewardVisual for the same kinds, for consistency.
 const ANNOUNCEMENT_ICONS: Record<string, string> = {
   armor_socket: '💠',
   lucky_comet_scroll: '🎰',
   lucky_fallen_star_scroll: '🎰',
+  lucky_fallen_star: '🌠',
+  lucky_gem_tempered: '💎',
+  lucky_gem_ascended: '💎',
+  lucky_gear_radiant_bow: '🏹',
+  lucky_gear_radiant_coat: '🥋',
+  lucky_gear_ascended_random: '🗡️',
 }
 
 // Shows only the single most recent global announcement, not a scrollable

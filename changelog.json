@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.70.5",
+    "date": "2026-08-10",
+    "changes": [
+      "Global announcements now cover more Lucky Lad wins — Fallen Star, Tempered/Ascended Gems, and the 3 hyper-rare gear rewards all get announced now, not just the two Scroll types"
+    ]
+  },
+  {
     "version": "1.70.4",
     "date": "2026-08-10",
     "changes": [
