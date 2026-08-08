@@ -415,3 +415,23 @@ export function buildGemBagTooltip(): ItemTooltipData {
     stats: ['Open for 1 random Normal gem'],
   }
 }
+
+// Client-side mirror of the Class 1-10 Money Bag gold ramp (item_templates.price,
+// seeded/updated in the Lucky Lad migrations) — needed only for LuckyPanel's
+// pre-open board tooltip, which has no real item_instances/item_templates row
+// to read a live price from yet (the board is just {kind, amount} pairs).
+// Once opened, the real tooltip elsewhere always reads the live template
+// price instead of this table. Must stay in sync with whichever migration
+// last updated the Money Bag prices.
+export const MONEY_BAG_GOLD_BY_CLASS: Record<number, number> = {
+  1: 50000,
+  2: 100000,
+  3: 200000,
+  4: 400000,
+  5: 800000,
+  6: 1500000,
+  7: 3000000,
+  8: 6000000,
+  9: 9000000,
+  10: 15000000,
+}

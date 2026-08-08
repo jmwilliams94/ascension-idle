@@ -8,6 +8,7 @@ import { useAppUpdateStore } from '../lib/useAppUpdateStore'
 // nothing to opt out of, only defer (closing the tab still applies it next launch).
 export default function UpdateBanner() {
   const needRefresh = useAppUpdateStore((state) => state.needRefresh)
+  const refreshing = useAppUpdateStore((state) => state.refreshing)
   const applyUpdate = useAppUpdateStore((state) => state.applyUpdate)
 
   if (!needRefresh) {
@@ -19,10 +20,11 @@ export default function UpdateBanner() {
       <span>A new version of Ascension Idle is available.</span>
       <button
         type="button"
+        disabled={refreshing}
         onClick={applyUpdate}
-        className="shrink-0 rounded-lg border border-amber-500 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-200 hover:bg-amber-500/20"
+        className="shrink-0 rounded-lg border border-amber-500 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-200 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        Refresh
+        {refreshing ? 'Refreshing…' : 'Refresh'}
       </button>
     </div>
   )

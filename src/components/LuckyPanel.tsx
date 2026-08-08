@@ -19,9 +19,19 @@ import {
   COMET_ICON_SRC,
   COMET_SCROLL_ICON_SRC,
   getStoneIconSrc,
+  buildCometTooltip,
+  buildFallenStarTooltip,
+  buildCometScrollTooltip,
+  buildFallenStarScrollTooltip,
+  buildStoneTooltip,
+  buildMoneyBagTooltip,
+  buildGemBagTooltip,
+  MONEY_BAG_GOLD_BY_CLASS,
 } from '../game/items/forgeCosts'
 import { getGemTierColor } from '../game/items/gemTypes'
 import { QUALITY_COLORS } from '../game/items/equipmentBonus'
+import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
+import type { ItemTooltipData } from '../game/items/itemTooltip'
 
 // Lucky — Stage 1 (confirmed design, see CLAUDE.md's Lucky section and the
 // draw_lucky_ticket migration's own header). A free ticket every 6 hours,
@@ -99,6 +109,68 @@ function rewardVisual(reward: LuckyReward): { icon?: string; iconSrc?: string; c
   }
 }
 
+// Real hover tooltip content for a revealed board tile (2026-08-10, confirmed
+// with the user), reusing the same builders every other Inventory tile in the
+// game uses — see forgeCosts.ts. gem_tempered/gem_ascended and the two
+// hyper-rare gear kinds get a generic (not item-specific) tooltip since the
+// board only ever carries {kind, amount} — the exact gem type/gear template
+// isn't decided until the draw actually resolves the won card server-side.
+function buildLuckyRewardTooltip(reward: LuckyReward): ItemTooltipData {
+  switch (reward.kind) {
+    case 'gold':
+      return { title: 'Gold', icon: '💰', iconColor: '#F0B87A', stats: [`${reward.amount.toLocaleString()} gold`] }
+    case 'comet':
+      return buildCometTooltip()
+    case 'fallen_star':
+      return buildFallenStarTooltip()
+    case 'comet_scroll':
+      return buildCometScrollTooltip()
+    case 'fallen_star_scroll':
+      return buildFallenStarScrollTooltip()
+    case 'money_bag':
+      return buildMoneyBagTooltip(`Class ${reward.amount} Money Bag`, MONEY_BAG_GOLD_BY_CLASS[reward.amount] ?? 0)
+    case 'gem_bag':
+      return buildGemBagTooltip()
+    case 'composition_stone':
+      return buildStoneTooltip(reward.amount)
+    case 'gem_tempered':
+      return {
+        title: 'Tempered Gem',
+        icon: '💎',
+        iconColor: getGemTierColor('tempered'),
+        lines: ['Lucky Lad reward', 'Random of the 4 known gem types'],
+      }
+    case 'gem_ascended':
+      return {
+        title: 'Ascended Gem',
+        icon: '💎',
+        iconColor: getGemTierColor('ascended'),
+        lines: ['Lucky Lad reward', 'Random of the 4 known gem types'],
+      }
+    case 'gear_radiant_bow':
+      return {
+        title: "Radiant Ranger's Bow",
+        icon: '🏹',
+        iconColor: QUALITY_COLORS.radiant,
+        lines: ['Lucky Lad reward', 'Level 15, 2 empty sockets'],
+      }
+    case 'gear_radiant_coat':
+      return {
+        title: 'Radiant Fawnhide Coat',
+        icon: '🥋',
+        iconColor: QUALITY_COLORS.radiant,
+        lines: ['Lucky Lad reward', 'Level 15, 2 empty sockets'],
+      }
+    case 'gear_ascended_random':
+      return {
+        title: 'Ascended Gear',
+        icon: '🗡️',
+        iconColor: QUALITY_COLORS.ascended,
+        lines: ['Lucky Lad reward', 'Random class-appropriate item, level 15-70'],
+      }
+  }
+}
+
 function formatCountdown(ms: number): string {
   const totalMinutes = Math.max(1, Math.ceil(ms / 60000))
   const hours = Math.floor(totalMinutes / 60)
@@ -123,46 +195,61 @@ function LuckyCard({
 }) {
   const visual = reward ? rewardVisual(reward) : null
 
-  return (
-    <button
-      type="button"
-      disabled={disabled || !onClick}
-      onClick={onClick}
-      className={`relative flex aspect-[3/4] flex-col items-center justify-center gap-0.5 rounded-xl border-2 p-1 text-center transition-colors ${
-        won
-          ? 'border-amber-400 bg-amber-500/10 shadow-lg shadow-amber-500/20'
-          : armed
-            ? 'border-sky-400 bg-sky-500/10'
-            : reward
-              ? 'border-slate-700 bg-slate-900/60 opacity-60'
-              : 'border-slate-700 bg-slate-800 hover:border-slate-500'
-      } disabled:cursor-not-allowed`}
-    >
-      {reward && visual ? (
+  const containerClassName = `relative flex aspect-[3/4] flex-col items-center justify-center gap-0.5 rounded-xl border-2 p-1 text-center transition-colors ${
+    won
+      ? 'border-amber-400 bg-amber-500/10 shadow-lg shadow-amber-500/20'
+      : armed
+        ? 'border-sky-400 bg-sky-500/10'
+        : reward
+          ? 'border-slate-700 bg-slate-900/60 opacity-60'
+          : 'border-slate-700 bg-slate-800 hover:border-slate-500'
+  } disabled:cursor-not-allowed`
+
+  // Once revealed, this is no longer the pick button — it's an inert
+  // container around a real InventorySlot tile (2026-08-10, confirmed with
+  // the user: revealed tiles should be hoverable for their real tooltip and
+  // match Inventory tile sizing/background effect). InventorySlot renders
+  // its own <button>, so the outer element has to stop being one too — a
+  // <button> can't contain another <button>.
+  if (reward && visual) {
+    return (
+      <div className={containerClassName}>
         <motion.div
           initial={{ rotateY: 90, opacity: 0 }}
           animate={{ rotateY: 0, opacity: 1 }}
           transition={{ duration: 0.25, delay: won ? 0 : 0.15 + index * 0.06 }}
           className="flex flex-col items-center gap-0.5"
         >
-          {/* Opened chest as the reveal backdrop (real art, 2026-08-03),
-              same for every reward kind. The reward's own icon renders as a
-              proper item tile underneath it (2026-08-10, confirmed with the
-              user — supersedes the earlier small corner badge) so the 9
-              revealed cards still read apart from each other at a glance. */}
-          <img src={CHEST_OPEN_ICON_SRC} alt="" className="h-8 w-8 object-contain" />
-          <div
-            className="flex h-7 w-7 items-center justify-center rounded-md border-2 text-sm"
-            style={{ borderColor: visual.color, backgroundColor: `${visual.color}22` }}
-          >
-            {visual.iconSrc ? <img src={visual.iconSrc} alt="" className="h-4/5 w-4/5 object-contain" /> : visual.icon}
-          </div>
+          {/* Opened chest as the reveal backdrop (real art, 2026-08-03), same
+              for every reward kind, above the reward's own real Inventory
+              tile (same size/qualityColor background effect/hover tooltip as
+              everywhere else in the game) so the 9 revealed cards still read
+              apart from each other at a glance. */}
+          <img src={CHEST_OPEN_ICON_SRC} alt="" className="h-7 w-7 object-contain" />
+          <InventorySlot
+            slotId={`lucky-${index}`}
+            filled
+            sizeClassName={SLOT_SIZE_CLASS}
+            icon={visual.icon}
+            iconSrc={visual.iconSrc}
+            qualityColor={visual.color}
+            label={rewardLabel(reward)}
+            tooltip={buildLuckyRewardTooltip(reward)}
+          />
           <p className="text-[9px] font-medium leading-tight text-slate-300">{rewardLabel(reward)}</p>
         </motion.div>
-      ) : (
-        <img src={CHEST_CLOSED_ICON_SRC} alt="" className="h-11 w-11 object-contain" />
-      )}
-      {won && <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold text-slate-950">WON</span>}
+        {won && (
+          <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold text-slate-950">
+            WON
+          </span>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <button type="button" disabled={disabled || !onClick} onClick={onClick} className={containerClassName}>
+      <img src={CHEST_CLOSED_ICON_SRC} alt="" className="h-11 w-11 object-contain" />
     </button>
   )
 }

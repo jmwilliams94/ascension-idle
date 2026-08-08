@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.70.3",
+    "date": "2026-08-10",
+    "changes": [
+      "Lucky Lad's revealed reward tiles are now real Inventory-style tiles — hover for the full tooltip, same size and background effect as everywhere else"
+    ]
+  },
+  {
+    "version": "1.70.2",
+    "date": "2026-08-10",
+    "changes": [
+      "Fixed the update banner's Refresh button doing nothing for some players (mostly on Firefox) — it now forces a clean reload if the normal update path doesn't kick in within a couple seconds"
+    ]
+  },
+  {
     "version": "1.70.1",
     "date": "2026-08-10",
     "changes": [
