@@ -233,12 +233,22 @@ export function resolvePhysicalDamage(attack: number, defense: number): number {
 // New dodge/miss-chance mechanic (confirmed with the user, 2026-07-31) — a
 // player can now fully avoid an incoming monster attack, using boots' own
 // dodge stat plus Agility (see derivedStats.ts). PLACEHOLDER capped-linear
-// curve — 0.5% dodge chance per point, capped at 50% — unresolved/unsourced
-// like the rest of this combat math, tune later. Client-only (see
-// useCombatStore.runTick's monster-attack-back block) — not mirrored in
-// resolve-combat, since incoming damage/player HP was never simulated
-// server-side to begin with.
-const DODGE_CHANCE_PER_POINT = 0.005
+// curve, capped at 50% — unresolved/unsourced like the rest of this combat
+// math, tune later. Client-only (see useCombatStore.runTick's
+// monster-attack-back block) — not mirrored in resolve-combat, since
+// incoming damage/player HP was never simulated server-side to begin with.
+// This constant is also shared by rollAttackLands below (the player's own
+// outgoing hit chance vs. monster Dodge), which IS mirrored server-side.
+//
+// Lowered 2026-08-11 (was 0.005/0.5%-per-point, confirmed with the user as
+// "way too high") — Hunter is the Agility specialist and its Agility alone
+// crosses 100 by around level 45 (see classes.ts's ATTRIBUTE_ANCHORS), which
+// already saturated the 50% cap on its own from that point on, before any
+// Boots/composition dodge bonus. 0.0015 means only a true best-in-slot
+// level-130 Hunter (Agility 275 + Ascended Boots' dodge, roughly 341 points)
+// approaches the 50% cap, instead of any mid-30s Hunter sitting there by
+// default.
+const DODGE_CHANCE_PER_POINT = 0.0015
 const MAX_DODGE_CHANCE = 0.5
 
 export function rollIsHit(dodge: number): boolean {

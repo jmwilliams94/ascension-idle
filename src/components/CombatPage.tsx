@@ -170,23 +170,21 @@ export default function CombatPage() {
     return () => window.clearInterval(id)
   }, [])
 
+  // 'miss'/'dodge' entries have no `amount` — rendered as "Miss" text instead
+  // of a "-N" number (see the floating-text blocks below).
   const floatingNumbers =
     now === 0
       ? [] // `now` hasn't been initialized by the interval effect yet (very first render) —
         // treat as "nothing recent" rather than matching every entry against a stale `now`.
       : log.filter(
-          (entry): entry is CombatLogEntry & { amount: number } =>
-            entry.kind === 'damage' && typeof entry.amount === 'number' && now - entry.timestamp < FLOATING_NUMBER_LIFETIME_MS,
+          (entry) => (entry.kind === 'damage' || entry.kind === 'miss') && now - entry.timestamp < FLOATING_NUMBER_LIFETIME_MS,
         )
 
   const playerFloatingNumbers =
     now === 0
       ? []
       : log.filter(
-          (entry): entry is CombatLogEntry & { amount: number } =>
-            entry.kind === 'player-damage' &&
-            typeof entry.amount === 'number' &&
-            now - entry.timestamp < FLOATING_NUMBER_LIFETIME_MS,
+          (entry) => (entry.kind === 'player-damage' || entry.kind === 'dodge') && now - entry.timestamp < FLOATING_NUMBER_LIFETIME_MS,
         )
 
   const activeType = monsterTypeId ? ENEMY_TYPES[monsterTypeId] : null
@@ -268,9 +266,11 @@ export default function CombatPage() {
                       animate={{ opacity: 0, y: -32 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.8, ease: 'easeOut' }}
-                      className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 text-sm font-bold text-amber-300"
+                      className={`pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 text-sm font-bold ${
+                        entry.kind === 'miss' ? 'text-slate-300' : 'text-amber-300'
+                      }`}
                     >
-                      -{entry.amount}
+                      {entry.kind === 'miss' ? 'Miss' : `-${entry.amount}`}
                     </motion.div>
                   ))}
                 </AnimatePresence>
@@ -320,9 +320,11 @@ export default function CombatPage() {
                     animate={{ opacity: 0, y: -20 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.8, ease: 'easeOut' }}
-                    className="pointer-events-none absolute right-0 top-0 text-sm font-bold text-rose-300"
+                    className={`pointer-events-none absolute right-0 top-0 text-sm font-bold ${
+                      entry.kind === 'dodge' ? 'text-slate-300' : 'text-rose-300'
+                    }`}
                   >
-                    -{entry.amount}
+                    {entry.kind === 'dodge' ? 'Miss' : `-${entry.amount}`}
                   </motion.div>
                 ))}
               </AnimatePresence>
@@ -554,9 +556,11 @@ export default function CombatPage() {
                     animate={{ opacity: 0, y: -20 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.8, ease: 'easeOut' }}
-                    className="pointer-events-none absolute right-0 top-0 text-sm font-bold text-rose-300"
+                    className={`pointer-events-none absolute right-0 top-0 text-sm font-bold ${
+                      entry.kind === 'dodge' ? 'text-slate-300' : 'text-rose-300'
+                    }`}
                   >
-                    -{entry.amount}
+                    {entry.kind === 'dodge' ? 'Miss' : `-${entry.amount}`}
                   </motion.div>
                 ))}
               </AnimatePresence>
@@ -616,9 +620,11 @@ export default function CombatPage() {
                       animate={{ opacity: 0, y: -32 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.8, ease: 'easeOut' }}
-                      className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 text-sm font-bold text-amber-300"
+                      className={`pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 text-sm font-bold ${
+                        entry.kind === 'miss' ? 'text-slate-300' : 'text-amber-300'
+                      }`}
                     >
-                      -{entry.amount}
+                      {entry.kind === 'miss' ? 'Miss' : `-${entry.amount}`}
                     </motion.div>
                   ))}
                 </AnimatePresence>

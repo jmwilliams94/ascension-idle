@@ -372,7 +372,10 @@ function monsterDefense(type: EnemyType, characterLevel: number): number {
 // it changes whether a simulated attack actually lands a hit at all, which
 // directly affects kills/rewards for this window, not just player HP (which
 // still isn't simulated server-side).
-const DODGE_CHANCE_PER_POINT = 0.005
+//
+// Lowered 2026-08-11 from 0.005 — see combatResolver.ts's comment (Hunter's
+// Agility alone saturated the 50% cap by ~level 45 at the old rate).
+const DODGE_CHANCE_PER_POINT = 0.0015
 const MAX_DODGE_CHANCE = 0.5
 
 function monsterDodge(type: EnemyType): number {
