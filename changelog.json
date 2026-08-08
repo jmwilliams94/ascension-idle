@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.73.3",
+    "date": "2026-08-11",
+    "changes": [
+      "Narrowed the gap between an item's minimum and maximum damage roll — hits are now much more consistent instead of swinging as wildly between a weak and a strong hit"
+    ]
+  },
+  {
     "version": "1.73.2",
     "date": "2026-08-11",
     "changes": [

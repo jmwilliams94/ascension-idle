@@ -150,15 +150,26 @@ export function rollBonusCurrencyDrops(dropMultiplier = 1): { comets: number; fa
 export const MONSTER_ATTACK_INTERVAL_MS = 1000
 
 // Min/max hit range (confirmed with the user, 2026-07-31) — attack is now a
-// rolled range rather than a flat number, for both the player and monsters,
-// matching the real reference data's per-tier Min/Max Atk columns
-// (co.99.com/guide/items/rings.shtml's Iron Ring: min 1/max 3 at a midpoint
-// of 2, exactly a ±50% spread). Formula-derived from the existing single
-// stat value rather than stored per item/monster — no schema change needed,
-// every base_stats.physical_attack/magic_attack and EnemyTypeDef.attackDamage
-// number is now just interpreted as the midpoint wherever it's read.
-export const DAMAGE_ROLL_MIN_RATIO = 0.5
-export const DAMAGE_ROLL_MAX_RATIO = 1.5
+// rolled range rather than a flat number, for both the player and monsters.
+// Formula-derived from the existing single stat value rather than stored per
+// item/monster — no schema change needed, every base_stats.physical_attack/
+// magic_attack and EnemyTypeDef.attackDamage number is now just interpreted
+// as the midpoint wherever it's read.
+//
+// Narrowed 2026-08-11 (was 0.5/1.5, a ±50%/3x min-max ratio) — the original
+// ±50% spread was only ever validated against the level-1 Iron Ring
+// (co.99.com/guide/items/rings.shtml: min 1/max 3 at midpoint 2, a tiny-
+// integer rounding outlier), but the fuller reference tables
+// (reference/conquer-items/bows.md/rings.md) show real Bows running a much
+// tighter ~1.2-1.33x max/min ratio across nearly every level, narrowing
+// further at the very top end. 0.9/1.1 (a 1.222x ratio) was chosen to match
+// Bows specifically, since Hunter/Bow is the only playable class+weapon
+// today — Rings run wider in the real data (~1.8-2.5x through most levels,
+// only converging to 1.5x at the very top tiers), a known, accepted
+// under-fit for the secondary stat given this is one shared constant across
+// every physical_attack/magic_attack roll.
+export const DAMAGE_ROLL_MIN_RATIO = 0.9
+export const DAMAGE_ROLL_MAX_RATIO = 1.1
 
 export function damageRangeFromMidpoint(midpoint: number): { min: number; max: number } {
   const min = Math.max(1, Math.round(midpoint * DAMAGE_ROLL_MIN_RATIO))

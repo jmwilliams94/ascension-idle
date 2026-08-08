@@ -197,11 +197,13 @@ const RARE_CHANCE = 0.05
 const RARE_HP_MULTIPLIER = 2
 const RARE_REWARD_MULTIPLIER = 5
 const MIN_DAMAGE_PERCENT_OF_ATTACK = 0.1
-// Min/max hit range (see combatResolver.ts's mirror) — ±50% around the
-// midpoint, matching the real reference data's Iron Ring (min 1/max 3 at
-// midpoint 2).
-const DAMAGE_ROLL_MIN_RATIO = 0.5
-const DAMAGE_ROLL_MAX_RATIO = 1.5
+// Min/max hit range (see combatResolver.ts's mirror) — narrowed 2026-08-11
+// from 0.5/1.5 (±50%, a 3x ratio validated only against the level-1 Iron
+// Ring's tiny-integer rounding) to 0.9/1.1 (a 1.222x ratio), matching real
+// Bows data (reference/conquer-items/bows.md), the primary weapon/damage
+// source today.
+const DAMAGE_ROLL_MIN_RATIO = 0.9
+const DAMAGE_ROLL_MAX_RATIO = 1.1
 // Comet/Fallen Star kill-drop odds — confirmed, flat (reverted 2026-08-03: a
 // same-day earlier attempt scaled *this* base rate by monster level, but the
 // user clarified that was the wrong lever — the base rate was never the
