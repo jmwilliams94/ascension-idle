@@ -175,6 +175,10 @@ export interface ZoneDef {
   // locked (all 8 have full rosters), but the field stays in case a future
   // 9th+ zone is added before it's ready.
   locked: boolean
+  // Optional scene art shown behind the Combat page's monster card (contained
+  // to that card, not the full page — see CLAUDE.md). Same import.meta.env.BASE_URL
+  // pattern as EnemyTypeDef.portraitUrl. Falls back to a plain dark card when unset.
+  backgroundUrl?: string
 }
 
 export const ZONES: Record<ZoneId, ZoneDef> = {
@@ -183,6 +187,7 @@ export const ZONES: Record<ZoneId, ZoneDef> = {
     displayName: 'Windhollow',
     monsterOrder: ['quailwing', 'mourning-dove', 'redbreast', 'warshade', 'grim-specter'],
     locked: false,
+    backgroundUrl: `${import.meta.env.BASE_URL}zones/windhollow.webp`,
   },
   'cinderleaf': {
     id: 'cinderleaf',

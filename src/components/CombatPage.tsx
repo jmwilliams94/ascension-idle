@@ -241,7 +241,12 @@ export default function CombatPage() {
           nothing here can regress the desktop view. */}
       <div className="space-y-3 lg:hidden">
         {activeType && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+          <div
+            className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/80 bg-cover bg-center p-4"
+            style={currentZone.backgroundUrl ? { backgroundImage: `url(${currentZone.backgroundUrl})` } : undefined}
+          >
+            {currentZone.backgroundUrl && <div className="absolute inset-0 bg-slate-950/60" />}
+            <div className="relative">
             <div className="flex items-center gap-4">
               <div className="relative h-16 w-16 shrink-0">
                 {activeType.portraitUrl ? (
@@ -299,6 +304,7 @@ export default function CombatPage() {
             >
               {isFighting ? 'Stop' : 'Resume'}
             </button>
+            </div>
           </div>
         )}
 
@@ -595,7 +601,12 @@ export default function CombatPage() {
         )}
 
         {activeType && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+          <div
+            className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/80 bg-cover bg-center p-4"
+            style={currentZone.backgroundUrl ? { backgroundImage: `url(${currentZone.backgroundUrl})` } : undefined}
+          >
+            {currentZone.backgroundUrl && <div className="absolute inset-0 bg-slate-950/60" />}
+            <div className="relative">
             <div className="flex items-center gap-4">
               <div className="relative h-20 w-20 shrink-0">
                 {activeType.portraitUrl ? (
@@ -655,6 +666,7 @@ export default function CombatPage() {
             >
               {isFighting ? 'Stop' : 'Resume'}
             </button>
+            </div>
           </div>
         )}
 
