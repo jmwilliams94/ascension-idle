@@ -630,14 +630,73 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const now = Date.now()
   const lastResolvedMs = new Date(character.combat_last_resolved_at).getTime()
 
-  // Nothing selected to fight — just advance the clock so a later resolve
-  // doesn't get an inflated window once a monster IS selected. The AFK-cap
-  // Prestige tier bonus (see below) doesn't matter here since nothing is
-  // being simulated either way — a flat base cap is enough for this
-  // cosmetic elapsedMs value.
+  // Compare-and-swap claim on combat_last_resolved_at (2026-08-09, fixed a
+  // real duplicate-reward bug reported by the user: two "Welcome back" popups
+  // back to back after a long AFK, one currency-only and one item-heavy —
+  // two independent reward batches for the same overlapping away-window).
+  // Root cause: GameShell's resume detection fires from three independent
+  // triggers (visibilitychange, focus, a heartbeat fallback) that can all
+  // legitimately go off within milliseconds of each other on a single real
+  // resume, and nothing stopped two resulting resolve-combat calls from
+  // running concurrently — both would read the same stale
+  // combat_last_resolved_at, each simulate/roll its own full reward window
+  // for the same elapsed time, and each apply its own atomic reward delta on
+  // top of the other's. resolve_combat_apply_rewards's atomicity only
+  // protects the write of a single call's deltas — it never guaranteed only
+  // one call gets to compute a delta for a given window in the first place.
+  // This UPDATE...WHERE-old-value-matches is a standard optimistic-
+  // concurrency claim: whichever concurrent call's write lands first
+  // advances the timestamp and its `.eq` still matches (1 row updated); any
+  // other call's `.eq` no longer matches (the value already moved under it,
+  // 0 rows updated), and that call bails out as a harmless no-op below
+  // instead of proceeding to simulate/grant a duplicate window. Placed before
+  // the elapsed-window math (not after) so it claims as early as possible,
+  // and covers every return path below (nothing-selected/unknown-monster
+  // included) — those branches no longer need their own separate
+  // combat_last_resolved_at update.
+  const { data: claimedRows, error: claimError } = await db
+    .from('characters')
+    .update({ combat_last_resolved_at: new Date(now).toISOString() })
+    .eq('id', characterId)
+    .eq('combat_last_resolved_at', character.combat_last_resolved_at)
+    .select('id')
+
+  if (claimError) {
+    console.error('resolve-combat claim failed:', claimError.message)
+    return json({ ok: false, error: 'claim_failed', detail: claimError.message }, 500)
+  }
+
+  if (!claimedRows || claimedRows.length === 0) {
+    return json({
+      ok: true,
+      elapsedMs: 0,
+      gained: { kills: 0, rareKills: 0, gold: 0, exp: 0, comets: 0, fallenStars: 0 },
+      character: {
+        gold: character.gold,
+        exp: character.exp,
+        level: character.level,
+        comets: character.comet_count,
+        fallenStars: character.fallen_star_count,
+        cometScrolls: character.comet_scroll_count,
+      },
+      itemsGranted: [],
+      itemsHeld: [],
+      currencyHeld: [],
+      inventoryFull: false,
+      monsterId: null,
+      characterKillCount: 0,
+      accountKillCount: 0,
+      petObtained: null,
+    })
+  }
+
+  // Nothing selected to fight — the claim above already advanced the clock,
+  // so a later resolve won't get an inflated window once a monster IS
+  // selected. The AFK-cap Prestige tier bonus (see below) doesn't matter
+  // here since nothing is being simulated either way — a flat base cap is
+  // enough for this cosmetic elapsedMs value.
   if (!character.selected_monster_id) {
     const provisionalElapsedMs = Math.min(Math.max(now - lastResolvedMs, 0), BASE_AFK_CAP_MS)
-    await db.from('characters').update({ combat_last_resolved_at: new Date(now).toISOString() }).eq('id', characterId)
     return json({
       ok: true,
       elapsedMs: provisionalElapsedMs,
@@ -648,6 +707,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
         level: character.level,
         comets: character.comet_count,
         fallenStars: character.fallen_star_count,
+        cometScrolls: character.comet_scroll_count,
       },
       itemsGranted: [],
       itemsHeld: [],
@@ -663,7 +723,6 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const { data: monster } = await db.from('enemy_types').select('*').eq('id', character.selected_monster_id).maybeSingle()
 
   if (!monster) {
-    await db.from('characters').update({ combat_last_resolved_at: new Date(now).toISOString() }).eq('id', characterId)
     return json({ ok: false, error: 'unknown_monster' })
   }
 

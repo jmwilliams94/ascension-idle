@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.74.4",
+    "date": "2026-08-09",
+    "changes": [
+      "Fixed a bug where returning to the app after a long time away could show two separate idle-rewards summaries and grant rewards twice for the same stretch of time"
+    ]
+  },
+  {
     "version": "1.74.3",
     "date": "2026-08-09",
     "changes": [

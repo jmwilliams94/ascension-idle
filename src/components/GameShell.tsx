@@ -165,13 +165,34 @@ export default function GameShell({ characterId }: { characterId: string }) {
   // path. The real fix is the third one below — a heartbeat that doesn't
   // depend on any visibility/lifecycle API firing at all.
   useEffect(() => {
+    // In-flight guard (2026-08-09, fixed a real duplicate-reward bug reported
+    // by the user: two separate "Welcome back" popups back to back after a
+    // long AFK — one currency-only, one item-heavy — from two independent
+    // reward batches for the same overlapping away-window). The existing
+    // `result !== null` check below only blocks a *second* resume check once
+    // the *first* has already finished and shown something — it does nothing
+    // against visibilitychange and focus (and occasionally the heartbeat too)
+    // all firing within the same tick on one real resume, which each pass
+    // that check simultaneously (synchronously, before any of them has
+    // `await`ed anything yet) and then race two concurrent resolve-combat
+    // calls. The server now also guards against this independently (see
+    // resolve-combat/index.ts's compare-and-swap claim on
+    // combat_last_resolved_at) but avoiding the redundant call here too
+    // means no wasted round-trip.
+    let checkInFlight = false
+
     const checkOfflineProgressOnResume = async () => {
-      if (useOfflineProgressStore.getState().result !== null) {
+      if (checkInFlight || useOfflineProgressStore.getState().result !== null) {
         return
       }
-      const offlineResult = await runOfflineProgressCheck(characterId)
-      if (offlineResult) {
-        useOfflineProgressStore.getState().show(offlineResult)
+      checkInFlight = true
+      try {
+        const offlineResult = await runOfflineProgressCheck(characterId)
+        if (offlineResult) {
+          useOfflineProgressStore.getState().show(offlineResult)
+        }
+      } finally {
+        checkInFlight = false
       }
     }
 
