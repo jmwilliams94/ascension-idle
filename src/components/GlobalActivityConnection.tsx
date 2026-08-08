@@ -21,6 +21,12 @@ function toAnnouncement(row: Record<string, unknown>): GlobalAnnouncement {
 // to the supabase_realtime publication -- see the
 // 20260808050000_global_announcements.sql migration) pushes new
 // announcements live.
+//
+// Presence payload carries an `active` flag driven by document.visibilityState
+// so a minimised/backgrounded tab doesn't count as "online" -- re-tracked
+// (not a separate RPC/heartbeat) only on actual visibilitychange transitions,
+// so this costs one Realtime presence message per idle/resume, not per-tick
+// polling. onlineCount only counts keys with at least one active presence.
 export default function GlobalActivityConnection({ accountId }: { accountId: string | undefined }) {
   const setOnlineCount = useGlobalActivityStore((state) => state.setOnlineCount)
   const setLatestAnnouncement = useGlobalActivityStore((state) => state.setLatestAnnouncement)
@@ -31,6 +37,7 @@ export default function GlobalActivityConnection({ accountId }: { accountId: str
     }
 
     let cancelled = false
+    let subscribed = false
 
     // Seed with whatever the most recent announcement already was, so a
     // client that connects between events isn't stuck showing nothing until
@@ -50,9 +57,26 @@ export default function GlobalActivityConnection({ accountId }: { accountId: str
       config: { presence: { key: accountId } },
     })
 
+    const trackPresence = () => {
+      void channel.track({
+        online_at: new Date().toISOString(),
+        active: document.visibilityState !== 'hidden',
+      })
+    }
+
+    const handleVisibilityChange = () => {
+      if (subscribed) {
+        trackPresence()
+      }
+    }
+
     channel
       .on('presence', { event: 'sync' }, () => {
-        setOnlineCount(Object.keys(channel.presenceState()).length)
+        const state = channel.presenceState() as Record<string, Array<{ active?: boolean }>>
+        const activeCount = Object.values(state).filter((entries) =>
+          entries.some((entry) => entry.active !== false),
+        ).length
+        setOnlineCount(activeCount)
       })
       .on(
         'postgres_changes',
@@ -61,12 +85,17 @@ export default function GlobalActivityConnection({ accountId }: { accountId: str
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          void channel.track({ online_at: new Date().toISOString() })
+          subscribed = true
+          trackPresence()
         }
       })
 
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     return () => {
       cancelled = true
+      subscribed = false
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       void supabase.removeChannel(channel)
     }
   }, [accountId, setOnlineCount, setLatestAnnouncement])

@@ -14,9 +14,10 @@ export interface GlobalAnnouncement {
 }
 
 interface GlobalActivityState {
-  // Distinct connected accounts (Realtime Presence, keyed by account id so
-  // multiple tabs/characters on one account count once) -- see CLAUDE.md's
-  // Global Activity section.
+  // Distinct connected accounts with at least one non-hidden tab (Realtime
+  // Presence, keyed by account id so multiple tabs/characters on one account
+  // count once; a minimised/backgrounded tab is excluded via the `active`
+  // presence flag) -- see CLAUDE.md's Global Activity section.
   onlineCount: number
   // Only the single most recent announcement is ever kept -- confirmed with
   // the user as "just one thing," not a scrollable history.
