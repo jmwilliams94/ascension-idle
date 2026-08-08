@@ -35,24 +35,24 @@ import {
 // Staged redesign (2026-08-07), confirmed with the user, replaces every
 // earlier version of this card (the click-to-open Sell/Bank popovers, the
 // "Clear Everything" liquidate-all fallback — both superseded, not
-// additive). The user's own framing, verbatim: "the sell all normal button
-// should be the 1st and only button they can press initially. After that
-// they are presented with the comets and fallen stars ... they obtained if
-// there are any. Finally they should be left with any quality gears where
-// they can decide what to do with them." Three stages, derived purely from
-// what's still in `entries` (no separate step/wizard state to desync):
-//   1. 'sell-normal' — any Normal-tier gear present: ONLY a "Sell All
-//      Normal" button is shown, nothing else.
-//   2. 'currency' — once Normal gear is cleared: Comet/Fallen Star entries
-//      (plus composed +N gear, once that's a real drop — loot_holding has
-//      no composition_level column yet, so that bucket is always empty for
-//      now) shown as a small tile grid with two bulk actions, "Claim All"
-//      and "Store All."
-//   3. 'decide' — once currency is cleared: whatever non-Normal gear is
-//      left (Tempered+), shown as individual tiles. Tapping one opens a
-//      3-action popover — Claim / Store / Sell — for a real per-item
-//      decision, per the user's own "where they can decide what to do with
-//      them."
+// additive). Originally 3 stages that hid Normal-tier gear behind a single
+// "Sell All Normal" button with no tiles shown at all — justified back then
+// by how spammy Normal drops were. Reworked 2026-08-10 (confirmed with the
+// user, after the quality-drop-rate recalibration made ANY drop meaningfully
+// rarer): that hid-behind-a-button treatment no longer made sense, so Normal
+// gear now gets the same individual-tile-plus-popover treatment quality gear
+// already had — the "Sell All Normal" button survives only as an optional
+// bulk-convenience shortcut above the grid, not a gate. Two stages now,
+// derived purely from what's still in `entries` (no separate step/wizard
+// state to desync):
+//   1. 'currency' — Comet/Fallen Star entries present: shown as a small tile
+//      grid with two bulk actions, "Claim All" and "Store All."
+//   2. 'gear' — once currency is cleared: every remaining gear entry
+//      (Normal and quality alike) shown as an individual tile. Tapping one
+//      opens the same 3-action popover — Claim / Store / Sell — regardless
+//      of tier. A "Sell All Normal" button also appears above the grid
+//      whenever at least one Normal-tier item is present, for fast bulk
+//      clearing without needing to tap each one.
 // "Store" (new, 2026-08-07) is the actual fix for the previously-reported
 // dead end: it inserts straight into account-wide Bank Storage
 // (store_loot_holding_to_bank for gear, the pre-existing bank_loot_holding
@@ -117,15 +117,14 @@ export default function LootHoldingCard() {
 
   const normalGearEntries = entries.filter((entry) => entry.template_id && entry.quality_tier === 'normal')
   const currencyEntries = entries.filter((entry) => entry.currency_type)
-  const remainingGearEntries = entries.filter((entry) => entry.template_id && entry.quality_tier !== 'normal')
+  const gearEntries = entries.filter((entry) => entry.template_id)
 
   const normalSellTotal = normalGearEntries.reduce((sum, entry) => {
     const template = templates.find((t) => t.id === entry.template_id)
     return sum + (template ? previewSellPrice(template.price, 'normal') : 0)
   }, 0)
 
-  const stage: 'sell-normal' | 'currency' | 'decide' =
-    normalGearEntries.length > 0 ? 'sell-normal' : currencyEntries.length > 0 ? 'currency' : 'decide'
+  const stage: 'currency' | 'gear' = currencyEntries.length > 0 ? 'currency' : 'gear'
 
   const handleSellAllNormal = async () => {
     setError(null)
@@ -206,22 +205,6 @@ export default function LootHoldingCard() {
         </div>
       </div>
 
-      {stage === 'sell-normal' && (
-        <div className="space-y-2">
-          <p className="text-[11px] text-slate-500">
-            {normalGearEntries.length} Normal-tier item{normalGearEntries.length === 1 ? '' : 's'} to clear first.
-          </p>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void handleSellAllNormal()}
-            className="w-full rounded-lg border border-amber-600 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {busy ? 'Selling…' : `Sell All Normal (${normalSellTotal.toLocaleString()} gold)`}
-          </button>
-        </div>
-      )}
-
       {stage === 'currency' && (
         <div className="space-y-3">
           <p className="text-[11px] text-slate-500">Comets and Fallen Stars found while you were away.</p>
@@ -267,12 +250,22 @@ export default function LootHoldingCard() {
         </div>
       )}
 
-      {stage === 'decide' && (
+      {stage === 'gear' && (
         <div className="space-y-3">
           <p className="text-[11px] text-slate-500">Tap an item below to Claim, Store, or Sell it.</p>
+          {normalGearEntries.length > 0 && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void handleSellAllNormal()}
+              className="w-full rounded-lg border border-amber-600 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {busy ? 'Selling…' : `Sell All Normal (${normalSellTotal.toLocaleString()} gold)`}
+            </button>
+          )}
           <div className="flex justify-center overflow-x-auto">
             <div className="grid grid-cols-[repeat(5,3.5rem)] gap-1.5 lg:grid-cols-[repeat(5,4rem)]">
-              {remainingGearEntries.map((entry) => {
+              {gearEntries.map((entry) => {
                 const template = entry.template_id ? templates.find((t) => t.id === entry.template_id) : null
                 const label = template && entry.quality_tier ? formatItemDisplayName(template.name, entry.quality_tier) : 'Unknown item'
                 const icon = getItemIcon(template?.slot_type)

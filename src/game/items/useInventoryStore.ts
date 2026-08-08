@@ -16,9 +16,10 @@ import type { GemCounts, GemTier, GemTypeId } from './gemTypes'
 // is now real (2026-08-02, see unlock_weapon_socket/quality_upgrade/
 // level_upgrade in supabase/migrations/20260802010000_add_gear_sockets.sql
 // and CLAUDE.md's Sockets section): an unlocked-but-empty socket is a plain
-// jsonb `null` array element (one socket = [null], two = [null, null]) —
-// inserting a gem would later replace that null, but gems aren't
-// implemented as items yet so every socket just shows Empty for now.
+// jsonb `null` array element (one socket = [null], two = [null, null]). A
+// filled socket (2026-08-10, socket_gem's SQL) is a plain string in
+// gemStorageKey format ("<gemId>_<tier>", e.g. "drake_tempered") — never
+// removed, only ever overwritten with a different gem string.
 // quality_tier/level/composition_level/composition_points/sockets are only
 // ever changed server-side via the quality_upgrade/level_upgrade/
 // composition_feed/unlock_weapon_socket Postgres functions (see
@@ -32,7 +33,7 @@ export interface ItemInstance {
   level: number
   composition_level: number
   composition_points: number
-  sockets: (null | Record<string, unknown>)[]
+  sockets: (null | string)[]
   enchant: unknown | null
   created_at: string
   // Bank Storage (confirmed with the user, 2026-08-03, replaces the earlier

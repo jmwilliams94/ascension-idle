@@ -1,0 +1,132 @@
+// Dependency-free gem catalog/data — split out of gemTypes.ts (2026-08-10) so
+// equipmentBonus.ts can read gem info for a socketed item's tooltip without a
+// circular import (gemTypes.ts itself imports QUALITY_COLORS from
+// equipmentBonus.ts for getGemTierColor/buildGemTooltip — the same
+// "dependency-free shared module" pattern itemTooltip.ts already established
+// for ItemTooltipData, see that file's own header comment). gemTypes.ts
+// re-exports everything here unchanged, so no existing import site needs to
+// change — only equipmentBonus.ts imports this file directly.
+
+// Confirmed 2026-08-02: gems reuse gear's own quality-tier ladder/colors/
+// ember-density rather than inventing a separate one, skipping Infused/Radiant.
+export type GemTier = 'normal' | 'tempered' | 'ascended'
+
+export const GEM_TIERS: GemTier[] = ['normal', 'tempered', 'ascended']
+
+const GEM_TIER_LABELS: Record<GemTier, string> = {
+  normal: 'Normal',
+  tempered: 'Tempered',
+  ascended: 'Ascended',
+}
+
+export function formatGemTierLabel(tier: GemTier): string {
+  return GEM_TIER_LABELS[tier]
+}
+
+export type GemTypeId = 'drake' | 'ember' | 'bastion' | 'iris'
+
+export interface GemTypeDef {
+  id: GemTypeId
+  displayName: string
+  effectLabel: string
+  percentByTier: Record<GemTier, number>
+}
+
+export const GEM_TYPES: Record<GemTypeId, GemTypeDef> = {
+  drake: {
+    id: 'drake',
+    displayName: 'Drake Gem',
+    effectLabel: 'Physical Attack',
+    percentByTier: { normal: 5, tempered: 10, ascended: 15 },
+  },
+  ember: {
+    id: 'ember',
+    displayName: 'Ember Gem',
+    effectLabel: 'Magic Attack',
+    percentByTier: { normal: 5, tempered: 10, ascended: 15 },
+  },
+  bastion: {
+    id: 'bastion',
+    displayName: 'Bastion Gem',
+    effectLabel: 'Damage Reduction',
+    percentByTier: { normal: 5, tempered: 10, ascended: 15 },
+  },
+  iris: {
+    id: 'iris',
+    displayName: 'Iris Gem',
+    effectLabel: 'Character EXP',
+    percentByTier: { normal: 5, tempered: 10, ascended: 15 },
+  },
+}
+
+export const GEM_TYPE_ORDER: GemTypeId[] = ['drake', 'ember', 'bastion', 'iris']
+
+// Storage key into characters.gems (flat, mirrors composition_stones' own
+// flat "1".."9" keys) — must stay in sync with the shape written by any RPC
+// that grants/spends gems (draw_lucky_ticket, socket_gem, transfer_gem).
+export function gemStorageKey(gemId: GemTypeId, tier: GemTier): string {
+  return `${gemId}_${tier}`
+}
+
+const GEM_KEY_PATTERN = /^(drake|ember|bastion|iris)_(normal|tempered|ascended)$/
+
+// Reverse of gemStorageKey — used to interpret a filled socket's raw stored
+// value (item_instances.sockets[i], see socket_gem's SQL) back into a real
+// gem+tier, and to validate/parse a gem drag id's payload. Returns null for
+// anything that isn't exactly one of the 12 valid combinations (including
+// null/empty sockets, which callers should already be handling separately).
+export function parseGemStorageKey(key: string): { gemId: GemTypeId; tier: GemTier } | null {
+  const match = GEM_KEY_PATTERN.exec(key)
+  if (!match) {
+    return null
+  }
+  return { gemId: match[1] as GemTypeId, tier: match[2] as GemTier }
+}
+
+export type GemCounts = Partial<Record<string, number>>
+
+export function gemCount(counts: GemCounts, gemId: GemTypeId, tier: GemTier): number {
+  return counts[gemStorageKey(gemId, tier)] ?? 0
+}
+
+// Gems are real, physical, non-stacking Inventory tiles (2026-08-09) — same
+// synthetic-id convention as Comets/Stones (no per-unit DB row, just a
+// running count per gemStorageKey), so each rendered tile gets an id
+// combining the gem+tier with a render-time index purely for a stable React
+// key. Mirrors stoneDragId/parseStoneDragId in forgeCosts.ts.
+const GEM_DRAG_ID_PREFIX = 'gem:'
+
+export function gemDragId(gemId: GemTypeId, tier: GemTier, index: number): string {
+  return `${GEM_DRAG_ID_PREFIX}${gemId}:${tier}:${index}`
+}
+
+// Used by the Forge's Sockets tab to tell a dropped gem tile apart from a
+// dropped gear item — same purpose as parseStoneDragId in forgeCosts.ts.
+export function parseGemDragId(id: string): { gemId: GemTypeId; tier: GemTier } | null {
+  if (!id.startsWith(GEM_DRAG_ID_PREFIX)) {
+    return null
+  }
+  const [gemPart, tierPart] = id.slice(GEM_DRAG_ID_PREFIX.length).split(':')
+  return parseGemStorageKey(`${gemPart}_${tierPart}`)
+}
+
+// User-supplied art only (existing item icons are polished/painterly
+// renders, outside what the Aseprite pixel-art tool can match) — points at
+// the expected filename for whenever the real PNG lands. Real distinct art
+// per tier (revised 2026-08-08 — supersedes the original one-icon-per-gem-
+// type/color-only design), still paired with getGemTierColor's border/glow.
+export function getGemIconSrc(gemId: GemTypeId, tier: GemTier): string {
+  return `${import.meta.env.BASE_URL}item-icons/gem-${gemId}-${tier}.png`
+}
+
+// One-line description of a socketed gem for use in plain string contexts
+// (e.g. buildGearTooltip's socket lines) where a full ItemTooltipData card
+// isn't appropriate — e.g. "Tempered Drake Gem — Physical Attack +10%".
+export function describeSocketedGem(key: string): string | null {
+  const parsed = parseGemStorageKey(key)
+  if (!parsed) {
+    return null
+  }
+  const gem = GEM_TYPES[parsed.gemId]
+  return `${formatGemTierLabel(parsed.tier)} ${gem.displayName} — ${gem.effectLabel} +${gem.percentByTier[parsed.tier]}%`
+}

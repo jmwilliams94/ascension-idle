@@ -5,6 +5,7 @@ import type { ItemInstance } from './useInventoryStore'
 import type { ItemTemplate } from './useItemTemplatesStore'
 import { EQUIP_SLOTS, type EquipSlot } from './useEquipmentStore'
 import { damageRangeFromMidpoint } from '../combat/combatResolver'
+import { describeSocketedGem } from './gemCatalog'
 
 // How much stronger each quality tier is than the template's stored (Normal-tier)
 // base_stats — an approximate, rounded pattern (not any single sourced item's
@@ -388,9 +389,14 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
   // Only shown when the item actually has a socket (2026-08-02 — see
   // CLAUDE.md's Sockets section) — an item with none gets no extra lines at
   // all, matching "sockets should definitely be displayed if the item
-  // actually has them" and not otherwise. Every socket currently shows
-  // "Empty" since gems aren't implemented as items yet to fill one.
-  const socketLines = item.sockets.length > 0 ? ['Sockets', ...item.sockets.map(() => 'Empty')] : []
+  // actually has them" and not otherwise. A filled socket (2026-08-10, once
+  // gem socketing shipped — see socket_gem's SQL) shows the real gem's name
+  // and effect via describeSocketedGem; an unlocked-but-empty one (still
+  // jsonb null) shows "Empty" same as before.
+  const socketLines =
+    item.sockets.length > 0
+      ? ['Sockets', ...item.sockets.map((socket) => (socket ? (describeSocketedGem(socket) ?? 'Empty') : 'Empty'))]
+      : []
 
   return {
     title: template

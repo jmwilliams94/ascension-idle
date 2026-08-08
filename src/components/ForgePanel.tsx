@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import ForgeCompositionPanel from './ForgeCompositionPanel'
 import ForgeMaterialSlot, { MAX_MATERIAL_ENTRIES, type MaterialEntry } from './ForgeMaterialSlot'
-import ForgeSocketsPanel from './ForgeSocketsPanel'
+import ForgeSocketsTab from './ForgeSocketsTab'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import MasterForgePanel from './MasterForgePanel'
 import SalvagePanel from './SalvagePanel'
@@ -204,7 +204,10 @@ function PreviewSquare({
 // (2026-08-02) that "these should all be dragged." Weapon Socket unlock is
 // deliberately NOT part of this material-driven flow (it shares Fallen Stars
 // with Quality Upgrade with no way to tell them apart from what's dropped) —
-// it stays its own small toggle, unchanged internally (ForgeSocketsPanel).
+// it lives in its own top-level Sockets tab instead (ForgeSocketsTab.tsx,
+// 2026-08-10 — supersedes the old collapsible toggle that used to live
+// inline here, moved out once gem socketing needed its own real
+// drag-and-drop flow, not just an informational panel).
 export default function ForgePanel() {
   const items = useInventoryStore((state) => state.items)
   const templates = useItemTemplatesStore((state) => state.templates)
@@ -225,13 +228,12 @@ export default function ForgePanel() {
   // ShopPanel's own Weapons/Armor/Potions tabs (local state, not
   // useTabStore — this is a sub-navigation inside the Forge tab, not a
   // sibling of it).
-  const [forgeMode, setForgeMode] = useState<'standard' | 'master' | 'salvage'>('standard')
+  const [forgeMode, setForgeMode] = useState<'standard' | 'master' | 'salvage' | 'sockets'>('standard')
 
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [materialEntries, setMaterialEntries] = useState<MaterialEntry[]>([])
   const [attemptResult, setAttemptResult] = useState<AttemptResult | null>(null)
   const [feedError, setFeedError] = useState<string | null>(null)
-  const [socketsOpen, setSocketsOpen] = useState(false)
 
   const selectedItem = items.find((item) => item.id === selectedItemId) ?? null
   const selectedTemplate = selectedItem ? (templates.find((t) => t.id === selectedItem.template_id) ?? null) : null
@@ -286,7 +288,6 @@ export default function ForgePanel() {
       if (attemptResult.success) {
         setSelectedItemId(null)
         setMaterialEntries([])
-        setSocketsOpen(false)
       }
     }, RESULT_DISPLAY_MS)
 
@@ -302,7 +303,6 @@ export default function ForgePanel() {
     setAttemptResult(null)
     setMaterialEntries([])
     setFeedError(null)
-    setSocketsOpen(false)
   }
 
   const handleRemove = () => {
@@ -310,7 +310,6 @@ export default function ForgePanel() {
     setAttemptResult(null)
     setMaterialEntries([])
     setFeedError(null)
-    setSocketsOpen(false)
   }
 
   const handleDropMaterial = (id: string) => {
@@ -501,12 +500,23 @@ export default function ForgePanel() {
         >
           Salvage
         </button>
+        <button
+          type="button"
+          onClick={() => setForgeMode('sockets')}
+          className={`rounded-lg border px-4 py-1.5 text-xs font-medium ${
+            forgeMode === 'sockets' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-400 hover:border-slate-500'
+          }`}
+        >
+          Sockets
+        </button>
       </div>
 
       {forgeMode === 'master' ? (
         <MasterForgePanel />
       ) : forgeMode === 'salvage' ? (
         <SalvagePanel />
+      ) : forgeMode === 'sockets' ? (
+        <ForgeSocketsTab />
       ) : (
         <DragDropProvider>
           {/* Single centered column at every viewport size — the row of three
@@ -594,23 +604,6 @@ export default function ForgePanel() {
                 )}
               </div>
 
-              {selectedItem && (
-                <div className="text-center">
-                  <button
-                    type="button"
-                    onClick={() => setSocketsOpen((open) => !open)}
-                    className="text-[10px] text-slate-500 underline hover:text-slate-300"
-                  >
-                    {socketsOpen ? 'Hide Sockets' : 'Sockets'}
-                  </button>
-
-                  {socketsOpen && (
-                    <div className="mt-2 w-full max-w-xs rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-left">
-                      <ForgeSocketsPanel item={selectedItem} template={selectedTemplate} />
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
 
             {/* Draggable only here — opting into onTileDrop is what enables it. */}

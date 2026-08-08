@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { supabase } from '../../lib/supabaseClient'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { useCompositionStore, type CompositionStones } from './useCompositionStore'
+import { useGemStore } from './useGemStore'
+import type { GemCounts } from './gemCatalog'
 import { useInventoryStore, type ItemInstance } from './useInventoryStore'
 
 // Shape returned by the quality_upgrade/level_upgrade Postgres functions (see
@@ -101,6 +103,17 @@ interface UnlockWeaponSocketResult {
   fallen_star_scrolls_remaining?: number
 }
 
+// Shape returned by socket_gem (see migration 20260810040000_add_socket_gem.sql)
+// — fills or overwrites one already-unlocked socket with a gem the character
+// owns. Deliberately no "unsocket" counterpart anywhere — a filled socket can
+// only ever be overwritten with a different gem, never returned to empty.
+interface SocketGemResult {
+  ok: boolean
+  error?: 'invalid_gem' | 'invalid_tier' | 'invalid_socket_index' | 'item_not_found' | 'not_owner' | 'socket_not_unlocked' | 'not_enough_gems'
+  sockets?: ItemInstance['sockets']
+  gems?: GemCounts
+}
+
 // Shape returned by composition_feed (see migration 20260728000000). No RNG and no
 // "upgraded" boolean — feeding always applies its full point value, the only
 // question is how far it advances the item (possibly across several tiers in one
@@ -139,6 +152,9 @@ interface ForgeState {
   // Master Forge (2026-08-05) — guaranteed success on either upgrade type,
   // priced dynamically (see MasterForgeUpgradeResult's own comment).
   masterForgeUpgrade: (itemId: string, upgradeType: 'quality' | 'level') => Promise<MasterForgeUpgradeResult>
+  // Sockets tab (2026-08-10) — fills/overwrites socketIndex with one unit of
+  // the given gem+tier, spent from the character's own gems.
+  socketGem: (itemId: string, socketIndex: number, gemId: string, gemTier: string) => Promise<SocketGemResult>
 }
 
 export const useForgeStore = create<ForgeState>((set) => ({
@@ -307,6 +323,35 @@ export const useForgeStore = create<ForgeState>((set) => ({
       } else if (result.upgrade_type === 'level') {
         useCurrencyStore.getState().setCometScrolls(result.scrolls_remaining)
       }
+    }
+
+    return result
+  },
+
+  socketGem: async (itemId, socketIndex, gemId, gemTier) => {
+    set({ busy: true })
+
+    const { data, error } = await supabase.rpc('socket_gem', {
+      item_id: itemId,
+      socket_index: socketIndex,
+      gem_id: gemId,
+      gem_tier: gemTier,
+    })
+
+    set({ busy: false })
+
+    if (error) {
+      console.error('Socket gem call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as SocketGemResult
+
+    if (result.ok && result.sockets) {
+      useInventoryStore.getState().patchItem(itemId, { sockets: result.sockets })
+    }
+    if (result.ok && result.gems) {
+      useGemStore.getState().setGems(result.gems)
     }
 
     return result

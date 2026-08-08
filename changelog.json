@@ -1,5 +1,21 @@
 [
   {
+    "version": "1.72.0",
+    "date": "2026-08-10",
+    "changes": [
+      "Added a real Sockets tab to the Forge — drag gear with sockets in, then drag gems from your Inventory onto its socket slots to fill them (a filled socket can be overwritten with a different gem, but never emptied)",
+      "Fixed the \"gained a socket\" announcement sometimes naming the item's previous tier instead of its new one, when a Level Upgrade and a socket both landed on the same attempt",
+      "The AFK/unclaimed rewards popup shows every item again (Normal and quality alike) instead of hiding Normal gear behind a single \"Sell All Normal\" button with nothing visible"
+    ]
+  },
+  {
+    "version": "1.71.0",
+    "date": "2026-08-10",
+    "changes": [
+      "Massively increased how often gear drops come out Tempered, Infused, Radiant, or Ascended instead of Normal — quality gear was landing at roughly 1-in-a-million-plus odds and is now tuned toward a handful of Tempered pieces, a couple Infused, and the occasional Radiant/Ascended over a typical AFK session"
+    ]
+  },
+  {
     "version": "1.70.5",
     "date": "2026-08-10",
     "changes": [

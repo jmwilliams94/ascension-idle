@@ -191,12 +191,25 @@ const FALLEN_STAR_DROP_CHANCE = 1 / 20000
 // only way to ever see a non-Normal item. Mirrored client-side in
 // useInventoryStore.ts's DROP_CHANCE (that copy is predictive-only — combat
 // log flavor text — so it doesn't need the quality roll, just the rate).
+//
+// Quality odds recalibrated 2026-08-10 (confirmed with the user, reported
+// the old table as "very high" i.e. far too rare) — grounded in expCurve.ts's
+// own ~1,200 kills/hour constant (3 hits/kill @ 1 attack/sec, deliberately
+// flat across every level), so a 2-hour AFK-cap session is ~2,400 kills.
+// Target was 1-5 Tempered / a couple Infused / potentially a Radiant / an
+// Ascended about once/day (~4 two-hour sessions), which — with DROP_CHANCE
+// left untouched per the user's explicit call to use quality odds as the
+// only lever — works out to conditional (given-a-drop) chances of 3/32
+// Tempered, 1/16 Infused, 3/200 Radiant, 3/400 Ascended (~17.9% of drops
+// Tempered-or-better). Then halved across the board as a deliberate safety
+// margin at the user's request before shipping: ~1.5 Tempered / ~1 Infused /
+// ~0.24 Radiant / ~0.12 Ascended expected per 2-hour session.
 const DROP_CHANCE = 1 / 150
 const QUALITY_DROP_CHANCES: [tier: string, chance: number][] = [
-  ['ascended', 1 / 15000],
-  ['radiant', 1 / 5000],
-  ['infused', 1 / 2000],
-  ['tempered', 1 / 500],
+  ['ascended', 3 / 400],
+  ['radiant', 3 / 200],
+  ['infused', 1 / 16],
+  ['tempered', 3 / 32],
 ]
 
 // qualityBonusMultiplier (2026-08-07, confirmed with the user, supersedes
