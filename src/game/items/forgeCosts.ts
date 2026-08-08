@@ -389,3 +389,29 @@ const GEAR_SLOT_LABELS: Record<GearSlotType, string> = {
 export function formatGearSlotLabel(slotType: GearSlotType): string {
   return GEAR_SLOT_LABELS[slotType]
 }
+
+// Money Bag / Random Gem Bag (Lucky Lad rewards expansion, 2026-08-09) — real
+// item_templates/item_instances rows (not a stackable jsonb counter like
+// Comets/Stones), each consumed via an "Open" action (open_reward_item RPC)
+// same as a Comet/Fallen Star Scroll's "Open" unbundles it. goldValue comes
+// from the owning template's own `price` column (reused rather than adding a
+// new schema column — Money Bags are never Shop-listed, so no collision).
+export function buildMoneyBagTooltip(className: string, goldValue: number): ItemTooltipData {
+  return {
+    title: className,
+    icon: '💰',
+    iconColor: FALLEN_STAR_COLOR,
+    lines: ['Lucky Lad reward'],
+    stats: [`Open for ${goldValue.toLocaleString()} gold`],
+  }
+}
+
+export function buildGemBagTooltip(): ItemTooltipData {
+  return {
+    title: 'Random Gem Bag',
+    icon: '🎁',
+    iconColor: MATERIAL_COLOR,
+    lines: ['Lucky Lad reward'],
+    stats: ['Open for 1 random Normal gem'],
+  }
+}

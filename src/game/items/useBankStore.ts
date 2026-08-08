@@ -4,6 +4,8 @@ import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { useCompositionStore, type CompositionStones } from './useCompositionStore'
+import { useGemStore } from './useGemStore'
+import type { GemCounts, GemTier, GemTypeId } from './gemTypes'
 import { type GearSlotType } from './forgeCosts'
 import { useInventoryStore, occupiedSlotCount, INVENTORY_SLOT_CAP, type ItemInstance } from './useInventoryStore'
 
@@ -57,6 +59,19 @@ interface TransferStoneResult {
   error?: 'invalid_direction' | 'invalid_request' | 'not_owner' | 'not_enough_stones' | 'not_enough_points'
   stones?: CompositionStones
   bank_points?: number
+}
+
+// transfer_gem (2026-08-09) — symmetric per-unit deposit/withdraw between a
+// character's `gems` and the account's `gems_banked`, mirroring
+// transfer_currency's shape but without Scroll-bundling (gems have no
+// Scroll concept).
+interface TransferGemResult {
+  ok: boolean
+  error?: 'invalid_gem' | 'invalid_tier' | 'invalid_direction' | 'invalid_amount' | 'not_owner' | 'not_enough_balance' | 'not_enough_room'
+  gems?: GemCounts
+  gems_banked?: GemCounts
+  occupied?: number
+  max_withdrawable?: number
 }
 
 interface TransferCurrencyResult {
@@ -132,6 +147,11 @@ interface BankState {
   withdrawStone: (characterId: string, tier: number, amount: number) => Promise<TransferStoneResult>
   depositCurrency: (characterId: string, currency: Currency, amount: number) => Promise<TransferCurrencyResult>
   withdrawCurrency: (characterId: string, currency: Currency, amount: number) => Promise<TransferCurrencyResult>
+  // Gems (2026-08-09) — physical, non-stacking Inventory tiles now, banked
+  // the same symmetric per-unit way as Comets/Fallen Stars (transfer_gem),
+  // not the points-liquidation way Stones use (gems have no points concept).
+  depositGem: (characterId: string, gemId: GemTypeId, tier: GemTier, amount: number) => Promise<TransferGemResult>
+  withdrawGem: (characterId: string, gemId: GemTypeId, tier: GemTier, amount: number) => Promise<TransferGemResult>
   clearFullMessage: () => void
   depositItemToStorage: (itemId: string) => Promise<DepositItemToStorageResult>
   // characterId is always the active character (the recipient claiming the
@@ -322,6 +342,44 @@ export const useBankStore = create<BankState>((set, get) => ({
     return applyCurrencyResult(currency, data as TransferCurrencyResult)
   },
 
+  depositGem: async (characterId, gemId, tier, amount) => {
+    set({ busy: true })
+    const { data, error } = await supabase.rpc('transfer_gem', {
+      character_id: characterId,
+      gem_id: gemId,
+      tier,
+      amount,
+      direction: 'deposit',
+    })
+    set({ busy: false })
+
+    if (error) {
+      console.error('Deposit gem call failed', error)
+      return { ok: false }
+    }
+
+    return applyGemResult(data as TransferGemResult)
+  },
+
+  withdrawGem: async (characterId, gemId, tier, amount) => {
+    set({ busy: true })
+    const { data, error } = await supabase.rpc('transfer_gem', {
+      character_id: characterId,
+      gem_id: gemId,
+      tier,
+      amount,
+      direction: 'withdraw',
+    })
+    set({ busy: false })
+
+    if (error) {
+      console.error('Withdraw gem call failed', error)
+      return { ok: false }
+    }
+
+    return applyGemResult(data as TransferGemResult)
+  },
+
   clearFullMessage: () => set({ fullMessage: null }),
 
   depositItemToStorage: async (itemId) => {
@@ -413,6 +471,14 @@ function applyBankCurrencyItemResult(currencyType: BankCurrencyType, result: Ban
     usePlayerRecordStore.getState().setFallenStarBankCount(result.bank_count)
   }
 
+  return result
+}
+
+function applyGemResult(result: TransferGemResult): TransferGemResult {
+  if (result.ok && result.gems && result.gems_banked) {
+    useGemStore.getState().setGems(result.gems)
+    usePlayerRecordStore.getState().setGemsBanked(result.gems_banked)
+  }
   return result
 }
 

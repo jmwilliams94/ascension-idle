@@ -18,6 +18,7 @@ import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useBankStore } from '../game/items/useBankStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
+import { GEM_TYPE_ORDER, GEM_TIERS, GEM_TYPES, gemStorageKey, getGemIconSrc, getGemTierColor, formatGemTierLabel, type GemTier, type GemTypeId } from '../game/items/gemTypes'
 // The per-action floating "+gained" toast (2026-08-07, confirmed with the
 // user) — fired for every deliberate Bank deposit/withdraw here, mirroring
 // the same call ShopPanel/SalvagePanel's own sell/salvage flows make.
@@ -40,7 +41,7 @@ const CURRENCIES: { id: CurrencyId; label: string }[] = [
   { id: 'fallen_stars', label: 'Fallen Stars' },
 ]
 
-type SelectedSquare = { kind: 'currency'; id: CurrencyId } | { kind: 'compositionPoints' } | { kind: 'gearPoints' } | null
+type SelectedSquare = { kind: 'currency'; id: CurrencyId } | { kind: 'compositionPoints' } | { kind: 'gearPoints' } | { kind: 'gems' } | null
 
 function squareKey(square: NonNullable<SelectedSquare>): string {
   switch (square.kind) {
@@ -50,6 +51,8 @@ function squareKey(square: NonNullable<SelectedSquare>): string {
       return 'compositionPoints'
     case 'gearPoints':
       return 'gearPoints'
+    case 'gems':
+      return 'gems'
   }
 }
 
@@ -101,12 +104,14 @@ export default function BankSquares({
   const bankFallenStars = usePlayerRecordStore((state) => state.bankFallenStars)
   const bankPoints = usePlayerRecordStore((state) => state.bankPoints)
   const gearCompositionPoints = usePlayerRecordStore((state) => state.gearCompositionPoints)
+  const gemsBanked = usePlayerRecordStore((state) => state.gemsBanked)
 
   const busy = useBankStore((state) => state.busy)
   const depositCurrency = useBankStore((state) => state.depositCurrency)
   const withdrawCurrency = useBankStore((state) => state.withdrawCurrency)
   const withdrawStone = useBankStore((state) => state.withdrawStone)
   const withdrawGearComposition = useBankStore((state) => state.withdrawGearComposition)
+  const withdrawGem = useBankStore((state) => state.withdrawGem)
 
   const [selected, setSelected] = useState<SelectedSquare>(null)
 
@@ -116,6 +121,7 @@ export default function BankSquares({
 
   const walletFor = (id: CurrencyId) => (id === 'gold' ? gold : id === 'comets' ? comets : fallenStars)
   const bankFor = (id: CurrencyId) => (id === 'gold' ? bankGold : id === 'comets' ? bankComets : bankFallenStars)
+  const totalGemsBanked = Object.values(gemsBanked).reduce<number>((sum, count) => sum + (count ?? 0), 0)
 
   const closeModal = () => setSelected(null)
 
@@ -142,6 +148,13 @@ export default function BankSquares({
           onClick={() => toggle({ kind: 'compositionPoints' })}
         />
         <Square label="Gear Points" selected={selected?.kind === 'gearPoints'} onClick={() => toggle({ kind: 'gearPoints' })} />
+        <Square
+          label="Gems"
+          value={totalGemsBanked}
+          icon="💎"
+          selected={selected?.kind === 'gems'}
+          onClick={() => toggle({ kind: 'gems' })}
+        />
       </div>
 
       {selected?.kind === 'currency' && (
@@ -185,6 +198,24 @@ export default function BankSquares({
             gearCompositionPoints={gearCompositionPoints}
             busy={busy}
             onWithdraw={(_slotType, templateId, tier) => withdrawGearComposition(characterId, templateId, tier)}
+            onDone={() => {
+              closeModal()
+              onWithdrawLandedInInventory?.()
+            }}
+          />
+        </BankActionModal>
+      )}
+
+      {selected?.kind === 'gems' && (
+        <BankActionModal
+          title="Gems"
+          subtitle="Withdraw a banked gem back into your Inventory. Deposit a gem via its own Bank/Bank All button in Inventory."
+          onClose={closeModal}
+        >
+          <GemsPanel
+            gemsBanked={gemsBanked}
+            busy={busy}
+            onWithdraw={(gemId, tier) => withdrawGem(characterId, gemId, tier, 1)}
             onDone={() => {
               closeModal()
               onWithdrawLandedInInventory?.()
@@ -665,6 +696,102 @@ function GearSlotWithdrawPanel({
       )}
 
       {error && <p className="mt-2 text-xs text-amber-400">{error}</p>}
+    </div>
+  )
+}
+
+// Gems (2026-08-09) — withdraw-only, same convention as Composition/Gear
+// Points above (deposit happens via the per-gem-tile Bank/Bank All button in
+// Inventory instead). Two dimensions to pick (gem type x tier) rather than
+// a single tier slider, since gems have no shared "points" pool to spend —
+// each gem type+tier combo is its own fully independent banked count.
+function GemsPanel({
+  gemsBanked,
+  busy,
+  onWithdraw,
+  onDone,
+}: {
+  gemsBanked: Partial<Record<string, number>>
+  busy: boolean
+  onWithdraw: (gemId: GemTypeId, tier: GemTier) => Promise<{ ok: boolean; error?: string }>
+  onDone: () => void
+}) {
+  const showGainToast = useGainToastStore((state) => state.show)
+  const [gemId, setGemId] = useState<GemTypeId>(GEM_TYPE_ORDER[0])
+  const [tier, setTier] = useState<GemTier>(GEM_TIERS[0])
+  const [error, setError] = useState<string | null>(null)
+
+  const owned = gemsBanked[gemStorageKey(gemId, tier)] ?? 0
+  const color = getGemTierColor(tier)
+
+  const handleWithdraw = async () => {
+    setError(null)
+    const result = await onWithdraw(gemId, tier)
+    if (!result.ok) {
+      setError(result.error === 'not_enough_room' ? 'Not enough Inventory space.' : "You don't have that gem banked.")
+      return
+    }
+
+    showGainToast({ label: `${formatGemTierLabel(tier)} ${GEM_TYPES[gemId].displayName}`, amount: 1, iconSrc: getGemIconSrc(gemId, tier), color })
+    onDone()
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-4 gap-1.5">
+        {GEM_TYPE_ORDER.map((id) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setGemId(id)}
+            className={`rounded-lg border px-2 py-1.5 text-[11px] font-medium ${
+              gemId === id ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
+            }`}
+          >
+            {GEM_TYPES[id].displayName.replace(' Gem', '')}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex gap-1.5">
+        {GEM_TIERS.map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTier(t)}
+            className={`flex-1 rounded-lg border px-2 py-1.5 text-[11px] font-medium ${
+              tier === t ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
+            }`}
+          >
+            {formatGemTierLabel(t)}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+        <div
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 p-1"
+          style={{ borderColor: color, backgroundColor: `${color}22` }}
+        >
+          <img src={getGemIconSrc(gemId, tier)} alt="" className="h-full w-full object-contain" />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-slate-200">
+            {formatGemTierLabel(tier)} {GEM_TYPES[gemId].displayName}
+          </p>
+          <p className="text-xs text-slate-500">{owned.toLocaleString()} banked</p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        disabled={busy || owned <= 0}
+        onClick={() => void handleWithdraw()}
+        className="w-full rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-2 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        {busy ? 'Working…' : 'Withdraw 1'}
+      </button>
+      {error && <p className="text-xs text-amber-400">{error}</p>}
     </div>
   )
 }

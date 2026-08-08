@@ -3,6 +3,10 @@ import { supabase } from '../../lib/supabaseClient'
 import { useProgressionStore } from '../stats/useProgressionStore'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
+import { useInventoryStore, type ItemInstance } from '../items/useInventoryStore'
+import { useCompositionStore, type CompositionStones } from '../items/useCompositionStore'
+import { useGemStore } from '../items/useGemStore'
+import type { GemCounts } from '../items/gemTypes'
 
 export const LUCKY_TICKET_ITEM_COST = 1
 
@@ -27,7 +31,27 @@ export const LUCKYLAD_ICON_SRC = `${BASE_URL}lucky-icons/luckylad.png`
 export const CHEST_CLOSED_ICON_SRC = `${BASE_URL}lucky-icons/chest-closed.png`
 export const CHEST_OPEN_ICON_SRC = `${BASE_URL}lucky-icons/chest-open.png`
 
-export type LuckyRewardKind = 'gold' | 'comet' | 'fallen_star' | 'comet_scroll' | 'fallen_star_scroll'
+// Lucky rewards expansion (2026-08-09) — 'gold' is kept as a recognized kind
+// for type-completeness only; pick_lucky_reward no longer rolls it (replaced
+// by tiered money_bag). New kinds: money_bag (amount = Class 1-10, opens for
+// gold), gem_bag (opens for 1 random Normal gem), composition_stone (amount
+// = tier 1-6, credited directly), gem_tempered/gem_ascended (credited
+// directly, random of the 4 coded gem types — which type isn't known until
+// the draw resolves), and three pre-made gear rewards.
+export type LuckyRewardKind =
+  | 'gold'
+  | 'comet'
+  | 'fallen_star'
+  | 'comet_scroll'
+  | 'fallen_star_scroll'
+  | 'money_bag'
+  | 'gem_bag'
+  | 'composition_stone'
+  | 'gem_tempered'
+  | 'gem_ascended'
+  | 'gear_radiant_bow'
+  | 'gear_radiant_coat'
+  | 'gear_ascended_random'
 
 export interface LuckyReward {
   kind: LuckyRewardKind
@@ -45,7 +69,7 @@ interface LuckyCharacterTotals {
 
 export interface DrawLuckyTicketResult {
   ok: boolean
-  error?: 'invalid_card_index' | 'not_owner' | 'not_enough_ap' | 'not_enough_lottery_tickets' | 'rpc_failed'
+  error?: 'invalid_card_index' | 'not_owner' | 'not_enough_ap' | 'not_enough_lottery_tickets' | 'not_enough_room' | 'rpc_failed'
   cost?: number
   ascension_points?: number
   next_free_ticket_at?: string | null
@@ -53,6 +77,16 @@ export interface DrawLuckyTicketResult {
   won_index?: number
   payment?: 'free' | 'ascension_points' | 'lottery_ticket'
   character?: LuckyCharacterTotals
+  // Present only for item-producing kinds (money_bag/gem_bag/gear_*) — the
+  // freshly-inserted item_instances row, straight from the RPC's own
+  // `returning *`. Present alongside the scalar `character` totals, not
+  // instead of them.
+  granted_item?: ItemInstance
+  // Present only for the composition_stone/gem_tempered/gem_ascended kinds —
+  // the character's full updated jsonb column, ready to hand straight to
+  // useCompositionStore/useGemStore.
+  composition_stones?: CompositionStones
+  gems?: GemCounts
 }
 
 interface LuckyState {
@@ -114,6 +148,23 @@ export const useLuckyStore = create<LuckyState>((set, get) => ({
 
     if (result.ok && typeof result.ascension_points === 'number') {
       usePlayerRecordStore.getState().setAscensionPoints(result.ascension_points)
+    }
+
+    // Item-producing kinds (money_bag/gem_bag/gear_*) — the RPC already
+    // inserted the real item_instances row server-side, this just appends it
+    // to local state without a full inventory refetch (addItem is upsert-by-id,
+    // see useInventoryStore).
+    if (result.ok && result.granted_item) {
+      useInventoryStore.getState().addItem(result.granted_item)
+    }
+
+    // composition_stone / gem_tempered / gem_ascended — both jsonb columns
+    // are server-authoritative, same trust model as comets/fallen stars.
+    if (result.ok && result.composition_stones) {
+      useCompositionStore.getState().setStones(result.composition_stones)
+    }
+    if (result.ok && result.gems) {
+      useGemStore.getState().setGems(result.gems)
     }
 
     return result

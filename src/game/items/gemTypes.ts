@@ -87,6 +87,17 @@ export function gemCount(counts: GemCounts, gemId: GemTypeId, tier: GemTier): nu
   return counts[gemStorageKey(gemId, tier)] ?? 0
 }
 
+// Gems are real, physical, non-stacking Inventory tiles now (2026-08-09) —
+// same synthetic-id convention as Comets/Stones (no per-unit DB row, just a
+// running count per gemStorageKey), so each rendered tile gets an id
+// combining the gem+tier with a render-time index purely for a stable React
+// key. Mirrors stoneDragId/parseStoneDragId in forgeCosts.ts.
+const GEM_DRAG_ID_PREFIX = 'gem:'
+
+export function gemDragId(gemId: GemTypeId, tier: GemTier, index: number): string {
+  return `${GEM_DRAG_ID_PREFIX}${gemId}:${tier}:${index}`
+}
+
 // User-supplied art only (existing item icons are polished/painterly
 // renders, outside what the Aseprite pixel-art tool can match) — points at
 // the expected filename for whenever the real PNG lands. Real distinct art

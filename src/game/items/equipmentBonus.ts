@@ -188,6 +188,8 @@ const SLOT_ICONS: Record<string, string> = {
   ring: '💍',
   boots: '👢',
   quiver: '🏹',
+  'money-bag': '💰',
+  'gem-bag': '🎁',
 }
 
 export function getItemIcon(slotType: string | undefined): string {

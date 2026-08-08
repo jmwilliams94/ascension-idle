@@ -15,6 +15,7 @@ import ForgePanel from './ForgePanel'
 import InventoryFullModal from './InventoryFullModal'
 import MarketplacePanel from './MarketplacePanel'
 import OfflineProgressModal from './OfflineProgressModal'
+import MoneyBagRevealModal from './MoneyBagRevealModal'
 import UnclaimedLootBadge from './UnclaimedLootBadge'
 import SettingsModal from './SettingsModal'
 import ShopPanel from './ShopPanel'
@@ -313,6 +314,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
       <InventoryFullModal />
       <OfflineProgressModal />
+      <MoneyBagRevealModal />
       <UnclaimedLootBadge />
       <GainToastHost />
       <CombatEngine />

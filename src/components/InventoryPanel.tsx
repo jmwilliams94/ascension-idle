@@ -29,6 +29,8 @@ import {
   buildCometScrollTooltip,
   buildCometTooltip,
   buildStoneTooltip,
+  buildMoneyBagTooltip,
+  buildGemBagTooltip,
   compositionPointValue,
   fallenStarDragId,
   fallenStarScrollDragId,
@@ -39,6 +41,20 @@ import {
 } from '../game/items/forgeCosts'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
 import { useCompositionStore } from '../game/items/useCompositionStore'
+import { useGemStore } from '../game/items/useGemStore'
+import {
+  gemDragId,
+  buildGemTooltip,
+  getGemIconSrc,
+  getGemTierColor,
+  formatGemTierLabel,
+  gemCount,
+  GEM_TYPE_ORDER,
+  GEM_TIERS,
+  GEM_TYPES,
+  type GemTier,
+  type GemTypeId,
+} from '../game/items/gemTypes'
 import { INVENTORY_SLOT_CAP, useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { usePotionStore } from '../game/items/usePotionStore'
@@ -51,6 +67,7 @@ import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { POTION_TYPES } from '../game/items/potionTypes'
 import { useBankStore } from '../game/items/useBankStore'
 import { useGainToastStore } from '../game/hud/useGainToastStore'
+import { useMoneyBagRevealStore } from '../game/items/useMoneyBagRevealStore'
 
 // A single fixed 40-cell grid shared by gear (item_instances), Composition
 // stones, Comets/Fallen Stars (+ their Scrolls), and HP/Mana potion stacks —
@@ -62,6 +79,7 @@ import { useGainToastStore } from '../game/hud/useGainToastStore'
 type SelectedSlot =
   | { kind: 'item'; id: string }
   | { kind: 'stone'; dragId: string; tier: number }
+  | { kind: 'gem'; dragId: string; gemId: GemTypeId; tier: GemTier }
   | { kind: 'potion'; id: string }
   | { kind: 'currency'; dragId: string; currencyType: 'comet' | 'fallen_star' }
   | { kind: 'scroll'; dragId: string; currencyType: 'comet' | 'fallen_star' }
@@ -132,6 +150,8 @@ export default function InventoryPanel({
 }: InventoryPanelProps) {
   const items = useInventoryStore((state) => state.items)
   const sellItem = useInventoryStore((state) => state.sellItem)
+  const openRewardItem = useInventoryStore((state) => state.openRewardItem)
+  const showMoneyBagReveal = useMoneyBagRevealStore((state) => state.show)
   const templates = useItemTemplatesStore((state) => state.templates)
   const setEquippedItem = useEquipmentStore((state) => state.setEquippedItem)
   // Subscribe to equippedIds itself, not the isEquipped function — isEquipped's
@@ -143,6 +163,7 @@ export default function InventoryPanel({
   const characterLevel = useProgressionStore((state) => state.level)
 
   const stones = useCompositionStore((state) => state.stones)
+  const gems = useGemStore((state) => state.gems)
   const comets = useCurrencyStore((state) => state.comets)
   const fallenStars = useCurrencyStore((state) => state.fallenStars)
   const cometScrolls = useCurrencyStore((state) => state.cometScrolls)
@@ -171,6 +192,7 @@ export default function InventoryPanel({
   // through the Bank tab; gear keeps both Deposit and Bank.
   const depositItemAsComposition = useBankStore((state) => state.depositItemAsComposition)
   const depositStone = useBankStore((state) => state.depositStone)
+  const depositGem = useBankStore((state) => state.depositGem)
   const depositCurrency = useBankStore((state) => state.depositCurrency)
   const showGainToast = useGainToastStore((state) => state.show)
   // Snap-highlight (2026-08-07) — a no-op false on any page without an
@@ -201,6 +223,14 @@ export default function InventoryPanel({
   // always-below-the-grid Unbundle card (2026-08-07, per the user: move it
   // into the tooltip like Bundle already is).
   const [scrollPopoverAnchorRect, setScrollPopoverAnchorRect] = useState<DOMRect | null>(null)
+  // Money Bag / Gem Bag "Open" popover (Lucky Lad rewards expansion,
+  // 2026-08-09) — same click-opened TooltipActionPopover shell as the Scroll
+  // popover above, but takes precedence over equipPopoverEnabled/
+  // enableBankDeposit for these two item_family values regardless of which
+  // InventoryPanel instance this is (see the item-tile render loop below).
+  const [bagPopoverAnchorRect, setBagPopoverAnchorRect] = useState<DOMRect | null>(null)
+  const [bagBusy, setBagBusy] = useState(false)
+  const [bagError, setBagError] = useState<string | null>(null)
   const [bankDepositBusy, setBankDepositBusy] = useState(false)
   const [bankDepositError, setBankDepositError] = useState<string | null>(null)
   const [sellBusy, setSellBusy] = useState(false)
@@ -233,7 +263,8 @@ export default function InventoryPanel({
     ((equipPopoverEnabled && popoverAnchorRect !== null) ||
       (enableBankDeposit && bankPopoverAnchorRect !== null) ||
       (!enableBankDeposit && bundlePopoverAnchorRect !== null) ||
-      scrollPopoverAnchorRect !== null)
+      scrollPopoverAnchorRect !== null ||
+      bagPopoverAnchorRect !== null)
 
   const visiblePotionStacks = potionStacks.filter((stack) => stack.count > 0)
 
@@ -274,7 +305,24 @@ export default function InventoryPanel({
   // Comets/Fallen Stars don't stack either (same as Stones — confirmed with the
   // user, 2026-07-31) — one tile per owned unit, sharing the same remaining-
   // budget clamp, allocated after Stones in the same greedy fashion.
-  const remainingAfterStones = Math.max(0, baseStoneBudget - stoneTiles.length)
+  // Gems (2026-08-09) — real, physical, non-stacking Inventory tiles now,
+  // same greedy budget-clamp chain as Stones/Comets above. All 4 gem
+  // types x 3 tiers are checked, even though only the 4 coded types
+  // (Drake/Ember/Bastion/Iris) can ever actually be owned yet.
+  const remainingAfterStonesBudget = Math.max(0, baseStoneBudget - stoneTiles.length)
+  const gemTiles = GEM_TYPE_ORDER.flatMap((gemId) => GEM_TIERS.map((tier) => ({ gemId, tier, owned: gemCount(gems, gemId, tier) }))).reduce<
+    { gemId: GemTypeId; tier: GemTier; index: number; dragId: string }[]
+  >((acc, { gemId, tier, owned }) => {
+    const shown = Math.min(owned, Math.max(0, remainingAfterStonesBudget - acc.length))
+
+    for (let index = 0; index < shown; index += 1) {
+      acc.push({ gemId, tier, index, dragId: gemDragId(gemId, tier, index) })
+    }
+
+    return acc
+  }, [])
+
+  const remainingAfterStones = Math.max(0, remainingAfterStonesBudget - gemTiles.length)
   const cometShown = Math.min(comets, remainingAfterStones)
   const cometTiles = Array.from({ length: cometShown }, (_, index) => ({ index, dragId: cometDragId(index) }))
   const remainingAfterComets = Math.max(0, remainingAfterStones - cometTiles.length)
@@ -295,6 +343,7 @@ export default function InventoryPanel({
 
   const occupiedCount =
     stoneTiles.length +
+    gemTiles.length +
     cometTiles.length +
     fallenStarTiles.length +
     cometScrollTiles.length +
@@ -330,13 +379,16 @@ export default function InventoryPanel({
   const compareTooltip =
     equippedItemForSlot && equippedTemplateForSlot ? buildGearTooltip(equippedItemForSlot, equippedTemplateForSlot) : null
   const selectedStoneTier = selectedSlot?.kind === 'stone' ? selectedSlot.tier : undefined
+  const selectedGem = selectedSlot?.kind === 'gem' ? { gemId: selectedSlot.gemId, tier: selectedSlot.tier } : undefined
   const selectedPotionStack =
     selectedSlot?.kind === 'potion' ? visiblePotionStacks.find((stack) => stack.id === selectedSlot.id) : undefined
   const selectedCurrencyType = selectedSlot?.kind === 'currency' ? selectedSlot.currencyType : undefined
   const selectedScrollType = selectedSlot?.kind === 'scroll' ? selectedSlot.currencyType : undefined
 
   const slotKey = (slot: NonNullable<SelectedSlot>): string =>
-    slot.kind === 'stone' || slot.kind === 'currency' || slot.kind === 'scroll' ? slot.dragId : `${slot.kind}:${slot.id}`
+    slot.kind === 'stone' || slot.kind === 'gem' || slot.kind === 'currency' || slot.kind === 'scroll'
+      ? slot.dragId
+      : `${slot.kind}:${slot.id}`
 
   // Fixed-size tracks (not grid-cols-N's equal-fraction columns) so tiles stay a
   // consistent size regardless of how wide the surrounding column/page is — matches
@@ -380,6 +432,13 @@ export default function InventoryPanel({
   const closeScrollPopover = () => {
     setSelectedSlot(null)
     setScrollPopoverAnchorRect(null)
+  }
+
+  // Bag popover-only — dismiss action, also used after a successful Open
+  // from inside the popover.
+  const closeBagPopover = () => {
+    setSelectedSlot(null)
+    setBagPopoverAnchorRect(null)
   }
 
   // Every enableBankDeposit handler below follows the same shape: deposit,
@@ -507,6 +566,44 @@ export default function InventoryPanel({
     closeBankPopover()
   }
 
+  const handleBankGem = async (gemId: GemTypeId, tier: GemTier) => {
+    if (!characterId) {
+      return
+    }
+    setBankDepositError(null)
+    setBankDepositBusy(true)
+    const result = await depositGem(characterId, gemId, tier, 1)
+    setBankDepositBusy(false)
+
+    if (!result.ok) {
+      setBankDepositError("Couldn't bank that gem.")
+      return
+    }
+
+    closeBankPopover()
+  }
+
+  const handleBankAllGem = async (gemId: GemTypeId, tier: GemTier) => {
+    if (!characterId) {
+      return
+    }
+    const owned = gemCount(gems, gemId, tier)
+    if (owned <= 0) {
+      return
+    }
+    setBankDepositError(null)
+    setBankDepositBusy(true)
+    const result = await depositGem(characterId, gemId, tier, owned)
+    setBankDepositBusy(false)
+
+    if (!result.ok) {
+      setBankDepositError("Couldn't bank those gems.")
+      return
+    }
+
+    closeBankPopover()
+  }
+
   const handleBankCurrency = async (currencyType: 'comet' | 'fallen_star') => {
     if (!characterId) {
       return
@@ -587,6 +684,28 @@ export default function InventoryPanel({
     }
 
     closeScrollPopover()
+  }
+
+  // Money Bag / Gem Bag "Open" — consumes the item, grants its wrapped
+  // reward (see open_reward_item), then hands the result to
+  // useMoneyBagRevealStore for the center-screen reveal card.
+  const handleOpenBag = async (itemId: string) => {
+    setBagError(null)
+    setBagBusy(true)
+    const result = await openRewardItem(itemId)
+    setBagBusy(false)
+
+    if (!result.ok || !result.granted) {
+      setBagError("Couldn't open that.")
+      return
+    }
+
+    closeBagPopover()
+    if (result.granted.kind === 'gold') {
+      showMoneyBagReveal({ kind: 'gold', amount: result.granted.amount })
+    } else {
+      showMoneyBagReveal({ kind: 'gem', gemId: result.granted.gem_id, tier: result.granted.tier })
+    }
   }
 
   const handleTileDrop = (overTarget: string | null, id: string) => {
@@ -835,6 +954,55 @@ export default function InventoryPanel({
             )
           })}
 
+          {gemTiles.map(({ gemId, tier, dragId }) => {
+            if (reservedItemIds.includes(dragId)) {
+              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+            }
+
+            const isSelected = selectedSlot?.kind === 'gem' && selectedSlot.dragId === dragId
+            const gemColor = getGemTierColor(tier)
+            const gemIconSrc = getGemIconSrc(gemId, tier)
+
+            const commonProps = {
+              slotId: dragId,
+              filled: true as const,
+              sizeClassName: SLOT_SIZE_CLASS,
+              icon: '💎',
+              iconSrc: gemIconSrc,
+              qualityColor: gemColor,
+              label: `${formatGemTierLabel(tier)} ${GEM_TYPES[gemId].displayName}`,
+              tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildGemTooltip(gemId, tier),
+              selected: isSelected,
+            }
+
+            const gemSlot = onTileDrop ? (
+              <DraggableInventorySlot
+                key={dragId}
+                {...commonProps}
+                dragEnabled
+                dragPayload={{ id: dragId, icon: '💎', iconSrc: gemIconSrc, qualityColor: gemColor }}
+                onDrop={handleTileDrop}
+                onClick={() => toggleSlot({ kind: 'gem', dragId, gemId, tier })}
+              />
+            ) : (
+              <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'gem', dragId, gemId, tier })} />
+            )
+
+            if (!enableBankDeposit) {
+              return gemSlot
+            }
+
+            return (
+              <div
+                key={dragId}
+                data-tooltip-action-anchor
+                onClick={(event) => setBankPopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
+              >
+                {gemSlot}
+              </div>
+            )
+          })}
+
           {cometTiles.map(({ dragId }) => {
             if (reservedItemIds.includes(dragId)) {
               return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
@@ -1048,6 +1216,18 @@ export default function InventoryPanel({
 
             const isSelected = selectedSlot?.kind === 'item' && selectedSlot.id === item.id
 
+            // Money Bag / Gem Bag (Lucky Lad rewards expansion, 2026-08-09) —
+            // real item_templates/item_instances rows, but not gear: their own
+            // flavor tooltip (Open-for-N-gold / Open-for-a-gem) reads better
+            // than buildGearTooltip's level/class/stats framing, which doesn't
+            // apply to them.
+            const isBagItem = template?.item_family === 'money-bag' || template?.item_family === 'gem-bag'
+            const bagTooltip = isBagItem
+              ? template?.item_family === 'money-bag'
+                ? buildMoneyBagTooltip(template?.name ?? 'Money Bag', template?.price ?? 0)
+                : buildGemBagTooltip()
+              : null
+
             const commonProps = {
               slotId: item.id,
               filled: true as const,
@@ -1061,7 +1241,7 @@ export default function InventoryPanel({
               // this exact tile's own popover is open, where it would just
               // duplicate the popover's own tooltip (2026-08-05 fix — see
               // isPopoverOpenForSelection's own comment).
-              tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildGearTooltip(item, template),
+              tooltip: isPopoverOpenForSelection(isSelected) ? undefined : (bagTooltip ?? buildGearTooltip(item, template)),
               selected: isSelected,
             }
 
@@ -1085,6 +1265,23 @@ export default function InventoryPanel({
             ) : (
               <InventorySlot key={item.id} {...commonProps} onClick={() => toggleSlot({ kind: 'item', id: item.id })} />
             )
+
+            // Money Bag / Gem Bag "Open" popover — takes precedence over
+            // equipPopoverEnabled/enableBankDeposit/enableSelling below,
+            // regardless of which InventoryPanel instance this is, since
+            // these items are never equippable/bankable/sellable in any
+            // meaningful sense — Open is their only real action.
+            if (isBagItem) {
+              return (
+                <div
+                  key={item.id}
+                  data-tooltip-action-anchor
+                  onClick={(event) => setBagPopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
+                >
+                  {slot}
+                </div>
+              )
+            }
 
             // GearEquipPopover (Inventory grid only, see equipPopoverEnabled's
             // own doc comment) — wraps the tile so its click also captures the
@@ -1177,6 +1374,25 @@ export default function InventoryPanel({
         </div>
       )}
 
+      {selectedGem && !enableBankDeposit && (
+        <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
+          <div className="flex items-center gap-3">
+            <div
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 p-1 text-lg"
+              style={{ borderColor: getGemTierColor(selectedGem.tier), backgroundColor: `${getGemTierColor(selectedGem.tier)}22` }}
+            >
+              <img src={getGemIconSrc(selectedGem.gemId, selectedGem.tier)} alt="" className="h-full w-full object-contain" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-200">
+                {formatGemTierLabel(selectedGem.tier)} {GEM_TYPES[selectedGem.gemId].displayName}
+              </p>
+              <p className="text-xs text-slate-500">{gemCount(gems, selectedGem.gemId, selectedGem.tier)} owned total</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {!enableBankDeposit && selectedCurrencyType && bundlePopoverAnchorRect && (
         <TooltipActionPopover
           anchorRect={bundlePopoverAnchorRect}
@@ -1224,6 +1440,28 @@ export default function InventoryPanel({
         />
       )}
 
+      {selectedItem &&
+        bagPopoverAnchorRect &&
+        (selectedTemplate?.item_family === 'money-bag' || selectedTemplate?.item_family === 'gem-bag') && (
+          <TooltipActionPopover
+            anchorRect={bagPopoverAnchorRect}
+            tooltip={
+              selectedTemplate.item_family === 'money-bag'
+                ? buildMoneyBagTooltip(selectedTemplate.name, selectedTemplate.price)
+                : buildGemBagTooltip()
+            }
+            actions={[
+              {
+                label: bagBusy ? 'Opening…' : 'Open',
+                onClick: () => void handleOpenBag(selectedItem.id),
+                disabled: bagBusy,
+              },
+            ]}
+            onClose={closeBagPopover}
+          />
+        )}
+      {bagError && <p className="text-xs text-amber-400">{bagError}</p>}
+
       {selectedPotionStack && (
         <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
           <div className="flex items-center gap-3">
@@ -1268,7 +1506,11 @@ export default function InventoryPanel({
         </div>
       )}
 
-      {selectedItem && !equipPopoverEnabled && !enableBankDeposit && (
+      {selectedItem &&
+        !equipPopoverEnabled &&
+        !enableBankDeposit &&
+        selectedTemplate?.item_family !== 'money-bag' &&
+        selectedTemplate?.item_family !== 'gem-bag' && (
         <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
           <div className="flex items-center gap-3">
             <div
@@ -1419,6 +1661,26 @@ export default function InventoryPanel({
             {
               label: 'Bank All',
               onClick: () => void handleBankAllStone(selectedStoneTier),
+              disabled: bankDepositBusy,
+            },
+          ]}
+          onClose={closeBankPopover}
+        />
+      )}
+
+      {enableBankDeposit && selectedGem && bankPopoverAnchorRect && (
+        <TooltipActionPopover
+          anchorRect={bankPopoverAnchorRect}
+          tooltip={buildGemTooltip(selectedGem.gemId, selectedGem.tier)}
+          actions={[
+            {
+              label: bankDepositBusy ? 'Banking…' : 'Bank',
+              onClick: () => void handleBankGem(selectedGem.gemId, selectedGem.tier),
+              disabled: bankDepositBusy,
+            },
+            {
+              label: 'Bank All',
+              onClick: () => void handleBankAllGem(selectedGem.gemId, selectedGem.tier),
               disabled: bankDepositBusy,
             },
           ]}

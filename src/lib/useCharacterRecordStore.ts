@@ -8,6 +8,8 @@ import { useZoneStore } from '../game/zones/useZoneStore'
 import { useEquipmentStore, type EquipSlot } from '../game/items/useEquipmentStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useCompositionStore, type CompositionStones } from '../game/items/useCompositionStore'
+import { useGemStore } from '../game/items/useGemStore'
+import type { GemCounts } from '../game/items/gemTypes'
 import { useLuckyStore } from '../game/lucky/useLuckyStore'
 
 // Loads/saves the active character's row (characters table) — class, level, gold,
@@ -45,6 +47,10 @@ interface CharacterRow {
   // the counts above (server-authoritative, excluded from saveNow below).
   lottery_ticket_count: number
   composition_stones: CompositionStones
+  // First real hydration of this column (Lucky Lad rewards expansion,
+  // 2026-08-09) — see useGemStore.ts. Same server-authoritative trust model
+  // as composition_stones above (excluded from saveNow below).
+  gems: GemCounts
   selected_monster_id: string | null
   last_active_at: string
   // Server-authoritative, same trust model as comet_count/fallen_star_count
@@ -82,7 +88,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     const { data, error } = await supabase
       .from('characters')
       .select(
-        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, comet_count, fallen_star_count, comet_scroll_count, fallen_star_scroll_count, lottery_ticket_count, composition_stones, selected_monster_id, last_active_at, lucky_free_ticket_claimed_at',
+        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, comet_count, fallen_star_count, comet_scroll_count, fallen_star_scroll_count, lottery_ticket_count, composition_stones, gems, selected_monster_id, last_active_at, lucky_free_ticket_claimed_at',
       )
       .eq('id', characterId)
       .maybeSingle<CharacterRow>()
@@ -118,6 +124,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
       lotteryTickets: data.lottery_ticket_count,
     })
     useCompositionStore.getState().hydrate(data.composition_stones)
+    useGemStore.getState().hydrate(data.gems)
     useLuckyStore.getState().hydrate(data.lucky_free_ticket_claimed_at)
 
     set({ loaded: true, previousLastActiveAt: data.last_active_at, characterName: data.name })

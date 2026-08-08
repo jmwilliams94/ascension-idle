@@ -863,7 +863,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     const { data: dropPool } = await db
       .from('item_templates')
       .select('id, required_level, item_family, required_class')
-      .not('item_family', 'in', '("sword","quiver","lucky-bow")')
+      .not('item_family', 'in', '("sword","quiver","lucky-bow","money-bag","gem-bag")')
 
     const pickDropTemplate = (): { id: string; required_level: number } | null => {
       const candidates = (dropPool ?? []).filter((t) => t.required_class === null || t.required_class === character.class)

@@ -18,7 +18,10 @@ import {
   MATERIAL_COLOR,
   COMET_ICON_SRC,
   COMET_SCROLL_ICON_SRC,
+  getStoneIconSrc,
 } from '../game/items/forgeCosts'
+import { getGemTierColor } from '../game/items/gemTypes'
+import { QUALITY_COLORS } from '../game/items/equipmentBonus'
 
 // Lucky — Stage 1 (confirmed design, see CLAUDE.md's Lucky section and the
 // draw_lucky_ticket migration's own header). A free ticket every 6 hours,
@@ -43,6 +46,25 @@ function rewardLabel(reward: LuckyReward): string {
       return 'Comet Scroll'
     case 'fallen_star_scroll':
       return 'Fallen Star Scroll'
+    case 'money_bag':
+      return `Class ${reward.amount} Money Bag`
+    case 'gem_bag':
+      return 'Random Gem Bag'
+    case 'composition_stone':
+      return `+${reward.amount} Stone`
+    case 'gem_tempered':
+      // The specific gem type is only decided once the draw actually
+      // resolves the won card server-side (see draw_lucky_ticket) — every
+      // board entry of this kind, won or not, only ever carries {kind, amount}.
+      return 'Tempered Gem'
+    case 'gem_ascended':
+      return 'Ascended Gem'
+    case 'gear_radiant_bow':
+      return "Radiant Ranger's Bow"
+    case 'gear_radiant_coat':
+      return 'Radiant Fawnhide Coat'
+    case 'gear_ascended_random':
+      return 'Ascended Gear'
   }
 }
 
@@ -58,6 +80,22 @@ function rewardVisual(reward: LuckyReward): { icon?: string; iconSrc?: string; c
       return { iconSrc: COMET_SCROLL_ICON_SRC, color: MATERIAL_COLOR }
     case 'fallen_star_scroll':
       return { iconSrc: FALLEN_STAR_SCROLL_ICON_SRC, color: FALLEN_STAR_COLOR }
+    case 'money_bag':
+      return { icon: '💰', color: FALLEN_STAR_COLOR }
+    case 'gem_bag':
+      return { icon: '🎁', color: MATERIAL_COLOR }
+    case 'composition_stone':
+      return { icon: '🔷', iconSrc: getStoneIconSrc(reward.amount), color: MATERIAL_COLOR }
+    case 'gem_tempered':
+      return { icon: '💎', color: getGemTierColor('tempered') }
+    case 'gem_ascended':
+      return { icon: '💎', color: getGemTierColor('ascended') }
+    case 'gear_radiant_bow':
+      return { icon: '🏹', color: QUALITY_COLORS.radiant }
+    case 'gear_radiant_coat':
+      return { icon: '🥋', color: QUALITY_COLORS.radiant }
+    case 'gear_ascended_random':
+      return { icon: '🗡️', color: QUALITY_COLORS.ascended }
   }
 }
 
@@ -181,7 +219,9 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
             ? "Not enough Lottery Tickets."
             : result.error === 'not_owner'
               ? "Couldn't verify this character owns that — try reloading the page."
-              : "Couldn't draw a ticket — try again.",
+              : result.error === 'not_enough_room'
+                ? 'Your Inventory is full — free up a slot and try again.'
+                : "Couldn't draw a ticket — try again.",
       )
       setArmedIndex(null)
       setUseTicketPayment(false)

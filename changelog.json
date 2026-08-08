@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.70.0",
+    "date": "2026-08-09",
+    "changes": [
+      "Lucky Lad rewards overhauled: gold now comes wrapped in Class 1-10 Money Bags (Open them from your Inventory for a burst of gold, with a bigger reveal for the rarer classes)",
+      "Lucky Lad can now also award Composition Stones, Gems (including a Random Gem Bag), and — very rarely — a Radiant 2-socket Bow or Coat, or a piece of Ascended gear",
+      "Gems now have their own Inventory tile and can be Banked (and withdrawn) from the Bank tab, the same way Comets and Fallen Stars work"
+    ]
+  },
+  {
     "version": "1.69.4",
     "date": "2026-08-08",
     "changes": [

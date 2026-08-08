@@ -9,6 +9,8 @@ import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 import { useItemTemplatesStore, type ItemTemplate } from './useItemTemplatesStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
 import { useCharacterStore } from '../stats/useCharacterStore'
+import { useGemStore } from './useGemStore'
+import type { GemCounts, GemTier, GemTypeId } from './gemTypes'
 
 // Mirrors the item_instances table. enchant is still unused/inert — sockets
 // is now real (2026-08-02, see unlock_weapon_socket/quality_upgrade/
@@ -61,7 +63,7 @@ const DROP_CHANCE = 1 / 150
 // supabase/functions/resolve-combat (the actual grant), since Deno can't
 // import this file directly — must stay in sync, same pattern as
 // combatResolver.ts's other server/client mirrors.
-const NON_DROPPABLE_FAMILIES = ['sword', 'quiver', 'lucky-bow']
+const NON_DROPPABLE_FAMILIES = ['sword', 'quiver', 'lucky-bow', 'money-bag', 'gem-bag']
 
 export function pickLevelAppropriateTemplate(templates: ItemTemplate[], monsterLevel: number, classId: string): ItemTemplate | null {
   const candidates = templates.filter(
@@ -109,6 +111,10 @@ export function occupiedSlotCount(items: ItemInstance[]): number {
   // an equipped item does — see the Bank Storage note on ItemInstance above.
   const gearCount = items.filter((item) => !isEquipped(item.id) && item.location !== 'bank').length
   const totalStoneCount = Object.values(useCompositionStore.getState().stones).reduce((sum, count) => sum + count, 0)
+  // Gems are real, physical, non-stacking Inventory tiles now (2026-08-09) —
+  // one slot per owned unit, same as Comets/Stones. Must stay in sync with
+  // draw_lucky_ticket/transfer_gem's own occupied-slot formula.
+  const totalGemCount = Object.values(useGemStore.getState().gems).reduce<number>((sum, count) => sum + (count ?? 0), 0)
   // A potion stack occupies a slot exactly like a stone tier does — see
   // usePotionStore/potionTypes.ts.
   const potionStackCount = usePotionStore.getState().stacks.filter((stack) => stack.count > 0).length
@@ -118,7 +124,7 @@ export function occupiedSlotCount(items: ItemInstance[]): number {
   // own non-stacking item too — one Scroll tile per owned Scroll.
   const currency = useCurrencyStore.getState()
   const currencyCount = currency.comets + currency.fallenStars + currency.cometScrolls + currency.fallenStarScrolls
-  return gearCount + totalStoneCount + potionStackCount + currencyCount
+  return gearCount + totalStoneCount + totalGemCount + potionStackCount + currencyCount
 }
 
 interface InventoryState {
@@ -180,6 +186,15 @@ interface InventoryState {
   // Ascension Points only, no gold. A separate action from sellItem since
   // the two have genuinely different payouts, not just different UI.
   salvageItem: (itemId: string) => Promise<{ ok: boolean; error?: string; apGained?: number }>
+  // Money Bag / Gem Bag "Open" action (see open_reward_item) — consumes the
+  // item, grants its wrapped reward (gold for a Money Bag, 1 random Normal
+  // gem for a Gem Bag). Returns what was granted so the caller can drive
+  // useMoneyBagRevealStore's reveal card.
+  openRewardItem: (itemId: string) => Promise<{
+    ok: boolean
+    error?: string
+    granted?: { kind: 'gold'; amount: number } | { kind: 'gem'; gem_id: GemTypeId; tier: GemTier }
+  }>
 }
 
 export const useInventoryStore = create<InventoryState>((set, get) => ({
@@ -386,5 +401,34 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     }
 
     return { ok: result.ok, error: result.error, apGained: result.ap_gained }
+  },
+
+  openRewardItem: async (itemId) => {
+    const { data, error } = await supabase.rpc('open_reward_item', { item_id: itemId })
+
+    if (error) {
+      console.error('Open reward item call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as {
+      ok: boolean
+      error?: string
+      granted?: { kind: 'gold'; amount: number } | { kind: 'gem'; gem_id: GemTypeId; tier: GemTier }
+      gold?: number
+      gems?: GemCounts
+    }
+
+    if (result.ok && result.granted) {
+      get().removeItems([itemId])
+      if (result.granted.kind === 'gold') {
+        // gold-only — addRewards(gold, 0) adds gold without touching EXP/level.
+        useProgressionStore.getState().addRewards(result.granted.amount, 0)
+      } else if (result.gems) {
+        useGemStore.getState().setGems(result.gems)
+      }
+    }
+
+    return { ok: result.ok, error: result.error, granted: result.granted }
   },
 }))

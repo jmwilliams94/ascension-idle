@@ -5,8 +5,10 @@ import { supabase } from './supabaseClient'
 import { APP_VERSION } from '../version'
 import { DEFAULT_GEAR_COMPOSITION_POINTS, type GearCompositionPoints } from '../game/items/forgeCosts'
 import type { CompositionStones } from '../game/items/useCompositionStore'
+import type { GemCounts } from '../game/items/gemTypes'
 
 const DEFAULT_STONES_BANKED: CompositionStones = { '1': 0, '2': 0, '3': 0, '4': 0 }
+const DEFAULT_GEMS_BANKED: GemCounts = {}
 
 // Account-level only — class/level/gold/exp/zone/equipped/comets/fallen stars all
 // moved to the characters table (see useCharacterRecordStore) as part of the
@@ -24,6 +26,9 @@ interface PlayerRow {
   comet_bank_count: number
   fallen_star_bank_count: number
   composition_stones_banked: CompositionStones
+  // Gems' own account-wide bank balance (2026-08-09) — see transfer_gem.
+  // Same key format as characters.gems ("<gemId>_<tier>").
+  gems_banked: GemCounts
   // Achievements rework (2026-08-06) — permanent combat buffs, cumulative
   // across every monster's own account-tier Achievement claims (see
   // claim_account_achievement_reward). Both made per-zone (2026-08-07,
@@ -76,6 +81,7 @@ interface PlayerRecordState {
   cometBankCount: number
   fallenStarBankCount: number
   stonesBanked: CompositionStones
+  gemsBanked: GemCounts
   // Achievements rework (2026-08-06) — see PlayerRow's own comment above.
   accountZoneAttackBonusPct: Record<string, number>
   accountZoneDropBonusPct: Record<string, number>
@@ -95,6 +101,7 @@ interface PlayerRecordState {
   setCometBankCount: (value: number) => void
   setFallenStarBankCount: (value: number) => void
   setStonesBanked: (value: CompositionStones) => void
+  setGemsBanked: (value: GemCounts) => void
   setAccountZoneAttackBonusPct: (value: Record<string, number>) => void
   setAccountZoneDropBonusPct: (value: Record<string, number>) => void
 }
@@ -112,6 +119,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
   cometBankCount: 0,
   fallenStarBankCount: 0,
   stonesBanked: DEFAULT_STONES_BANKED,
+  gemsBanked: DEFAULT_GEMS_BANKED,
   accountZoneAttackBonusPct: {},
   accountZoneDropBonusPct: {},
 
@@ -119,7 +127,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
     const { data, error } = await supabase
       .from('players')
       .select(
-        'last_seen_version, bank_gold, bank_comets, bank_fallen_stars, unlocked_classes, ascension_points, bank_points, gear_composition_points, comet_bank_count, fallen_star_bank_count, composition_stones_banked, account_zone_attack_bonus_pct, account_zone_drop_bonus_pct',
+        'last_seen_version, bank_gold, bank_comets, bank_fallen_stars, unlocked_classes, ascension_points, bank_points, gear_composition_points, comet_bank_count, fallen_star_bank_count, composition_stones_banked, gems_banked, account_zone_attack_bonus_pct, account_zone_drop_bonus_pct',
       )
       .eq('id', userId)
       .maybeSingle<PlayerRow>()
@@ -153,6 +161,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
         cometBankCount: 0,
         fallenStarBankCount: 0,
         stonesBanked: DEFAULT_STONES_BANKED,
+        gemsBanked: DEFAULT_GEMS_BANKED,
         accountZoneAttackBonusPct: {},
         accountZoneDropBonusPct: {},
       })
@@ -170,6 +179,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
       cometBankCount: data.comet_bank_count,
       fallenStarBankCount: data.fallen_star_bank_count,
       stonesBanked: data.composition_stones_banked,
+      gemsBanked: data.gems_banked ?? DEFAULT_GEMS_BANKED,
       accountZoneAttackBonusPct: data.account_zone_attack_bonus_pct ?? {},
       accountZoneDropBonusPct: data.account_zone_drop_bonus_pct ?? {},
     })
@@ -205,6 +215,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
   setCometBankCount: (value) => set({ cometBankCount: value }),
   setFallenStarBankCount: (value) => set({ fallenStarBankCount: value }),
   setStonesBanked: (value) => set({ stonesBanked: value }),
+  setGemsBanked: (value) => set({ gemsBanked: value }),
   setAccountZoneAttackBonusPct: (value) => set({ accountZoneAttackBonusPct: value }),
   setAccountZoneDropBonusPct: (value) => set({ accountZoneDropBonusPct: value }),
 }))
