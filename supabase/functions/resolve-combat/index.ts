@@ -861,7 +861,6 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   ])
 
   const characterKillsBefore = characterKillsRow?.kills ?? 0
-  const claimedTierIndex = characterKillsRow?.claimed_tier_index ?? 0
   const accountKillsBefore = accountKillsRow?.kills ?? 0
   const petAlreadyUnlocked = Boolean(petRow)
   // Both per-zone now (2026-08-07, confirmed with the user — attack bonus
@@ -1083,31 +1082,43 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     level += 1
   }
 
-  const characterKillCount = characterKillsBefore + killsThisWindow
-  const accountKillCount = accountKillsBefore + killsThisWindow
+  // Atomic increment (2026-08-11) — was a plain read-old-value-then-write-
+  // absolute-total upsert (`characterKillsBefore + killsThisWindow`, from a
+  // row read at the *start* of this function), the same "lost update" race
+  // resolve_combat_apply_rewards was already fixed for below: two
+  // resolve-combat calls for the same character landing close together (the
+  // periodic interval call and an immediate call on stop/switch/
+  // visibilitychange/beforeunload can easily overlap) would both read the
+  // same starting kill count, and whichever finished last silently
+  // discarded the other's kills. resolve_combat_apply_kill_counts does
+  // `kills = kills + delta` as a single upsert, safe against any
+  // interleaving. claimed_tier_index is untouched by this RPC — it's only
+  // ever written by claim_kill_count_reward.
+  let characterKillCount = characterKillsBefore
+  let accountKillCount = accountKillsBefore
 
   if (killsThisWindow > 0) {
-    await Promise.all([
-      db
-        .from('character_monster_kills')
-        .upsert(
-          {
-            character_id: characterId,
-            monster_id: character.selected_monster_id,
-            kills: characterKillCount,
-            // Preserves the existing value — claiming a tier only ever
-            // happens through claim_kill_count_reward, never here.
-            claimed_tier_index: claimedTierIndex,
-          },
-          { onConflict: 'character_id,monster_id' },
-        ),
-      db
-        .from('account_monster_kills')
-        .upsert(
-          { account_id: character.account_id, monster_id: character.selected_monster_id, kills: accountKillCount },
-          { onConflict: 'account_id,monster_id' },
-        ),
-    ])
+    const { data: killCountRow, error: killCountError } = await db
+      .rpc('resolve_combat_apply_kill_counts', {
+        p_character_id: characterId,
+        p_account_id: character.account_id,
+        p_monster_id: character.selected_monster_id,
+        p_kills_delta: killsThisWindow,
+      })
+      .single()
+
+    if (killCountError || !killCountRow) {
+      console.error('resolve-combat resolve_combat_apply_kill_counts call failed:', killCountError?.message)
+      // Falls back to the old (racy) locally-computed totals only if the RPC
+      // itself somehow failed to return a row — keeps the response shape
+      // intact rather than crashing, at the cost of reintroducing the race
+      // for just this one call.
+      characterKillCount = characterKillsBefore + killsThisWindow
+      accountKillCount = accountKillsBefore + killsThisWindow
+    } else {
+      characterKillCount = killCountRow.character_kills as number
+      accountKillCount = killCountRow.account_kills as number
+    }
   }
 
   if (petObtained) {
