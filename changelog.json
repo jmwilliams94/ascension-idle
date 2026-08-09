@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.78.6",
+    "date": "2026-08-09",
+    "changes": [
+      "Forge's \"Salvage All Tempered/Infused/Radiant\" buttons no longer sweep up gear that already has a +1 (or higher) enhancement"
+    ]
+  },
+  {
     "version": "1.78.5",
     "date": "2026-08-09",
     "changes": [
