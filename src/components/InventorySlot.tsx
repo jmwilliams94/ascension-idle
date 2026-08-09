@@ -182,7 +182,12 @@ export default function InventorySlot({
       {emberCount > 0 && <TierEmberEffect color={qualityColor as string} count={emberCount} seed={seedFromId(slotId)} />}
       {iconSrc ? <img src={iconSrc} alt="" className={`relative z-10 object-contain ${iconSizeClassName}`} /> : <span className="relative z-10">{icon}</span>}
       {Boolean(compositionLevel) && (
-        <span className="absolute right-1 top-0.5 z-10 text-[9px] font-semibold text-amber-300">+{compositionLevel}</span>
+        <span
+          className="absolute right-1.5 top-1 z-10 text-[18px] font-extrabold leading-none text-slate-100"
+          style={{ textShadow: '0 1px 2px rgba(0,0,0,0.9), 0 -1px 0 rgba(255,255,255,0.35)' }}
+        >
+          +{compositionLevel}
+        </span>
       )}
       {badge && <span className="absolute bottom-0.5 right-1 z-10 text-[9px] font-semibold text-slate-200">{badge}</span>}
     </button>

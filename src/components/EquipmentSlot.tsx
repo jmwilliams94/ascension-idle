@@ -85,7 +85,12 @@ export default function EquipmentSlot({
       {emberCount > 0 && <TierEmberEffect color={qualityColor as string} count={emberCount} seed={seedFromId(label)} />}
       {iconSrc ? <img src={iconSrc} alt="" className="relative z-10 h-4/5 w-4/5 object-contain" /> : <span className="relative z-10">{icon}</span>}
       {filled && Boolean(compositionLevel) && (
-        <span className="absolute right-1 top-0.5 z-10 text-[9px] font-semibold text-amber-300">+{compositionLevel}</span>
+        <span
+          className="absolute right-1.5 top-1 z-10 text-[18px] font-extrabold leading-none text-slate-100"
+          style={{ textShadow: '0 1px 2px rgba(0,0,0,0.9), 0 -1px 0 rgba(255,255,255,0.35)' }}
+        >
+          +{compositionLevel}
+        </span>
       )}
     </button>
   )

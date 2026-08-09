@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.75.2",
+    "date": "2026-08-12",
+    "changes": [
+      "Made the composition \"+N\" badge on gear icons bigger and easier to read, with a cleaner engraved look"
+    ]
+  },
+  {
     "version": "1.75.1",
     "date": "2026-08-12",
     "changes": [
