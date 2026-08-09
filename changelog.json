@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.76.1",
+    "date": "2026-08-09",
+    "changes": [
+      "Added real monster art for Talon Isle's whole roster: Wingkin, Wingkin Sovereign, Hawklord, Silverwing, and Footpad"
+    ]
+  },
+  {
+    "version": "1.76.0",
+    "date": "2026-08-13",
+    "changes": [
+      "Redesigned the Forge into a hub of 6 tiles — Forge, Master Forge, Composition, Salvage, Sockets, and the new Enchantress — each opening its own screen with your Inventory on the left and the upgrade controls on the right",
+      "Added the Enchantress: consume a Normal, Tempered, or Ascended gem to roll a flat HP bonus onto a piece of gear, with a big rolling-number reveal animation"
+    ]
+  },
+  {
     "version": "1.75.11",
     "date": "2026-08-09",
     "changes": [
