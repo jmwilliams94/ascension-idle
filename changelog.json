@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.75.9",
+    "date": "2026-08-13",
+    "changes": [
+      "Fixed LuckyLad reward icons still reading as washed out — added a solid backdrop panel behind the reward tile so the chest's glow can no longer show through it"
+    ]
+  },
+  {
     "version": "1.75.8",
     "date": "2026-08-09",
     "changes": [

@@ -238,16 +238,25 @@ function LuckyCard({
             alt=""
             className={`absolute inset-0 h-full w-full object-contain ${won ? '' : 'opacity-60'}`}
           />
-          <InventorySlot
-            slotId={`lucky-${index}`}
-            filled
-            sizeClassName={SLOT_SIZE_CLASS}
-            icon={visual.icon}
-            iconSrc={visual.iconSrc}
-            qualityColor={visual.color}
-            label={rewardLabel(reward)}
-            tooltip={buildLuckyRewardTooltip(reward)}
-          />
+          {/* InventorySlot's own background is a light, deliberately-translucent
+              qualityColor tint (see InventorySlot.tsx) — fine over the app's
+              usual solid dark panels, but here it let the chest's bright glow
+              show straight through, reading as washed out (reported by the
+              user). A solid backdrop, sized/rounded to match the tile exactly,
+              sits behind it so the icon reads on the same flat dark
+              background every other Inventory tile has. */}
+          <div className={`relative ${SLOT_SIZE_CLASS} rounded-lg bg-slate-900`}>
+            <InventorySlot
+              slotId={`lucky-${index}`}
+              filled
+              sizeClassName={SLOT_SIZE_CLASS}
+              icon={visual.icon}
+              iconSrc={visual.iconSrc}
+              qualityColor={visual.color}
+              label={rewardLabel(reward)}
+              tooltip={buildLuckyRewardTooltip(reward)}
+            />
+          </div>
         </motion.div>
         {won && (
           <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold text-slate-950">
