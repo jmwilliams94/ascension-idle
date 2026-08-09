@@ -797,12 +797,14 @@ export default function InventoryPanel({
   // Convenience shortcut for the common case (dumping junk) — doesn't stop
   // the player from also hand-picking higher-tier items via the checkboxes.
   // Excludes anything with composition progress (+N) even at Normal quality,
-  // since that's no longer junk.
+  // since that's no longer junk. Also excludes anything with an unlocked
+  // socket (even an empty one) — sockets cost real Fallen Stars (weapons) or
+  // a rare RNG proc (armor) to unlock, so that gear isn't junk either.
   const selectAllNormal = () => {
     setSelectedForSale(
       new Set(
         visibleItems
-          .filter((item) => item.quality_tier === 'normal' && item.composition_level === 0)
+          .filter((item) => item.quality_tier === 'normal' && item.composition_level === 0 && item.sockets.length === 0)
           .map((item) => item.id)
       )
     )

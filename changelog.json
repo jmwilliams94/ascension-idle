@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.80.1",
+    "date": "2026-08-13",
+    "changes": [
+      "\"Select All Normal\" in the Shop's bulk sell no longer includes gear with an unlocked socket"
+    ]
+  },
+  {
     "version": "1.80.0",
     "date": "2026-08-13",
     "changes": [
