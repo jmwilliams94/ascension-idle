@@ -35,9 +35,17 @@ export const CHEST_OPEN_ICON_SRC = `${BASE_URL}lucky-icons/chest-open.png`
 // for type-completeness only; pick_lucky_reward no longer rolls it (replaced
 // by tiered money_bag). New kinds: money_bag (amount = Class 1-10, opens for
 // gold), gem_bag (opens for 1 random Normal gem), composition_stone (amount
-// = tier 1-6, credited directly), gem_tempered/gem_ascended (credited
-// directly, random of the 4 coded gem types — which type isn't known until
-// the draw resolves), and three pre-made gear rewards.
+// = tier 1-6, credited directly), and three pre-made gear rewards.
+//
+// gem_tempered_<id>/gem_ascended_<id> (2026-08-13, split from the original
+// generic 'gem_tempered'/'gem_ascended' kinds) — the specific gem type is now
+// baked into the reward kind itself and rolled by pick_lucky_reward at the
+// same time as everything else, rather than being decided separately, after
+// the fact, only for whichever card was actually picked (see
+// draw_lucky_ticket's old random-gem-id assignment). This means every board
+// entry — won or not — now carries its real specific gem, not a placeholder
+// "Tempered Gem"/"Ascended Gem" label. The original two weights were split
+// evenly 4 ways across drake/ember/bastion/iris in pick_lucky_reward.
 export type LuckyRewardKind =
   | 'gold'
   | 'comet'
@@ -47,8 +55,14 @@ export type LuckyRewardKind =
   | 'money_bag'
   | 'gem_bag'
   | 'composition_stone'
-  | 'gem_tempered'
-  | 'gem_ascended'
+  | 'gem_tempered_drake'
+  | 'gem_tempered_ember'
+  | 'gem_tempered_bastion'
+  | 'gem_tempered_iris'
+  | 'gem_ascended_drake'
+  | 'gem_ascended_ember'
+  | 'gem_ascended_bastion'
+  | 'gem_ascended_iris'
   | 'gear_radiant_bow'
   | 'gear_radiant_coat'
   | 'gear_ascended_random'

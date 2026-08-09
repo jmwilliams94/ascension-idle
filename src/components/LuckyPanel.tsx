@@ -8,6 +8,7 @@ import {
   CHEST_CLOSED_ICON_SRC,
   CHEST_OPEN_ICON_SRC,
   type LuckyReward,
+  type LuckyRewardKind,
 } from '../game/lucky/useLuckyStore'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
@@ -28,10 +29,21 @@ import {
   buildGemBagTooltip,
   MONEY_BAG_GOLD_BY_CLASS,
 } from '../game/items/forgeCosts'
-import { getGemTierColor } from '../game/items/gemTypes'
+import { GEM_TYPES, formatGemTierLabel, getGemIconSrc, getGemTierColor, buildGemTooltip, type GemTier, type GemTypeId } from '../game/items/gemTypes'
 import { QUALITY_COLORS } from '../game/items/equipmentBonus'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
+
+// Parses the gem type/tier back out of a gem_tempered_<id>/gem_ascended_<id>
+// reward kind (see useLuckyStore.ts's LuckyRewardKind for why the gem
+// identity now lives in the kind itself). Shared by the three switch
+// statements below so each only needs one case block for all 8 gem kinds.
+const GEM_REWARD_KIND_PATTERN = /^gem_(tempered|ascended)_(drake|ember|bastion|iris)$/
+
+function parseGemRewardKind(kind: LuckyRewardKind): { tier: GemTier; gemId: GemTypeId } | null {
+  const match = GEM_REWARD_KIND_PATTERN.exec(kind)
+  return match ? { tier: match[1] as GemTier, gemId: match[2] as GemTypeId } : null
+}
 
 // Lucky — Stage 1 (confirmed design, see CLAUDE.md's Lucky section and the
 // draw_lucky_ticket migration's own header). A free ticket every 6 hours,
@@ -62,13 +74,17 @@ function rewardLabel(reward: LuckyReward): string {
       return 'Random Gem Bag'
     case 'composition_stone':
       return `+${reward.amount} Stone`
-    case 'gem_tempered':
-      // The specific gem type is only decided once the draw actually
-      // resolves the won card server-side (see draw_lucky_ticket) — every
-      // board entry of this kind, won or not, only ever carries {kind, amount}.
-      return 'Tempered Gem'
-    case 'gem_ascended':
-      return 'Ascended Gem'
+    case 'gem_tempered_drake':
+    case 'gem_tempered_ember':
+    case 'gem_tempered_bastion':
+    case 'gem_tempered_iris':
+    case 'gem_ascended_drake':
+    case 'gem_ascended_ember':
+    case 'gem_ascended_bastion':
+    case 'gem_ascended_iris': {
+      const gem = parseGemRewardKind(reward.kind)!
+      return `${formatGemTierLabel(gem.tier)} ${GEM_TYPES[gem.gemId].displayName}`
+    }
     case 'gear_radiant_bow':
       return "Radiant Ranger's Bow"
     case 'gear_radiant_coat':
@@ -96,10 +112,17 @@ function rewardVisual(reward: LuckyReward): { icon?: string; iconSrc?: string; c
       return { icon: '🎁', color: MATERIAL_COLOR }
     case 'composition_stone':
       return { icon: '🔷', iconSrc: getStoneIconSrc(reward.amount), color: MATERIAL_COLOR }
-    case 'gem_tempered':
-      return { icon: '💎', color: getGemTierColor('tempered') }
-    case 'gem_ascended':
-      return { icon: '💎', color: getGemTierColor('ascended') }
+    case 'gem_tempered_drake':
+    case 'gem_tempered_ember':
+    case 'gem_tempered_bastion':
+    case 'gem_tempered_iris':
+    case 'gem_ascended_drake':
+    case 'gem_ascended_ember':
+    case 'gem_ascended_bastion':
+    case 'gem_ascended_iris': {
+      const gem = parseGemRewardKind(reward.kind)!
+      return { iconSrc: getGemIconSrc(gem.gemId, gem.tier), color: getGemTierColor(gem.tier) }
+    }
     case 'gear_radiant_bow':
       return { icon: '🏹', color: QUALITY_COLORS.radiant }
     case 'gear_radiant_coat':
@@ -111,10 +134,12 @@ function rewardVisual(reward: LuckyReward): { icon?: string; iconSrc?: string; c
 
 // Real hover tooltip content for a revealed board tile (2026-08-10, confirmed
 // with the user), reusing the same builders every other Inventory tile in the
-// game uses — see forgeCosts.ts. gem_tempered/gem_ascended and the two
-// hyper-rare gear kinds get a generic (not item-specific) tooltip since the
-// board only ever carries {kind, amount} — the exact gem type/gear template
-// isn't decided until the draw actually resolves the won card server-side.
+// game uses — see forgeCosts.ts (buildGemTooltip, gemTypes.ts, for the gem
+// kinds — real per-gem-type tooltip since 2026-08-13, see LuckyRewardKind's
+// own header for why). The three hyper-rare gear kinds still get a generic
+// (not item-specific) tooltip since the board only ever carries {kind,
+// amount} for those — the exact gear template isn't decided until the draw
+// actually resolves the won card server-side.
 function buildLuckyRewardTooltip(reward: LuckyReward): ItemTooltipData {
   switch (reward.kind) {
     case 'gold':
@@ -133,20 +158,18 @@ function buildLuckyRewardTooltip(reward: LuckyReward): ItemTooltipData {
       return buildGemBagTooltip()
     case 'composition_stone':
       return buildStoneTooltip(reward.amount)
-    case 'gem_tempered':
-      return {
-        title: 'Tempered Gem',
-        icon: '💎',
-        iconColor: getGemTierColor('tempered'),
-        lines: ['Lucky Lad reward', 'Random of the 4 known gem types'],
-      }
-    case 'gem_ascended':
-      return {
-        title: 'Ascended Gem',
-        icon: '💎',
-        iconColor: getGemTierColor('ascended'),
-        lines: ['Lucky Lad reward', 'Random of the 4 known gem types'],
-      }
+    case 'gem_tempered_drake':
+    case 'gem_tempered_ember':
+    case 'gem_tempered_bastion':
+    case 'gem_tempered_iris':
+    case 'gem_ascended_drake':
+    case 'gem_ascended_ember':
+    case 'gem_ascended_bastion':
+    case 'gem_ascended_iris': {
+      const gem = parseGemRewardKind(reward.kind)!
+      const tooltip = buildGemTooltip(gem.gemId, gem.tier)
+      return { ...tooltip, lines: ['Lucky Lad reward', ...(tooltip.lines ?? [])] }
+    }
     case 'gear_radiant_bow':
       return {
         title: "Radiant Ranger's Bow",
