@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.74.7",
+    "date": "2026-08-09",
+    "changes": [
+      "Fixed switching monsters mid-fight sometimes continuing to credit gold, EXP, and Achievements kill counts to whichever monster you were fighting before the switch, for as long as you kept fighting without pausing"
+    ]
+  },
+  {
     "version": "1.74.6",
     "date": "2026-08-09",
     "changes": [

@@ -42,7 +42,22 @@ export function usePersistGameState(characterId: string | undefined, loaded: boo
 
     let previousLevel = useProgressionStore.getState().level
 
-    const unsubscribeProgression = useProgressionStore.subscribe((state) => {
+    // Bug fix (2026-08-11): this subscriber used to fire on ANY
+    // useProgressionStore change, including predictedGold/predictedLevel/
+    // predictedExp — which addPredictedRewards updates once per attack
+    // (see useCombatStore.runTick), often faster than once per 2s. That
+    // meant this store's debounced save almost never got a quiet enough gap
+    // to actually fire while continuously fighting, so selected_monster_id
+    // (persisted on the same character row, see useCharacterRecordStore's
+    // saveNow) could go stale for as long as combat kept running — a
+    // monster switch mid-fight would silently keep crediting gold/EXP/kill
+    // counts to the previous monster server-side until something else
+    // forced a flush (level-up/tab-hide/unload). Only the real, persisted
+    // level/gold/exp fields should reschedule this save.
+    const unsubscribeProgression = useProgressionStore.subscribe((state, prevState) => {
+      if (state.level === prevState.level && state.gold === prevState.gold && state.exp === prevState.exp) {
+        return
+      }
       if (state.level > previousLevel) {
         previousLevel = state.level
         saveNow()
