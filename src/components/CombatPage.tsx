@@ -248,18 +248,18 @@ export default function CombatPage() {
             {currentZone.backgroundUrl && <div className="absolute inset-0 bg-slate-950/60" />}
             <div className="relative">
             <div className="flex items-center gap-4">
-              <div className="relative h-16 w-16 shrink-0">
+              <div className="relative h-32 w-32 shrink-0">
                 {activeType.portraitUrl ? (
                   <img
                     key={monsterInstanceKey}
                     src={activeType.portraitUrl}
                     alt={activeType.displayName}
-                    className={`h-16 w-16 rounded-2xl border-2 border-slate-700 object-contain p-[15%] ${isRareInstance ? 'super-quality-glow' : ''}`}
+                    className={`h-32 w-32 rounded-2xl border-2 border-slate-700 object-contain p-[15%] ${isRareInstance ? 'super-quality-glow' : ''}`}
                   />
                 ) : (
                   <div
                     key={monsterInstanceKey}
-                    className={`h-16 w-16 rounded-2xl border-2 border-slate-700 ${isRareInstance ? 'super-quality-glow' : ''}`}
+                    className={`h-32 w-32 rounded-2xl border-2 border-slate-700 ${isRareInstance ? 'super-quality-glow' : ''}`}
                     style={{ backgroundColor: hexColor(activeType.color) }}
                   />
                 )}
@@ -608,18 +608,18 @@ export default function CombatPage() {
             {currentZone.backgroundUrl && <div className="absolute inset-0 bg-slate-950/60" />}
             <div className="relative">
             <div className="flex items-center gap-4">
-              <div className="relative h-20 w-20 shrink-0">
+              <div className="relative h-40 w-40 shrink-0">
                 {activeType.portraitUrl ? (
                   <img
                     key={monsterInstanceKey}
                     src={activeType.portraitUrl}
                     alt={activeType.displayName}
-                    className={`h-20 w-20 rounded-2xl border-2 border-slate-700 object-contain p-[15%] ${isRareInstance ? 'super-quality-glow' : ''}`}
+                    className={`h-40 w-40 rounded-2xl border-2 border-slate-700 object-contain p-[15%] ${isRareInstance ? 'super-quality-glow' : ''}`}
                   />
                 ) : (
                   <div
                     key={monsterInstanceKey}
-                    className={`h-20 w-20 rounded-2xl border-2 border-slate-700 ${isRareInstance ? 'super-quality-glow' : ''}`}
+                    className={`h-40 w-40 rounded-2xl border-2 border-slate-700 ${isRareInstance ? 'super-quality-glow' : ''}`}
                     style={{ backgroundColor: hexColor(activeType.color) }}
                   />
                 )}
