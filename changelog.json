@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.77.5",
+    "date": "2026-08-09",
+    "changes": [
+      "Gave the Forge hub's tiles real icon art — Master Forge and Enchantress get dedicated new art, Salvage gets a new cracked-hammer icon, Sockets now shows an Ascended Drake Gem, and Composition now shows a +9 Composition Stone"
+    ]
+  },
+  {
     "version": "1.77.4",
     "date": "2026-08-09",
     "changes": [
