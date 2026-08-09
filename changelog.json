@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.80.3",
+    "date": "2026-08-13",
+    "changes": [
+      "Market nav button now shows a badge when you have unclaimed Mail, same as Achievements' claimable badge",
+      "Removed the obsolete Display tab from Settings (its show-monster-names/health-bars/item-drop-text toggles weren't wired up to anything)"
+    ]
+  },
+  {
     "version": "1.80.2",
     "date": "2026-08-13",
     "changes": [

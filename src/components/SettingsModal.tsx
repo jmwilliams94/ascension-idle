@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { changelogNewestFirst } from '../lib/changelog'
 import ChangelogEntries from './ChangelogEntries'
-import DisplaySettingsSection from './DisplaySettingsSection'
 import ItemEffectGallery from './ItemEffectGallery'
 
 interface SettingsSection {
@@ -11,13 +10,12 @@ interface SettingsSection {
 }
 
 // Add more sections here later (audio, etc.) — the modal itself doesn't need to
-// change, just this list.
+// change, just this list. Display section (monster name/health/item-drop-text
+// toggles) removed 2026-08-13 (confirmed with the user, "obsolete") — those
+// three flags were never actually read anywhere outside the settings store
+// itself, so the whole section (plus useDisplaySettingsStore.ts and the
+// now-unused ToggleRow.tsx) was deleted rather than left as dead UI.
 const SECTIONS: SettingsSection[] = [
-  {
-    id: 'display',
-    label: 'Display',
-    content: <DisplaySettingsSection />,
-  },
   {
     id: 'effects',
     label: 'Item Effects',

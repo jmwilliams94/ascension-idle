@@ -3,6 +3,7 @@ import { useTabStore, type TabId } from '../game/hud/useTabStore'
 import { TAB_ICONS, useEquippedWeaponIcon } from '../game/hud/navIcons'
 import NavIconGlyph from './NavIconGlyph'
 import { useAchievementsStore, totalClaimableCount } from '../game/achievements/useAchievementsStore'
+import { useMailStore } from '../game/marketplace/useMailStore'
 
 const TAB_ITEMS: { id: TabId; label: string }[] = [
   { id: 'combat', label: 'Combat' },
@@ -91,6 +92,11 @@ export default function TabNav() {
   const characterKills = useAchievementsStore((state) => state.characterKills)
   const accountKills = useAchievementsStore((state) => state.accountKills)
   const achievementsBadge = totalClaimableCount(characterKills, accountKills)
+  // Unclaimed Mail count (2026-08-13, requested by the user) — same badge
+  // treatment as Achievements, mirroring MarketplacePanel's own Mail sub-tab
+  // badge (see that file) so a pending purchase/returned-listing item is
+  // visible from the nav bar too, not just after already opening Market.
+  const mailBadge = useMailStore((state) => state.entries.length)
 
   return (
     <div className="hidden grid-cols-8 gap-2 lg:grid">
@@ -100,7 +106,7 @@ export default function TabNav() {
           key={item.id}
           id={item.id}
           label={item.label}
-          badge={item.id === 'achievements' ? achievementsBadge : undefined}
+          badge={item.id === 'achievements' ? achievementsBadge : item.id === 'marketplace' ? mailBadge : undefined}
         />
       ))}
     </div>

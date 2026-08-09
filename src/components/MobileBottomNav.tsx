@@ -5,6 +5,7 @@ import { useTabStore, type TabId } from '../game/hud/useTabStore'
 import { TAB_ICONS, useEquippedWeaponIcon } from '../game/hud/navIcons'
 import NavIconGlyph from './NavIconGlyph'
 import { useAchievementsStore, totalClaimableCount } from '../game/achievements/useAchievementsStore'
+import { useMailStore } from '../game/marketplace/useMailStore'
 
 // Fixed bottom nav bar, mobile-only (`lg:hidden` — desktop keeps TabNav.tsx
 // unchanged, now `hidden lg:grid`). Combat is centered as "Fight"/"Idle" —
@@ -111,11 +112,16 @@ function FightNavButton() {
 // navigating; tapping anywhere else on the page also collapses it (the same
 // outside-pointerdown-dismiss pattern GearEquipPopover already established in
 // this codebase), so it doesn't linger open over an unrelated tab.
-function TownNavButton() {
+// badges (2026-08-13, requested by the user) — keyed by TabId, currently only
+// Market (unclaimed Mail count) uses this; shown both on the individual
+// rolled-out item and, summed, on the collapsed Town button itself so a
+// pending item is visible without opening the rollup first.
+function TownNavButton({ badges }: { badges: Partial<Record<TabId, number>> }) {
   const activeTab = useTabStore((state) => state.activeTab)
   const setActiveTab = useTabStore((state) => state.setActiveTab)
   const [expanded, setExpanded] = useState(false)
   const active = TOWN_ITEMS.some((item) => item.id === activeTab)
+  const totalBadge = Object.values(badges).reduce<number>((sum, value) => sum + (value ?? 0), 0)
 
   useEffect(() => {
     if (!expanded) return undefined
@@ -142,6 +148,7 @@ function TownNavButton() {
           >
             {TOWN_ITEMS.map((item) => {
               const icon = TAB_ICONS[item.id]
+              const badge = badges[item.id]
               return (
                 <button
                   key={item.id}
@@ -150,12 +157,17 @@ function TownNavButton() {
                     setActiveTab(item.id)
                     setExpanded(false)
                   }}
-                  className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-left text-xs font-medium ${
+                  className={`relative flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-left text-xs font-medium ${
                     activeTab === item.id ? 'bg-sky-500/10 text-sky-300' : 'text-slate-300 hover:bg-slate-800'
                   }`}
                 >
                   {icon && <NavIconGlyph icon={icon} />}
                   {item.label}
+                  {Boolean(badge) && (
+                    <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-bold text-slate-950">
+                      {badge! > 99 ? '99+' : badge}
+                    </span>
+                  )}
                 </button>
               )
             })}
@@ -166,12 +178,17 @@ function TownNavButton() {
       <button
         type="button"
         onClick={() => setExpanded((current) => !current)}
-        className={`flex flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-medium leading-tight ${
+        className={`relative flex flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-medium leading-tight ${
           active || expanded ? 'text-sky-300' : 'text-slate-400'
         }`}
       >
         <span className="text-lg">🏘️</span>
         <span className="truncate">Town</span>
+        {totalBadge > 0 && (
+          <span className="absolute right-2 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-slate-900 bg-amber-500 px-1 text-[9px] font-bold text-slate-950">
+            {totalBadge > 99 ? '99+' : totalBadge}
+          </span>
+        )}
       </button>
     </div>
   )
@@ -181,6 +198,10 @@ export default function MobileBottomNav() {
   const characterKills = useAchievementsStore((state) => state.characterKills)
   const accountKills = useAchievementsStore((state) => state.accountKills)
   const achievementsBadge = totalClaimableCount(characterKills, accountKills)
+  // Unclaimed Mail count (2026-08-13, requested by the user) — see
+  // TownNavButton's own doc comment for how this surfaces on mobile, where
+  // Market lives inside the Town rollup rather than its own top-level slot.
+  const mailBadge = useMailStore((state) => state.entries.length)
 
   return (
     <nav
@@ -192,7 +213,7 @@ export default function MobileBottomNav() {
           <NavButton key={item.id} {...item} />
         ))}
         <FightNavButton />
-        <TownNavButton />
+        <TownNavButton badges={{ marketplace: mailBadge }} />
         {RIGHT_ITEMS.map((item) => (
           <NavButton key={item.id} {...item} badge={item.id === 'achievements' ? achievementsBadge : undefined} />
         ))}
