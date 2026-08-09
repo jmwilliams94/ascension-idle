@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.78.1",
+    "date": "2026-08-13",
+    "changes": [
+      "Renamed Twistpath Ruins' Ratling Flinger to Hollow Sentinel and Swiftgnaw to Mosswarden"
+    ]
+  },
+  {
     "version": "1.78.0",
     "date": "2026-08-09",
     "changes": [

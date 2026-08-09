@@ -408,7 +408,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDef> = {
   // --- Twistpath Ruins ---
   'ratling-flinger': {
     id: 'ratling-flinger',
-    displayName: 'Ratling Flinger',
+    displayName: 'Hollow Sentinel',
     level: 105,
     maxHp: 888,
     goldReward: 18,
@@ -428,7 +428,7 @@ export const ENEMY_TYPES: Record<EnemyTypeId, EnemyTypeDef> = {
   },
   'swiftgnaw': {
     id: 'swiftgnaw',
-    displayName: 'Swiftgnaw',
+    displayName: 'Mosswarden',
     level: 112,
     maxHp: 984,
     goldReward: 19,

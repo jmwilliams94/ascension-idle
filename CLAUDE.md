@@ -100,7 +100,7 @@ Rosters (5 monsters each, first/last always kept, middle 3 spaced evenly by leve
 - Sunscar Wastes: Dunecrawler(67), Cragbeast(72), Boulderback Golem(75), Stonewarden(80), Edgeborn(85)
 - Talon Isle: Wingkin(87), Wingkin Sovereign(90), Hawklord(92), Silverwing(95), Footpad(100)
 - Duskspire Keep: Cryptwing(102), Crimson Wing(107), Crimson Sovereign(110), Ironhorn Fiend(115), Verdant Fiend(120)
-- Twistpath Ruins: Ratling Flinger(105), Gilded Wraith(108), Swiftgnaw(112), Nightfiend(117), Bullhorn Warden(120)
+- Twistpath Ruins: Hollow Sentinel(105), Gilded Wraith(108), Mosswarden(112), Nightfiend(117), Bullhorn Warden(120) — renamed 2026-08-13 from Ratling Flinger/Swiftgnaw (cosmetic only, stable ids `ratling-flinger`/`swiftgnaw` and all stats unchanged)
 - Rimehollow: Rime Serpent(120), Serpent Herald(122), Serpent Warden(124), Fiend Sovereign(127), Frostblade Fiend(129)
 
 No HP/gold/EXP rebalancing was needed for the roster trim (each monster's stats are hand-placed per its own level, not interpolated). Removed monster ids no longer exist at all (`delete from enemy_types where id in (...)`, migration `20260731110000_trim_enemy_rosters.sql`) — `selected_monster_id` has no FK, so a returning character with a removed selection just falls back to "pick a monster."
