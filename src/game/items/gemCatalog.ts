@@ -102,9 +102,9 @@ export const SOCKETED_GEM_COLOR = '#7BC488'
 export const BLESS_PCT_STEPS: number[] = [1, 3, 5, 7]
 export const BLESS_MAX_PCT = BLESS_PCT_STEPS[BLESS_PCT_STEPS.length - 1]
 
-// A soft holy-light blue — distinct from ENCHANT_HP_COLOR's gold, the purple
-// used for Composition's "Bonus:" lines, and SOCKETED_GEM_COLOR's green.
-export const BLESS_COLOR = '#8ECDF7'
+// A soft orange — distinct from ENCHANT_HP_COLOR's gold, the purple used for
+// Composition's "Bonus:" lines, and SOCKETED_GEM_COLOR's green.
+export const BLESS_COLOR = '#F0955C'
 
 // Storage key into characters.gems (flat, mirrors composition_stones' own
 // flat "1".."9" keys) — must stay in sync with the shape written by any RPC

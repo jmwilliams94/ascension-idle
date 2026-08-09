@@ -11,6 +11,13 @@
 // else keeps the block's default.
 export type TooltipLine = string | { text: string; color: string }
 
+// `stats`' own default color (sky blue) — exported so a builder placing a
+// stat line inside `lines` instead (see buildGearTooltip's base-stat lines,
+// moved 2026-08-13 to sit between Class and Sockets) can still explicitly
+// color it as a "stat," since `lines`' own default (DEFAULT_LINE_COLOR,
+// ItemTooltip.tsx) is a plainer slate.
+export const DEFAULT_STAT_COLOR = '#7dd3fc'
+
 export interface ItemTooltipData {
   title: string
   // Quality color for gear; omitted (falls back to a neutral slate) for
@@ -30,8 +37,16 @@ export interface ItemTooltipData {
   // the default neutral slate.
   iconColor?: string
   // Secondary info lines (quality/level, composition tier, ammo count, etc.).
+  // For gear specifically (buildGearTooltip), this also carries the item's
+  // base combat stats (white physical defense/dodge, then blue everything
+  // else) positioned after Class and before Sockets — see that function's
+  // own comment for why these live here instead of in `stats` below.
   lines?: TooltipLine[]
-  // Stat bonus lines, shown in a visually distinct block below `lines`.
+  // Stat bonus lines, shown in a visually distinct bordered block below
+  // `lines` — used by non-gear tooltips (stones, gems, currency) for their
+  // own stat lines. Gear tooltips leave this empty (their stats moved into
+  // `lines`, see above); the bordered block still renders for gear whenever
+  // bonusStats/enchantLine/blessLine are present.
   stats?: TooltipLine[]
   // Composition ("+N") stat bonus lines (see equipmentBonus.ts's
   // computeCompositionBonusStats) — rendered directly below `stats` in
@@ -43,7 +58,7 @@ export interface ItemTooltipData {
   // Omitted entirely for an item with no enchant.
   enchantLine?: string
   // Enchantress "Bless" bonus (see gemCatalog.ts's BLESS_PCT_STEPS) —
-  // "Blessed: +N% Damage Reduction", rendered directly below enchantLine in
-  // its own holy-light blue. Omitted entirely for an item with no blessing.
+  // "Damage: -N%", rendered directly below enchantLine in its own soft
+  // orange (BLESS_COLOR). Omitted entirely for an item with no blessing.
   blessLine?: string
 }

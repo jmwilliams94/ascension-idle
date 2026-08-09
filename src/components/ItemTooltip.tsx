@@ -1,12 +1,13 @@
-import type { ItemTooltipData, TooltipLine } from '../game/items/itemTooltip'
+import { DEFAULT_STAT_COLOR, type ItemTooltipData, type TooltipLine } from '../game/items/itemTooltip'
 import { BLESS_COLOR, ENCHANT_HP_COLOR } from '../game/items/gemCatalog'
 
-// `lines`' own default (matches the old flat text-slate-400) and `stats`' own
-// default (matches the old flat text-sky-300) — a plain string entry in
-// either array falls back to its block's default; a { text, color } entry
-// overrides just that one line (see TooltipLine).
+// `lines`' own default (matches the old flat text-slate-400) — a plain
+// string entry in either array falls back to its block's default; a
+// { text, color } entry overrides just that one line (see TooltipLine).
+// `stats`' own default lives in itemTooltip.ts (DEFAULT_STAT_COLOR), shared
+// with buildGearTooltip so a stat line placed inside `lines` instead (see
+// that function) can still be explicitly colored to match.
 const DEFAULT_LINE_COLOR = '#94a3b8'
-const DEFAULT_STAT_COLOR = '#7dd3fc'
 
 function lineText(line: TooltipLine): string {
   return typeof line === 'string' ? line : line.text
@@ -22,6 +23,11 @@ function lineColor(line: TooltipLine, fallback: string): string {
 // EquipmentSlot) so hovering any of them looks and reads the same way.
 export default function ItemTooltip({ title, titleColor, icon, iconSrc, iconColor, lines, stats, bonusStats, enchantLine, blessLine }: ItemTooltipData) {
   const hasIcon = Boolean(icon || iconSrc)
+  // Gear tooltips (2026-08-13 reorder) no longer populate `stats` — their
+  // base stats moved into `lines` — but bonusStats/enchantLine/blessLine
+  // still need this bordered block to render, so the block's visibility
+  // can't gate on `stats.length` alone anymore.
+  const hasBonusBlock = (stats && stats.length > 0) || (bonusStats && bonusStats.length > 0) || Boolean(enchantLine) || Boolean(blessLine)
 
   const body = (
     <>
@@ -39,9 +45,9 @@ export default function ItemTooltip({ title, titleColor, icon, iconSrc, iconColo
         </div>
       )}
 
-      {stats && stats.length > 0 && (
+      {hasBonusBlock && (
         <div className="mt-1.5 space-y-0.5 border-t border-slate-800 pt-1.5">
-          {stats.map((stat, index) => (
+          {stats?.map((stat, index) => (
             <p key={index} className="text-[11px]" style={{ color: lineColor(stat, DEFAULT_STAT_COLOR) }}>
               {lineText(stat)}
             </p>

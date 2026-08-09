@@ -1,6 +1,6 @@
 import { CLASS_DEFINITIONS, type ClassId } from '../stats/classes'
 import type { EquipmentBonus } from '../stats/derivedStats'
-import type { ItemTooltipData, TooltipLine } from './itemTooltip'
+import { DEFAULT_STAT_COLOR, type ItemTooltipData, type TooltipLine } from './itemTooltip'
 import type { ItemInstance } from './useInventoryStore'
 import type { ItemTemplate } from './useItemTemplatesStore'
 import { EQUIP_SLOTS, type EquipSlot } from './useEquipmentStore'
@@ -228,9 +228,15 @@ export function formatBaseStats(baseStats: Record<string, number>, qualityTier: 
 // buildGearTooltip (the plain Inventory/Equipment detail-card displays keep
 // using formatBaseStats' flat string) — same per-key formatting, but keeps
 // each entry separate so Physical Defense/Dodge can render white while
-// everything else keeps the tooltip's default stat-block blue.
+// everything else keeps the tooltip's default stat-block blue. These lines
+// now live inside buildGearTooltip's `lines` (2026-08-13 tooltip reorder —
+// see that function), not the bordered `stats` block, so every entry gets an
+// explicit color rather than relying on either block's own default. Ordered
+// white-first, then blue — a fixed, deliberate order rather than whatever
+// key order base_stats happens to store, per the user's "white stats after
+// Class before Sockets, blue stats after white" layout.
 export function buildStatTooltipLines(baseStats: Record<string, number>, qualityTier: string): TooltipLine[] {
-  return Object.entries(baseStats).map(([key]): TooltipLine => {
+  const toLine = (key: string): TooltipLine => {
     const value = scaledStat(baseStats, key, qualityTier)
     const text = RANGED_STAT_KEYS.includes(key)
       ? (() => {
@@ -238,8 +244,13 @@ export function buildStatTooltipLines(baseStats: Record<string, number>, quality
           return `${min}-${max} ${key.replace(/_/g, ' ')}`
         })()
       : `+${value} ${key.replace(/_/g, ' ')}`
-    return WHITE_STAT_KEYS.includes(key) ? { text, color: TOOLTIP_WHITE } : text
-  })
+    return { text, color: WHITE_STAT_KEYS.includes(key) ? TOOLTIP_WHITE : DEFAULT_STAT_COLOR }
+  }
+
+  const keys = Object.keys(baseStats)
+  const whiteKeys = keys.filter((key) => WHITE_STAT_KEYS.includes(key))
+  const blueKeys = keys.filter((key) => !WHITE_STAT_KEYS.includes(key))
+  return [...whiteKeys.map(toLine), ...blueKeys.map(toLine)]
 }
 
 // Underlying stored quality_tier values were originally 'normal'/'refined'/
@@ -546,10 +557,20 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
     icon: getItemIcon(template?.slot_type),
     iconSrc: getGearIconSrc(template?.name),
     iconColor: getQualityColor(item.quality_tier),
-    lines: [{ text: formatItemLevel(item.level), color: TOOLTIP_WHITE }, ...(classLine ? [classLine] : []), ...socketLines],
-    stats: template ? buildStatTooltipLines(template.base_stats, item.quality_tier) : [],
+    // Base combat stats (2026-08-13 reorder, per the user's explicit layout
+    // request) now sit inside `lines` itself — white stats (Physical
+    // Defense/Dodge), then blue stats (Physical/Magic Attack, Magic Defense,
+    // Dexterity) — positioned after Class and before Sockets, rather than in
+    // a separately-bordered `stats` block below everything. See
+    // buildStatTooltipLines' own comment for the white-then-blue ordering.
+    lines: [
+      { text: formatItemLevel(item.level), color: TOOLTIP_WHITE },
+      ...(classLine ? [classLine] : []),
+      ...(template ? buildStatTooltipLines(template.base_stats, item.quality_tier) : []),
+      ...socketLines,
+    ],
     bonusStats: bonusStats.length > 0 ? bonusStats : undefined,
     enchantLine: enchantHp ? `Enchanted HP: ${enchantHp}` : undefined,
-    blessLine: blessPct ? `Blessed: +${blessPct}% Damage Reduction` : undefined,
+    blessLine: blessPct ? `Damage: -${blessPct}%` : undefined,
   }
 }

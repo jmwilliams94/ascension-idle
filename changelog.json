@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.79.1",
+    "date": "2026-08-13",
+    "changes": [
+      "Reworked gear tooltips: base stats now appear right after Class and before Sockets instead of in a separate block below everything",
+      "Restyled the Bless tooltip line to a soft orange \"Damage: -N%\" instead of the earlier \"Blessed: +N% Damage Reduction\""
+    ]
+  },
+  {
     "version": "1.79.0",
     "date": "2026-08-13",
     "changes": [
