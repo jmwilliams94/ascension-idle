@@ -95,8 +95,10 @@ export interface ConfettiEmberConfig extends RadiateEmberConfig {
 
 // Confetti-style burst (SalvageRevealToast, 2026-08-13, requested by the
 // user — "the embers sort of burst out and then trickle downwards", as
-// opposed to buildRadiateEmbers' burst-and-fade-in-place). Same radial
-// burst math as buildRadiateEmbers, plus a `fall` distance the
+// opposed to buildRadiateEmbers' burst-and-fade-in-place). Also used by
+// MoneyBagRevealModal's own reveal (2026-08-13, same request extended to
+// there too, colors unchanged). Same radial burst math as buildRadiateEmbers,
+// plus a `fall` distance the
 // .effect-ember-confetti CSS animation (index.css) adds on top of the
 // burst's own resting dy only in its second half — every particle, however
 // it initially launched, ends up drifting further down under that shared

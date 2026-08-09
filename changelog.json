@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.78.2",
+    "date": "2026-08-13",
+    "changes": [
+      "Money Bag/Gem Bag reveals now use the same confetti-style ember burst as Salvage's reveal (colors unchanged)"
+    ]
+  },
+  {
     "version": "1.78.1",
     "date": "2026-08-13",
     "changes": [

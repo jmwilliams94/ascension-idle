@@ -2,7 +2,7 @@ import { useEffect, useMemo, type CSSProperties } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useMoneyBagRevealStore } from '../game/items/useMoneyBagRevealStore'
 import { GEM_TYPES, getGemIconSrc, getGemTierColor, formatGemTierLabel } from '../game/items/gemTypes'
-import { buildRadiateEmbers, seedFromId } from '../game/items/tierEffectsData'
+import { buildConfettiEmbers, seedFromId } from '../game/items/tierEffectsData'
 
 // The "what did I just open" reveal for a Money Bag/Gem Bag's Open action
 // (Lucky Lad rewards expansion, 2026-08-09) — see useMoneyBagRevealStore.
@@ -29,14 +29,17 @@ const BURST_RADIUS = 90
 interface BurstStyle extends CSSProperties {
   '--ember-dx': string
   '--ember-dy': string
+  '--ember-fall': string
 }
 
-// Same per-particle layout math as tierEffects.tsx's ambient TierEmberEffect
-// (buildRadiateEmbers), but rendered with the one-shot .effect-ember-burst
-// animation (index.css) instead of the infinite .effect-ember-radiate loop —
-// a burst that plays once on reveal, not ambient tile decoration.
+// Confetti-style burst (2026-08-13, requested by the user — bring
+// SalvageRevealToast's own "bursts out then trickles downward" ember
+// physics here too), same coloring as before (gold for a gold reveal, the
+// gem's own tier color for a gem reveal) — only the particle motion changed,
+// from buildRadiateEmbers/.effect-ember-burst (burst-and-fade-in-place) to
+// buildConfettiEmbers/.effect-ember-confetti (index.css).
 function EmberBurst({ seed, color }: { seed: number; color: string }) {
-  const embers = useMemo(() => buildRadiateEmbers(BURST_EMBER_COUNT, seed, BURST_RADIUS), [seed])
+  const embers = useMemo(() => buildConfettiEmbers(BURST_EMBER_COUNT, seed, BURST_RADIUS), [seed])
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-visible">
@@ -52,8 +55,9 @@ function EmberBurst({ seed, color }: { seed: number; color: string }) {
           animationDuration: ember.duration,
           '--ember-dx': ember.dx,
           '--ember-dy': ember.dy,
+          '--ember-fall': ember.fall,
         }
-        return <span key={i} className="effect-ember-burst absolute rounded-full" style={style} />
+        return <span key={i} className="effect-ember-confetti absolute rounded-full" style={style} />
       })}
     </div>
   )
