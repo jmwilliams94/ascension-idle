@@ -137,15 +137,32 @@ interface CompositionFeedResult {
 }
 
 // Shape returned by enchant_item_hp (see migration
-// 20260813000000_enchantress_hp_enchant.sql) — the gem is consumed
-// regardless of outcome; `applied` tells the caller whether the roll beat the
-// item's existing enchant_hp (only a higher roll ever overwrites it).
+// 20260813070000_enchantress_bless.sql, which reworked this to return the
+// item's full resulting `enchant` object rather than just its own `hp` key —
+// necessary once blessPct could live on the same object, so the client never
+// has to hand-merge two independent RPCs' partial views of one jsonb column)
+// — the gem is consumed regardless of outcome; `applied` tells the caller
+// whether the roll beat the item's existing enchant_hp (only a higher roll
+// ever overwrites it).
 interface EnchantHpResult {
   ok: boolean
   error?: 'invalid_gem' | 'invalid_tier' | 'item_not_found' | 'not_owner' | 'not_enough_gems'
   rolled?: number
   applied?: boolean
   enchant_hp?: number
+  enchant?: { hp?: number; blessPct?: number }
+  gems?: GemCounts
+}
+
+// Shape returned by bless_item (see migration
+// 20260813070000_enchantress_bless.sql) — deterministic, no RNG: always
+// succeeds and consumes exactly one Ascended Bastion Gem unless the item is
+// already at BLESS_MAX_PCT (already_max_bless, gem left unspent).
+interface BlessItemResult {
+  ok: boolean
+  error?: 'item_not_found' | 'not_owner' | 'already_max_bless' | 'not_enough_gems'
+  bless_pct?: number
+  enchant?: { hp?: number; blessPct?: number }
   gems?: GemCounts
 }
 
@@ -175,6 +192,11 @@ interface ForgeState {
   // gemCatalog.ts's ENCHANT_HP_RANGE_BY_TIER). Only overwrites the item's
   // existing enchant if the new roll is higher; the gem is spent either way.
   enchantItemHp: (itemId: string, gemId: GemTypeId, gemTier: GemTier) => Promise<EnchantHpResult>
+  // Enchantress "Bless" tab (2026-08-13) — consumes one Ascended Bastion Gem
+  // to advance the item's Blessed Damage Reduction one step along
+  // gemCatalog.ts's BLESS_PCT_STEPS. Deterministic (no roll) and refuses the
+  // attempt upfront (gem not spent) once the item is already at the cap.
+  blessItem: (itemId: string) => Promise<BlessItemResult>
 }
 
 export const useForgeStore = create<ForgeState>((set) => ({
@@ -391,8 +413,32 @@ export const useForgeStore = create<ForgeState>((set) => ({
 
     const result = data as EnchantHpResult
 
-    if (result.ok && typeof result.enchant_hp === 'number') {
-      useInventoryStore.getState().patchItem(itemId, { enchant: { hp: result.enchant_hp } })
+    if (result.ok && result.enchant) {
+      useInventoryStore.getState().patchItem(itemId, { enchant: result.enchant })
+    }
+    if (result.ok && result.gems) {
+      useGemStore.getState().setGems(result.gems)
+    }
+
+    return result
+  },
+
+  blessItem: async (itemId) => {
+    set({ busy: true })
+
+    const { data, error } = await supabase.rpc('bless_item', { item_id: itemId })
+
+    set({ busy: false })
+
+    if (error) {
+      console.error('Bless item call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as BlessItemResult
+
+    if (result.ok && result.enchant) {
+      useInventoryStore.getState().patchItem(itemId, { enchant: result.enchant })
     }
     if (result.ok && result.gems) {
       useGemStore.getState().setGems(result.gems)

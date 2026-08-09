@@ -54,6 +54,13 @@ export interface DerivedStats {
   // defense/dodge bonus has no equivalent account-wide multiplier, so it's
   // already folded into physicalDefense/magicDefense/dodge above.
   compositionAttackBonus: number
+  // Enchantress "Bless" tab (2026-08-13, see gemCatalog.ts's BLESS_PCT_STEPS)
+  // — flat % reduction applied to incoming monster damage, summed across
+  // every equipped item's own blessPct (each individually capped at
+  // BLESS_MAX_PCT). Consumed by useCombatStore.runTick via
+  // combatResolver.ts's applyDamageReduction — client-only, same boundary as
+  // the rest of incoming player damage (never simulated server-side).
+  damageReductionPct: number
 }
 
 // Flat stat bonuses from the currently equipped item(s) — stacks on top of the
@@ -71,6 +78,9 @@ export interface EquipmentBonus {
   // straight onto hp below same as the attribute-derived base, not scaled by
   // anything (no account-wide multiplier applies to it, unlike attack).
   enchantHpBonus?: number
+  // Enchantress "Bless" bonus (see gemCatalog.ts's BLESS_PCT_STEPS,
+  // item_instances.enchant.blessPct) — summed across every equipped item.
+  blessDamageReductionPct?: number
 }
 
 export function computeDerivedStats(attributes: Attributes, equipmentBonus: EquipmentBonus = {}): DerivedStats {
@@ -102,5 +112,6 @@ export function computeDerivedStats(attributes: Attributes, equipmentBonus: Equi
     dodge,
     dexterity,
     compositionAttackBonus: equipmentBonus.compositionAttackBonus ?? 0,
+    damageReductionPct: equipmentBonus.blessDamageReductionPct ?? 0,
   }
 }

@@ -129,6 +129,7 @@ export function computeEquipmentBonus(
     dexterity: 0,
     compositionAttackBonus: 0,
     enchantHpBonus: 0,
+    blessDamageReductionPct: 0,
   }
 
   for (const slot of EQUIP_SLOTS) {
@@ -139,8 +140,9 @@ export function computeEquipmentBonus(
     const template = item && templates.find((entry) => entry.id === item.template_id)
     if (!item || !template) continue
 
-    const itemEnchant = item.enchant as { hp?: number } | null
+    const itemEnchant = item.enchant as { hp?: number; blessPct?: number } | null
     bonus.enchantHpBonus += itemEnchant?.hp ?? 0
+    bonus.blessDamageReductionPct += itemEnchant?.blessPct ?? 0
 
     bonus.physicalAttack += scaledStat(template.base_stats, 'physical_attack', item.quality_tier) ?? 0
     bonus.magicAttack += scaledStat(template.base_stats, 'magic_attack', item.quality_tier) ?? 0
@@ -532,7 +534,9 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
     : {}
   const bonusStats = Object.entries(compositionBonus).map(([key, value]) => `Bonus: +${value} ${key.replace(/_/g, ' ')}`)
 
-  const enchantHp = (item.enchant as { hp?: number } | null)?.hp
+  const itemEnchant = item.enchant as { hp?: number; blessPct?: number } | null
+  const enchantHp = itemEnchant?.hp
+  const blessPct = itemEnchant?.blessPct
 
   return {
     title: template
@@ -546,5 +550,6 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
     stats: template ? buildStatTooltipLines(template.base_stats, item.quality_tier) : [],
     bonusStats: bonusStats.length > 0 ? bonusStats : undefined,
     enchantLine: enchantHp ? `Enchanted HP: ${enchantHp}` : undefined,
+    blessLine: blessPct ? `Blessed: +${blessPct}% Damage Reduction` : undefined,
   }
 }

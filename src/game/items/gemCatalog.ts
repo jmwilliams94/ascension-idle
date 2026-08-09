@@ -91,6 +91,21 @@ export const ENCHANT_HP_COLOR = '#E8C468'
 // (buildGemTooltip, gemTypes.ts) is unaffected.
 export const SOCKETED_GEM_COLOR = '#7BC488'
 
+// Enchantress's "Bless" tab (2026-08-13) — consuming one Ascended Bastion
+// Gem advances a gear item's Blessed Damage Reduction along this fixed,
+// deterministic ladder (no RNG, unlike the HP roll above). Mirrors
+// bless_item's own SQL case statement (20260813070000_enchantress_bless.sql)
+// — keep in sync. Applied as real incoming-damage mitigation in
+// useCombatStore.runTick (see combatResolver.ts's applyDamageReduction) —
+// client-only, same boundary as the rest of incoming player damage/HP, which
+// has never been simulated server-side.
+export const BLESS_PCT_STEPS: number[] = [1, 3, 5, 7]
+export const BLESS_MAX_PCT = BLESS_PCT_STEPS[BLESS_PCT_STEPS.length - 1]
+
+// A soft holy-light blue — distinct from ENCHANT_HP_COLOR's gold, the purple
+// used for Composition's "Bonus:" lines, and SOCKETED_GEM_COLOR's green.
+export const BLESS_COLOR = '#8ECDF7'
+
 // Storage key into characters.gems (flat, mirrors composition_stones' own
 // flat "1".."9" keys) — must stay in sync with the shape written by any RPC
 // that grants/spends gems (draw_lucky_ticket, socket_gem, transfer_gem).

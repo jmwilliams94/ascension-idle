@@ -42,4 +42,8 @@ export interface ItemTooltipData {
   // "Enchanted HP: XX", rendered in its own muted gold below bonusStats.
   // Omitted entirely for an item with no enchant.
   enchantLine?: string
+  // Enchantress "Bless" bonus (see gemCatalog.ts's BLESS_PCT_STEPS) —
+  // "Blessed: +N% Damage Reduction", rendered directly below enchantLine in
+  // its own holy-light blue. Omitted entirely for an item with no blessing.
+  blessLine?: string
 }

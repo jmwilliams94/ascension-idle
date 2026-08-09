@@ -4,7 +4,15 @@ import ForgeTwoColumnLayout from './ForgeTwoColumnLayout'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import { DragDropProvider } from './dragDrop'
 import InventoryPanel from './InventoryPanel'
-import { ENCHANT_HP_COLOR, ENCHANT_HP_RANGE_BY_TIER, parseGemDragId, type GemTier, type GemTypeId } from '../game/items/gemTypes'
+import {
+  BLESS_COLOR,
+  BLESS_MAX_PCT,
+  ENCHANT_HP_COLOR,
+  ENCHANT_HP_RANGE_BY_TIER,
+  parseGemDragId,
+  type GemTier,
+  type GemTypeId,
+} from '../game/items/gemTypes'
 import { useForgeStore } from '../game/items/useForgeStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
@@ -32,38 +40,66 @@ function describeEnchantFailure(error?: string): string {
   }
 }
 
+function describeBlessFailure(error?: string): string {
+  switch (error) {
+    case 'already_max_bless':
+      return `That item's already blessed to the max (+${BLESS_MAX_PCT}%).`
+    case 'not_enough_gems':
+      return "You don't have an Ascended Bastion Gem anymore."
+    case 'not_owner':
+    case 'item_not_found':
+      return "Couldn't find that item."
+    default:
+      return 'Something went wrong.'
+  }
+}
+
 interface StagedGem {
   dragId: string
   gemId: GemTypeId
   tier: GemTier
 }
 
+type EnchantressSubMode = 'enchant' | 'bless'
+
 interface EnchantressPanelProps {
   onBack: () => void
 }
 
-// Enchantress (2026-08-13, new mechanic) — consume any gem, of any type, at
-// a given tier to roll a flat HP bonus onto a gear item, somewhere within
-// that tier's range (Normal 1-59, Tempered 100-159, Ascended 200-255 — see
-// gemCatalog.ts's ENCHANT_HP_RANGE_BY_TIER). One enchant slot per item,
-// overwrite-only: a new roll only replaces the stored value if it beats the
-// item's existing enchant, the gem is consumed either way (see
-// enchant_item_hp's SQL). The roll itself is always decided server-side —
-// the cycling number here is a pure client-side animation that lands on
-// whatever the RPC actually returned, never a locally-guessed value.
+// Enchantress (2026-08-13, new mechanic) — two sub-tabs sharing one selected
+// item. **Enchant**: consume any gem, of any type, at a given tier to roll a
+// flat HP bonus onto a gear item, somewhere within that tier's range (Normal
+// 1-59, Tempered 100-159, Ascended 200-255 — see gemCatalog.ts's
+// ENCHANT_HP_RANGE_BY_TIER). One enchant slot per item, overwrite-only: a new
+// roll only replaces the stored value if it beats the item's existing
+// enchant, the gem is consumed either way (see enchant_item_hp's SQL). The
+// roll itself is always decided server-side — the cycling number here is a
+// pure client-side animation that lands on whatever the RPC actually
+// returned, never a locally-guessed value. **Bless**: consumes exactly one
+// Ascended Bastion Gem to advance the item's Damage Reduction along a fixed
+// ladder (+1/+3/+5/+7%, see gemCatalog.ts's BLESS_PCT_STEPS) — deterministic,
+// no roll, refused upfront (gem not spent) once already at the cap.
 export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
   const items = useInventoryStore((state) => state.items)
   const templates = useItemTemplatesStore((state) => state.templates)
   const busy = useForgeStore((state) => state.busy)
   const enchantItemHp = useForgeStore((state) => state.enchantItemHp)
+  const blessItem = useForgeStore((state) => state.blessItem)
 
+  const [subMode, setSubMode] = useState<EnchantressSubMode>('enchant')
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
+
   const [stagedGem, setStagedGem] = useState<StagedGem | null>(null)
   const [rolling, setRolling] = useState(false)
   const [rollDisplay, setRollDisplay] = useState<number | null>(null)
   const [resultMessage, setResultMessage] = useState<{ rolled: number; applied: boolean } | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const cycleIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const [blessGem, setBlessGem] = useState<StagedGem | null>(null)
+  const [blessing, setBlessing] = useState(false)
+  const [blessResult, setBlessResult] = useState<{ pct: number } | null>(null)
+  const [blessError, setBlessError] = useState<string | null>(null)
 
   useEffect(() => () => {
     if (cycleIntervalRef.current) {
@@ -74,23 +110,43 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
   const selectedItem = items.find((item) => item.id === selectedItemId) ?? null
   const selectedTemplate = selectedItem ? (templates.find((t) => t.id === selectedItem.template_id) ?? null) : null
   const currentEnchantHp = selectedItem?.enchant?.hp ?? 0
+  const currentBlessPct = selectedItem?.enchant?.blessPct ?? 0
+  const isBlessMaxed = currentBlessPct >= BLESS_MAX_PCT
+
+  const handleSetSubMode = (mode: EnchantressSubMode) => {
+    if (rolling || blessing) {
+      return
+    }
+    setSubMode(mode)
+    setStagedGem(null)
+    setResultMessage(null)
+    setErrorMessage(null)
+    setRollDisplay(null)
+    setBlessGem(null)
+    setBlessResult(null)
+    setBlessError(null)
+  }
 
   const handleDropItemId = (itemId: string) => {
-    if (!items.some((item) => item.id === itemId) || rolling) {
+    if (!items.some((item) => item.id === itemId) || rolling || blessing) {
       return
     }
     setSelectedItemId(itemId)
     setResultMessage(null)
     setErrorMessage(null)
+    setBlessResult(null)
+    setBlessError(null)
   }
 
   const handleRemoveItem = () => {
-    if (rolling) {
+    if (rolling || blessing) {
       return
     }
     setSelectedItemId(null)
     setResultMessage(null)
     setErrorMessage(null)
+    setBlessResult(null)
+    setBlessError(null)
   }
 
   const handleDropGem = (id: string) => {
@@ -113,14 +169,64 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
     setStagedGem(null)
   }
 
+  const handleDropBlessGem = (id: string) => {
+    if (blessing) {
+      return
+    }
+    const parsed = parseGemDragId(id)
+    if (!parsed) {
+      return
+    }
+    if (parsed.gemId !== 'bastion' || parsed.tier !== 'ascended') {
+      setBlessError('Bless requires an Ascended Bastion Gem.')
+      return
+    }
+    setBlessGem({ dragId: id, gemId: parsed.gemId, tier: parsed.tier })
+    setBlessResult(null)
+    setBlessError(null)
+  }
+
+  const handleRemoveBlessGem = () => {
+    if (blessing) {
+      return
+    }
+    setBlessGem(null)
+  }
+
   const handleTileDrop = (overTarget: string, id: string) => {
     if (overTarget === 'upgrade') {
       handleDropItemId(id)
       return
     }
     if (overTarget === 'gem') {
-      handleDropGem(id)
+      if (subMode === 'bless') {
+        handleDropBlessGem(id)
+      } else {
+        handleDropGem(id)
+      }
     }
+  }
+
+  const handleBless = async () => {
+    if (!selectedItem || !blessGem || blessing || isBlessMaxed) {
+      return
+    }
+
+    setBlessing(true)
+    setBlessResult(null)
+    setBlessError(null)
+
+    const result = await blessItem(selectedItem.id)
+
+    setBlessing(false)
+    setBlessGem(null)
+
+    if (!result.ok || typeof result.bless_pct !== 'number') {
+      setBlessError(describeBlessFailure(result.error))
+      return
+    }
+
+    setBlessResult({ pct: result.bless_pct })
   }
 
   const handleEnchant = async () => {
@@ -168,64 +274,138 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
           <InventoryPanel columns={5} reservedItemIds={selectedItemId ? [selectedItemId] : []} onTileDrop={handleTileDrop} />
         }
       >
-        <p className="max-w-sm text-center text-[11px] text-slate-500">
-          Consume a Normal, Tempered, or Ascended gem to roll a flat HP bonus for a piece of gear. Only a higher roll replaces the
-          item's existing bonus — the gem is spent either way.
-        </p>
-
-        <div className="flex items-start justify-center gap-6">
-          <ForgeUpgradeSlot item={selectedItem} template={selectedTemplate} onRemove={handleRemoveItem} />
-          <EnchantGemSlot gem={stagedGem} onRemove={handleRemoveGem} />
-        </div>
-
-        {selectedItem && (
-          <p className="text-center text-[11px] text-slate-500">
-            Current Enchanted HP: <span style={{ color: ENCHANT_HP_COLOR }}>{currentEnchantHp}</span>
-          </p>
-        )}
-
-        {rollDisplay !== null && (
-          <div className="flex flex-col items-center gap-1">
-            <p
-              className="text-5xl font-extrabold tabular-nums"
-              style={{ color: rolling ? '#e2e8f0' : ENCHANT_HP_COLOR }}
-            >
-              {rollDisplay}
-            </p>
-            <p className="text-[10px] uppercase tracking-wide text-slate-500">{rolling ? 'Rolling…' : 'HP'}</p>
-          </div>
-        )}
-
-        {resultMessage && (
-          <div
-            className={`w-full max-w-xs rounded-xl border p-2.5 text-center text-xs ${
-              resultMessage.applied ? 'forge-success-flash border-emerald-600 bg-emerald-500/10 text-emerald-300' : 'border-slate-700 bg-slate-900/60 text-slate-400'
+        <div className="grid w-full max-w-xs grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => handleSetSubMode('enchant')}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+              subMode === 'enchant' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
             }`}
           >
-            {resultMessage.applied
-              ? `New Enchanted HP: ${resultMessage.rolled}!`
-              : `Rolled ${resultMessage.rolled} HP — didn't beat the current enchant. Gem consumed.`}
-          </div>
-        )}
-
-        {errorMessage && <p className="text-center text-[11px] text-red-400">{errorMessage}</p>}
-
-        <div className="w-full max-w-xs space-y-2">
-          {!selectedItem ? (
-            <p className="text-center text-[11px] text-slate-600">Drag an item into the Upgrade Slot.</p>
-          ) : !stagedGem ? (
-            <p className="text-center text-[11px] text-slate-600">Drag a gem into the Gem slot.</p>
-          ) : (
-            <button
-              type="button"
-              disabled={busy || rolling}
-              onClick={() => void handleEnchant()}
-              className="w-full rounded-lg border border-emerald-600 bg-emerald-500/10 px-4 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {rolling ? 'Rolling…' : 'Enchant'}
-            </button>
-          )}
+            Enchant
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSetSubMode('bless')}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+              subMode === 'bless' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
+            }`}
+          >
+            Bless
+          </button>
         </div>
+
+        {subMode === 'enchant' ? (
+          <>
+            <p className="max-w-sm text-center text-[11px] text-slate-500">
+              Consume a Normal, Tempered, or Ascended gem to roll a flat HP bonus for a piece of gear. Only a higher roll replaces
+              the item's existing bonus — the gem is spent either way.
+            </p>
+
+            <div className="flex items-start justify-center gap-6">
+              <ForgeUpgradeSlot item={selectedItem} template={selectedTemplate} onRemove={handleRemoveItem} />
+              <EnchantGemSlot gem={stagedGem} onRemove={handleRemoveGem} />
+            </div>
+
+            {selectedItem && (
+              <p className="text-center text-[11px] text-slate-500">
+                Current Enchanted HP: <span style={{ color: ENCHANT_HP_COLOR }}>{currentEnchantHp}</span>
+              </p>
+            )}
+
+            {rollDisplay !== null && (
+              <div className="flex flex-col items-center gap-1">
+                <p
+                  className="text-5xl font-extrabold tabular-nums"
+                  style={{ color: rolling ? '#e2e8f0' : ENCHANT_HP_COLOR }}
+                >
+                  {rollDisplay}
+                </p>
+                <p className="text-[10px] uppercase tracking-wide text-slate-500">{rolling ? 'Rolling…' : 'HP'}</p>
+              </div>
+            )}
+
+            {resultMessage && (
+              <div
+                className={`w-full max-w-xs rounded-xl border p-2.5 text-center text-xs ${
+                  resultMessage.applied
+                    ? 'forge-success-flash border-emerald-600 bg-emerald-500/10 text-emerald-300'
+                    : 'border-slate-700 bg-slate-900/60 text-slate-400'
+                }`}
+              >
+                {resultMessage.applied
+                  ? `New Enchanted HP: ${resultMessage.rolled}!`
+                  : `Rolled ${resultMessage.rolled} HP — didn't beat the current enchant. Gem consumed.`}
+              </div>
+            )}
+
+            {errorMessage && <p className="text-center text-[11px] text-red-400">{errorMessage}</p>}
+
+            <div className="w-full max-w-xs space-y-2">
+              {!selectedItem ? (
+                <p className="text-center text-[11px] text-slate-600">Drag an item into the Upgrade Slot.</p>
+              ) : !stagedGem ? (
+                <p className="text-center text-[11px] text-slate-600">Drag a gem into the Gem slot.</p>
+              ) : (
+                <button
+                  type="button"
+                  disabled={busy || rolling}
+                  onClick={() => void handleEnchant()}
+                  className="w-full rounded-lg border border-emerald-600 bg-emerald-500/10 px-4 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {rolling ? 'Rolling…' : 'Enchant'}
+                </button>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="max-w-sm text-center text-[11px] text-slate-500">
+              Consume an Ascended Bastion Gem to bless a piece of gear with Damage Reduction. Blessing advances a fixed ladder —
+              +1%, +3%, +5%, then +7% — no roll involved, and always succeeds while there's a step left to take.
+            </p>
+
+            <div className="flex items-start justify-center gap-6">
+              <ForgeUpgradeSlot item={selectedItem} template={selectedTemplate} onRemove={handleRemoveItem} />
+              <EnchantGemSlot gem={blessGem} onRemove={handleRemoveBlessGem} />
+            </div>
+
+            {selectedItem && (
+              <p className="text-center text-[11px] text-slate-500">
+                Current Blessing:{' '}
+                <span style={{ color: BLESS_COLOR }}>{currentBlessPct > 0 ? `+${currentBlessPct}% Damage Reduction` : 'None'}</span>
+                {isBlessMaxed && ' (max)'}
+              </p>
+            )}
+
+            {blessResult && (
+              <div className="forge-success-flash w-full max-w-xs rounded-xl border border-sky-600 bg-sky-500/10 p-2.5 text-center text-xs text-sky-300">
+                {`Blessed! Damage Reduction now +${blessResult.pct}%.`}
+              </div>
+            )}
+
+            {blessError && <p className="text-center text-[11px] text-red-400">{blessError}</p>}
+
+            <div className="w-full max-w-xs space-y-2">
+              {!selectedItem ? (
+                <p className="text-center text-[11px] text-slate-600">Drag an item into the Upgrade Slot.</p>
+              ) : isBlessMaxed ? (
+                <p className="text-center text-[11px] text-slate-600">Already blessed to the max (+{BLESS_MAX_PCT}%).</p>
+              ) : !blessGem ? (
+                <p className="text-center text-[11px] text-slate-600">Drag an Ascended Bastion Gem into the Gem slot.</p>
+              ) : (
+                <button
+                  type="button"
+                  disabled={busy || blessing}
+                  onClick={() => void handleBless()}
+                  className="w-full rounded-lg border border-sky-600 bg-sky-500/10 px-4 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {blessing ? 'Blessing…' : 'Bless'}
+                </button>
+              )}
+            </div>
+          </>
+        )}
       </ForgeTwoColumnLayout>
     </DragDropProvider>
   )

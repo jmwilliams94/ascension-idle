@@ -22,9 +22,11 @@ import type { GemCounts, GemTier, GemTypeId } from './gemTypes'
 // SQL) is a plain string in gemStorageKey format ("<gemId>_<tier>", e.g.
 // "drake_tempered") — never removed, only ever overwritten with a different
 // gem string. enchant (2026-08-13, Enchantress — see enchant_item_hp's SQL)
-// is `{ hp: number } | null`, a flat HP bonus rolled from a consumed gem —
-// one enchant slot per item, only ever overwritten with a *higher* value,
-// never removed.
+// is `{ hp?: number, blessPct?: number } | null` — `hp` is a flat HP bonus
+// rolled from a consumed gem, only ever overwritten with a *higher* value;
+// `blessPct` (see bless_item's SQL) is a deterministic Damage Reduction %
+// that only ever advances forward along BLESS_PCT_STEPS. Neither key is ever
+// removed once set.
 // quality_tier/level/composition_level/composition_points/sockets/enchant are
 // only ever changed server-side via the quality_upgrade/level_upgrade/
 // composition_feed/unlock_weapon_socket/enchant_item_hp Postgres functions
@@ -39,7 +41,7 @@ export interface ItemInstance {
   composition_level: number
   composition_points: number
   sockets: (null | string)[]
-  enchant: { hp?: number } | null
+  enchant: { hp?: number; blessPct?: number } | null
   created_at: string
   // Bank Storage (confirmed with the user, 2026-08-03, replaces the earlier
   // fungible warehouse_items token model for gear) — a genuinely additive

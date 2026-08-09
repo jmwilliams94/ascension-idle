@@ -1,5 +1,5 @@
 import type { ItemTooltipData, TooltipLine } from '../game/items/itemTooltip'
-import { ENCHANT_HP_COLOR } from '../game/items/gemCatalog'
+import { BLESS_COLOR, ENCHANT_HP_COLOR } from '../game/items/gemCatalog'
 
 // `lines`' own default (matches the old flat text-slate-400) and `stats`' own
 // default (matches the old flat text-sky-300) — a plain string entry in
@@ -20,7 +20,7 @@ function lineColor(line: TooltipLine, fallback: string): string {
 // secondary info lines, then a visually distinct stats block. Used everywhere an
 // item/weapon/stone/arrow tile is shown (see InventorySlot's `tooltip` prop and
 // EquipmentSlot) so hovering any of them looks and reads the same way.
-export default function ItemTooltip({ title, titleColor, icon, iconSrc, iconColor, lines, stats, bonusStats, enchantLine }: ItemTooltipData) {
+export default function ItemTooltip({ title, titleColor, icon, iconSrc, iconColor, lines, stats, bonusStats, enchantLine, blessLine }: ItemTooltipData) {
   const hasIcon = Boolean(icon || iconSrc)
 
   const body = (
@@ -54,6 +54,11 @@ export default function ItemTooltip({ title, titleColor, icon, iconSrc, iconColo
           {enchantLine && (
             <p className="text-[11px] font-medium" style={{ color: ENCHANT_HP_COLOR }}>
               {enchantLine}
+            </p>
+          )}
+          {blessLine && (
+            <p className="text-[11px] font-medium" style={{ color: BLESS_COLOR }}>
+              {blessLine}
             </p>
           )}
         </div>

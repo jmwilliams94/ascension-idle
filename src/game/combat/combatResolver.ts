@@ -225,6 +225,22 @@ export function resolvePhysicalDamage(attack: number, defense: number): number {
   return Math.max(mitigated, floor, 1)
 }
 
+// Enchantress "Bless" tab (2026-08-13, see gemCatalog.ts's BLESS_PCT_STEPS) —
+// a flat % reduction applied to incoming monster damage *after*
+// resolvePhysicalDamage's own Attack-minus-Defense mitigation, not folded
+// into the Defense calculation itself (Bless is a gear-enchant bonus, not a
+// Defense stat). Capped defensively at MAX_DAMAGE_REDUCTION_PCT, the same
+// "never let a stacked bonus fully zero out combat" shape MAX_DODGE_CHANCE
+// already uses below — stacking every equipped item's own +7% cap (7 slots)
+// would reach 49% today, well under the cap, but the cap exists so this
+// can't runaway if more slots/sources are added later.
+const MAX_DAMAGE_REDUCTION_PCT = 90
+
+export function applyDamageReduction(damage: number, reductionPct: number): number {
+  const clampedPct = Math.min(Math.max(reductionPct, 0), MAX_DAMAGE_REDUCTION_PCT)
+  return Math.max(1, Math.round(damage * (1 - clampedPct / 100)))
+}
+
 // New dodge/miss-chance mechanic (confirmed with the user, 2026-07-31) — a
 // player can now fully avoid an incoming monster attack, using boots' own
 // dodge stat plus Agility (see derivedStats.ts). PLACEHOLDER capped-linear

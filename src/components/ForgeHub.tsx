@@ -59,7 +59,7 @@ const FORGE_TILES: ForgeHubTile[] = [
   {
     mode: 'enchant',
     title: 'Enchantress',
-    description: 'Consume a Normal, Tempered, or Ascended gem to add an HP bonus to your gear.',
+    description: 'Enchant gear with a bonus HP roll, or Bless it with Damage Reduction.',
     iconSrc: `${import.meta.env.BASE_URL}forge-icons/enchant.png`,
   },
 ]

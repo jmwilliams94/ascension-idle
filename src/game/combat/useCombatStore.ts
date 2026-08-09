@@ -11,6 +11,7 @@ import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 import { ENEMY_TYPES, zoneIdForMonster, type EnemyTypeId } from '../zones/zoneData'
 import {
   MONSTER_ATTACK_INTERVAL_MS,
+  applyDamageReduction,
   expMultiplierForLevelDiff,
   expectedRewardPerAttack,
   killRewards,
@@ -270,7 +271,13 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         const effectivePlayerDefense = Math.round(
           derived.physicalDefense * playerDefenseMultiplierForLevelDiff(characterLevel, type.level),
         )
-        const damage = resolvePhysicalDamage(monsterAttackDamage(type), effectivePlayerDefense)
+        // Enchantress "Bless" tab (see gemCatalog.ts's BLESS_PCT_STEPS) —
+        // applied after Defense mitigation, not folded into it (Bless is a
+        // gear-enchant bonus, not a Defense stat).
+        const damage = applyDamageReduction(
+          resolvePhysicalDamage(monsterAttackDamage(type), effectivePlayerDefense),
+          derived.damageReductionPct,
+        )
         const nextPlayerHp = Math.max(0, currentPlayerHp - damage)
 
         set((s) => ({
