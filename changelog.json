@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.78.5",
+    "date": "2026-08-09",
+    "changes": [
+      "Opening a Money Bag now shows its real class-tiered bag icon in the reveal popup instead of a generic coin emoji"
+    ]
+  },
+  {
     "version": "1.78.4",
     "date": "2026-08-09",
     "changes": [

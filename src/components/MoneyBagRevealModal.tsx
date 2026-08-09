@@ -101,6 +101,8 @@ export default function MoneyBagRevealModal() {
             >
               {isGem && reveal.kind === 'gem' ? (
                 <img src={getGemIconSrc(reveal.gemId, reveal.tier)} alt="" className="h-4/5 w-4/5 object-contain" />
+              ) : reveal?.kind === 'gold' && reveal.iconSrc ? (
+                <img src={reveal.iconSrc} alt="" className="h-4/5 w-4/5 object-contain" />
               ) : (
                 <span className="text-xl">💰</span>
               )}

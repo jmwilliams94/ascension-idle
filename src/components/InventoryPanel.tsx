@@ -692,6 +692,11 @@ export default function InventoryPanel({
   const handleOpenBag = async (itemId: string) => {
     setBagError(null)
     setBagBusy(true)
+    // Grabbed before the RPC call — open_reward_item deletes the item row on
+    // success, so the template lookup (for the reveal card's icon) has to
+    // happen off the pre-open local state.
+    const bagItem = items.find((entry) => entry.id === itemId)
+    const bagTemplate = bagItem ? templates.find((entry) => entry.id === bagItem.template_id) : undefined
     const result = await openRewardItem(itemId)
     setBagBusy(false)
 
@@ -702,7 +707,7 @@ export default function InventoryPanel({
 
     closeBagPopover()
     if (result.granted.kind === 'gold') {
-      showMoneyBagReveal({ kind: 'gold', amount: result.granted.amount })
+      showMoneyBagReveal({ kind: 'gold', amount: result.granted.amount, iconSrc: getGearIconSrc(bagTemplate?.name) })
     } else {
       showMoneyBagReveal({ kind: 'gem', gemId: result.granted.gem_id, tier: result.granted.tier })
     }

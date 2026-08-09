@@ -7,7 +7,9 @@ import type { GemTier, GemTypeId } from './gemTypes'
 // unlike PetToast — this is a genuine reveal moment the player should
 // explicitly close (same reasoning as OfflineProgressModal's "Got it"
 // button), not a passive notification that can be missed.
-export type MoneyBagReveal = { kind: 'gold'; amount: number } | { kind: 'gem'; gemId: GemTypeId; tier: GemTier }
+export type MoneyBagReveal =
+  | { kind: 'gold'; amount: number; iconSrc?: string }
+  | { kind: 'gem'; gemId: GemTypeId; tier: GemTier }
 
 interface MoneyBagRevealState {
   reveal: MoneyBagReveal | null
