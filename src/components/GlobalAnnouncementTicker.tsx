@@ -32,8 +32,9 @@ const GEM_IDS: GemTypeId[] = ['drake', 'ember', 'bastion', 'iris']
 // so this parses the same fixed message shapes the SQL functions that insert
 // these rows always produce (quality_upgrade/level_upgrade/master_forge_upgrade's
 // "<name>'s <item> gained a socket!", draw_lucky_ticket's "<name> won a(n)
-// <Tier> <Gem> Gem/Ascended <item> from Lucky Lad!") -- brittle to a wording
-// change there, but keeps this a client-only change with no migration.
+// <Tier> <Gem> Gem/Ascended <item> from LL!" -- "LL" since 2026-08-13,
+// shortened from "Lucky Lad") -- brittle to a wording change there, but
+// keeps this a client-only change with no migration.
 // Returns undefined (falls back to the emoji above) if parsing or icon
 // lookup fails, e.g. a gear name not yet in ITEM_ICON_OVERRIDES.
 function resolveAnnouncementIconSrc(kind: string, message: string): string | undefined {
@@ -60,7 +61,7 @@ function resolveAnnouncementIconSrc(kind: string, message: string): string | und
     case 'lucky_gear_radiant_coat':
       return getGearIconSrc('Fawnhide Coat')
     case 'lucky_gear_ascended_random': {
-      const match = message.match(/won an Ascended (.+) from Lucky Lad!$/)
+      const match = message.match(/won an Ascended (.+) from LL!$/)
       return match ? getGearIconSrc(match[1]) : undefined
     }
     default:
@@ -84,11 +85,11 @@ function AnnouncementIcon({ kind, message, imgClassName }: { kind: string; messa
   )
 }
 
-// The last-10-global-announcements dropdown (2026-08-11) — only reachable by
-// manually reopening a collapsed ticker (see isManualReopen below), never
-// shown on a fresh live announcement, so the ambient live-update toast stays
-// exactly as lean as it always has. Combines both kinds (armor-socket procs
-// + every announced Lucky Lad tier) in one feed, not split by source.
+// The last-10-global-announcements dropdown (2026-08-11) — reachable via the
+// "See more" toggle, which now always shows next to the current announcement
+// (2026-08-13, previously only reachable after manually reopening a
+// collapsed ticker). Combines both kinds (armor-socket procs + every
+// announced LL tier) in one feed, not split by source.
 function AnnouncementHistoryDropdown() {
   const entries = useAnnouncementHistoryStore((state) => state.entries)
   const loaded = useAnnouncementHistoryStore((state) => state.loaded)
@@ -125,19 +126,14 @@ function AnnouncementHistoryDropdown() {
 // Renders nothing until the first announcement (live or seeded on connect)
 // shows up -- see GlobalActivityConnection.tsx.
 //
-// "See more" (2026-08-11, confirmed with the user): a fresh live
-// announcement never shows it -- only a *manual* reopen (tapping the
-// collapsed 📣▸ pill) does, per the user's own framing ("on notifications
-// that have just happened maybe don't include any kind of latest button but
-// if a user manually hits the announcement expansion button it show the
-// latest 1 as well as an option to see more"). isManualReopen tracks which
-// of those two paths produced the current expanded state.
+// "See more" (2026-08-11, originally gated to only a *manual* reopen of the
+// collapsed 📣▸ pill; that gate was removed 2026-08-13 per the user's
+// request -- it now always shows, on a fresh live announcement too).
 export default function GlobalAnnouncementTicker() {
   const announcement = useGlobalActivityStore((state) => state.latestAnnouncement)
   const loadHistory = useAnnouncementHistoryStore((state) => state.loadHistory)
   const [collapsed, setCollapsed] = useState(false)
   const [lastSeenId, setLastSeenId] = useState<string | null>(null)
-  const [isManualReopen, setIsManualReopen] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
 
   // Reset to the lean auto-expanded state during render when a genuinely new
@@ -148,7 +144,6 @@ export default function GlobalAnnouncementTicker() {
   if (announcement && announcement.id !== lastSeenId) {
     setLastSeenId(announcement.id)
     setCollapsed(false)
-    setIsManualReopen(false)
     setShowHistory(false)
   }
 
@@ -160,10 +155,7 @@ export default function GlobalAnnouncementTicker() {
     return (
       <button
         type="button"
-        onClick={() => {
-          setCollapsed(false)
-          setIsManualReopen(true)
-        }}
+        onClick={() => setCollapsed(false)}
         aria-label="Show latest announcement"
         title="Show latest announcement"
         className="shrink-0 rounded-lg border border-slate-700 bg-slate-900/60 px-2 py-1.5 text-xs text-slate-400 backdrop-blur hover:border-slate-500 hover:text-slate-200"
@@ -178,21 +170,19 @@ export default function GlobalAnnouncementTicker() {
       <div className="flex items-center gap-2 rounded-lg border border-amber-600/50 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-200 backdrop-blur">
         <AnnouncementIcon kind={announcement.kind} message={announcement.message} imgClassName="h-4 w-4 shrink-0 object-contain" />
         <span className="min-w-0 flex-1 truncate">{announcement.message}</span>
-        {isManualReopen && (
-          <button
-            type="button"
-            onClick={() => {
-              const next = !showHistory
-              setShowHistory(next)
-              if (next) {
-                void loadHistory()
-              }
-            }}
-            className="shrink-0 text-[10px] font-normal text-amber-300/70 underline hover:text-amber-100"
-          >
-            {showHistory ? 'Hide' : 'See more'}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => {
+            const next = !showHistory
+            setShowHistory(next)
+            if (next) {
+              void loadHistory()
+            }
+          }}
+          className="shrink-0 text-[10px] font-normal text-amber-300/70 underline hover:text-amber-100"
+        >
+          {showHistory ? 'Hide' : 'See more'}
+        </button>
         <button
           type="button"
           onClick={() => {

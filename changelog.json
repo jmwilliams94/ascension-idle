@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.79.2",
+    "date": "2026-08-13",
+    "changes": [
+      "Lucky Lad win announcements now say \"LL\" instead of the full name",
+      "The announcement ticker's \"See more\" history option is now always available, not just after manually reopening a collapsed announcement"
+    ]
+  },
+  {
     "version": "1.79.1",
     "date": "2026-08-13",
     "changes": [
