@@ -1,0 +1,11 @@
+-- Live Mail push (2026-08-13, requested by the user) -- an admin send (or a
+-- marketplace purchase/return) currently only shows up for an already-logged
+-- -in player after they reload or switch character, since loadMail only ever
+-- runs once on GameShell mount. Adding `mail` to the supabase_realtime
+-- publication is what lets a client subscribe to it via Postgres Changes --
+-- without this, RLS alone doesn't make new/changed rows visible to Realtime
+-- subscribers (same requirement already noted for global_announcements, see
+-- 20260808050000_global_announcements.sql). RLS itself (`characters.account_id
+-- = auth.uid()`) still scopes exactly what each subscriber can actually see;
+-- this only unlocks the transport.
+alter publication supabase_realtime add table public.mail;

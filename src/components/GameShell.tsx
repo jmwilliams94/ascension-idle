@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import CombatEngine from '../game/combat/CombatEngine'
 import GlobalActivityConnection from './GlobalActivityConnection'
+import MailRealtimeConnection from './MailRealtimeConnection'
 import QuiverWarningHud from './QuiverWarningHud'
 import InventoryFullWarningHud from './InventoryFullWarningHud'
 import KnockoutHud from './KnockoutHud'
@@ -360,6 +361,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <GainToastHost />
       <CombatEngine />
       <GlobalActivityConnection accountId={accountId} />
+      <MailRealtimeConnection characterId={characterId} />
 
       {/* pb-24 (was pb-6, matched by py-6 on lg): clearance for
           MobileBottomNav's fixed bar below `lg` — without it, the bar covers

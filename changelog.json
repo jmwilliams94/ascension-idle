@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.83.0",
+    "date": "2026-08-13",
+    "changes": [
+      "New mail now arrives instantly while you're playing, instead of only showing up after a reload"
+    ]
+  },
+  {
     "version": "1.82.2",
     "date": "2026-08-13",
     "changes": [
