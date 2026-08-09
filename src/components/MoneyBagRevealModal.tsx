@@ -14,6 +14,12 @@ import { buildRadiateEmbers, seedFromId } from '../game/items/tierEffectsData'
 // on screen, that fades in/out on its own (same auto-dismiss idea as
 // GainToastHost's top-right toasts, just centered and bigger, with a gold
 // ember burst around the box itself instead of a big circular icon frame).
+//
+// Padding trimmed 2026-08-13 (requested by the user, same pass that added
+// SalvageRevealToast's own center reveal) — this card was noticeably
+// roomier than it needed to be; not shrunk all the way to
+// SalvageRevealToast's own tighter padding since this one still needs to
+// fit an optional two-line title+subtitle (gem reveals), not just one line.
 
 const REVEAL_DISPLAY_MS = 2800
 const GOLD_BURST_COLOR = '#FFD700'
@@ -81,18 +87,18 @@ export default function MoneyBagRevealModal() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.92 }}
             transition={{ duration: 0.25 }}
-            className="relative flex items-center gap-3 rounded-xl border bg-slate-900/95 px-4 py-3 shadow-xl backdrop-blur"
+            className="relative flex items-center gap-2 rounded-xl border bg-slate-900/95 px-3 py-2 shadow-xl backdrop-blur"
             style={{ borderColor: `${color}80` }}
           >
             <EmberBurst seed={seed} color={color as string} />
             <div
-              className="relative z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-2"
+              className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2"
               style={{ borderColor: color, backgroundColor: `${color}22` }}
             >
               {isGem && reveal.kind === 'gem' ? (
                 <img src={getGemIconSrc(reveal.gemId, reveal.tier)} alt="" className="h-4/5 w-4/5 object-contain" />
               ) : (
-                <span className="text-2xl">💰</span>
+                <span className="text-xl">💰</span>
               )}
             </div>
             <div className="relative z-10">

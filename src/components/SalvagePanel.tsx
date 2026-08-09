@@ -12,7 +12,7 @@ import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemT
 import { useMarketplaceStore } from '../game/marketplace/useMarketplaceStore'
 import { useMailStore } from '../game/marketplace/useMailStore'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
-import { useGainToastStore } from '../game/hud/useGainToastStore'
+import { useSalvageRevealStore } from '../game/items/useSalvageRevealStore'
 
 // Bulk-salvageable tiers (2026-08-09, per the user's request) — deliberately
 // excludes Normal (no salvage value, see isWorthless below) and Ascended
@@ -132,7 +132,7 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
   const templates = useItemTemplatesStore((state) => state.templates)
   const salvageItem = useInventoryStore((state) => state.salvageItem)
   const ascensionPoints = usePlayerRecordStore((state) => state.ascensionPoints)
-  const showGainToast = useGainToastStore((state) => state.show)
+  const showSalvageReveal = useSalvageRevealStore((state) => state.show)
 
   // Same "what's actually mine to touch right now" filter InventoryPanel
   // applies to its own visibleItems — equipped/listed/banked/unclaimed-mail
@@ -217,7 +217,7 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
       }
 
       if (typeof outcome.apGained === 'number') {
-        showGainToast({ label: 'Ascension Points', amount: outcome.apGained, icon: '🎖️', color: '#a855f7' })
+        showSalvageReveal(outcome.apGained)
       }
       setResult({ success: true, message: `Salvaged for ${outcome.apGained ?? 0} AP.` })
       setSelectedItemId(null)
@@ -262,7 +262,7 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
     }
 
     if (apTotal > 0) {
-      showGainToast({ label: 'Ascension Points', amount: apTotal, icon: '🎖️', color: '#a855f7' })
+      showSalvageReveal(apTotal)
     }
 
     setPhase('idle')

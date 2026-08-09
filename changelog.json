@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.78.0",
+    "date": "2026-08-09",
+    "changes": [
+      "Salvage's Ascension Point gain now shows as a center-screen reveal (like opening a Money Bag) instead of a top-right toast, with a confetti-style ember burst that trickles downward — Money Bag's own reveal card is also a bit more compact now",
+      "Gold in the top bar now displays as 1k-999k, 1.XXM, or a flat XXM at 10M+, colored gold/white/cyan by size"
+    ]
+  },
+  {
     "version": "1.77.14",
     "date": "2026-08-09",
     "changes": [

@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { MAX_CHARACTER_LEVEL, requiredExpForLevel, useProgressionStore } from '../game/stats/useProgressionStore'
+import { formatGoldAmount, goldColorClass } from '../game/stats/formatGold'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 
 // Real art (2026-08-05), a user-supplied golden crystal cluster — Ascension
@@ -89,8 +90,8 @@ export default function ExpBar() {
         <div className={`h-full rounded-full ${isMaxLevel ? 'bg-amber-400' : 'bg-emerald-500'}`} style={{ width: `${percent}%` }} />
       </div>
       <span className="shrink-0 text-slate-500">{isMaxLevel ? 'MAX' : `${percent.toFixed(2)}%`}</span>
-      <span className="shrink-0 border-l border-slate-700 pl-2 font-semibold text-amber-300 lg:pl-3">
-        {displayedGold.toLocaleString()}g
+      <span className={`shrink-0 border-l border-slate-700 pl-2 font-semibold lg:pl-3 ${goldColorClass(displayedGold)}`}>
+        {formatGoldAmount(displayedGold)}
       </span>
       <span className="flex shrink-0 items-center gap-1 border-l border-slate-700 pl-2 font-semibold text-purple-300 lg:pl-3">
         <img src={AP_ICON_SRC} alt="" className="h-3.5 w-3.5 object-contain lg:h-4 lg:w-4" />

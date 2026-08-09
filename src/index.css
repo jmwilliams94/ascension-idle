@@ -154,6 +154,37 @@ img {
   animation: effect-ember-burst 1.1s ease-out both;
 }
 
+/* Confetti-style burst (SalvageRevealToast, 2026-08-13) — a two-phase
+   variant of effect-ember-burst above: a fast outward burst (0-45%, eased
+   out like the burst above), then a slower downward "trickle" (45-100%,
+   eased in like something falling under its own weight) layered on top of
+   the burst's own resting --ember-dx/--ember-dy position via --ember-fall.
+   Per-keyframe animation-timing-function (set on the 0% and 45% stops)
+   lets one animation carry two different easing feels instead of one
+   uniform curve across the whole thing. */
+@keyframes effect-ember-confetti {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) scale(0.6);
+    opacity: 0;
+    animation-timing-function: ease-out;
+  }
+  15% {
+    opacity: 1;
+  }
+  45% {
+    transform: translate(-50%, -50%) translate(var(--ember-dx, 0), var(--ember-dy, 0)) scale(0.55);
+    opacity: 1;
+    animation-timing-function: ease-in;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--ember-dx, 0), calc(var(--ember-dy, 0) + var(--ember-fall, 50px))) scale(0.3);
+    opacity: 0;
+  }
+}
+.effect-ember-confetti {
+  animation: effect-ember-confetti 1.5s both;
+}
+
 /* A brighter, breathing core glow behind the radiating embers above — part
    of the same confirmed tier effect (tierEffects.tsx). */
 @keyframes effect-core-pulse {

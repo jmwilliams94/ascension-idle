@@ -88,3 +88,32 @@ export function buildRadiateEmbers(count: number, seed: number, radius = 32): Ra
     }
   })
 }
+
+export interface ConfettiEmberConfig extends RadiateEmberConfig {
+  fall: string
+}
+
+// Confetti-style burst (SalvageRevealToast, 2026-08-13, requested by the
+// user — "the embers sort of burst out and then trickle downwards", as
+// opposed to buildRadiateEmbers' burst-and-fade-in-place). Same radial
+// burst math as buildRadiateEmbers, plus a `fall` distance the
+// .effect-ember-confetti CSS animation (index.css) adds on top of the
+// burst's own resting dy only in its second half — every particle, however
+// it initially launched, ends up drifting further down under that shared
+// "gravity" term, the same way real confetti arcs over and drops regardless
+// of which direction it was thrown.
+export function buildConfettiEmbers(count: number, seed: number, radius = 90): ConfettiEmberConfig[] {
+  const rand = mulberry32(seed)
+  return Array.from({ length: count }, () => {
+    const angle = rand() * Math.PI * 2
+    const distance = radius * (0.5 + rand() * 0.6)
+    return {
+      size: 2 + Math.round(rand() * 3),
+      delay: `${(rand() * 0.3).toFixed(2)}s`,
+      duration: `${(1.2 + rand() * 0.7).toFixed(2)}s`,
+      dx: `${(Math.cos(angle) * distance).toFixed(1)}px`,
+      dy: `${(Math.sin(angle) * distance).toFixed(1)}px`,
+      fall: `${(50 + rand() * 60).toFixed(1)}px`,
+    }
+  })
+}

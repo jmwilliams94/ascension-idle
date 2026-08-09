@@ -16,6 +16,7 @@ import InventoryFullModal from './InventoryFullModal'
 import MarketplacePanel from './MarketplacePanel'
 import OfflineProgressModal from './OfflineProgressModal'
 import MoneyBagRevealModal from './MoneyBagRevealModal'
+import SalvageRevealToast from './SalvageRevealToast'
 import UnclaimedLootBadge from './UnclaimedLootBadge'
 import SettingsModal from './SettingsModal'
 import ShopPanel from './ShopPanel'
@@ -354,6 +355,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <InventoryFullModal />
       <OfflineProgressModal />
       <MoneyBagRevealModal />
+      <SalvageRevealToast />
       <UnclaimedLootBadge />
       <GainToastHost />
       <CombatEngine />
