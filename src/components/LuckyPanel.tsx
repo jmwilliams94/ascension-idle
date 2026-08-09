@@ -410,21 +410,23 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
       {/* max-w-sm caps how wide each card can stretch on desktop — without
           it, grid-cols-3's fluid columns fill the whole (much wider) page
           width, and since each card is aspect-[3/4] (taller than wide), a
-          wide card becomes proportionally very tall. */}
-      {(paymentChoice || board) && (
-        <div className="mx-auto grid max-w-sm grid-cols-3 gap-2">
-          {Array.from({ length: LUCKY_CARD_COUNT }, (_, index) => (
-            <LuckyCard
-              key={index}
-              index={index}
-              reward={board ? board[index] : null}
-              won={wonIndex === index}
-              disabled={busy || Boolean(board)}
-              onClick={board ? undefined : () => void handleOpen(index)}
-            />
-          ))}
-        </div>
-      )}
+          wide card becomes proportionally very tall.
+
+          Shown from first load (not gated behind paymentChoice) — chests are
+          just inert/dimmed until a payment method is picked above, rather
+          than appearing only after that choice. */}
+      <div className={`mx-auto grid max-w-sm grid-cols-3 gap-2 ${paymentChoice || board ? '' : 'opacity-50'}`}>
+        {Array.from({ length: LUCKY_CARD_COUNT }, (_, index) => (
+          <LuckyCard
+            key={index}
+            index={index}
+            reward={board ? board[index] : null}
+            won={wonIndex === index}
+            disabled={busy || Boolean(board) || !paymentChoice}
+            onClick={board || !paymentChoice ? undefined : () => void handleOpen(index)}
+          />
+        ))}
+      </div>
 
       {board && wonIndex !== null && (
         <div className="rounded-xl border border-amber-600 bg-amber-500/10 p-3 text-center">
