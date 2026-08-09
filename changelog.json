@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.78.4",
+    "date": "2026-08-09",
+    "changes": [
+      "Fixed \"Sell All Normal\"/\"Select All Normal\" (Shop and offline-progress rewards) sweeping up Normal-quality gear that already has a +1 (or higher) enhancement — those are now excluded"
+    ]
+  },
+  {
     "version": "1.78.3",
     "date": "2026-08-13",
     "changes": [

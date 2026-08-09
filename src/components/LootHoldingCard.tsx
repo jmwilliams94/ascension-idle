@@ -125,7 +125,9 @@ export default function LootHoldingCard() {
     return null
   }
 
-  const normalGearEntries = entries.filter((entry) => entry.template_id && entry.quality_tier === 'normal')
+  const normalGearEntries = entries.filter(
+    (entry) => entry.template_id && entry.quality_tier === 'normal' && entry.composition_level === 0
+  )
   const currencyEntries = entries.filter((entry) => entry.currency_type)
   const gearEntries = entries.filter((entry) => entry.template_id)
 
