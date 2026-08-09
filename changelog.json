@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.75.5",
+    "date": "2026-08-13",
+    "changes": [
+      "Fixed LuckyLad reward icons looking washed out/translucent — the reward tile now stays fully opaque, only the chest art behind a non-winning tile dims"
+    ]
+  },
+  {
     "version": "1.75.4",
     "date": "2026-08-13",
     "changes": [

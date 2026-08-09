@@ -195,13 +195,19 @@ function LuckyCard({
 }) {
   const visual = reward ? rewardVisual(reward) : null
 
+  // Note: the non-won "would have been" dimming below is applied only to the
+  // chest art itself (see the opacity-60 on that <img>, not this container) —
+  // putting it here used to cascade onto the InventorySlot's own solid
+  // background too, making it translucent enough for the chest's golden
+  // glow to bleed through behind the reward icon (reported by the user as
+  // "too much opacity, looks unpolished").
   const containerClassName = `relative flex aspect-square items-center justify-center rounded-xl border-2 p-1 text-center transition-colors ${
     won
       ? 'border-amber-400 bg-amber-500/10 shadow-lg shadow-amber-500/20'
       : armed
         ? 'border-sky-400 bg-sky-500/10'
         : reward
-          ? 'border-slate-700 bg-slate-900/60 opacity-60'
+          ? 'border-slate-700 bg-slate-900/60'
           : 'border-slate-700 bg-slate-800 hover:border-slate-500'
   } disabled:cursor-not-allowed`
 
@@ -227,7 +233,11 @@ function LuckyCard({
               background effect/hover tooltip as everywhere else in the
               game) sits centered on top of it — layered, not stacked, so
               both read at full size instead of sharing the card vertically. */}
-          <img src={CHEST_OPEN_ICON_SRC} alt="" className="absolute inset-0 h-full w-full object-contain" />
+          <img
+            src={CHEST_OPEN_ICON_SRC}
+            alt=""
+            className={`absolute inset-0 h-full w-full object-contain ${won ? '' : 'opacity-60'}`}
+          />
           <InventorySlot
             slotId={`lucky-${index}`}
             filled
