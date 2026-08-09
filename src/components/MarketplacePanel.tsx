@@ -316,9 +316,10 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
 
   const parsedPrice = Number(priceAmount)
   const priceValid = Number.isFinite(parsedPrice) && parsedPrice > 0
-  const fee = priceValid ? previewListingFee(parsedPrice) : 0
+  const fee = priceValid ? previewListingFee(parsedPrice, priceCurrency) : 0
   const balance = priceCurrency === 'gold' ? gold : ascensionPoints
-  // A 0 fee (price < 20, see previewListingFee) is always affordable — it
+  // A 0 fee (below the currency's own free-threshold, see previewListingFee)
+  // is always affordable — it
   // used to be gated behind `fee > 0`, which incorrectly blocked the List
   // button entirely for a free listing.
   const canAffordFee = balance >= fee

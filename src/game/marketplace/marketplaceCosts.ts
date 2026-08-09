@@ -1,24 +1,30 @@
+export type ListingCurrency = 'gold' | 'ascension_points'
+
 // Mirrors create_marketplace_listing's fee formula in
-// supabase/migrations/20260813020000_marketplace_seller_name_and_free_small_fee.sql
-// (originally 20260802050000_add_marketplace.sql, ceil-only) — preview only,
-// for showing the player their fee before they commit. The actual fee is
-// always computed server-side; if these drift out of sync the worst case is
-// a wrong preview number, not a wrong charge. Keep them in sync.
+// supabase/migrations/20260813030000_marketplace_ap_listing_fee_rate.sql
+// (originally 20260802050000_add_marketplace.sql, flat 5% ceil-only) —
+// preview only, for showing the player their fee before they commit. The
+// actual fee is always computed server-side; if these drift out of sync the
+// worst case is a wrong preview number, not a wrong charge. Keep them in
+// sync.
 //
-// Free below price 20 (2026-08-13, requested by the user): the true
-// (unrounded) 5% only reaches a whole 1 unit at price 20 — below that, the
-// old plain `ceil` forced a 1-unit minimum fee that was disproportionately
-// more than 5% of a cheap listing's price (e.g. a price-5 listing paid a
-// 1-unit fee, actually 20%). Unchanged for price >= 20.
-export function previewListingFee(priceAmount: number): number {
+// Ascension-Points-priced listings pay 1%, Gold-priced pay 5% (2026-08-13,
+// requested by the user).
+//
+// Free below the price where the true (unrounded) fee reaches a whole 1
+// unit — price 20 for Gold's 5%, price 100 for AP's 1% (2026-08-13,
+// requested by the user): below that, the old plain `ceil` forced a 1-unit
+// minimum fee that was disproportionately more than the nominal rate on a
+// cheap listing (e.g. a Gold price-5 listing paid a 1-unit fee, actually
+// 20% not 5%). Unchanged above that threshold.
+export function previewListingFee(priceAmount: number, currency: ListingCurrency): number {
   if (!Number.isFinite(priceAmount) || priceAmount <= 0) {
     return 0
   }
-  const rawFee = priceAmount * 0.05
+  const feeRate = currency === 'ascension_points' ? 0.01 : 0.05
+  const rawFee = priceAmount * feeRate
   return rawFee < 1 ? 0 : Math.ceil(rawFee)
 }
-
-export type ListingCurrency = 'gold' | 'ascension_points'
 
 // Fixed presets shown in the UI — the RPC itself accepts any 1-168 hour
 // value, so this list is just a convenience, not a hard constraint. Easy to

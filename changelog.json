@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.77.11",
+    "date": "2026-08-09",
+    "changes": [
+      "Marketplace listings priced in Ascension Points now pay a 1% listing fee instead of 5% (Gold-priced listings are unchanged at 5%)"
+    ]
+  },
+  {
     "version": "1.77.10",
     "date": "2026-08-09",
     "changes": [
