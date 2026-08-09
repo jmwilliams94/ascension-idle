@@ -1,5 +1,6 @@
 import type { ItemTooltipData } from './itemTooltip'
 import type { ItemTemplate } from './useItemTemplatesStore'
+import { getGearIconSrc } from './equipmentBonus'
 
 // Mirrors the flat cost in supabase/migrations/20260731070000_forge_flat_currency_cost.sql
 // (stage 3 of the Bank/Warehouse redesign — supersedes the earlier scaling
@@ -426,6 +427,7 @@ export function buildMoneyBagTooltip(className: string, goldValue: number): Item
   return {
     title: className,
     icon: '💰',
+    iconSrc: getGearIconSrc(className),
     iconColor: FALLEN_STAR_COLOR,
     lines: ['Lucky Lad reward'],
     stats: [`Open for ${goldValue.toLocaleString()} gold`],

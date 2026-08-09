@@ -30,7 +30,7 @@ import {
   MONEY_BAG_GOLD_BY_CLASS,
 } from '../game/items/forgeCosts'
 import { GEM_TYPES, formatGemTierLabel, getGemIconSrc, getGemTierColor, buildGemTooltip, type GemTier, type GemTypeId } from '../game/items/gemTypes'
-import { QUALITY_COLORS } from '../game/items/equipmentBonus'
+import { QUALITY_COLORS, getGearIconSrc } from '../game/items/equipmentBonus'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
 
@@ -107,7 +107,7 @@ function rewardVisual(reward: LuckyReward): { icon?: string; iconSrc?: string; c
     case 'fallen_star_scroll':
       return { iconSrc: FALLEN_STAR_SCROLL_ICON_SRC, color: FALLEN_STAR_COLOR }
     case 'money_bag':
-      return { icon: '💰', color: FALLEN_STAR_COLOR }
+      return { icon: '💰', iconSrc: getGearIconSrc(`Class ${reward.amount} Money Bag`), color: FALLEN_STAR_COLOR }
     case 'gem_bag':
       return { icon: '🎁', color: MATERIAL_COLOR }
     case 'composition_stone':
