@@ -195,7 +195,7 @@ function LuckyCard({
 }) {
   const visual = reward ? rewardVisual(reward) : null
 
-  const containerClassName = `relative flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border-2 p-1 text-center transition-colors ${
+  const containerClassName = `relative flex aspect-square items-center justify-center rounded-xl border-2 p-1 text-center transition-colors ${
     won
       ? 'border-amber-400 bg-amber-500/10 shadow-lg shadow-amber-500/20'
       : armed
@@ -218,14 +218,16 @@ function LuckyCard({
           initial={{ rotateY: 90, opacity: 0 }}
           animate={{ rotateY: 0, opacity: 1 }}
           transition={{ duration: 0.25, delay: won ? 0 : 0.15 + index * 0.06 }}
-          className="flex flex-col items-center gap-1"
+          className="relative flex h-full w-full items-center justify-center"
         >
-          {/* Reward's own real Inventory tile (2026-08-10, confirmed with
-              the user — same size/qualityColor background effect/hover
-              tooltip as everywhere else in the game) sits centered in the
-              card, with the opened chest (real art, 2026-08-03) underneath
-              it as the reveal backdrop, same for every reward kind, so the 9
-              revealed cards still read apart from each other at a glance. */}
+          {/* Opened chest (real art, 2026-08-03) fills the card at the same
+              size the shut chest did, sitting behind the reward as the
+              reveal backdrop. The reward's own real Inventory tile
+              (2026-08-10, confirmed with the user — same size/qualityColor
+              background effect/hover tooltip as everywhere else in the
+              game) sits centered on top of it — layered, not stacked, so
+              both read at full size instead of sharing the card vertically. */}
+          <img src={CHEST_OPEN_ICON_SRC} alt="" className="absolute inset-0 h-full w-full object-contain" />
           <InventorySlot
             slotId={`lucky-${index}`}
             filled
@@ -236,7 +238,6 @@ function LuckyCard({
             label={rewardLabel(reward)}
             tooltip={buildLuckyRewardTooltip(reward)}
           />
-          <img src={CHEST_OPEN_ICON_SRC} alt="" className="h-10 w-10 object-contain" />
         </motion.div>
         {won && (
           <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold text-slate-950">
@@ -249,7 +250,7 @@ function LuckyCard({
 
   return (
     <button type="button" disabled={disabled || !onClick} onClick={onClick} className={containerClassName}>
-      <img src={CHEST_CLOSED_ICON_SRC} alt="" className="h-16 w-16 object-contain" />
+      <img src={CHEST_CLOSED_ICON_SRC} alt="" className="h-full w-full object-contain" />
     </button>
   )
 }

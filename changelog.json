@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.75.4",
+    "date": "2026-08-13",
+    "changes": [
+      "LuckyLad: the closed chest now fills most of the card, and the opened chest sits behind your won reward at that same size instead of stacking above/below it"
+    ]
+  },
+  {
     "version": "1.75.3",
     "date": "2026-08-13",
     "changes": [
