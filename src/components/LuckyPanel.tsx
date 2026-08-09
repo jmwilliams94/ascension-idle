@@ -193,6 +193,10 @@ function buildLuckyRewardTooltip(reward: LuckyReward): ItemTooltipData {
   }
 }
 
+// Seconds to hold on the won card alone before the other 8 flip — long
+// enough to read as a deliberate pause, not an accident of stagger math.
+const REVEAL_BATCH_DELAY_S = 0.5
+
 function formatCountdown(ms: number): string {
   const totalMinutes = Math.max(1, Math.ceil(ms / 60000))
   const hours = Math.floor(totalMinutes / 60)
@@ -241,7 +245,12 @@ function LuckyCard({
         <motion.div
           initial={{ rotateY: 90, opacity: 0 }}
           animate={{ rotateY: 0, opacity: 1 }}
-          transition={{ duration: 0.25, delay: won ? 0 : 0.15 + index * 0.06 }}
+          // The won card flips immediately (delay 0); the other 8 wait for it
+          // to land, then flip together as one batch (a small 0.02s/card
+          // stagger for a bit of visual life, not the old cascading reveal)
+          // — requested by the user 2026-08-10: "flip over just one of the
+          // cards initially and then a short delay and then the rest".
+          transition={{ duration: 0.25, delay: won ? 0 : REVEAL_BATCH_DELAY_S + index * 0.02 }}
           className="relative flex h-full w-full items-center justify-center"
         >
           {/* Opened chest (real art, 2026-08-03) fills the card at the same
@@ -363,6 +372,30 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
         </div>
       </div>
 
+      {/* max-w-sm caps how wide each card can stretch on desktop — without
+          it, grid-cols-3's fluid columns fill the whole (much wider) page
+          width, and since each card is aspect-[3/4] (taller than wide), a
+          wide card becomes proportionally very tall.
+
+          Shown from first load (not gated behind paymentChoice) — chests are
+          just inert/dimmed until a payment method is picked below, rather
+          than appearing only after that choice. Sits above the payment
+          controls (2026-08-10, requested by the user) so header + chests +
+          controls all fit on one mobile screen without scrolling, and so
+          picking a payment method doesn't shift the chests around. */}
+      <div className={`mx-auto grid max-w-sm grid-cols-3 gap-2 ${paymentChoice || board ? '' : 'opacity-50'}`}>
+        {Array.from({ length: LUCKY_CARD_COUNT }, (_, index) => (
+          <LuckyCard
+            key={index}
+            index={index}
+            reward={board ? board[index] : null}
+            won={wonIndex === index}
+            disabled={busy || Boolean(board) || !paymentChoice}
+            onClick={board || !paymentChoice ? undefined : () => void handleOpen(index)}
+          />
+        ))}
+      </div>
+
       {!paymentChoice && !board && (
         <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
           <p className="text-xs text-slate-400">Choose how to pay for a draw:</p>
@@ -406,27 +439,6 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
           </button>
         </div>
       )}
-
-      {/* max-w-sm caps how wide each card can stretch on desktop — without
-          it, grid-cols-3's fluid columns fill the whole (much wider) page
-          width, and since each card is aspect-[3/4] (taller than wide), a
-          wide card becomes proportionally very tall.
-
-          Shown from first load (not gated behind paymentChoice) — chests are
-          just inert/dimmed until a payment method is picked above, rather
-          than appearing only after that choice. */}
-      <div className={`mx-auto grid max-w-sm grid-cols-3 gap-2 ${paymentChoice || board ? '' : 'opacity-50'}`}>
-        {Array.from({ length: LUCKY_CARD_COUNT }, (_, index) => (
-          <LuckyCard
-            key={index}
-            index={index}
-            reward={board ? board[index] : null}
-            won={wonIndex === index}
-            disabled={busy || Boolean(board) || !paymentChoice}
-            onClick={board || !paymentChoice ? undefined : () => void handleOpen(index)}
-          />
-        ))}
-      </div>
 
       {board && wonIndex !== null && (
         <div className="rounded-xl border border-amber-600 bg-amber-500/10 p-3 text-center">

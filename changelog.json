@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.81.3",
+    "date": "2026-08-10",
+    "changes": [
+      "LuckyLad: payment buttons moved below the chests so nothing shifts around when you pick one, and only the winning chest flips right away — the rest flip together after a short pause"
+    ]
+  },
+  {
     "version": "1.81.2",
     "date": "2026-08-10",
     "changes": [
