@@ -62,7 +62,11 @@ export async function resolveCombat(characterId: string, mode: ResolveCombatMode
     return result
   }
 
-  useProgressionStore.getState().applyServerCombatResult(result.character)
+  useProgressionStore.getState().applyServerCombatResult({
+    goldGained: result.gained?.gold ?? 0,
+    exp: result.character.exp,
+    level: result.character.level,
+  })
   useCurrencyStore.getState().setComets(result.character.comets)
   useCurrencyStore.getState().setFallenStars(result.character.fallenStars)
   useCurrencyStore.getState().setCometScrolls(result.character.cometScrolls)
