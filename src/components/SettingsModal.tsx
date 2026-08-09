@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { changelogNewestFirst } from '../lib/changelog'
+import { useIsAdmin } from '../lib/adminConfig'
+import AdminMailSection from './AdminMailSection'
 import ChangelogEntries from './ChangelogEntries'
 import ItemEffectGallery from './ItemEffectGallery'
 
@@ -29,8 +31,13 @@ const SECTIONS: SettingsSection[] = [
 ]
 
 export default function SettingsModal({ onClose }: { onClose: () => void }) {
+  const isAdmin = useIsAdmin()
+  // Admin tab (2026-08-13, requested by the user) — only ever shown for the
+  // hardcoded admin account (see useIsAdmin's own doc comment); real
+  // enforcement lives server-side in the RPCs it calls, this is cosmetic.
+  const sections = isAdmin ? [...SECTIONS, { id: 'admin', label: 'Admin', content: <AdminMailSection /> }] : SECTIONS
   const [activeSectionId, setActiveSectionId] = useState(SECTIONS[0].id)
-  const activeSection = SECTIONS.find((section) => section.id === activeSectionId) ?? SECTIONS[0]
+  const activeSection = sections.find((section) => section.id === activeSectionId) ?? sections[0]
 
   return (
     <div
@@ -42,7 +49,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
         onClick={(event) => event.stopPropagation()}
       >
         <nav className="w-40 shrink-0 space-y-1 border-r border-slate-800 bg-slate-950/60 p-3">
-          {SECTIONS.map((section) => (
+          {sections.map((section) => (
             <button
               key={section.id}
               type="button"

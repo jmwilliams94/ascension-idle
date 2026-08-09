@@ -1,8 +1,16 @@
 import { create } from 'zustand'
 import { supabase } from '../../lib/supabaseClient'
+import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 import { useInventoryStore, type ItemInstance } from '../items/useInventoryStore'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
 import type { ListableCurrencyType } from './useMarketplaceStore'
+
+// Admin Mail (2026-08-13) adds two currency kinds that are mail-claimable but
+// deliberately NOT marketplace-listable (Lottery Tickets/Ascension Points
+// aren't tradeable items) — kept as a separate superset type so
+// ListableCurrencyType (which also governs what a player can list for sale)
+// stays untouched.
+export type MailCurrencyType = ListableCurrencyType | 'lottery_ticket' | 'ascension_points'
 
 // Mail (see CLAUDE.md's Marketplace section and
 // supabase/migrations/20260802050000_add_marketplace.sql). Sale proceeds
@@ -16,21 +24,34 @@ import type { ListableCurrencyType } from './useMarketplaceStore'
 // claim_mail can remove a row).
 export type MailReason = 'purchase' | 'listing_cancelled' | 'listing_expired'
 
+export type MailReasonExtended = MailReason | 'admin_gift'
+
 export interface MailEntry {
   id: string
   character_id: string
   item_id: string | null
-  currency_type: ListableCurrencyType | null
-  reason: MailReason
+  currency_type: MailCurrencyType | null
+  reason: MailReasonExtended
   created_at: string
   item?: ItemInstance
+  // Admin Mail only (2026-08-13, migration 20260813100000_admin_mail.sql) —
+  // null for every pre-existing marketplace-generated row. Several rows
+  // sharing the same mail_batch_id were all inserted by one admin send and
+  // carry identical sender_label/message — MailTab groups them into a single
+  // card rather than rendering one card per row (see that component).
+  mail_batch_id: string | null
+  sender_label: string | null
+  message: string | null
+  // Currency rows only — how many units this one row grants on claim
+  // (null means 1, for every pre-existing row that predates this column).
+  amount: number | null
 }
 
 interface ClaimResult {
   ok: boolean
   error?: string
   item_id?: string
-  currency_type?: ListableCurrencyType
+  currency_type?: MailCurrencyType
   new_count?: number
 }
 
@@ -54,7 +75,7 @@ export const useMailStore = create<MailState>((set, get) => ({
   loadMail: async (characterId) => {
     const { data, error } = await supabase
       .from('mail')
-      .select('id, character_id, item_id, currency_type, reason, created_at')
+      .select('id, character_id, item_id, currency_type, amount, reason, mail_batch_id, sender_label, message, created_at')
       .eq('character_id', characterId)
       .order('created_at', { ascending: true })
 
@@ -112,6 +133,12 @@ export const useMailStore = create<MailState>((set, get) => ({
             break
           case 'fallen_star_scroll':
             currencyStore.setFallenStarScrolls(result.new_count)
+            break
+          case 'lottery_ticket':
+            currencyStore.setLotteryTickets(result.new_count)
+            break
+          case 'ascension_points':
+            usePlayerRecordStore.getState().setAscensionPoints(result.new_count)
             break
         }
       } else if (entry?.item) {

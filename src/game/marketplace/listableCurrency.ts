@@ -7,6 +7,7 @@ import {
   COMET_SCROLL_ICON_SRC,
 } from '../items/forgeCosts'
 import type { ListableCurrencyType } from './useMarketplaceStore'
+import type { MailCurrencyType } from './useMailStore'
 
 // Small display helpers shared by MarketplaceListingSlot (the "List an Item"
 // drop target) and MarketplacePanel's listing/mail tile rendering — kept
@@ -43,4 +44,23 @@ export function listableCurrencyVisual(type: ListableCurrencyType): ListableCurr
     case 'fallen_star_scroll':
       return { iconSrc: FALLEN_STAR_SCROLL_ICON_SRC, qualityColor: FALLEN_STAR_COLOR }
   }
+}
+
+// Ascension Points' own purple, matching the gain-toast color already used
+// for it elsewhere (InventoryPanel.tsx's sellSelected toast). Mail-only —
+// Lottery Tickets/Ascension Points are never marketplace-listable, so these
+// two wrappers exist alongside (not merged into) the functions above, which
+// stay scoped to what a player can actually list for sale.
+const ASCENSION_POINTS_COLOR = '#a855f7'
+
+export function mailCurrencyLabel(type: MailCurrencyType): string {
+  if (type === 'lottery_ticket') return 'Lottery Ticket'
+  if (type === 'ascension_points') return 'Ascension Points'
+  return listableCurrencyLabel(type)
+}
+
+export function mailCurrencyVisual(type: MailCurrencyType): ListableCurrencyVisual {
+  if (type === 'lottery_ticket') return { icon: '🎫', qualityColor: MATERIAL_COLOR }
+  if (type === 'ascension_points') return { icon: '🎖️', qualityColor: ASCENSION_POINTS_COLOR }
+  return listableCurrencyVisual(type)
 }

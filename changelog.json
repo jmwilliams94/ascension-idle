@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.81.0",
+    "date": "2026-08-13",
+    "changes": [
+      "Mail system updated"
+    ]
+  },
+  {
     "version": "1.80.3",
     "date": "2026-08-13",
     "changes": [

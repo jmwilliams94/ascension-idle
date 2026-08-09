@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import InventoryPanel from './InventoryPanel'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import MarketplaceListingSlot, { type ListingDraftTarget } from './MarketplaceListingSlot'
@@ -14,7 +14,7 @@ import {
   type ListingCurrency,
 } from '../game/marketplace/useMarketplaceStore'
 import { useMailStore, type MailEntry } from '../game/marketplace/useMailStore'
-import { listableCurrencyLabel, listableCurrencyVisual } from '../game/marketplace/listableCurrency'
+import { listableCurrencyLabel, listableCurrencyVisual, mailCurrencyLabel, mailCurrencyVisual } from '../game/marketplace/listableCurrency'
 import { LISTING_DURATION_OPTIONS, previewListingFee } from '../game/marketplace/marketplaceCosts'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
@@ -538,7 +538,106 @@ function reasonLabel(reason: MailEntry['reason']): string {
       return 'Listing cancelled'
     case 'listing_expired':
       return 'Listing expired unsold'
+    case 'admin_gift':
+      return 'Gift'
   }
+}
+
+function mailEntryLabel(entry: MailEntry, templates: ItemTemplate[]): string {
+  if (entry.currency_type) {
+    return mailCurrencyLabel(entry.currency_type)
+  }
+  if (entry.item) {
+    const template = templates.find((t) => t.id === entry.item!.template_id)
+    return formatItemDisplayName(template?.name ?? 'Unknown item', entry.item.quality_tier, entry.item.composition_level)
+  }
+  return 'Item unavailable'
+}
+
+// One reward tile — a currency unit or a gear item — shared by the main Mail
+// grid (ungrouped/single-row entries) and a batch card's own detail
+// sub-grid (Admin Mail, 2026-08-13), so both render identically. `selected`/
+// `onClick` are omitted entirely for the sub-grid's purely informational
+// tiles (see MailTab below).
+function MailEntryTile({
+  entry,
+  templates,
+  selected = false,
+  onClick,
+}: {
+  entry: MailEntry
+  templates: ItemTemplate[]
+  selected?: boolean
+  onClick?: () => void
+}) {
+  if (entry.currency_type) {
+    const visual = mailCurrencyVisual(entry.currency_type)
+    return (
+      <InventorySlot
+        slotId={entry.id}
+        filled
+        sizeClassName={SLOT_SIZE_CLASS}
+        icon={visual.icon}
+        iconSrc={visual.iconSrc}
+        qualityColor={visual.qualityColor}
+        label={mailCurrencyLabel(entry.currency_type)}
+        badge={entry.amount && entry.amount > 1 ? String(entry.amount) : undefined}
+        selected={selected}
+        onClick={onClick}
+      />
+    )
+  }
+
+  const template = entry.item ? templates.find((t) => t.id === entry.item!.template_id) : undefined
+
+  return (
+    <InventorySlot
+      slotId={entry.id}
+      filled={Boolean(entry.item)}
+      sizeClassName={SLOT_SIZE_CLASS}
+      icon={entry.item ? getItemIcon(template?.slot_type) : undefined}
+      iconSrc={entry.item ? getGearIconSrc(template?.name) : undefined}
+      qualityColor={entry.item ? getQualityColor(entry.item.quality_tier) : undefined}
+      compositionLevel={entry.item?.composition_level}
+      label={mailEntryLabel(entry, templates)}
+      tooltip={entry.item ? buildGearTooltip(entry.item, template) : undefined}
+      selected={selected}
+      onClick={onClick}
+    />
+  )
+}
+
+// A "group" is either one ungrouped row (pre-existing marketplace mail,
+// batchId null) or every row sharing one mail_batch_id (one Admin Mail send,
+// 2026-08-13 — see admin_send_mail in supabase/migrations/
+// 20260813100000_admin_mail.sql). Purely a display grouping: claiming either
+// shape just calls the existing per-row claim_mail once per entry in the
+// group — there's no separate "claim a batch" RPC.
+interface MailGroup {
+  key: string
+  batchId: string | null
+  entries: MailEntry[]
+}
+
+function groupMailEntries(entries: MailEntry[]): MailGroup[] {
+  const batchIndex = new Map<string, number>()
+  const groups: MailGroup[] = []
+
+  for (const entry of entries) {
+    if (entry.mail_batch_id) {
+      const existingIndex = batchIndex.get(entry.mail_batch_id)
+      if (existingIndex === undefined) {
+        batchIndex.set(entry.mail_batch_id, groups.length)
+        groups.push({ key: entry.mail_batch_id, batchId: entry.mail_batch_id, entries: [entry] })
+      } else {
+        groups[existingIndex].entries.push(entry)
+      }
+    } else {
+      groups.push({ key: entry.id, batchId: null, entries: [entry] })
+    }
+  }
+
+  return groups
 }
 
 function MailTab({ characterId, templates }: { characterId: string; templates: ItemTemplate[] }) {
@@ -546,30 +645,24 @@ function MailTab({ characterId, templates }: { characterId: string; templates: I
   const busy = useMailStore((state) => state.busy)
   const claim = useMailStore((state) => state.claim)
 
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [claimAllBusy, setClaimAllBusy] = useState(false)
 
-  const selectedEntry = entries.find((entry) => entry.id === selectedId) ?? null
-  const selectedTemplate = selectedEntry?.item ? (templates.find((t) => t.id === selectedEntry.item!.template_id) ?? null) : null
-  const selectedLabel = selectedEntry
-    ? selectedEntry.currency_type
-      ? listableCurrencyLabel(selectedEntry.currency_type)
-      : selectedEntry.item
-        ? formatItemDisplayName(selectedTemplate?.name ?? 'Unknown item', selectedEntry.item.quality_tier, selectedEntry.item.composition_level)
-        : 'Item unavailable'
-    : ''
+  const groups = useMemo(() => groupMailEntries(entries), [entries])
+  const selectedGroup = groups.find((group) => group.key === selectedKey) ?? null
 
   const handleClaim = async () => {
-    if (!selectedEntry) {
+    if (!selectedGroup) {
       return
     }
     setError(null)
-    const result = await claim(characterId, selectedEntry.id)
-    if (result.ok) {
-      setSelectedId(null)
+    const results = await Promise.all(selectedGroup.entries.map((entry) => claim(characterId, entry.id)))
+    const failures = results.filter((result) => !result.ok).length
+    if (failures === 0) {
+      setSelectedKey(null)
     } else {
-      setError("Couldn't claim that.")
+      setError(`Couldn't claim ${failures} item${failures === 1 ? '' : 's'}.`)
     }
   }
 
@@ -578,7 +671,7 @@ function MailTab({ characterId, templates }: { characterId: string; templates: I
     const results = await Promise.all(entries.map((entry) => claim(characterId, entry.id)))
     const failures = results.filter((result) => !result.ok).length
     setClaimAllBusy(false)
-    setSelectedId(null)
+    setSelectedKey(null)
     if (failures > 0) {
       setError(`Couldn't claim ${failures} item${failures === 1 ? '' : 's'}.`)
     }
@@ -601,65 +694,67 @@ function MailTab({ characterId, templates }: { characterId: string; templates: I
 
       <div className="overflow-x-auto">
         <div className="grid grid-cols-[repeat(8,3.5rem)] gap-1.5 lg:grid-cols-[repeat(8,4rem)]">
-          {entries.map((entry) => {
-            if (entry.currency_type) {
-              const visual = listableCurrencyVisual(entry.currency_type)
+          {groups.map((group) => {
+            const onClick = () => {
+              setSelectedKey((current) => (current === group.key ? null : group.key))
+              setError(null)
+            }
+
+            if (group.batchId) {
               return (
                 <InventorySlot
-                  key={entry.id}
-                  slotId={entry.id}
+                  key={group.key}
+                  slotId={group.key}
                   filled
                   sizeClassName={SLOT_SIZE_CLASS}
-                  icon={visual.icon}
-                  iconSrc={visual.iconSrc}
-                  qualityColor={visual.qualityColor}
-                  label={listableCurrencyLabel(entry.currency_type)}
-                  selected={selectedId === entry.id}
-                  onClick={() => {
-                    setSelectedId((current) => (current === entry.id ? null : entry.id))
-                    setError(null)
-                  }}
+                  icon="💌"
+                  qualityColor="#f59e0b"
+                  label={group.entries[0].sender_label ?? 'Mail'}
+                  badge={group.entries.length > 1 ? String(group.entries.length) : undefined}
+                  selected={selectedKey === group.key}
+                  onClick={onClick}
                 />
               )
             }
 
-            const template = entry.item ? templates.find((t) => t.id === entry.item!.template_id) : undefined
-            const label = entry.item
-              ? formatItemDisplayName(template?.name ?? 'Unknown item', entry.item.quality_tier, entry.item.composition_level)
-              : 'Item unavailable'
-
             return (
-              <InventorySlot
-                key={entry.id}
-                slotId={entry.id}
-                filled={Boolean(entry.item)}
-                sizeClassName={SLOT_SIZE_CLASS}
-                icon={entry.item ? getItemIcon(template?.slot_type) : undefined}
-                iconSrc={entry.item ? getGearIconSrc(template?.name) : undefined}
-                qualityColor={entry.item ? getQualityColor(entry.item.quality_tier) : undefined}
-                compositionLevel={entry.item?.composition_level}
-                label={label}
-                tooltip={entry.item ? buildGearTooltip(entry.item, template) : undefined}
-                selected={selectedId === entry.id}
-                onClick={() => {
-                  setSelectedId((current) => (current === entry.id ? null : entry.id))
-                  setError(null)
-                }}
+              <MailEntryTile
+                key={group.key}
+                entry={group.entries[0]}
+                templates={templates}
+                selected={selectedKey === group.key}
+                onClick={onClick}
               />
             )
           })}
         </div>
       </div>
 
-      {selectedEntry && (
-        <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-          <p className="text-sm font-medium text-slate-200">{selectedLabel}</p>
-          <p className="text-[11px] text-slate-500">{reasonLabel(selectedEntry.reason)}</p>
+      {selectedGroup && (
+        <div className="space-y-2 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+          {selectedGroup.batchId ? (
+            <>
+              <p className="text-sm font-medium text-slate-200">From: {selectedGroup.entries[0].sender_label ?? 'Unknown'}</p>
+              {selectedGroup.entries[0].message && (
+                <p className="whitespace-pre-wrap text-xs text-slate-400">{selectedGroup.entries[0].message}</p>
+              )}
+              <div className="flex flex-wrap gap-1.5">
+                {selectedGroup.entries.map((entry) => (
+                  <MailEntryTile key={entry.id} entry={entry} templates={templates} />
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-medium text-slate-200">{mailEntryLabel(selectedGroup.entries[0], templates)}</p>
+              <p className="text-[11px] text-slate-500">{reasonLabel(selectedGroup.entries[0].reason)}</p>
+            </>
+          )}
           <button
             type="button"
             disabled={busy}
             onClick={() => void handleClaim()}
-            className="mt-2 rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Claim
           </button>
