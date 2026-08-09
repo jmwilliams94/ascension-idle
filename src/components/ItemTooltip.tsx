@@ -1,5 +1,20 @@
-import type { ItemTooltipData } from '../game/items/itemTooltip'
+import type { ItemTooltipData, TooltipLine } from '../game/items/itemTooltip'
 import { ENCHANT_HP_COLOR } from '../game/items/gemCatalog'
+
+// `lines`' own default (matches the old flat text-slate-400) and `stats`' own
+// default (matches the old flat text-sky-300) — a plain string entry in
+// either array falls back to its block's default; a { text, color } entry
+// overrides just that one line (see TooltipLine).
+const DEFAULT_LINE_COLOR = '#94a3b8'
+const DEFAULT_STAT_COLOR = '#7dd3fc'
+
+function lineText(line: TooltipLine): string {
+  return typeof line === 'string' ? line : line.text
+}
+
+function lineColor(line: TooltipLine, fallback: string): string {
+  return typeof line === 'string' ? fallback : line.color
+}
 
 // Universal Diablo/PoE-style hover tooltip — dark card, quality-colored title,
 // secondary info lines, then a visually distinct stats block. Used everywhere an
@@ -17,8 +32,8 @@ export default function ItemTooltip({ title, titleColor, icon, iconSrc, iconColo
       {lines && lines.length > 0 && (
         <div className="mt-1 space-y-0.5">
           {lines.map((line, index) => (
-            <p key={index} className="text-[11px] text-slate-400">
-              {line}
+            <p key={index} className="text-[11px]" style={{ color: lineColor(line, DEFAULT_LINE_COLOR) }}>
+              {lineText(line)}
             </p>
           ))}
         </div>
@@ -27,8 +42,8 @@ export default function ItemTooltip({ title, titleColor, icon, iconSrc, iconColo
       {stats && stats.length > 0 && (
         <div className="mt-1.5 space-y-0.5 border-t border-slate-800 pt-1.5">
           {stats.map((stat, index) => (
-            <p key={index} className="text-[11px] text-sky-300">
-              {stat}
+            <p key={index} className="text-[11px]" style={{ color: lineColor(stat, DEFAULT_STAT_COLOR) }}>
+              {lineText(stat)}
             </p>
           ))}
           {bonusStats?.map((stat, index) => (

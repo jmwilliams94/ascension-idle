@@ -1,11 +1,22 @@
 import { CLASS_DEFINITIONS, type ClassId } from '../stats/classes'
 import type { EquipmentBonus } from '../stats/derivedStats'
-import type { ItemTooltipData } from './itemTooltip'
+import type { ItemTooltipData, TooltipLine } from './itemTooltip'
 import type { ItemInstance } from './useInventoryStore'
 import type { ItemTemplate } from './useItemTemplatesStore'
 import { EQUIP_SLOTS, type EquipSlot } from './useEquipmentStore'
 import { damageRangeFromMidpoint } from '../combat/combatResolver'
-import { describeSocketedGem } from './gemCatalog'
+import { describeSocketedGem, SOCKETED_GEM_COLOR } from './gemCatalog'
+
+// Plain white, used for a handful of gear tooltip lines that should read as
+// neutral/informational rather than tinted (Lvl, Class, the "Sockets"
+// header, and the Physical Defense/Dodge stat lines below) — per the user's
+// 2026-08-13 tooltip color pass. Magic Attack/Defense and Physical Attack/
+// Dexterity are deliberately left at the block's own default blue.
+const TOOLTIP_WHITE = '#FFFFFF'
+
+// Stat keys that get the white override above instead of the default stat
+// block color (sky blue) — everything else in base_stats keeps that default.
+const WHITE_STAT_KEYS = ['physical_defense', 'dodge']
 
 // How much stronger each quality tier is than the template's stored (Normal-tier)
 // base_stats — an approximate, rounded pattern (not any single sourced item's
@@ -209,6 +220,24 @@ export function formatBaseStats(baseStats: Record<string, number>, qualityTier: 
       return `+${value} ${key.replace(/_/g, ' ')}`
     })
     .join(', ')
+}
+
+// Structured counterpart to formatBaseStats above, used only by
+// buildGearTooltip (the plain Inventory/Equipment detail-card displays keep
+// using formatBaseStats' flat string) — same per-key formatting, but keeps
+// each entry separate so Physical Defense/Dodge can render white while
+// everything else keeps the tooltip's default stat-block blue.
+export function buildStatTooltipLines(baseStats: Record<string, number>, qualityTier: string): TooltipLine[] {
+  return Object.entries(baseStats).map(([key]): TooltipLine => {
+    const value = scaledStat(baseStats, key, qualityTier)
+    const text = RANGED_STAT_KEYS.includes(key)
+      ? (() => {
+          const { min, max } = damageRangeFromMidpoint(value ?? 0)
+          return `${min}-${max} ${key.replace(/_/g, ' ')}`
+        })()
+      : `+${value} ${key.replace(/_/g, ' ')}`
+    return WHITE_STAT_KEYS.includes(key) ? { text, color: TOOLTIP_WHITE } : text
+  })
 }
 
 // Underlying stored quality_tier values were originally 'normal'/'refined'/
@@ -453,10 +482,11 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
   // "Class: ___" is display-only for now — just the plain class name (e.g.
   // "Hunter"), not a promotion-tier-specific name (no promotion-tier naming
   // exists yet). Nothing currently blocks equipping across classes; this is
-  // flavor/info ahead of that enforcement existing.
-  const classLine =
+  // flavor/info ahead of that enforcement existing. White (2026-08-13 color
+  // pass), like the Lvl line and the "Sockets" header below.
+  const classLine: TooltipLine | null =
     template?.required_class && template.required_class in CLASS_DEFINITIONS
-      ? `Class: ${CLASS_DEFINITIONS[template.required_class as ClassId].displayName}`
+      ? { text: `Class: ${CLASS_DEFINITIONS[template.required_class as ClassId].displayName}`, color: TOOLTIP_WHITE }
       : null
 
   // Only shown when the item actually has a socket (2026-08-02 — see
@@ -464,11 +494,22 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
   // all, matching "sockets should definitely be displayed if the item
   // actually has them" and not otherwise. A filled socket (2026-08-10, once
   // gem socketing shipped — see socket_gem's SQL) shows the real gem's name
-  // and effect via describeSocketedGem; an unlocked-but-empty one (still
-  // jsonb null) shows "Empty" same as before.
-  const socketLines =
+  // and effect via describeSocketedGem, in its own soft green
+  // (SOCKETED_GEM_COLOR, 2026-08-13); an unlocked-but-empty one (still jsonb
+  // null) shows "Empty" in the block's plain default color, same as before.
+  // The "Sockets" header itself is white, like Lvl/Class above.
+  const socketLines: TooltipLine[] =
     item.sockets.length > 0
-      ? ['Sockets', ...item.sockets.map((socket) => (socket ? (describeSocketedGem(socket) ?? 'Empty') : 'Empty'))]
+      ? [
+          { text: 'Sockets', color: TOOLTIP_WHITE },
+          ...item.sockets.map((socket): TooltipLine => {
+            if (!socket) {
+              return 'Empty'
+            }
+            const description = describeSocketedGem(socket)
+            return description ? { text: description, color: SOCKETED_GEM_COLOR } : 'Empty'
+          }),
+        ]
       : []
 
   const compositionBonus = template
@@ -486,8 +527,8 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
     icon: getItemIcon(template?.slot_type),
     iconSrc: getGearIconSrc(template?.name),
     iconColor: getQualityColor(item.quality_tier),
-    lines: [formatItemLevel(item.level), ...(classLine ? [classLine] : []), ...socketLines],
-    stats: template ? formatBaseStats(template.base_stats, item.quality_tier).split(', ').filter(Boolean) : [],
+    lines: [{ text: formatItemLevel(item.level), color: TOOLTIP_WHITE }, ...(classLine ? [classLine] : []), ...socketLines],
+    stats: template ? buildStatTooltipLines(template.base_stats, item.quality_tier) : [],
     bonusStats: bonusStats.length > 0 ? bonusStats : undefined,
     enchantLine: enchantHp ? `Enchanted HP: ${enchantHp}` : undefined,
   }

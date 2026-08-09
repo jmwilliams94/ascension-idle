@@ -3,6 +3,14 @@
 // (equipmentBonus.ts's buildGearTooltip, forgeCosts.ts's buildStoneTooltip) and the
 // presentational component can import the same shape without a circular import
 // between the two builder modules.
+
+// A plain string renders in that block's own default color (slate for
+// `lines`, sky blue for `stats`); an object overrides the color for just that
+// one line — used e.g. for Lvl/Class/"Sockets"/physical defense/dodge (white)
+// and a filled socket's own gem description (soft green), while everything
+// else keeps the block's default.
+export type TooltipLine = string | { text: string; color: string }
+
 export interface ItemTooltipData {
   title: string
   // Quality color for gear; omitted (falls back to a neutral slate) for
@@ -22,9 +30,9 @@ export interface ItemTooltipData {
   // the default neutral slate.
   iconColor?: string
   // Secondary info lines (quality/level, composition tier, ammo count, etc.).
-  lines?: string[]
+  lines?: TooltipLine[]
   // Stat bonus lines, shown in a visually distinct block below `lines`.
-  stats?: string[]
+  stats?: TooltipLine[]
   // Composition ("+N") stat bonus lines (see equipmentBonus.ts's
   // computeCompositionBonusStats) — rendered directly below `stats` in
   // purple to read as a distinct bonus source, not part of the item's base

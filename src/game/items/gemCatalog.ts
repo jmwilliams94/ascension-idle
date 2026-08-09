@@ -29,6 +29,11 @@ export interface GemTypeDef {
   id: GemTypeId
   displayName: string
   effectLabel: string
+  // Shorter label used only for the socketed-gem line inside a gear
+  // tooltip's Sockets block (see describeSocketedGem below) — the gem's own
+  // standalone tile tooltip (buildGemTooltip, gemTypes.ts) always uses the
+  // full effectLabel unchanged. Falls back to effectLabel when omitted.
+  shortEffectLabel?: string
   percentByTier: Record<GemTier, number>
 }
 
@@ -55,6 +60,7 @@ export const GEM_TYPES: Record<GemTypeId, GemTypeDef> = {
     id: 'iris',
     displayName: 'Iris Gem',
     effectLabel: 'Character EXP',
+    shortEffectLabel: 'EXP',
     percentByTier: { normal: 5, tempered: 10, ascended: 15 },
   },
 }
@@ -77,6 +83,13 @@ export const ENCHANT_HP_RANGE_BY_TIER: Record<GemTier, { min: number; max: numbe
 // lines — per the user's "nice yellow (not fluoro)" request for the
 // Enchanted HP tooltip line.
 export const ENCHANT_HP_COLOR = '#E8C468'
+
+// A soft, muted green — paired with ENCHANT_HP_COLOR's muted gold as the gear
+// tooltip's two "bonus" accent colors. Used only for a filled socket's own
+// gem description line inside a gear tooltip's Sockets block (see
+// describeSocketedGem below) — the gem's own standalone tile tooltip
+// (buildGemTooltip, gemTypes.ts) is unaffected.
+export const SOCKETED_GEM_COLOR = '#7BC488'
 
 // Storage key into characters.gems (flat, mirrors composition_stones' own
 // flat "1".."9" keys) — must stay in sync with the shape written by any RPC
@@ -138,12 +151,18 @@ export function getGemIconSrc(gemId: GemTypeId, tier: GemTier): string {
 
 // One-line description of a socketed gem for use in plain string contexts
 // (e.g. buildGearTooltip's socket lines) where a full ItemTooltipData card
-// isn't appropriate — e.g. "Tempered Drake Gem — Physical Attack +10%".
+// isn't appropriate. Deliberately generic — no tier prefix — since the gem's
+// own tile elsewhere already shows its tier via color/icon; e.g. "Iris Gem —
+// EXP +5%" (was "Tempered Drake Gem — Physical Attack +10%" before
+// 2026-08-13). Only this socketed-gem line is generic this way — the gem's
+// own standalone tile tooltip (buildGemTooltip, gemTypes.ts) still shows the
+// full tier-prefixed name and effectLabel, unchanged.
 export function describeSocketedGem(key: string): string | null {
   const parsed = parseGemStorageKey(key)
   if (!parsed) {
     return null
   }
   const gem = GEM_TYPES[parsed.gemId]
-  return `${formatGemTierLabel(parsed.tier)} ${gem.displayName} — ${gem.effectLabel} +${gem.percentByTier[parsed.tier]}%`
+  const effectLabel = gem.shortEffectLabel ?? gem.effectLabel
+  return `${gem.displayName} — ${effectLabel} +${gem.percentByTier[parsed.tier]}%`
 }

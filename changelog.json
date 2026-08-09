@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.77.3",
+    "date": "2026-08-13",
+    "changes": [
+      "Recolored gear tooltips: Lvl, Class, and the Sockets header are now white; a socketed gem's own line is a soft green; Physical Defense and Dodge are now white too (Magic Attack/Defense stay their existing blue)",
+      "Simplified how a socketed gem reads in a gear tooltip — just its name and effect (e.g. \"Iris Gem — EXP +5%\") instead of repeating the tier"
+    ]
+  },
+  {
     "version": "1.77.2",
     "date": "2026-08-09",
     "changes": [
