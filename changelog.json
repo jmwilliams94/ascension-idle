@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.75.7",
+    "date": "2026-08-13",
+    "changes": [
+      "Fixed \"Inventory full\" incorrectly blocking claims/purchases/drops when an item sitting in an active Marketplace listing or unclaimed Mail was silently counted against your Inventory space without showing up in the displayed count"
+    ]
+  },
+  {
     "version": "1.75.6",
     "date": "2026-08-09",
     "changes": [

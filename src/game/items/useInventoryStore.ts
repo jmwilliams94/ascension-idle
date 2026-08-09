@@ -10,6 +10,8 @@ import { useItemTemplatesStore, type ItemTemplate } from './useItemTemplatesStor
 import { useProgressionStore } from '../stats/useProgressionStore'
 import { useCharacterStore } from '../stats/useCharacterStore'
 import { useGemStore } from './useGemStore'
+import { useMarketplaceStore } from '../marketplace/useMarketplaceStore'
+import { useMailStore } from '../marketplace/useMailStore'
 import type { GemCounts, GemTier, GemTypeId } from './gemTypes'
 
 // Mirrors the item_instances table. enchant is still unused/inert — sockets
@@ -108,9 +110,22 @@ export const INVENTORY_SLOT_CAP = 40
 // than reimplementing it.
 export function occupiedSlotCount(items: ItemInstance[]): number {
   const isEquipped = useEquipmentStore.getState().isEquipped
+  // Actively-listed (Marketplace escrow) and unclaimed-Mail items are real
+  // item_instances rows still owned by this character, but InventoryPanel's
+  // own visibleItems filter already hides both from the grid (see the Bank/
+  // Marketplace/Mail sections of CLAUDE.md) — this must exclude the exact
+  // same set, or a stray listing/unclaimed-mail item silently eats a "phantom"
+  // slot that never appears in the displayed count. Fixed 2026-08-13 after a
+  // real report: player saw "5/40" but every claim/grant failed with
+  // "Inventory full" — root cause was this function counting a hidden
+  // listed/mailed item the header count didn't.
+  const isListed = useMarketplaceStore.getState().isListed
+  const hasUnclaimedMail = useMailStore.getState().hasUnclaimedMail
   // Banked gear (location === 'bank') frees its Inventory slot exactly like
   // an equipped item does — see the Bank Storage note on ItemInstance above.
-  const gearCount = items.filter((item) => !isEquipped(item.id) && item.location !== 'bank').length
+  const gearCount = items.filter(
+    (item) => !isEquipped(item.id) && item.location !== 'bank' && !isListed(item.id) && !hasUnclaimedMail(item.id),
+  ).length
   const totalStoneCount = Object.values(useCompositionStore.getState().stones).reduce((sum, count) => sum + count, 0)
   // Gems are real, physical, non-stacking Inventory tiles now (2026-08-09) —
   // one slot per owned unit, same as Comets/Stones. Must stay in sync with
