@@ -101,7 +101,17 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
   }, [attemptResult])
 
   const handleDropItemId = (itemId: string) => {
-    if (!items.some((item) => item.id === itemId) || materialEntries.some((entry) => entry.id === itemId)) {
+    const item = items.find((entry) => entry.id === itemId)
+    if (!item || materialEntries.some((entry) => entry.id === itemId)) {
+      return
+    }
+
+    // The Quiver has no stats and no upgrade chain — Level Upgrade already
+    // has nowhere to go, and Quality Upgrade would just burn Fallen Stars
+    // for a cosmetic tier with nothing to scale. Excluded from this tile
+    // entirely rather than left to fail silently once dropped.
+    const template = templates.find((entry) => entry.id === item.template_id)
+    if (template?.slot_type === 'quiver') {
       return
     }
 

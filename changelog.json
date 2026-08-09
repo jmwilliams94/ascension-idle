@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.77.1",
+    "date": "2026-08-13",
+    "changes": [
+      "Excluded the Quiver from the Forge's Quality/Level upgrade tile — it has no stats to upgrade"
+    ]
+  },
+  {
     "version": "1.76.1",
     "date": "2026-08-09",
     "changes": [
