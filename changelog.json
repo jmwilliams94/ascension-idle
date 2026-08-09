@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.81.4",
+    "date": "2026-08-13",
+    "changes": [
+      "Mail: the Market notification badge now shows how many mail you have, not how many items are inside them",
+      "Mail: gifted messages now show as their own compact card instead of a small icon tile",
+      "Mail: Comet/Fallen Star/Comet Scroll/Fallen Star Scroll/Lottery Ticket/Ascension Points tiles now show a tooltip on hover",
+      "Mail: fixed the Ascension Points icon showing a medal placeholder instead of its real icon"
+    ]
+  },
+  {
     "version": "1.81.3",
     "date": "2026-08-10",
     "changes": [

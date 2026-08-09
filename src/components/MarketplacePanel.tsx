@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import InventoryPanel from './InventoryPanel'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import MarketplaceListingSlot, { type ListingDraftTarget } from './MarketplaceListingSlot'
@@ -13,8 +13,14 @@ import {
   type MarketplaceListing,
   type ListingCurrency,
 } from '../game/marketplace/useMarketplaceStore'
-import { useMailStore, type MailEntry } from '../game/marketplace/useMailStore'
-import { listableCurrencyLabel, listableCurrencyVisual, mailCurrencyLabel, mailCurrencyVisual } from '../game/marketplace/listableCurrency'
+import { useMailStore, groupMailEntries, type MailEntry, type MailGroup } from '../game/marketplace/useMailStore'
+import {
+  listableCurrencyLabel,
+  listableCurrencyVisual,
+  mailCurrencyLabel,
+  mailCurrencyVisual,
+  mailCurrencyTooltip,
+} from '../game/marketplace/listableCurrency'
 import { LISTING_DURATION_OPTIONS, previewListingFee } from '../game/marketplace/marketplaceCosts'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
@@ -555,10 +561,14 @@ function mailEntryLabel(entry: MailEntry, templates: ItemTemplate[]): string {
 }
 
 // One reward tile — a currency unit or a gear item — shared by the main Mail
-// grid (ungrouped/single-row entries) and a batch card's own detail
-// sub-grid (Admin Mail, 2026-08-13), so both render identically. `selected`/
-// `onClick` are omitted entirely for the sub-grid's purely informational
-// tiles (see MailTab below).
+// grid (ungrouped/single-row entries) and a batch card's own reward row
+// (Admin Mail, 2026-08-13), so both render identically. `selected`/`onClick`
+// are omitted entirely for a batch card's purely informational tiles (see
+// MailTab below). Currency tiles now always carry a real tooltip
+// (mailCurrencyTooltip) — fixed 2026-08-13, reported by the user: only gear
+// tiles had one before, Comet/Fallen Star/etc. tiles had no hover info at
+// all (InventorySlot's native `title` fallback only fires when `tooltip` is
+// omitted, and it was never a reliable substitute).
 function MailEntryTile({
   entry,
   templates,
@@ -581,6 +591,7 @@ function MailEntryTile({
         iconSrc={visual.iconSrc}
         qualityColor={visual.qualityColor}
         label={mailCurrencyLabel(entry.currency_type)}
+        tooltip={mailCurrencyTooltip(entry.currency_type, entry.amount)}
         badge={entry.amount && entry.amount > 1 ? String(entry.amount) : undefined}
         selected={selected}
         onClick={onClick}
@@ -607,62 +618,47 @@ function MailEntryTile({
   )
 }
 
-// A "group" is either one ungrouped row (pre-existing marketplace mail,
-// batchId null) or every row sharing one mail_batch_id (one Admin Mail send,
-// 2026-08-13 — see admin_send_mail in supabase/migrations/
-// 20260813100000_admin_mail.sql). Purely a display grouping: claiming either
-// shape just calls the existing per-row claim_mail once per entry in the
-// group — there's no separate "claim a batch" RPC.
-interface MailGroup {
-  key: string
-  batchId: string | null
-  entries: MailEntry[]
-}
-
-function groupMailEntries(entries: MailEntry[]): MailGroup[] {
-  const batchIndex = new Map<string, number>()
-  const groups: MailGroup[] = []
-
-  for (const entry of entries) {
-    if (entry.mail_batch_id) {
-      const existingIndex = batchIndex.get(entry.mail_batch_id)
-      if (existingIndex === undefined) {
-        batchIndex.set(entry.mail_batch_id, groups.length)
-        groups.push({ key: entry.mail_batch_id, batchId: entry.mail_batch_id, entries: [entry] })
-      } else {
-        groups[existingIndex].entries.push(entry)
-      }
-    } else {
-      groups.push({ key: entry.id, batchId: null, entries: [entry] })
-    }
-  }
-
-  return groups
-}
-
 function MailTab({ characterId, templates }: { characterId: string; templates: ItemTemplate[] }) {
   const entries = useMailStore((state) => state.entries)
   const busy = useMailStore((state) => state.busy)
   const claim = useMailStore((state) => state.claim)
 
-  const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [claimAllBusy, setClaimAllBusy] = useState(false)
+  const [claimingBatchKey, setClaimingBatchKey] = useState<string | null>(null)
 
-  const groups = useMemo(() => groupMailEntries(entries), [entries])
-  const selectedGroup = groups.find((group) => group.key === selectedKey) ?? null
+  const groups = groupMailEntries(entries)
+  const batchGroups = groups.filter((group): group is MailGroup & { batchId: string } => group.batchId !== null)
+  const singleEntries = groups.filter((group) => group.batchId === null).map((group) => group.entries[0])
+  const selectedEntry = singleEntries.find((entry) => entry.id === selectedId) ?? null
 
-  const handleClaim = async () => {
-    if (!selectedGroup) {
+  // Batch cards (2026-08-13 redesign, requested by the user) — a full
+  // message-with-rewards card, no separate "click a tile first" step. Each
+  // claims independently via its own local busy key rather than the store's
+  // single shared `busy` flag, since several batch cards could otherwise be
+  // claimed around the same time.
+  const handleClaimBatch = async (group: MailGroup) => {
+    setError(null)
+    setClaimingBatchKey(group.key)
+    const results = await Promise.all(group.entries.map((entry) => claim(characterId, entry.id)))
+    setClaimingBatchKey(null)
+    const failures = results.filter((result) => !result.ok).length
+    if (failures > 0) {
+      setError(`Couldn't claim ${failures} item${failures === 1 ? '' : 's'}.`)
+    }
+  }
+
+  const handleClaimSingle = async () => {
+    if (!selectedEntry) {
       return
     }
     setError(null)
-    const results = await Promise.all(selectedGroup.entries.map((entry) => claim(characterId, entry.id)))
-    const failures = results.filter((result) => !result.ok).length
-    if (failures === 0) {
-      setSelectedKey(null)
+    const result = await claim(characterId, selectedEntry.id)
+    if (result.ok) {
+      setSelectedId(null)
     } else {
-      setError(`Couldn't claim ${failures} item${failures === 1 ? '' : 's'}.`)
+      setError("Couldn't claim that.")
     }
   }
 
@@ -671,7 +667,7 @@ function MailTab({ characterId, templates }: { characterId: string; templates: I
     const results = await Promise.all(entries.map((entry) => claim(characterId, entry.id)))
     const failures = results.filter((result) => !result.ok).length
     setClaimAllBusy(false)
-    setSelectedKey(null)
+    setSelectedId(null)
     if (failures > 0) {
       setError(`Couldn't claim ${failures} item${failures === 1 ? '' : 's'}.`)
     }
@@ -692,68 +688,62 @@ function MailTab({ characterId, templates }: { characterId: string; templates: I
         {claimAllBusy ? 'Claiming…' : `Claim All (${entries.length})`}
       </button>
 
-      <div className="overflow-x-auto">
-        <div className="grid grid-cols-[repeat(8,3.5rem)] gap-1.5 lg:grid-cols-[repeat(8,4rem)]">
-          {groups.map((group) => {
-            const onClick = () => {
-              setSelectedKey((current) => (current === group.key ? null : group.key))
-              setError(null)
-            }
-
-            if (group.batchId) {
-              return (
-                <InventorySlot
-                  key={group.key}
-                  slotId={group.key}
-                  filled
-                  sizeClassName={SLOT_SIZE_CLASS}
-                  icon="💌"
-                  qualityColor="#f59e0b"
-                  label={group.entries[0].sender_label ?? 'Mail'}
-                  badge={group.entries.length > 1 ? String(group.entries.length) : undefined}
-                  selected={selectedKey === group.key}
-                  onClick={onClick}
-                />
-              )
-            }
-
-            return (
-              <MailEntryTile
-                key={group.key}
-                entry={group.entries[0]}
-                templates={templates}
-                selected={selectedKey === group.key}
-                onClick={onClick}
-              />
-            )
-          })}
-        </div>
-      </div>
-
-      {selectedGroup && (
-        <div className="space-y-2 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-          {selectedGroup.batchId ? (
-            <>
-              <p className="text-sm font-medium text-slate-200">From: {selectedGroup.entries[0].sender_label ?? 'Unknown'}</p>
-              {selectedGroup.entries[0].message && (
-                <p className="whitespace-pre-wrap text-xs text-slate-400">{selectedGroup.entries[0].message}</p>
+      {batchGroups.length > 0 && (
+        <div className="space-y-3">
+          {batchGroups.map((group) => (
+            <div
+              key={group.key}
+              className="mx-auto w-full max-w-xs space-y-2 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-center"
+            >
+              <p className="text-sm font-medium text-slate-200">From: {group.entries[0].sender_label ?? 'Unknown'}</p>
+              {group.entries[0].message && (
+                <p className="whitespace-pre-wrap text-xs text-slate-400">{group.entries[0].message}</p>
               )}
-              <div className="flex flex-wrap gap-1.5">
-                {selectedGroup.entries.map((entry) => (
+              <div className="flex flex-wrap justify-center gap-1.5">
+                {group.entries.map((entry) => (
                   <MailEntryTile key={entry.id} entry={entry} templates={templates} />
                 ))}
               </div>
-            </>
-          ) : (
-            <>
-              <p className="text-sm font-medium text-slate-200">{mailEntryLabel(selectedGroup.entries[0], templates)}</p>
-              <p className="text-[11px] text-slate-500">{reasonLabel(selectedGroup.entries[0].reason)}</p>
-            </>
-          )}
+              <button
+                type="button"
+                disabled={claimingBatchKey === group.key}
+                onClick={() => void handleClaimBatch(group)}
+                className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {claimingBatchKey === group.key ? 'Claiming…' : 'Claim'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {singleEntries.length > 0 && (
+        <div className="overflow-x-auto">
+          <div className="grid grid-cols-[repeat(8,3.5rem)] gap-1.5 lg:grid-cols-[repeat(8,4rem)]">
+            {singleEntries.map((entry) => (
+              <MailEntryTile
+                key={entry.id}
+                entry={entry}
+                templates={templates}
+                selected={selectedId === entry.id}
+                onClick={() => {
+                  setSelectedId((current) => (current === entry.id ? null : entry.id))
+                  setError(null)
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {selectedEntry && (
+        <div className="space-y-2 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+          <p className="text-sm font-medium text-slate-200">{mailEntryLabel(selectedEntry, templates)}</p>
+          <p className="text-[11px] text-slate-500">{reasonLabel(selectedEntry.reason)}</p>
           <button
             type="button"
             disabled={busy}
-            onClick={() => void handleClaim()}
+            onClick={() => void handleClaimSingle()}
             className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Claim

@@ -47,6 +47,39 @@ export interface MailEntry {
   amount: number | null
 }
 
+// A "group" is either one ungrouped row (pre-existing marketplace mail,
+// batchId null) or every row sharing one mail_batch_id (one Admin Mail send
+// — see admin_send_mail in supabase/migrations/20260813100000_admin_mail.sql).
+// Exported so both MailTab (rendering) and the nav badges (TabNav.tsx/
+// MobileBottomNav.tsx, 2026-08-13 fix) can count "unread mail" the same way
+// — a 9-item admin gift is 1 unread mail, not 9.
+export interface MailGroup {
+  key: string
+  batchId: string | null
+  entries: MailEntry[]
+}
+
+export function groupMailEntries(entries: MailEntry[]): MailGroup[] {
+  const batchIndex = new Map<string, number>()
+  const groups: MailGroup[] = []
+
+  for (const entry of entries) {
+    if (entry.mail_batch_id) {
+      const existingIndex = batchIndex.get(entry.mail_batch_id)
+      if (existingIndex === undefined) {
+        batchIndex.set(entry.mail_batch_id, groups.length)
+        groups.push({ key: entry.mail_batch_id, batchId: entry.mail_batch_id, entries: [entry] })
+      } else {
+        groups[existingIndex].entries.push(entry)
+      }
+    } else {
+      groups.push({ key: entry.id, batchId: null, entries: [entry] })
+    }
+  }
+
+  return groups
+}
+
 interface ClaimResult {
   ok: boolean
   error?: string
