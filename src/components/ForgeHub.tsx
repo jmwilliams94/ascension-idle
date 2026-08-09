@@ -5,6 +5,11 @@ interface ForgeHubTile {
   title: string
   description: string
   iconSrc: string
+  // Overrides the default h-14 w-14 icon box below — only Composition uses
+  // this (the +9 Composition Stone art reads visually larger than the other
+  // five icons at the same box size, per the user's request to shrink it
+  // ~15%).
+  iconClassName?: string
 }
 
 // Six large tiles (2026-08-13 redesign — supersedes the old cramped
@@ -37,6 +42,7 @@ const FORGE_TILES: ForgeHubTile[] = [
     title: 'Composition',
     description: 'Feed stones and gear into an item for guaranteed, permanent +N stat growth.',
     iconSrc: `${import.meta.env.BASE_URL}item-icons/composition-stone-9.png`,
+    iconClassName: 'h-12 w-12',
   },
   {
     mode: 'salvage',
@@ -72,7 +78,7 @@ export default function ForgeHub({ onSelect }: ForgeHubProps) {
           onClick={() => onSelect(tile.mode)}
           className="flex min-h-40 flex-col items-center gap-2 rounded-xl border border-slate-800 bg-slate-950/60 p-5 text-center transition-colors hover:border-amber-600/60 hover:bg-slate-900"
         >
-          <img src={tile.iconSrc} alt="" className="h-14 w-14 object-contain" />
+          <img src={tile.iconSrc} alt="" className={`${tile.iconClassName ?? 'h-14 w-14'} object-contain`} />
           <span className="text-sm font-semibold text-slate-200">{tile.title}</span>
           <span className="text-[11px] leading-snug text-slate-500">{tile.description}</span>
         </button>

@@ -1,15 +1,14 @@
 import { useState } from 'react'
 import { useGlobalActivityStore } from '../game/social/useGlobalActivityStore'
 import { useAnnouncementHistoryStore } from '../game/social/useAnnouncementHistoryStore'
+import { getGearIconSrc } from '../game/items/equipmentBonus'
+import { getGemIconSrc, type GemTier, type GemTypeId } from '../game/items/gemCatalog'
+import { COMET_SCROLL_ICON_SRC, FALLEN_STAR_SCROLL_ICON_SRC, FALLEN_STAR_ICON_SRC } from '../game/items/forgeCosts'
 
-// Extensible by kind (see 20260808050000_global_announcements.sql) --
-// unrecognized future kinds fall back to the generic 📣 rather than needing
-// a code change to render at all. The lucky_* set below was expanded
-// 2026-08-10 (20260810020000_expand_lucky_announcements.sql) to cover
-// anything at least as rare as Comet Scroll's own weight -- icons reused
-// from LuckyPanel.tsx's own rewardVisual for the same kinds, for consistency.
-// Exported so the "See more" history dropdown below can reuse the same
-// kind->icon mapping instead of a second copy.
+// Emoji fallback, kept for any kind resolveAnnouncementIconSrc can't turn
+// into a real icon (an unrecognized future kind, or a gear name that isn't
+// in ITEM_ICON_OVERRIDES yet). Exported so the "See more" history dropdown
+// below can reuse the same fallback map instead of a second copy.
 export const ANNOUNCEMENT_ICONS: Record<string, string> = {
   armor_socket: '💠',
   lucky_comet_scroll: '🎰',
@@ -20,6 +19,69 @@ export const ANNOUNCEMENT_ICONS: Record<string, string> = {
   lucky_gear_radiant_bow: '🏹',
   lucky_gear_radiant_coat: '🥋',
   lucky_gear_ascended_random: '🗡️',
+}
+
+const GEM_IDS: GemTypeId[] = ['drake', 'ember', 'bastion', 'iris']
+
+// Real icon of the specific thing that was actually won, parsed out of the
+// announcement's own free-text `message` (2026-08-13) -- supersedes the
+// generic per-kind emoji above, which only said "a socket happened" or "a
+// gem happened" rather than showing which gear/gem it actually was. There's
+// no structured per-announcement reward data in the schema (global_announcements
+// only stores kind/character_name/message, see 20260808050000_global_announcements.sql)
+// so this parses the same fixed message shapes the SQL functions that insert
+// these rows always produce (quality_upgrade/level_upgrade/master_forge_upgrade's
+// "<name>'s <item> gained a socket!", draw_lucky_ticket's "<name> won a(n)
+// <Tier> <Gem> Gem/Ascended <item> from Lucky Lad!") -- brittle to a wording
+// change there, but keeps this a client-only change with no migration.
+// Returns undefined (falls back to the emoji above) if parsing or icon
+// lookup fails, e.g. a gear name not yet in ITEM_ICON_OVERRIDES.
+function resolveAnnouncementIconSrc(kind: string, message: string): string | undefined {
+  switch (kind) {
+    case 'armor_socket': {
+      const match = message.match(/'s (.+) gained a socket!$/)
+      return match ? getGearIconSrc(match[1]) : undefined
+    }
+    case 'lucky_comet_scroll':
+      return COMET_SCROLL_ICON_SRC
+    case 'lucky_fallen_star_scroll':
+      return FALLEN_STAR_SCROLL_ICON_SRC
+    case 'lucky_fallen_star':
+      return FALLEN_STAR_ICON_SRC
+    case 'lucky_gem_tempered':
+    case 'lucky_gem_ascended': {
+      const tier: GemTier = kind === 'lucky_gem_tempered' ? 'tempered' : 'ascended'
+      const match = message.match(/won an? (?:Tempered|Ascended) (\w+) Gem/)
+      const gemId = match?.[1]?.toLowerCase() as GemTypeId | undefined
+      return gemId && GEM_IDS.includes(gemId) ? getGemIconSrc(gemId, tier) : undefined
+    }
+    case 'lucky_gear_radiant_bow':
+      return getGearIconSrc("Ranger's Bow")
+    case 'lucky_gear_radiant_coat':
+      return getGearIconSrc('Fawnhide Coat')
+    case 'lucky_gear_ascended_random': {
+      const match = message.match(/won an Ascended (.+) from Lucky Lad!$/)
+      return match ? getGearIconSrc(match[1]) : undefined
+    }
+    default:
+      return undefined
+  }
+}
+
+// imgClassName sizes the real icon (fixed h/w + object-contain); the emoji
+// fallback deliberately isn't forced into the same box — a fixed h/w would
+// clip an emoji glyph rather than scale it — so it just gets a shrink-0 to
+// match layout, sized by its surrounding text instead.
+function AnnouncementIcon({ kind, message, imgClassName }: { kind: string; message: string; imgClassName: string }) {
+  const iconSrc = resolveAnnouncementIconSrc(kind, message)
+  if (iconSrc) {
+    return <img src={iconSrc} alt="" className={imgClassName} />
+  }
+  return (
+    <span className="shrink-0" aria-hidden="true">
+      {ANNOUNCEMENT_ICONS[kind] ?? '📣'}
+    </span>
+  )
 }
 
 // The last-10-global-announcements dropdown (2026-08-11) — only reachable by
@@ -42,9 +104,7 @@ function AnnouncementHistoryDropdown() {
         <div className="max-h-64 space-y-1 overflow-y-auto">
           {entries.map((entry) => (
             <div key={entry.id} className="flex items-start gap-2 rounded-md px-1 py-1 text-xs text-slate-300">
-              <span className="shrink-0" aria-hidden="true">
-                {ANNOUNCEMENT_ICONS[entry.kind] ?? '📣'}
-              </span>
+              <AnnouncementIcon kind={entry.kind} message={entry.message} imgClassName="h-4 w-4 shrink-0 object-contain" />
               <span className="min-w-0 flex-1">{entry.message}</span>
               <span className="shrink-0 text-[10px] text-slate-600">{new Date(entry.createdAt).toLocaleDateString()}</span>
             </div>
@@ -116,9 +176,7 @@ export default function GlobalAnnouncementTicker() {
   return (
     <div className="relative min-w-0 max-w-full shrink sm:max-w-sm">
       <div className="flex items-center gap-2 rounded-lg border border-amber-600/50 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-200 backdrop-blur">
-        <span className="shrink-0" aria-hidden="true">
-          {ANNOUNCEMENT_ICONS[announcement.kind] ?? '📣'}
-        </span>
+        <AnnouncementIcon kind={announcement.kind} message={announcement.message} imgClassName="h-4 w-4 shrink-0 object-contain" />
         <span className="min-w-0 flex-1 truncate">{announcement.message}</span>
         {isManualReopen && (
           <button

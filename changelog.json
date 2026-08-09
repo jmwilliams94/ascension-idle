@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.77.6",
+    "date": "2026-08-09",
+    "changes": [
+      "Shrunk the Composition tile's +9 stone icon in the Forge hub",
+      "Global announcements now show the real icon of what was actually won (the specific gear that gained a socket, the specific gem, a Radiant Bow/Coat, a Fallen Star, a Scroll) instead of a generic emoji"
+    ]
+  },
+  {
     "version": "1.77.5",
     "date": "2026-08-09",
     "changes": [
