@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.75.3",
+    "date": "2026-08-13",
+    "changes": [
+      "Added a \"Claim All\" button to the Unclaimed Rewards popup's item list, which claims as many items as currently fit in your Inventory and leaves the rest for later",
+      "Fixed the existing currency \"Claim All\" button being able to claim more Comets/Fallen Stars than actually had Inventory room, in rare cases"
+    ]
+  },
+  {
     "version": "1.75.2",
     "date": "2026-08-12",
     "changes": [

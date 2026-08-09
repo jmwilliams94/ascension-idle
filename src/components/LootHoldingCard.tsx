@@ -50,9 +50,14 @@ import {
 //   2. 'gear' — once currency is cleared: every remaining gear entry
 //      (Normal and quality alike) shown as an individual tile. Tapping one
 //      opens the same 3-action popover — Claim / Store / Sell — regardless
-//      of tier. A "Sell All Normal" button also appears above the grid
-//      whenever at least one Normal-tier item is present, for fast bulk
-//      clearing without needing to tap each one.
+//      of tier. A "Claim All" button (2026-08-13) sits above the grid,
+//      always available; a "Sell All Normal" button also appears whenever
+//      at least one Normal-tier item is present, for fast bulk clearing
+//      without needing to tap each one.
+//
+// Both "Claim All" buttons (2026-08-13) only ever claim as many entries as
+// currently fit in Inventory, then stop — see claimEntriesUpToRoom's own
+// comment for why this has to claim sequentially rather than all at once.
 // "Store" (new, 2026-08-07) is the actual fix for the previously-reported
 // dead end: it inserts straight into account-wide Bank Storage
 // (store_loot_holding_to_bank for gear, the pre-existing bank_loot_holding
@@ -110,6 +115,11 @@ export default function LootHoldingCard() {
   const [error, setError] = useState<string | null>(null)
   const [popoverEntryId, setPopoverEntryId] = useState<string | null>(null)
   const [popoverAnchorRect, setPopoverAnchorRect] = useState<DOMRect | null>(null)
+  // Local guard for a whole Claim All batch (below) — the store's own `busy`
+  // flag toggles true/false around each individual claim() call, so between
+  // sequential awaits there's a real gap where it reads false again. Without
+  // this, a second click mid-batch could start an overlapping batch.
+  const [bulkBusy, setBulkBusy] = useState(false)
 
   if (entries.length === 0) {
     return null
@@ -135,12 +145,59 @@ export default function LootHoldingCard() {
     }
   }
 
+  // Claims entries one at a time (not Promise.all) so each claim's real
+  // effect on Inventory room is visible to the next iteration's check before
+  // it fires — claim() itself only pre-checks room synchronously against
+  // whatever's in the store *right now*, so firing every request at once
+  // would let them all pass that check simultaneously (before any of the
+  // earlier ones have actually landed and updated the store), letting the
+  // batch claim more items than actually fit. Stops the moment a claim
+  // reports the Inventory is full, leaving the rest in Loot Holding for
+  // later — "only claim what currently fits," not "claim everything or
+  // nothing."
+  const claimEntriesUpToRoom = async (candidates: LootHoldingEntry[]) => {
+    let claimedCount = 0
+    for (const entry of candidates) {
+      if (occupiedSlotCount(useInventoryStore.getState().items) >= INVENTORY_SLOT_CAP) {
+        break
+      }
+      const result = await claim(entry.id)
+      if (result.ok) {
+        claimedCount += 1
+      } else if (result.error === 'inventory_full') {
+        break
+      }
+      // Any other failure (stale/already-claimed entry) — skip it and keep
+      // going rather than aborting the whole batch.
+    }
+    return { claimedCount, totalCandidates: candidates.length }
+  }
+
   const handleClaimAllCurrency = async () => {
     setError(null)
-    const results = await Promise.all(currencyEntries.map((entry) => claim(entry.id)))
-    const failures = results.filter((result) => !result.ok).length
-    if (failures > 0) {
-      setError(`Couldn't claim ${failures} — try Store instead, or free up Inventory space.`)
+    setBulkBusy(true)
+    const { claimedCount, totalCandidates } = await claimEntriesUpToRoom(currencyEntries)
+    setBulkBusy(false)
+    if (claimedCount < totalCandidates) {
+      setError(
+        claimedCount === 0
+          ? "Inventory is full — try Store instead, or free up Inventory space."
+          : `Claimed ${claimedCount} of ${totalCandidates} — Inventory is now full. Try Store for the rest, or free up space.`,
+      )
+    }
+  }
+
+  const handleClaimAllGear = async () => {
+    setError(null)
+    setBulkBusy(true)
+    const { claimedCount, totalCandidates } = await claimEntriesUpToRoom(gearEntries)
+    setBulkBusy(false)
+    if (claimedCount < totalCandidates) {
+      setError(
+        claimedCount === 0
+          ? "Inventory is full — try Store or Sell instead, or free up Inventory space."
+          : `Claimed ${claimedCount} of ${totalCandidates} — Inventory is now full. Try Store or Sell for the rest, or free up space.`,
+      )
     }
   }
 
@@ -227,7 +284,7 @@ export default function LootHoldingCard() {
           <div className="flex gap-2">
             <button
               type="button"
-              disabled={busy || inventoryFull}
+              disabled={busy || bulkBusy || inventoryFull}
               title={inventoryFull ? 'Inventory is full' : undefined}
               onClick={() => void handleClaimAllCurrency()}
               className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed ${
@@ -236,11 +293,11 @@ export default function LootHoldingCard() {
                   : 'border-sky-500 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20 disabled:opacity-50'
               }`}
             >
-              Claim All
+              {bulkBusy ? 'Claiming…' : 'Claim All'}
             </button>
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || bulkBusy}
               onClick={() => void handleStoreAllCurrency()}
               className="flex-1 rounded-lg border border-emerald-500 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -253,10 +310,23 @@ export default function LootHoldingCard() {
       {stage === 'gear' && (
         <div className="space-y-3">
           <p className="text-[11px] text-slate-500">Tap an item below to Claim, Store, or Sell it.</p>
+          <button
+            type="button"
+            disabled={busy || bulkBusy || inventoryFull}
+            title={inventoryFull ? 'Inventory is full' : 'Claims as many items below as currently fit in your Inventory'}
+            onClick={() => void handleClaimAllGear()}
+            className={`w-full rounded-lg border px-3 py-2 text-sm font-medium disabled:cursor-not-allowed ${
+              inventoryFull
+                ? 'border-red-600 bg-red-500/10 text-red-400 disabled:opacity-70'
+                : 'border-sky-500 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20 disabled:opacity-50'
+            }`}
+          >
+            {bulkBusy ? 'Claiming…' : 'Claim All'}
+          </button>
           {normalGearEntries.length > 0 && (
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || bulkBusy}
               onClick={() => void handleSellAllNormal()}
               className="w-full rounded-lg border border-amber-600 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
