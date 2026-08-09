@@ -16,6 +16,9 @@ interface EquipmentSlotProps {
   locked?: boolean
   filled?: boolean
   qualityColor?: string
+  // Composition level ("+N") — mirrors InventorySlot's own top-right badge,
+  // see its comment for why equipped gear needs its own copy.
+  compositionLevel?: number
   selected?: boolean
   onClick?: () => void
   // Universal Diablo/PoE-style hover tooltip (see ItemTooltip.tsx) — only Weapon
@@ -37,6 +40,7 @@ export default function EquipmentSlot({
   locked,
   filled,
   qualityColor,
+  compositionLevel,
   selected,
   onClick,
   tooltip,
@@ -80,6 +84,9 @@ export default function EquipmentSlot({
     >
       {emberCount > 0 && <TierEmberEffect color={qualityColor as string} count={emberCount} seed={seedFromId(label)} />}
       {iconSrc ? <img src={iconSrc} alt="" className="relative z-10 h-4/5 w-4/5 object-contain" /> : <span className="relative z-10">{icon}</span>}
+      {filled && Boolean(compositionLevel) && (
+        <span className="absolute right-1 top-0.5 z-10 text-[9px] font-semibold text-amber-300">+{compositionLevel}</span>
+      )}
     </button>
   )
 

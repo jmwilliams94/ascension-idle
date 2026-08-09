@@ -195,6 +195,7 @@ export default function BankGrid({ characterId }: BankGridProps) {
                     qualityColor={getQualityColor(item.quality_tier)}
                     icon={icon}
                     iconSrc={iconSrc}
+                    compositionLevel={item.composition_level}
                     label={template?.name ?? 'Unknown item'}
                     tooltip={buildGearTooltip(item, template)}
                     selected={selectedBankedSlot?.kind === 'item' && selectedBankedSlot.id === item.id}

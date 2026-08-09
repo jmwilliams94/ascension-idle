@@ -278,6 +278,19 @@ function rollDroppedQualityTier(qualityBonusMultiplier = 1): string {
   return 'normal'
 }
 
+// Composition +1 on drop (confirmed with the user, 2026-08-12) — an
+// independent roll, layered on top of (not instead of) the quality-tier roll
+// above, so a drop can land as e.g. Infused +1 at once. Deliberately reuses
+// the Infused entry from QUALITY_DROP_CHANCES rather than its own hardcoded
+// fraction, so "same rate as Infused" can't drift out of sync if that table
+// is ever recalibrated again. Same qualityBonusMultiplier as the quality
+// roll (accountDropMultiplier at the call site).
+const COMPOSITION_PLUS_ONE_DROP_CHANCE = QUALITY_DROP_CHANCES.find(([tier]) => tier === 'infused')![1]
+
+function rollDroppedCompositionLevel(qualityBonusMultiplier = 1): number {
+  return Math.random() < COMPOSITION_PLUS_ONE_DROP_CHANCE * qualityBonusMultiplier ? 1 : 0
+}
+
 // Achievements & Pets (confirmed shape, see CLAUDE.md — the tracking
 // mechanism is real, the reward VALUES below are a deliberate uniform
 // placeholder). Mirrors src/game/achievements/achievementData.ts — keep in
@@ -846,7 +859,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // Loot Holding is now exclusively for the offline/idle catch-up window
   // (surfaced in OfflineProgressModal, not a persistent Warehouse card).
   let inventoryFull = false
-  const droppedTemplates: { id: string; required_level: number; qualityTier: string }[] = []
+  const droppedTemplates: { id: string; required_level: number; qualityTier: string; compositionLevel: number }[] = []
 
   // Excludes equipped and Bank-Storage gear from the room-fit baseline below
   // (fixed 2026-08-05, reported by the user via unbundle_currency_scroll's
@@ -1078,10 +1091,15 @@ async function handleResolveCombat(req: Request): Promise<Response> {
         if (Math.random() < DROP_CHANCE) {
           const dropped = pickDropTemplate()
           if (dropped) {
-            // Quality is rolled once, at drop time, and carried with the
-            // template through to whichever table (item_instances or
-            // loot_holding) ends up actually receiving it below.
-            const withQuality = { ...dropped, qualityTier: rollDroppedQualityTier(accountDropMultiplier) }
+            // Quality (and now composition +1, 2026-08-12) is rolled once, at
+            // drop time, and carried with the template through to whichever
+            // table (item_instances or loot_holding) ends up actually
+            // receiving it below.
+            const withQuality = {
+              ...dropped,
+              qualityTier: rollDroppedQualityTier(accountDropMultiplier),
+              compositionLevel: rollDroppedCompositionLevel(accountDropMultiplier),
+            }
             if (mode === 'live') {
               if (projectedOccupied < INVENTORY_SLOT_CAP) {
                 droppedTemplates.push(withQuality)
@@ -1319,7 +1337,13 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       // honestly reflects which tier it actually is.
       const { data: inserted } = await db
         .from('item_instances')
-        .insert({ template_id: template.id, owner_id: characterId, level: template.required_level, quality_tier: template.qualityTier })
+        .insert({
+          template_id: template.id,
+          owner_id: characterId,
+          level: template.required_level,
+          quality_tier: template.qualityTier,
+          composition_level: template.compositionLevel,
+        })
         .select('*')
         .single()
       occupied += 1
@@ -1333,7 +1357,12 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       // they're away; everything gets reviewed via Loot Holding on return.
       await db
         .from('loot_holding')
-        .insert({ character_id: characterId, template_id: template.id, quality_tier: template.qualityTier })
+        .insert({
+          character_id: characterId,
+          template_id: template.id,
+          quality_tier: template.qualityTier,
+          composition_level: template.compositionLevel,
+        })
       heldCount += 1
       itemsHeld.push({ template_id: template.id })
     }

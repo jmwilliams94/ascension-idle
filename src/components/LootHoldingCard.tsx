@@ -65,12 +65,12 @@ import {
 
 // Synthetic ItemInstance for buildGearTooltip/previewSellPrice, mirroring
 // ShopPanel.tsx's own previewInstance — a Loot Holding entry isn't a real
-// item_instances row yet (it only stores template_id/quality_tier, not
-// level/composition/sockets — those get set fresh at claim/store time, see
-// CLAUDE.md's Level Upgrade note on claim_loot_holding), so this fills in
-// the same "Normal-equivalent, no composition/sockets" defaults Shop's own
-// preview already established for a not-yet-owned item, just using the
-// entry's own real quality_tier instead of always 'normal'.
+// item_instances row yet (it only stores template_id/quality_tier/
+// composition_level, not level/sockets — those get set fresh at claim/store
+// time, see CLAUDE.md's Level Upgrade note on claim_loot_holding), so this
+// fills in the same "no sockets" defaults Shop's own preview already
+// established for a not-yet-owned item, just using the entry's own real
+// quality_tier/composition_level instead of always Normal/+0.
 function previewInstanceForEntry(entry: LootHoldingEntry, template: ItemTemplate): ItemInstance {
   return {
     id: entry.id,
@@ -78,7 +78,7 @@ function previewInstanceForEntry(entry: LootHoldingEntry, template: ItemTemplate
     owner_id: '',
     quality_tier: entry.quality_tier ?? 'normal',
     level: template.required_level,
-    composition_level: 0,
+    composition_level: entry.composition_level,
     composition_points: 0,
     sockets: [],
     enchant: null,
@@ -280,6 +280,7 @@ export default function LootHoldingCard() {
                     sizeClassName={SLOT_SIZE_CLASS}
                     icon={icon}
                     iconSrc={iconSrc}
+                    compositionLevel={entry.composition_level}
                     label={label}
                     selected={isPopoverOpenForThisEntry}
                     tooltip={

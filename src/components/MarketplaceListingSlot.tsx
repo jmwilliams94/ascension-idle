@@ -74,6 +74,7 @@ export default function MarketplaceListingSlot({ target, onRemove }: Marketplace
           qualityColor={item ? getQualityColor(item.quality_tier) : currencyVisual?.qualityColor}
           icon={item ? icon : currencyVisual?.icon}
           iconSrc={item ? iconSrc : currencyVisual?.iconSrc}
+          compositionLevel={item?.composition_level}
           label={label}
           tooltip={item ? buildGearTooltip(item, template ?? undefined) : undefined}
           draggable={drag.draggable}

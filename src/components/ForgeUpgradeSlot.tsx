@@ -49,6 +49,7 @@ export default function ForgeUpgradeSlot({ item, template, onRemove }: ForgeUpgr
           qualityColor={item ? getQualityColor(item.quality_tier) : undefined}
           icon={item ? icon : undefined}
           iconSrc={item ? iconSrc : undefined}
+          compositionLevel={item?.composition_level}
           label={item ? (template ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level) : 'Unknown item') : undefined}
           tooltip={item ? buildGearTooltip(item, template ?? undefined) : undefined}
           draggable={drag.draggable}

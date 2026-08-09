@@ -146,6 +146,7 @@ function ListingTile({ listing, templates }: { listing: MarketplaceListing; temp
       icon={resolved ? icon : undefined}
       iconSrc={resolved ? iconSrc : undefined}
       qualityColor={resolved ? getQualityColor(resolved.quality_tier) : undefined}
+      compositionLevel={resolved?.composition_level}
       label={label}
       tooltip={resolved ? buildGearTooltip(resolved, template) : undefined}
     />
@@ -609,6 +610,7 @@ function MailTab({ characterId, templates }: { characterId: string; templates: I
                 icon={entry.item ? getItemIcon(template?.slot_type) : undefined}
                 iconSrc={entry.item ? getGearIconSrc(template?.name) : undefined}
                 qualityColor={entry.item ? getQualityColor(entry.item.quality_tier) : undefined}
+                compositionLevel={entry.item?.composition_level}
                 label={label}
                 tooltip={entry.item ? buildGearTooltip(entry.item, template) : undefined}
                 selected={selectedId === entry.id}

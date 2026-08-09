@@ -60,6 +60,10 @@ interface InventorySlotProps {
   tooltip?: ItemTooltipData
   // Small corner readout, e.g. an arrow stack's "3/50" count — gear doesn't use this.
   badge?: string
+  // Composition level ("+N") — shown top-right so it never collides with the
+  // existing bottom-right `badge` (e.g. ForgeMaterialSlot's composition-point
+  // readout on the same tile). Omitted entirely at 0 (no "+0" clutter).
+  compositionLevel?: number
   selected?: boolean
   onClick?: () => void
   // Right-click shortcut (e.g. arrow stacks equip directly on right-click instead
@@ -106,6 +110,7 @@ export default function InventorySlot({
   label,
   tooltip,
   badge,
+  compositionLevel,
   selected,
   onClick,
   onContextMenu,
@@ -176,6 +181,9 @@ export default function InventorySlot({
     >
       {emberCount > 0 && <TierEmberEffect color={qualityColor as string} count={emberCount} seed={seedFromId(slotId)} />}
       {iconSrc ? <img src={iconSrc} alt="" className={`relative z-10 object-contain ${iconSizeClassName}`} /> : <span className="relative z-10">{icon}</span>}
+      {Boolean(compositionLevel) && (
+        <span className="absolute right-1 top-0.5 z-10 text-[9px] font-semibold text-amber-300">+{compositionLevel}</span>
+      )}
       {badge && <span className="absolute bottom-0.5 right-1 z-10 text-[9px] font-semibold text-slate-200">{badge}</span>}
     </button>
   )

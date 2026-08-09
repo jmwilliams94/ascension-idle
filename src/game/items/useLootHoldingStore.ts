@@ -22,6 +22,7 @@ export interface LootHoldingEntry {
   id: string
   template_id: string | null
   quality_tier: string | null
+  composition_level: number
   currency_type: 'comet' | 'fallen_star' | null
   created_at: string
 }
@@ -105,7 +106,7 @@ export const useLootHoldingStore = create<LootHoldingState>((set) => ({
   loadLootHolding: async (characterId) => {
     const { data, error } = await supabase
       .from('loot_holding')
-      .select('id, template_id, quality_tier, currency_type, created_at')
+      .select('id, template_id, quality_tier, composition_level, currency_type, created_at')
       .eq('character_id', characterId)
       .order('created_at', { ascending: true })
 

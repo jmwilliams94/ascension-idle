@@ -123,6 +123,7 @@ export default function EquipmentPanel() {
                 iconSrc={equipped ? getGearIconSrc(equipped.template.name) : undefined}
                 filled={Boolean(equipped)}
                 qualityColor={equipped ? getQualityColor(glowQualityTier ?? 'normal') : undefined}
+                compositionLevel={equipped?.item.composition_level}
                 selected={selectedSlot === slot}
                 onClick={equipped ? () => setSelectedSlot((current) => (current === slot ? null : slot)) : undefined}
                 tooltip={equipped ? buildGearTooltip(equipped.item, equipped.template) : undefined}

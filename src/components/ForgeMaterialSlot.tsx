@@ -114,6 +114,7 @@ export default function ForgeMaterialSlot({ entries, templates, onRemoveEntry }:
                 iconSrc={getGearIconSrc(template?.name)}
                 qualityColor={getQualityColor(entry.item.quality_tier)}
                 badge={`${compositionPointValue(entry.item.composition_level)}`}
+                compositionLevel={entry.item.composition_level}
                 label={template ? formatItemDisplayName(template.name, entry.item.quality_tier, entry.item.composition_level) : 'Unknown item'}
                 tooltip={buildGearTooltip(entry.item, template)}
                 onClick={() => onRemoveEntry(entry.id)}

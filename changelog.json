@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.75.1",
+    "date": "2026-08-12",
+    "changes": [
+      "Composition level now shows as a small \"+N\" badge in the corner of gear icons, everywhere gear is shown",
+      "Gear drops from enemies now have a chance to already come with +1 Composition, at the same odds as an Infused-quality drop"
+    ]
+  },
+  {
     "version": "1.75.0",
     "date": "2026-08-09",
     "changes": [

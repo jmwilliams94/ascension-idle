@@ -1237,6 +1237,7 @@ export default function InventoryPanel({
               icon,
               iconSrc,
               label,
+              compositionLevel: item.composition_level,
               // Hover/long-press peek works normally (2026-08-04 fix: "plain
               // mouseover should still show the normal tooltip") except while
               // this exact tile's own popover is open, where it would just
