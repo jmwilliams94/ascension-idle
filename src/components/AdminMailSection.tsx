@@ -117,8 +117,10 @@ export default function AdminMailSection() {
     setRewards((current) => current.filter((_, candidateIndex) => candidateIndex !== index))
   }
 
-  const canSend =
-    subject.trim().length > 0 && message.trim().length > 0 && rewards.length > 0 && (sendToAll || targetName.trim().length > 0)
+  // Rewards are optional (2026-08-13, requested by the user) — a Subject +
+  // Message with no rewards sends a plain message-only mail (see
+  // 20260813120000_mail_optional_rewards.sql).
+  const canSend = subject.trim().length > 0 && message.trim().length > 0 && (sendToAll || targetName.trim().length > 0)
 
   const handleSend = async () => {
     if (sendToAll && !confirmingAll) {

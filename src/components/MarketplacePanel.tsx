@@ -678,6 +678,13 @@ function MailDetailModal({
 }) {
   const canClaim = isGroupUnclaimed(group)
   const message = group.entries[0].message
+  // Message-only mail (2026-08-13, requested by the user) — a row with
+  // neither item_id nor currency_type set (see mail_optional_rewards.sql)
+  // has nothing to show as a tile; filtered out rather than rendering an
+  // empty InventorySlot. A batch is either all-reward or all-message-only
+  // (admin_send_mail never mixes the two in one send), so this is really
+  // just an emptiness check, but filtering is defensive either way.
+  const rewardEntries = group.entries.filter((entry) => entry.item_id !== null || entry.currency_type !== null)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4" onClick={onClose}>
@@ -697,11 +704,13 @@ function MailDetailModal({
 
         {message && <p className="whitespace-pre-wrap text-xs text-slate-400">{message}</p>}
 
-        <div className="flex flex-wrap justify-center gap-1.5">
-          {group.entries.map((entry) => (
-            <MailEntryTile key={entry.id} entry={entry} templates={templates} />
-          ))}
-        </div>
+        {rewardEntries.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-1.5">
+            {rewardEntries.map((entry) => (
+              <MailEntryTile key={entry.id} entry={entry} templates={templates} />
+            ))}
+          </div>
+        )}
 
         {canClaim ? (
           <button
@@ -710,10 +719,10 @@ function MailDetailModal({
             onClick={onClaim}
             className="w-full rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {busy ? 'Claiming…' : 'Claim'}
+            {busy ? 'Claiming…' : rewardEntries.length > 0 ? 'Claim' : 'Mark as Read'}
           </button>
         ) : (
-          <p className="text-center text-[11px] text-slate-600">Claimed</p>
+          <p className="text-center text-[11px] text-slate-600">{rewardEntries.length > 0 ? 'Claimed' : 'Read'}</p>
         )}
       </div>
     </div>

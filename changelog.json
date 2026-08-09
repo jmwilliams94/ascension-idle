@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.82.2",
+    "date": "2026-08-13",
+    "changes": [
+      "Mail can now be sent as just a subject and message, with no items attached"
+    ]
+  },
+  {
     "version": "1.82.1",
     "date": "2026-08-13",
     "changes": [
