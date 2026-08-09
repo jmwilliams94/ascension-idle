@@ -406,16 +406,21 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Liberty Boots': `${import.meta.env.BASE_URL}item-icons/liberty-boots.png`,
   'Frostbite Boots': `${import.meta.env.BASE_URL}item-icons/frostbite-boots.png`,
   "Hunter's Quiver": `${import.meta.env.BASE_URL}item-icons/quiver.png`,
-  // Money Bag classes 1-5 (2026-08-13) — escalating sack art (worn/patched
-  // burlap through a coin-overflowing leather pouch), matching the Class
-  // 1-10 gold ramp (see forgeCosts.ts's MONEY_BAG_GOLD_BY_CLASS). Classes
-  // 6-10 still fall back to the plain 💰 emoji (getItemIcon('money-bag'))
-  // until art for those lands too.
+  // Money Bag classes 1-10 (2026-08-13) — escalating sack art from worn/
+  // patched burlap up through a bejeweled velvet pouch and finally a
+  // crowned black-velvet purse, matching the Class 1-10 gold ramp (see
+  // forgeCosts.ts's MONEY_BAG_GOLD_BY_CLASS). Full set now, no emoji
+  // fallback needed for any class.
   'Class 1 Money Bag': `${import.meta.env.BASE_URL}item-icons/money-bag-1.png`,
   'Class 2 Money Bag': `${import.meta.env.BASE_URL}item-icons/money-bag-2.png`,
   'Class 3 Money Bag': `${import.meta.env.BASE_URL}item-icons/money-bag-3.png`,
   'Class 4 Money Bag': `${import.meta.env.BASE_URL}item-icons/money-bag-4.png`,
   'Class 5 Money Bag': `${import.meta.env.BASE_URL}item-icons/money-bag-5.png`,
+  'Class 6 Money Bag': `${import.meta.env.BASE_URL}item-icons/money-bag-6.png`,
+  'Class 7 Money Bag': `${import.meta.env.BASE_URL}item-icons/money-bag-7.png`,
+  'Class 8 Money Bag': `${import.meta.env.BASE_URL}item-icons/money-bag-8.png`,
+  'Class 9 Money Bag': `${import.meta.env.BASE_URL}item-icons/money-bag-9.png`,
+  'Class 10 Money Bag': `${import.meta.env.BASE_URL}item-icons/money-bag-10.png`,
 }
 
 export function getGearIconSrc(templateName: string | undefined): string | undefined {
