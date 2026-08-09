@@ -153,7 +153,21 @@ function ListingTile({ listing, templates }: { listing: MarketplaceListing; temp
   )
 }
 
-function ListingRow({ listing, templates, action }: { listing: MarketplaceListing; templates: ItemTemplate[]; action: ReactNode }) {
+// showSeller (Browse tab only — My Listings' rows are always the viewer's
+// own character, so naming them again would be redundant) — falls back to
+// "Unknown seller" only for a listing created before the seller-name
+// snapshot shipped (2026-08-13), never for a genuinely blank name.
+function ListingRow({
+  listing,
+  templates,
+  action,
+  showSeller = false,
+}: {
+  listing: MarketplaceListing
+  templates: ItemTemplate[]
+  action: ReactNode
+  showSeller?: boolean
+}) {
   const label = listingLabel(listing, templates)
 
   return (
@@ -161,6 +175,7 @@ function ListingRow({ listing, templates, action }: { listing: MarketplaceListin
       <ListingTile listing={listing} templates={templates} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-slate-200">{label}</p>
+        {showSeller && <p className="text-[11px] text-sky-400/80">Sold by {listing.seller_character_name ?? 'Unknown seller'}</p>}
         <p className="text-xs text-slate-500">
           {listing.price_amount.toLocaleString()} {currencyLabel(listing.price_currency)}
         </p>
@@ -225,6 +240,7 @@ function BrowseTab({ characterId, templates }: { characterId: string; templates:
               key={listing.id}
               listing={listing}
               templates={templates}
+              showSeller
               action={
                 listing.seller_character_id === characterId ? (
                   <span className="rounded-lg border border-slate-700 px-3 py-1 text-xs text-slate-500">Your listing</span>
@@ -302,7 +318,10 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
   const priceValid = Number.isFinite(parsedPrice) && parsedPrice > 0
   const fee = priceValid ? previewListingFee(parsedPrice) : 0
   const balance = priceCurrency === 'gold' ? gold : ascensionPoints
-  const canAffordFee = fee > 0 && balance >= fee
+  // A 0 fee (price < 20, see previewListingFee) is always affordable — it
+  // used to be gated behind `fee > 0`, which incorrectly blocked the List
+  // button entirely for a free listing.
+  const canAffordFee = balance >= fee
 
   const handleDropTarget = (dragId: string) => {
     if (isCometDragId(dragId)) {
@@ -413,8 +432,15 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
 
             {priceValid && (
               <p className={`text-[11px] ${canAffordFee ? 'text-slate-500' : 'text-amber-400'}`}>
-                Listing fee: {fee.toLocaleString()} {currencyLabel(priceCurrency)} (forfeited whether or not it sells) — you have{' '}
-                {balance.toLocaleString()}
+                Listing fee:{' '}
+                {fee > 0 ? (
+                  <>
+                    {fee.toLocaleString()} {currencyLabel(priceCurrency)} (forfeited whether or not it sells) — you have{' '}
+                    {balance.toLocaleString()}
+                  </>
+                ) : (
+                  <span className="text-emerald-400">Free</span>
+                )}
               </p>
             )}
 

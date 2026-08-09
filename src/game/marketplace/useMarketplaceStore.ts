@@ -57,6 +57,16 @@ export interface MarketplaceListing {
   item_quality_tier: string | null
   item_level: number | null
   item_composition_level: number | null
+  // Snapshot of the seller's character name at the moment of listing
+  // (2026-08-13, requested by the user — "display which character posted
+  // the item up for sale"). Same reasoning as the item_* snapshot fields
+  // above: characters' own RLS is account-scoped only, so a Browse-tab
+  // viewer can't read another account's character name directly — and an
+  // active listing can't be renamed anyway, so a snapshot is accurate for
+  // the listing's whole lifetime. Null for any listing created before this
+  // migration shipped (no retroactive backfill, same disclosed limitation
+  // as the item snapshot).
+  seller_character_name: string | null
 }
 
 interface CreateListingResult {
