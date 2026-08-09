@@ -1,10 +1,11 @@
 import type { ItemTooltipData } from '../game/items/itemTooltip'
+import { ENCHANT_HP_COLOR } from '../game/items/gemCatalog'
 
 // Universal Diablo/PoE-style hover tooltip — dark card, quality-colored title,
 // secondary info lines, then a visually distinct stats block. Used everywhere an
 // item/weapon/stone/arrow tile is shown (see InventorySlot's `tooltip` prop and
 // EquipmentSlot) so hovering any of them looks and reads the same way.
-export default function ItemTooltip({ title, titleColor, icon, iconSrc, iconColor, lines, stats, bonusStats }: ItemTooltipData) {
+export default function ItemTooltip({ title, titleColor, icon, iconSrc, iconColor, lines, stats, bonusStats, enchantLine }: ItemTooltipData) {
   const hasIcon = Boolean(icon || iconSrc)
 
   const body = (
@@ -35,6 +36,11 @@ export default function ItemTooltip({ title, titleColor, icon, iconSrc, iconColo
               {stat}
             </p>
           ))}
+          {enchantLine && (
+            <p className="text-[11px] font-medium" style={{ color: ENCHANT_HP_COLOR }}>
+              {enchantLine}
+            </p>
+          )}
         </div>
       )}
     </>

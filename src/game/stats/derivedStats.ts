@@ -66,12 +66,17 @@ export interface EquipmentBonus {
   dodge?: number
   dexterity?: number
   compositionAttackBonus?: number
+  // Enchantress HP bonus (see gemCatalog.ts's ENCHANT_HP_RANGE_BY_TIER,
+  // item_instances.enchant) — summed flat across every equipped item, added
+  // straight onto hp below same as the attribute-derived base, not scaled by
+  // anything (no account-wide multiplier applies to it, unlike attack).
+  enchantHpBonus?: number
 }
 
 export function computeDerivedStats(attributes: Attributes, equipmentBonus: EquipmentBonus = {}): DerivedStats {
   const { strength, agility, vitality, spirit } = attributes
 
-  const hp = BASE_HP + vitality * 24 + strength * 3 + agility * 3 + spirit * 3
+  const hp = BASE_HP + vitality * 24 + strength * 3 + agility * 3 + spirit * 3 + (equipmentBonus.enchantHpBonus ?? 0)
   const mp = BASE_MP + spirit * 5
   const physicalAttack = strength * PHYSICAL_ATTACK_PER_STRENGTH + (equipmentBonus.physicalAttack ?? 0)
   const magicAttack = spirit * MAGIC_ATTACK_PER_SPIRIT + (equipmentBonus.magicAttack ?? 0)

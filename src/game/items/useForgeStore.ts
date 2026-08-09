@@ -5,6 +5,7 @@ import { useCompositionStore, type CompositionStones } from './useCompositionSto
 import { useGemStore } from './useGemStore'
 import type { GemCounts } from './gemCatalog'
 import { useInventoryStore, type ItemInstance } from './useInventoryStore'
+import type { GemTier, GemTypeId } from './gemCatalog'
 
 // Shape returned by the quality_upgrade/level_upgrade Postgres functions (see
 // migration 20260727050000). Both currency deduction and the item write happen
@@ -135,6 +136,19 @@ interface CompositionFeedResult {
   stones?: CompositionStones
 }
 
+// Shape returned by enchant_item_hp (see migration
+// 20260813000000_enchantress_hp_enchant.sql) — the gem is consumed
+// regardless of outcome; `applied` tells the caller whether the roll beat the
+// item's existing enchant_hp (only a higher roll ever overwrites it).
+interface EnchantHpResult {
+  ok: boolean
+  error?: 'invalid_gem' | 'invalid_tier' | 'item_not_found' | 'not_owner' | 'not_enough_gems'
+  rolled?: number
+  applied?: boolean
+  enchant_hp?: number
+  gems?: GemCounts
+}
+
 interface ForgeState {
   busy: boolean
   qualityUpgrade: (itemId: string) => Promise<QualityUpgradeResult>
@@ -156,6 +170,11 @@ interface ForgeState {
   // Sockets tab (2026-08-10) — fills/overwrites socketIndex with one unit of
   // the given gem+tier, spent from the character's own gems.
   socketGem: (itemId: string, socketIndex: number, gemId: string, gemTier: string) => Promise<SocketGemResult>
+  // Enchantress tab (2026-08-13) — consumes one gem of the given type+tier,
+  // rolling a flat HP bonus for the item within that tier's range (see
+  // gemCatalog.ts's ENCHANT_HP_RANGE_BY_TIER). Only overwrites the item's
+  // existing enchant if the new roll is higher; the gem is spent either way.
+  enchantItemHp: (itemId: string, gemId: GemTypeId, gemTier: GemTier) => Promise<EnchantHpResult>
 }
 
 export const useForgeStore = create<ForgeState>((set) => ({
@@ -350,6 +369,30 @@ export const useForgeStore = create<ForgeState>((set) => ({
 
     if (result.ok && result.sockets) {
       useInventoryStore.getState().patchItem(itemId, { sockets: result.sockets })
+    }
+    if (result.ok && result.gems) {
+      useGemStore.getState().setGems(result.gems)
+    }
+
+    return result
+  },
+
+  enchantItemHp: async (itemId, gemId, gemTier) => {
+    set({ busy: true })
+
+    const { data, error } = await supabase.rpc('enchant_item_hp', { item_id: itemId, gem_id: gemId, gem_tier: gemTier })
+
+    set({ busy: false })
+
+    if (error) {
+      console.error('Enchant item HP call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as EnchantHpResult
+
+    if (result.ok && typeof result.enchant_hp === 'number') {
+      useInventoryStore.getState().patchItem(itemId, { enchant: { hp: result.enchant_hp } })
     }
     if (result.ok && result.gems) {
       useGemStore.getState().setGems(result.gems)

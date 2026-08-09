@@ -14,18 +14,21 @@ import { useMarketplaceStore } from '../marketplace/useMarketplaceStore'
 import { useMailStore } from '../marketplace/useMailStore'
 import type { GemCounts, GemTier, GemTypeId } from './gemTypes'
 
-// Mirrors the item_instances table. enchant is still unused/inert — sockets
-// is now real (2026-08-02, see unlock_weapon_socket/quality_upgrade/
-// level_upgrade in supabase/migrations/20260802010000_add_gear_sockets.sql
-// and CLAUDE.md's Sockets section): an unlocked-but-empty socket is a plain
-// jsonb `null` array element (one socket = [null], two = [null, null]). A
-// filled socket (2026-08-10, socket_gem's SQL) is a plain string in
-// gemStorageKey format ("<gemId>_<tier>", e.g. "drake_tempered") — never
-// removed, only ever overwritten with a different gem string.
-// quality_tier/level/composition_level/composition_points/sockets are only
-// ever changed server-side via the quality_upgrade/level_upgrade/
-// composition_feed/unlock_weapon_socket Postgres functions (see
-// useForgeStore) — never write them via a normal update(). owner_id
+// Mirrors the item_instances table. sockets is real (2026-08-02, see
+// unlock_weapon_socket/quality_upgrade/level_upgrade in supabase/migrations/
+// 20260802010000_add_gear_sockets.sql and CLAUDE.md's Sockets section): an
+// unlocked-but-empty socket is a plain jsonb `null` array element (one socket
+// = [null], two = [null, null]). A filled socket (2026-08-10, socket_gem's
+// SQL) is a plain string in gemStorageKey format ("<gemId>_<tier>", e.g.
+// "drake_tempered") — never removed, only ever overwritten with a different
+// gem string. enchant (2026-08-13, Enchantress — see enchant_item_hp's SQL)
+// is `{ hp: number } | null`, a flat HP bonus rolled from a consumed gem —
+// one enchant slot per item, only ever overwritten with a *higher* value,
+// never removed.
+// quality_tier/level/composition_level/composition_points/sockets/enchant are
+// only ever changed server-side via the quality_upgrade/level_upgrade/
+// composition_feed/unlock_weapon_socket/enchant_item_hp Postgres functions
+// (see useForgeStore) — never write them via a normal update(). owner_id
 // references characters.id (a specific character), not the account.
 export interface ItemInstance {
   id: string
@@ -36,7 +39,7 @@ export interface ItemInstance {
   composition_level: number
   composition_points: number
   sockets: (null | string)[]
-  enchant: unknown | null
+  enchant: { hp?: number } | null
   created_at: string
   // Bank Storage (confirmed with the user, 2026-08-03, replaces the earlier
   // fungible warehouse_items token model for gear) — a genuinely additive
@@ -174,7 +177,7 @@ interface InventoryState {
   patchItem: (
     itemId: string,
     patch: Partial<
-      Pick<ItemInstance, 'quality_tier' | 'level' | 'composition_level' | 'composition_points' | 'template_id' | 'sockets'>
+      Pick<ItemInstance, 'quality_tier' | 'level' | 'composition_level' | 'composition_points' | 'template_id' | 'sockets' | 'enchant'>
     >,
   ) => void
   // Resolves a pendingFullDrop: pass an existing gear item or potion stack to

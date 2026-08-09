@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { DragDropProvider } from './dragDrop'
+import ForgePreviewSlot from './ForgePreviewSlot'
+import ForgeTwoColumnLayout from './ForgeTwoColumnLayout'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import InventoryPanel from './InventoryPanel'
-import InventorySlot, { SLOT_LABEL_HEIGHT_CLASS, SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
+import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import {
   buildGearTooltip,
-  formatItemDisplayName,
   getGearIconSrc,
   getItemIcon,
   getQualityColor,
@@ -69,7 +70,11 @@ function describeFailure(error?: string): string {
 // sometimes level cheap Shop-bought gear purely to farm the armor
 // socket-unlock roll or to resell it, never intending to equip it), but a
 // guaranteed, premium result is assumed to be for actual use.
-export default function MasterForgePanel() {
+interface MasterForgePanelProps {
+  onBack: () => void
+}
+
+export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
   const items = useInventoryStore((state) => state.items)
   const templates = useItemTemplatesStore((state) => state.templates)
   const equippedIds = useEquipmentStore((state) => state.equippedIds)
@@ -178,63 +183,42 @@ export default function MasterForgePanel() {
   )
 
   return (
-    <div className="flex flex-col items-center gap-6">
-      <p className="max-w-sm text-center text-[11px] text-slate-500">
-        A Forge master will guarantee a Quality or Level Upgrade — for a price well above the usual materials.
-      </p>
+    <DragDropProvider>
+      <ForgeTwoColumnLayout
+        title="Master Forge"
+        onBack={onBack}
+        inventory={<InventoryPanel columns={5} reservedItemIds={selectedItemId ? [selectedItemId] : []} onTileDrop={handleTileDrop} />}
+      >
+        <p className="max-w-sm text-center text-[11px] text-slate-500">
+          A Forge master will guarantee a Quality or Level Upgrade — for a price well above the usual materials.
+        </p>
 
-      <div className="flex gap-3">
-        <button
-          type="button"
-          onClick={() => handlePickType('quality')}
-          className={`rounded-lg border px-4 py-2 text-sm font-medium ${
-            upgradeType === 'quality' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-          }`}
-        >
-          Quality
-        </button>
-        <button
-          type="button"
-          onClick={() => handlePickType('level')}
-          className={`rounded-lg border px-4 py-2 text-sm font-medium ${
-            upgradeType === 'level' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-          }`}
-        >
-          Level
-        </button>
-      </div>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => handlePickType('quality')}
+            className={`rounded-lg border px-4 py-2 text-sm font-medium ${
+              upgradeType === 'quality' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
+            }`}
+          >
+            Quality
+          </button>
+          <button
+            type="button"
+            onClick={() => handlePickType('level')}
+            className={`rounded-lg border px-4 py-2 text-sm font-medium ${
+              upgradeType === 'level' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
+            }`}
+          >
+            Level
+          </button>
+        </div>
 
-      {upgradeType && (
-        <DragDropProvider>
-          <div className="flex flex-col items-center gap-4">
+        {upgradeType && (
+          <>
             <div className="flex items-start justify-center gap-6">
               <ForgeUpgradeSlot item={selectedItem} template={selectedTemplate} onRemove={handleRemove} />
-
-              <div className={`flex flex-col items-center gap-2 ${SLOT_WIDTH_CLASS}`}>
-                <div className={`flex ${SLOT_LABEL_HEIGHT_CLASS} items-center justify-center`}>
-                  <p className="text-center text-[10px] uppercase leading-tight tracking-wide text-slate-500">Preview</p>
-                </div>
-                <div className={SLOT_SIZE_CLASS}>
-                  {previewItem ? (
-                    <InventorySlot
-                      slotId="master-forge-preview"
-                      filled
-                      sizeClassName={SLOT_SIZE_CLASS}
-                      icon={getItemIcon(previewTemplate?.slot_type)}
-                      iconSrc={getGearIconSrc(previewTemplate?.name)}
-                      qualityColor={getQualityColor(previewItem.quality_tier)}
-                      label={
-                        previewTemplate
-                          ? formatItemDisplayName(previewTemplate.name, previewItem.quality_tier, previewItem.composition_level)
-                          : undefined
-                      }
-                      tooltip={buildGearTooltip(previewItem, previewTemplate ?? undefined)}
-                    />
-                  ) : (
-                    <InventorySlot slotId="master-forge-preview-empty" filled={false} sizeClassName={SLOT_SIZE_CLASS} />
-                  )}
-                </div>
-              </div>
+              <ForgePreviewSlot previewItem={previewItem} previewTemplate={previewTemplate} slotId="master-forge-preview" />
             </div>
 
             {!selectedItem && equippedEntries.length > 0 && (
@@ -313,11 +297,9 @@ export default function MasterForgePanel() {
                 )
               )}
             </div>
-          </div>
-
-          <InventoryPanel columns={5} reservedItemIds={selectedItemId ? [selectedItemId] : []} onTileDrop={handleTileDrop} />
-        </DragDropProvider>
-      )}
-    </div>
+          </>
+        )}
+      </ForgeTwoColumnLayout>
+    </DragDropProvider>
   )
 }

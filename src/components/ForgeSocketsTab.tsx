@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import ForgeSocketSlot from './ForgeSocketSlot'
+import ForgeTwoColumnLayout from './ForgeTwoColumnLayout'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import InventoryPanel from './InventoryPanel'
 import { DragDropProvider } from './dragDrop'
@@ -48,7 +49,11 @@ function describeSocketFailure(error?: string): string {
 // slots. A filled socket stays a live drop target — it can be overwritten
 // with a different gem — but there's deliberately no way to empty one again,
 // per the user's explicit "gems can never be removed."
-export default function ForgeSocketsTab() {
+interface ForgeSocketsTabProps {
+  onBack: () => void
+}
+
+export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
   const items = useInventoryStore((state) => state.items)
   const templates = useItemTemplatesStore((state) => state.templates)
   const fallenStars = useCurrencyStore((state) => state.fallenStars)
@@ -127,8 +132,11 @@ export default function ForgeSocketsTab() {
 
   return (
     <DragDropProvider>
-      <div className="flex flex-col items-center gap-6">
-        <div className="flex flex-col items-center gap-3">
+      <ForgeTwoColumnLayout
+        title="Sockets"
+        onBack={onBack}
+        inventory={<InventoryPanel columns={5} reservedItemIds={selectedItemId ? [selectedItemId] : []} onTileDrop={handleTileDrop} />}
+      >
           <div className="flex items-start justify-center gap-6">
             <ForgeUpgradeSlot item={selectedItem} template={selectedTemplate} onRemove={handleRemoveItem} />
             <ForgeSocketSlot index={0} unlocked={socketCount >= 1} filledKey={selectedItem?.sockets[0] ?? null} />
@@ -174,10 +182,7 @@ export default function ForgeSocketsTab() {
             {unlockError && <p className="text-center text-[11px] text-red-400">{unlockError}</p>}
             {socketError && <p className="text-center text-[11px] text-red-400">{socketError}</p>}
           </div>
-        </div>
-
-        <InventoryPanel columns={5} reservedItemIds={selectedItemId ? [selectedItemId] : []} onTileDrop={handleTileDrop} />
-      </div>
+      </ForgeTwoColumnLayout>
     </DragDropProvider>
   )
 }

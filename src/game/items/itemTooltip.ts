@@ -30,4 +30,8 @@ export interface ItemTooltipData {
   // purple to read as a distinct bonus source, not part of the item's base
   // stats block.
   bonusStats?: string[]
+  // Enchantress HP bonus (see gemCatalog.ts's ENCHANT_HP_RANGE_BY_TIER) —
+  // "Enchanted HP: XX", rendered in its own muted gold below bonusStats.
+  // Omitted entirely for an item with no enchant.
+  enchantLine?: string
 }

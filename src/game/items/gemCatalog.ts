@@ -61,6 +61,23 @@ export const GEM_TYPES: Record<GemTypeId, GemTypeDef> = {
 
 export const GEM_TYPE_ORDER: GemTypeId[] = ['drake', 'ember', 'bastion', 'iris']
 
+// Enchantress (2026-08-13) — consuming any gem, of any type, at a given tier
+// rolls a flat HP bonus for a gear item somewhere in that tier's range (only
+// the tier matters, not which of the 4 gem types was spent). Real reference
+// ranges supplied by the user. Mirrors enchant_item_hp's own SQL case
+// statement (20260813000000_enchantress_hp_enchant.sql) — keep in sync.
+export const ENCHANT_HP_RANGE_BY_TIER: Record<GemTier, { min: number; max: number }> = {
+  normal: { min: 1, max: 59 },
+  tempered: { min: 100, max: 159 },
+  ascended: { min: 200, max: 255 },
+}
+
+// A nice muted gold, deliberately distinct from the app's restrained amber
+// accent and from the purple used for Composition's own "Bonus:" tooltip
+// lines — per the user's "nice yellow (not fluoro)" request for the
+// Enchanted HP tooltip line.
+export const ENCHANT_HP_COLOR = '#E8C468'
+
 // Storage key into characters.gems (flat, mirrors composition_stones' own
 // flat "1".."9" keys) — must stay in sync with the shape written by any RPC
 // that grants/spends gems (draw_lucky_ticket, socket_gem, transfer_gem).

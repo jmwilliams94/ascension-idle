@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import ForgeTwoColumnLayout from './ForgeTwoColumnLayout'
 import InventoryPanel from './InventoryPanel'
 import InventorySlot, { SLOT_LABEL_HEIGHT_CLASS, SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
 import { DragDropProvider } from './dragDrop'
@@ -122,7 +123,11 @@ function SalvageSlot({ item, template, onRemove }: SalvageSlotProps) {
 // AP table (Tempered 1/Infused 2/Radiant 3/Ascended 4, Normal 0 — matches
 // sell_item's own AP payout exactly, Salvage's only difference from Sell is
 // forfeiting the gold).
-export default function SalvagePanel() {
+interface SalvagePanelProps {
+  onBack: () => void
+}
+
+export default function SalvagePanel({ onBack }: SalvagePanelProps) {
   const items = useInventoryStore((state) => state.items)
   const templates = useItemTemplatesStore((state) => state.templates)
   const salvageItem = useInventoryStore((state) => state.salvageItem)
@@ -275,91 +280,91 @@ export default function SalvagePanel() {
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-4">
-      <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-center text-xs text-slate-400">
-        <p>Drag in unwanted gear to salvage it for Ascension Points — no gold, but works on any quality tier.</p>
-        <p className="mt-1 text-purple-300">Ascension Points: {ascensionPoints}</p>
-      </div>
-
-      <div className="mx-auto w-full max-w-xs space-y-2">
-        <p className="text-center text-[11px] uppercase tracking-wide text-slate-500">Bulk Salvage</p>
-        {bulkGroups.map((group) => (
-          <button
-            key={group.tier}
-            type="button"
-            disabled={phase !== 'idle' || group.items.length === 0}
-            onClick={() => void handleBulkSalvage(group.tier)}
-            className="flex w-full items-center justify-between gap-2 rounded-lg border border-purple-800/60 bg-purple-500/5 px-3 py-2 text-left hover:bg-purple-500/10 disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-transparent"
-          >
-            <span className={`text-xs font-medium ${group.items.length === 0 ? 'text-slate-600' : 'text-purple-300'}`}>
-              Salvage All {BULK_TIER_LABEL[group.tier]} ({group.items.length})
-            </span>
-            <span className="shrink-0 text-[10px] text-slate-500">
-              {group.items.length > 0 ? `${group.apEstimate} AP · ${formatDurationEstimate(group.timeEstimateMs)}` : 'None owned'}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      <DragDropProvider>
-        <div className="flex flex-col items-center gap-3">
-          <SalvageSlot item={selectedItem} template={selectedTemplate} onRemove={handleRemove} />
-
-          {phase === 'bulk-salvaging' && bulkProgress && (
-            <div className="w-full max-w-xs">
-              <p className="mb-1 text-center text-[11px] text-slate-500">
-                Salvaging {BULK_TIER_LABEL[bulkProgress.tier]}… {bulkProgress.completed}/{bulkProgress.total} ·{' '}
-                {formatDurationEstimate((bulkProgress.total - bulkProgress.completed) * SALVAGE_ANIMATION_MS)} left
-              </p>
-              <div className="h-2.5 overflow-hidden rounded-full bg-slate-800">
-                <motion.div
-                  className="h-full rounded-full bg-purple-500"
-                  animate={{ width: `${(bulkProgress.completed / bulkProgress.total) * 100}%` }}
-                  transition={{ duration: SALVAGE_ANIMATION_MS / 1000, ease: 'linear' }}
-                />
-              </div>
-            </div>
-          )}
-
-          {phase === 'salvaging' && (
-            <div className="w-full max-w-xs">
-              <p className="mb-1 text-center text-[11px] text-slate-500">Salvaging…</p>
-              <div className="h-2.5 overflow-hidden rounded-full bg-slate-800">
-                <motion.div
-                  className="h-full rounded-full bg-purple-500"
-                  initial={{ width: '0%' }}
-                  animate={{ width: '100%' }}
-                  transition={{ duration: SALVAGE_ANIMATION_MS / 1000, ease: 'linear' }}
-                />
-              </div>
-            </div>
-          )}
-
-          {result && (
-            <div
-              className={`w-full max-w-xs rounded-xl border p-2.5 text-center text-xs ${
-                result.success ? 'border-purple-600 bg-purple-500/10 text-purple-300' : 'border-red-800 bg-red-500/10 text-red-300'
-              }`}
-            >
-              {result.message}
-            </div>
-          )}
-
-          {selectedItem && phase === 'idle' && !result && (
-            <button
-              type="button"
-              disabled={isWorthless}
-              onClick={handleSalvage}
-              title={isWorthless ? 'Normal-quality gear has no salvage value — sell it in the Shop instead.' : undefined}
-              className="w-full max-w-xs rounded-lg border border-purple-600 bg-purple-500/10 px-4 py-2 text-sm font-medium text-purple-300 hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-transparent disabled:text-slate-500"
-            >
-              {isWorthless ? 'No salvage value' : `Salvage (${apValue} AP)`}
-            </button>
-          )}
-
-          <InventoryPanel columns={5} reservedItemIds={selectedItemId ? [selectedItemId] : []} onTileDrop={handleTileDrop} />
+    <DragDropProvider>
+      <ForgeTwoColumnLayout
+        title="Salvage"
+        onBack={onBack}
+        inventory={<InventoryPanel columns={5} reservedItemIds={selectedItemId ? [selectedItemId] : []} onTileDrop={handleTileDrop} />}
+      >
+        <div className="w-full max-w-xs rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-center text-xs text-slate-400">
+          <p>Drag in unwanted gear to salvage it for Ascension Points — no gold, but works on any quality tier.</p>
+          <p className="mt-1 text-purple-300">Ascension Points: {ascensionPoints}</p>
         </div>
-      </DragDropProvider>
-    </div>
+
+        <div className="w-full max-w-xs space-y-2">
+          <p className="text-center text-[11px] uppercase tracking-wide text-slate-500">Bulk Salvage</p>
+          {bulkGroups.map((group) => (
+            <button
+              key={group.tier}
+              type="button"
+              disabled={phase !== 'idle' || group.items.length === 0}
+              onClick={() => void handleBulkSalvage(group.tier)}
+              className="flex w-full items-center justify-between gap-2 rounded-lg border border-purple-800/60 bg-purple-500/5 px-3 py-2 text-left hover:bg-purple-500/10 disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-transparent"
+            >
+              <span className={`text-xs font-medium ${group.items.length === 0 ? 'text-slate-600' : 'text-purple-300'}`}>
+                Salvage All {BULK_TIER_LABEL[group.tier]} ({group.items.length})
+              </span>
+              <span className="shrink-0 text-[10px] text-slate-500">
+                {group.items.length > 0 ? `${group.apEstimate} AP · ${formatDurationEstimate(group.timeEstimateMs)}` : 'None owned'}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <SalvageSlot item={selectedItem} template={selectedTemplate} onRemove={handleRemove} />
+
+        {phase === 'bulk-salvaging' && bulkProgress && (
+          <div className="w-full max-w-xs">
+            <p className="mb-1 text-center text-[11px] text-slate-500">
+              Salvaging {BULK_TIER_LABEL[bulkProgress.tier]}… {bulkProgress.completed}/{bulkProgress.total} ·{' '}
+              {formatDurationEstimate((bulkProgress.total - bulkProgress.completed) * SALVAGE_ANIMATION_MS)} left
+            </p>
+            <div className="h-2.5 overflow-hidden rounded-full bg-slate-800">
+              <motion.div
+                className="h-full rounded-full bg-purple-500"
+                animate={{ width: `${(bulkProgress.completed / bulkProgress.total) * 100}%` }}
+                transition={{ duration: SALVAGE_ANIMATION_MS / 1000, ease: 'linear' }}
+              />
+            </div>
+          </div>
+        )}
+
+        {phase === 'salvaging' && (
+          <div className="w-full max-w-xs">
+            <p className="mb-1 text-center text-[11px] text-slate-500">Salvaging…</p>
+            <div className="h-2.5 overflow-hidden rounded-full bg-slate-800">
+              <motion.div
+                className="h-full rounded-full bg-purple-500"
+                initial={{ width: '0%' }}
+                animate={{ width: '100%' }}
+                transition={{ duration: SALVAGE_ANIMATION_MS / 1000, ease: 'linear' }}
+              />
+            </div>
+          </div>
+        )}
+
+        {result && (
+          <div
+            className={`w-full max-w-xs rounded-xl border p-2.5 text-center text-xs ${
+              result.success ? 'border-purple-600 bg-purple-500/10 text-purple-300' : 'border-red-800 bg-red-500/10 text-red-300'
+            }`}
+          >
+            {result.message}
+          </div>
+        )}
+
+        {selectedItem && phase === 'idle' && !result && (
+          <button
+            type="button"
+            disabled={isWorthless}
+            onClick={handleSalvage}
+            title={isWorthless ? 'Normal-quality gear has no salvage value — sell it in the Shop instead.' : undefined}
+            className="w-full max-w-xs rounded-lg border border-purple-600 bg-purple-500/10 px-4 py-2 text-sm font-medium text-purple-300 hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-transparent disabled:text-slate-500"
+          >
+            {isWorthless ? 'No salvage value' : `Salvage (${apValue} AP)`}
+          </button>
+        )}
+      </ForgeTwoColumnLayout>
+    </DragDropProvider>
   )
 }
