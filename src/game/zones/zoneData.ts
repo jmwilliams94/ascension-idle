@@ -208,30 +208,35 @@ export const ZONES: Record<ZoneId, ZoneDef> = {
     displayName: 'Sunscar Wastes',
     monsterOrder: ['dunecrawler', 'cragbeast', 'boulderback-golem', 'stonewarden', 'edgeborn'],
     locked: false,
+    backgroundUrl: `${import.meta.env.BASE_URL}zones/sunscar-wastes.webp`,
   },
   'talon-isle': {
     id: 'talon-isle',
     displayName: 'Talon Isle',
     monsterOrder: ['wingkin', 'wingkin-sovereign', 'hawklord', 'silverwing', 'footpad'],
     locked: false,
+    backgroundUrl: `${import.meta.env.BASE_URL}zones/talon-isle.webp`,
   },
   'duskspire-keep': {
     id: 'duskspire-keep',
     displayName: 'Duskspire Keep',
     monsterOrder: ['cryptwing', 'crimson-wing', 'crimson-sovereign', 'ironhorn-fiend', 'verdant-fiend'],
     locked: false,
+    backgroundUrl: `${import.meta.env.BASE_URL}zones/duskspire-keep.webp`,
   },
   'twistpath-ruins': {
     id: 'twistpath-ruins',
     displayName: 'Twistpath Ruins',
     monsterOrder: ['ratling-flinger', 'gilded-wraith', 'swiftgnaw', 'nightfiend', 'bullhorn-warden'],
     locked: false,
+    backgroundUrl: `${import.meta.env.BASE_URL}zones/twistpath-ruins.webp`,
   },
   'rimehollow': {
     id: 'rimehollow',
     displayName: 'Rimehollow',
     monsterOrder: ['rime-serpent', 'serpent-herald', 'serpent-warden', 'fiend-sovereign', 'frostblade-fiend'],
     locked: false,
+    backgroundUrl: `${import.meta.env.BASE_URL}zones/rimehollow.webp`,
   },
 }
 
