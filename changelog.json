@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.75.8",
+    "date": "2026-08-09",
+    "changes": [
+      "Added real monster art for Cinderleaf's whole roster: Wingfang Serpent, Brushrunner, Thornreaver, Woodkin, and Woodkin Sovereign"
+    ]
+  },
+  {
     "version": "1.75.7",
     "date": "2026-08-13",
     "changes": [
