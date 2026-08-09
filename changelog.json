@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.75.6",
+    "date": "2026-08-09",
+    "changes": [
+      "Added real monster art for Redbreast, Warshade, and Grim Specter, and refreshed Quailwing/Mourning Dove's art — Windhollow now has full portrait art for its whole roster"
+    ]
+  },
+  {
     "version": "1.75.5",
     "date": "2026-08-13",
     "changes": [
