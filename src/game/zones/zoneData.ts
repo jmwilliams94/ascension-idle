@@ -194,12 +194,14 @@ export const ZONES: Record<ZoneId, ZoneDef> = {
     displayName: 'Cinderleaf',
     monsterOrder: ['wingfang-serpent', 'brushrunner', 'thornreaver', 'woodkin', 'woodkin-sovereign'],
     locked: false,
+    backgroundUrl: `${import.meta.env.BASE_URL}zones/cinderleaf.webp`,
   },
   'stormvale': {
     id: 'stormvale',
     displayName: 'Stormvale',
     monsterOrder: ['ridgeback-simian', 'boulder-ape', 'bellowing-brute', 'frostpelt', 'venomkin'],
     locked: false,
+    backgroundUrl: `${import.meta.env.BASE_URL}zones/stormvale.webp`,
   },
   'sunscar-wastes': {
     id: 'sunscar-wastes',
