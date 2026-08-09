@@ -15,6 +15,7 @@ const MAIL_CURRENCY_TYPES: MailCurrencyType[] = [
 ]
 
 const QUALITY_TIER_OPTIONS = Object.keys(QUALITY_COLORS)
+const SUBJECT_MAX_LENGTH = 100
 const MESSAGE_MAX_LENGTH = 500
 
 function describeReward(reward: AdminMailReward, templates: ItemTemplate[]): string {
@@ -29,6 +30,8 @@ function describeSendError(error?: string): string {
   switch (error) {
     case 'not_admin':
       return 'Not authorized.'
+    case 'subject_required':
+      return 'Subject is required.'
     case 'message_required':
       return 'Message is required.'
     case 'no_rewards':
@@ -57,6 +60,7 @@ export default function AdminMailSection() {
   const [lookupBusy, setLookupBusy] = useState(false)
   const [lookupResult, setLookupResult] = useState<{ ok: boolean; label: string } | null>(null)
 
+  const [subject, setSubject] = useState('')
   const [message, setMessage] = useState('')
 
   const [currencyType, setCurrencyType] = useState<MailCurrencyType>('comet')
@@ -113,7 +117,8 @@ export default function AdminMailSection() {
     setRewards((current) => current.filter((_, candidateIndex) => candidateIndex !== index))
   }
 
-  const canSend = message.trim().length > 0 && rewards.length > 0 && (sendToAll || targetName.trim().length > 0)
+  const canSend =
+    subject.trim().length > 0 && message.trim().length > 0 && rewards.length > 0 && (sendToAll || targetName.trim().length > 0)
 
   const handleSend = async () => {
     if (sendToAll && !confirmingAll) {
@@ -123,10 +128,11 @@ export default function AdminMailSection() {
 
     setConfirmingAll(false)
     setResult(null)
-    const response = await sendMail(sendToAll ? 'all' : targetName.trim(), message.trim(), rewards)
+    const response = await sendMail(sendToAll ? 'all' : targetName.trim(), subject.trim(), message.trim(), rewards)
 
     if (response.ok) {
       setResult({ ok: true, text: `Sent to ${response.recipient_count} character${response.recipient_count === 1 ? '' : 's'}.` })
+      setSubject('')
       setMessage('')
       setRewards([])
       setTargetName('')
@@ -176,6 +182,22 @@ export default function AdminMailSection() {
           />
           Send to ALL characters
         </label>
+      </div>
+
+      <div>
+        <div className="mb-1 flex items-center justify-between">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Subject</p>
+          <p className="text-[10px] text-slate-600">
+            {subject.length}/{SUBJECT_MAX_LENGTH}
+          </p>
+        </div>
+        <input
+          type="text"
+          value={subject}
+          onChange={(event) => setSubject(event.target.value.slice(0, SUBJECT_MAX_LENGTH))}
+          placeholder="Shown in the mail list"
+          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-200"
+        />
       </div>
 
       <div>

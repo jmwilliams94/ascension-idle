@@ -30,7 +30,7 @@ interface LookupCharacterResult {
 
 interface AdminMailState {
   busy: boolean
-  sendMail: (target: string, message: string, rewards: AdminMailReward[]) => Promise<SendMailResult>
+  sendMail: (target: string, subject: string, message: string, rewards: AdminMailReward[]) => Promise<SendMailResult>
   lookupCharacter: (name: string) => Promise<LookupCharacterResult>
 }
 
@@ -43,10 +43,11 @@ function toRewardJson(reward: AdminMailReward): Record<string, unknown> {
 export const useAdminMailStore = create<AdminMailState>((set) => ({
   busy: false,
 
-  sendMail: async (target, message, rewards) => {
+  sendMail: async (target, subject, message, rewards) => {
     set({ busy: true })
     const { data, error } = await supabase.rpc('admin_send_mail', {
       p_target: target,
+      p_subject: subject,
       p_message: message,
       p_rewards: rewards.map(toRewardJson),
     })

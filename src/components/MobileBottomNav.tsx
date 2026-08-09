@@ -5,7 +5,7 @@ import { useTabStore, type TabId } from '../game/hud/useTabStore'
 import { TAB_ICONS, useEquippedWeaponIcon } from '../game/hud/navIcons'
 import NavIconGlyph from './NavIconGlyph'
 import { useAchievementsStore, totalClaimableCount } from '../game/achievements/useAchievementsStore'
-import { useMailStore, groupMailEntries } from '../game/marketplace/useMailStore'
+import { useMailStore, countUnreadMail } from '../game/marketplace/useMailStore'
 
 // Fixed bottom nav bar, mobile-only (`lg:hidden` — desktop keeps TabNav.tsx
 // unchanged, now `hidden lg:grid`). Combat is centered as "Fight"/"Idle" —
@@ -201,10 +201,10 @@ export default function MobileBottomNav() {
   // Unclaimed Mail count (2026-08-13, requested by the user) — see
   // TownNavButton's own doc comment for how this surfaces on mobile, where
   // Market lives inside the Town rollup rather than its own top-level slot.
-  // Counts distinct mail (groupMailEntries), not raw rows — see TabNav.tsx's
-  // matching fix for why.
+  // Counts distinct unread mail (countUnreadMail), not raw rows — see
+  // TabNav.tsx's matching fix for why.
   const mailEntries = useMailStore((state) => state.entries)
-  const mailBadge = groupMailEntries(mailEntries).length
+  const mailBadge = countUnreadMail(mailEntries)
 
   return (
     <nav

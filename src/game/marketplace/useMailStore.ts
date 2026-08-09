@@ -45,6 +45,19 @@ export interface MailEntry {
   // Currency rows only — how many units this one row grants on claim
   // (null means 1, for every pre-existing row that predates this column).
   amount: number | null
+  // Admin Mail only (migration 20260813100000_admin_mail.sql's sender_label/
+  // message, this one added 20260813110000_mail_history.sql) — a real
+  // subject line, separate from `message`, the admin composer fills in.
+  // Null for every Market-originated row (purchase/listing_cancelled/
+  // listing_expired) — MailTab falls back to reasonLabel(reason) for those.
+  subject: string | null
+  // Set once a claim succeeds (20260813110000_mail_history.sql) — claiming
+  // no longer deletes the row, it marks this instead, so claimed mail stays
+  // visible as history until clear_mail_history removes it. Null means
+  // still unclaimed (this is what hides an item from Inventory and counts
+  // toward the "unread mail" nav badges — see hasUnclaimedMail/
+  // countUnreadMail below).
+  claimed_at: string | null
 }
 
 // A "group" is either one ungrouped row (pre-existing marketplace mail,
@@ -80,12 +93,22 @@ export function groupMailEntries(entries: MailEntry[]): MailGroup[] {
   return groups
 }
 
+// "Unread" = still-unclaimed mail, grouped the same way the row list groups
+// it — a 9-reward admin gift is 1 unread mail, not 9 (2026-08-13 fix, see
+// groupMailEntries's own comment). Single source of truth for both nav
+// badges (TabNav.tsx/MobileBottomNav.tsx) and MarketplacePanel's own Mail
+// sub-tab pill, which had drifted out of sync with the nav fix before.
+export function countUnreadMail(entries: MailEntry[]): number {
+  return groupMailEntries(entries.filter((entry) => entry.claimed_at === null)).length
+}
+
 interface ClaimResult {
   ok: boolean
   error?: string
   item_id?: string
   currency_type?: MailCurrencyType
   new_count?: number
+  claimed_at?: string
 }
 
 interface MailState {
@@ -98,6 +121,11 @@ interface MailState {
   // listing, stays hidden from Inventory until claimed.
   hasUnclaimedMail: (itemId: string) => boolean
   claim: (characterId: string, mailId: string) => Promise<ClaimResult>
+  // Player-facing (any character can clear their own — clear_mail_history's
+  // real guard is ownership, not admin). Only ever removes already-claimed
+  // rows server-side; local state mirrors that by keeping every still-
+  // unclaimed entry.
+  clearHistory: (characterId: string) => Promise<{ ok: boolean; error?: string; cleared_count?: number }>
 }
 
 export const useMailStore = create<MailState>((set, get) => ({
@@ -108,7 +136,9 @@ export const useMailStore = create<MailState>((set, get) => ({
   loadMail: async (characterId) => {
     const { data, error } = await supabase
       .from('mail')
-      .select('id, character_id, item_id, currency_type, amount, reason, mail_batch_id, sender_label, message, created_at')
+      .select(
+        'id, character_id, item_id, currency_type, amount, reason, mail_batch_id, sender_label, subject, message, claimed_at, created_at',
+      )
       .eq('character_id', characterId)
       .order('created_at', { ascending: true })
 
@@ -130,7 +160,7 @@ export const useMailStore = create<MailState>((set, get) => ({
     set({ entries: hydrated, loaded: true })
   },
 
-  hasUnclaimedMail: (itemId) => get().entries.some((entry) => entry.item_id === itemId),
+  hasUnclaimedMail: (itemId) => get().entries.some((entry) => entry.item_id === itemId && entry.claimed_at === null),
 
   claim: async (characterId, mailId) => {
     set({ busy: true })
@@ -183,7 +213,34 @@ export const useMailStore = create<MailState>((set, get) => ({
         useInventoryStore.getState().addItem(entry.item)
       }
 
-      set((state) => ({ entries: state.entries.filter((candidate) => candidate.id !== mailId) }))
+      // Marks claimed rather than removing (2026-08-13, mail is now
+      // browsable history) — reads claimed_at off the response, same "read
+      // the response, never assume" trust model as new_count above, rather
+      // than stamping a locally-guessed timestamp.
+      set((state) => ({
+        entries: state.entries.map((candidate) =>
+          candidate.id === mailId ? { ...candidate, claimed_at: result.claimed_at ?? new Date().toISOString() } : candidate,
+        ),
+      }))
+    }
+
+    return result
+  },
+
+  clearHistory: async (characterId) => {
+    const { data, error } = await supabase.rpc('clear_mail_history', { p_character_id: characterId })
+
+    if (error) {
+      console.error('Clear mail history call failed', error)
+      return { ok: false, error: 'rpc_failed' }
+    }
+
+    const result = data as { ok: boolean; error?: string; cleared_count?: number }
+
+    if (result.ok) {
+      // The RPC only ever deletes claimed_at-is-not-null rows server-side —
+      // mirror exactly that here rather than clearing everything.
+      set((state) => ({ entries: state.entries.filter((entry) => entry.claimed_at === null) }))
     }
 
     return result

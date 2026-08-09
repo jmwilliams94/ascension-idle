@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.82.0",
+    "date": "2026-08-13",
+    "changes": [
+      "Mail is now a proper inbox: a list of Sender/Subject rows instead of a grid of icons, tap one to open it in a popup",
+      "Claimed mail now stays as browsable history instead of disappearing — use the new \"Clear History\" button to tidy up"
+    ]
+  },
+  {
     "version": "1.81.4",
     "date": "2026-08-13",
     "changes": [

@@ -3,7 +3,7 @@ import { useTabStore, type TabId } from '../game/hud/useTabStore'
 import { TAB_ICONS, useEquippedWeaponIcon } from '../game/hud/navIcons'
 import NavIconGlyph from './NavIconGlyph'
 import { useAchievementsStore, totalClaimableCount } from '../game/achievements/useAchievementsStore'
-import { useMailStore, groupMailEntries } from '../game/marketplace/useMailStore'
+import { useMailStore, countUnreadMail } from '../game/marketplace/useMailStore'
 
 const TAB_ITEMS: { id: TabId; label: string }[] = [
   { id: 'combat', label: 'Combat' },
@@ -96,14 +96,14 @@ export default function TabNav() {
   // treatment as Achievements, mirroring MarketplacePanel's own Mail sub-tab
   // badge (see that file) so a pending purchase/returned-listing item is
   // visible from the nav bar too, not just after already opening Market.
-  // Counts distinct mail (groupMailEntries — an Admin Mail send with 9
+  // Counts distinct unread mail (countUnreadMail — an Admin Mail send with 9
   // rewards is still 1 unread mail, not 9), fixed 2026-08-13 after an admin
   // send showed "9" for what was really one message. Derived outside the
   // selector on purpose (see the Zustand selector gotcha noted elsewhere in
   // this project) — the selector only ever returns the stable `entries`
   // array reference.
   const mailEntries = useMailStore((state) => state.entries)
-  const mailBadge = groupMailEntries(mailEntries).length
+  const mailBadge = countUnreadMail(mailEntries)
 
   return (
     <div className="hidden grid-cols-8 gap-2 lg:grid">

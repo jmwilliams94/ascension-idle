@@ -13,7 +13,7 @@ import {
   type MarketplaceListing,
   type ListingCurrency,
 } from '../game/marketplace/useMarketplaceStore'
-import { useMailStore, groupMailEntries, type MailEntry, type MailGroup } from '../game/marketplace/useMailStore'
+import { useMailStore, groupMailEntries, countUnreadMail, type MailEntry, type MailGroup } from '../game/marketplace/useMailStore'
 import {
   listableCurrencyLabel,
   listableCurrencyVisual,
@@ -618,58 +618,148 @@ function MailEntryTile({
   )
 }
 
+function mailGroupSender(group: MailGroup): string {
+  return group.entries[0].sender_label ?? 'Market'
+}
+
+function mailGroupSubject(group: MailGroup): string {
+  return group.entries[0].subject ?? reasonLabel(group.entries[0].reason)
+}
+
+function isGroupUnclaimed(group: MailGroup): boolean {
+  return group.entries.some((entry) => entry.claimed_at === null)
+}
+
+// Horizontal inbox-style row (2026-08-13 redesign, requested by the user —
+// supersedes the earlier tile-grid layout). A small sky dot marks a group
+// with at least one still-unclaimed row; a fully-claimed group dims instead,
+// same "history" treatment either way — clicking any row opens
+// MailDetailModal for the full content.
+function MailRow({ group, onClick }: { group: MailGroup; onClick: () => void }) {
+  const unread = isGroupUnclaimed(group)
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs transition-colors ${
+        unread ? 'border-slate-700 bg-slate-900/60 hover:border-slate-500' : 'border-slate-800 bg-slate-950/40 opacity-60 hover:opacity-80'
+      }`}
+    >
+      {unread && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400" />}
+      <span className={`shrink-0 font-medium ${unread ? 'text-slate-200' : 'text-slate-400'}`}>{mailGroupSender(group)}</span>
+      <span className="min-w-0 flex-1 truncate text-slate-400">{mailGroupSubject(group)}</span>
+      {group.entries.length > 1 && <span className="shrink-0 text-[10px] text-slate-600">×{group.entries.length}</span>}
+    </button>
+  )
+}
+
+// Popup overlay (2026-08-13, requested by the user) showing a mail group's
+// full content — same fixed-inset-0-backdrop shell SettingsModal.tsx
+// already establishes. Doesn't force-close on a successful claim; it just
+// re-renders with `canClaim` now false (the underlying `entries` update
+// flows back down from useMailStore), same "you can keep reading after
+// collecting something" shape a real inbox has.
+function MailDetailModal({
+  group,
+  templates,
+  busy,
+  onClaim,
+  onClose,
+}: {
+  group: MailGroup
+  templates: ItemTemplate[]
+  busy: boolean
+  onClaim: () => void
+  onClose: () => void
+}) {
+  const canClaim = isGroupUnclaimed(group)
+  const message = group.entries[0].message
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-xs space-y-3 rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="text-[11px] uppercase tracking-wide text-slate-500">From: {mailGroupSender(group)}</p>
+            <p className="text-sm font-semibold text-slate-100">{mailGroupSubject(group)}</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close" className="text-slate-500 hover:text-slate-300">
+            ✕
+          </button>
+        </div>
+
+        {message && <p className="whitespace-pre-wrap text-xs text-slate-400">{message}</p>}
+
+        <div className="flex flex-wrap justify-center gap-1.5">
+          {group.entries.map((entry) => (
+            <MailEntryTile key={entry.id} entry={entry} templates={templates} />
+          ))}
+        </div>
+
+        {canClaim ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onClaim}
+            className="w-full rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {busy ? 'Claiming…' : 'Claim'}
+          </button>
+        ) : (
+          <p className="text-center text-[11px] text-slate-600">Claimed</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function MailTab({ characterId, templates }: { characterId: string; templates: ItemTemplate[] }) {
   const entries = useMailStore((state) => state.entries)
   const busy = useMailStore((state) => state.busy)
   const claim = useMailStore((state) => state.claim)
+  const clearHistory = useMailStore((state) => state.clearHistory)
 
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [openKey, setOpenKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [claimAllBusy, setClaimAllBusy] = useState(false)
-  const [claimingBatchKey, setClaimingBatchKey] = useState<string | null>(null)
+  const [clearBusy, setClearBusy] = useState(false)
 
   const groups = groupMailEntries(entries)
-  const batchGroups = groups.filter((group): group is MailGroup & { batchId: string } => group.batchId !== null)
-  const singleEntries = groups.filter((group) => group.batchId === null).map((group) => group.entries[0])
-  const selectedEntry = singleEntries.find((entry) => entry.id === selectedId) ?? null
+  const orderedGroups = [...groups].reverse() // newest first — loadMail itself stays ascending
+  const openGroup = orderedGroups.find((group) => group.key === openKey) ?? null
+  const unclaimedEntries = entries.filter((entry) => entry.claimed_at === null)
+  const claimedCount = entries.length - unclaimedEntries.length
 
-  // Batch cards (2026-08-13 redesign, requested by the user) — a full
-  // message-with-rewards card, no separate "click a tile first" step. Each
-  // claims independently via its own local busy key rather than the store's
-  // single shared `busy` flag, since several batch cards could otherwise be
-  // claimed around the same time.
-  const handleClaimBatch = async (group: MailGroup) => {
+  const handleClaimGroup = async (group: MailGroup) => {
     setError(null)
-    setClaimingBatchKey(group.key)
-    const results = await Promise.all(group.entries.map((entry) => claim(characterId, entry.id)))
-    setClaimingBatchKey(null)
+    const targets = group.entries.filter((entry) => entry.claimed_at === null)
+    const results = await Promise.all(targets.map((entry) => claim(characterId, entry.id)))
     const failures = results.filter((result) => !result.ok).length
     if (failures > 0) {
       setError(`Couldn't claim ${failures} item${failures === 1 ? '' : 's'}.`)
-    }
-  }
-
-  const handleClaimSingle = async () => {
-    if (!selectedEntry) {
-      return
-    }
-    setError(null)
-    const result = await claim(characterId, selectedEntry.id)
-    if (result.ok) {
-      setSelectedId(null)
-    } else {
-      setError("Couldn't claim that.")
     }
   }
 
   const handleClaimAll = async () => {
     setClaimAllBusy(true)
-    const results = await Promise.all(entries.map((entry) => claim(characterId, entry.id)))
+    const results = await Promise.all(unclaimedEntries.map((entry) => claim(characterId, entry.id)))
     const failures = results.filter((result) => !result.ok).length
     setClaimAllBusy(false)
-    setSelectedId(null)
     if (failures > 0) {
       setError(`Couldn't claim ${failures} item${failures === 1 ? '' : 's'}.`)
+    }
+  }
+
+  const handleClear = async () => {
+    setClearBusy(true)
+    const result = await clearHistory(characterId)
+    setClearBusy(false)
+    if (!result.ok) {
+      setError("Couldn't clear history.")
     }
   }
 
@@ -679,78 +769,42 @@ function MailTab({ characterId, templates }: { characterId: string; templates: I
 
   return (
     <div className="space-y-3">
-      <button
-        type="button"
-        disabled={claimAllBusy}
-        onClick={() => void handleClaimAll()}
-        className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {claimAllBusy ? 'Claiming…' : `Claim All (${entries.length})`}
-      </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          disabled={claimAllBusy || unclaimedEntries.length === 0}
+          onClick={() => void handleClaimAll()}
+          className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {claimAllBusy ? 'Claiming…' : `Claim All (${unclaimedEntries.length})`}
+        </button>
+        <button
+          type="button"
+          disabled={clearBusy || claimedCount === 0}
+          onClick={() => void handleClear()}
+          className="rounded-lg border border-slate-700 px-3 py-1 text-xs font-medium text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {clearBusy ? 'Clearing…' : `Clear History (${claimedCount})`}
+        </button>
+      </div>
 
-      {batchGroups.length > 0 && (
-        <div className="space-y-3">
-          {batchGroups.map((group) => (
-            <div
-              key={group.key}
-              className="mx-auto w-full max-w-xs space-y-2 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-center"
-            >
-              <p className="text-sm font-medium text-slate-200">From: {group.entries[0].sender_label ?? 'Unknown'}</p>
-              {group.entries[0].message && (
-                <p className="whitespace-pre-wrap text-xs text-slate-400">{group.entries[0].message}</p>
-              )}
-              <div className="flex flex-wrap justify-center gap-1.5">
-                {group.entries.map((entry) => (
-                  <MailEntryTile key={entry.id} entry={entry} templates={templates} />
-                ))}
-              </div>
-              <button
-                type="button"
-                disabled={claimingBatchKey === group.key}
-                onClick={() => void handleClaimBatch(group)}
-                className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {claimingBatchKey === group.key ? 'Claiming…' : 'Claim'}
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="space-y-1.5">
+        {orderedGroups.map((group) => (
+          <MailRow key={group.key} group={group} onClick={() => setOpenKey(group.key)} />
+        ))}
+      </div>
 
-      {singleEntries.length > 0 && (
-        <div className="overflow-x-auto">
-          <div className="grid grid-cols-[repeat(8,3.5rem)] gap-1.5 lg:grid-cols-[repeat(8,4rem)]">
-            {singleEntries.map((entry) => (
-              <MailEntryTile
-                key={entry.id}
-                entry={entry}
-                templates={templates}
-                selected={selectedId === entry.id}
-                onClick={() => {
-                  setSelectedId((current) => (current === entry.id ? null : entry.id))
-                  setError(null)
-                }}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {selectedEntry && (
-        <div className="space-y-2 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-          <p className="text-sm font-medium text-slate-200">{mailEntryLabel(selectedEntry, templates)}</p>
-          <p className="text-[11px] text-slate-500">{reasonLabel(selectedEntry.reason)}</p>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void handleClaimSingle()}
-            className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Claim
-          </button>
-        </div>
-      )}
       {error && <p className="text-xs text-amber-400">{error}</p>}
+
+      {openGroup && (
+        <MailDetailModal
+          group={openGroup}
+          templates={templates}
+          busy={busy}
+          onClaim={() => void handleClaimGroup(openGroup)}
+          onClose={() => setOpenKey(null)}
+        />
+      )}
     </div>
   )
 }
@@ -758,7 +812,11 @@ function MailTab({ characterId, templates }: { characterId: string; templates: I
 export default function MarketplacePanel() {
   const characterId = useActiveCharacterStore((state) => state.characterId)
   const templates = useItemTemplatesStore((state) => state.templates)
-  const mailCount = useMailStore((state) => state.entries.length)
+  // Unread mail count, not raw row count (2026-08-13 fix — this pill had
+  // drifted out of sync with the nav-badge fix that already used
+  // countUnreadMail elsewhere).
+  const mailEntries = useMailStore((state) => state.entries)
+  const mailCount = countUnreadMail(mailEntries)
 
   const [tab, setTab] = useState<MarketTab>('browse')
 

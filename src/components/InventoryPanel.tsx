@@ -196,7 +196,7 @@ export default function InventoryPanel({
   const myListings = useMarketplaceStore((state) => state.myListings)
   const isListed = (itemId: string) => myListings.some((listing) => listing.status === 'active' && listing.item_id === itemId)
   const mailEntries = useMailStore((state) => state.entries)
-  const hasUnclaimedMail = (itemId: string) => mailEntries.some((entry) => entry.item_id === itemId)
+  const hasUnclaimedMail = (itemId: string) => mailEntries.some((entry) => entry.item_id === itemId && entry.claimed_at === null)
   const depositItemToStorage = useBankStore((state) => state.depositItemToStorage)
   // "Bank" (liquidate to currency/points), alongside "Deposit" (physical
   // storage, gear only now — see below) — the other half of the Bank tab
