@@ -551,6 +551,46 @@ function json(body: unknown, status = 200) {
   })
 }
 
+// ---------------------------------------------------------------------------
+// In-memory drop-pool cache (2026-08-13, PostgREST egress fix). This Edge
+// Function's module scope stays warm across invocations on the same
+// instance (Deno doesn't tear it down between requests, only on a cold
+// start), so a plain top-level variable survives between calls. The
+// item_templates rows this backs barely ever change (only when the gear
+// catalog itself is edited), but the query used to re-run from scratch on
+// every ~4s resolve tick of every actively-fighting session — by far the
+// largest driver of PostgREST egress on the free tier, since it pulled
+// ~110 of the 117 templates every time. Caching it here turns "every tick"
+// into "roughly once per warm instance, refreshed every
+// DROP_POOL_CACHE_TTL_MS" — a stale cache only means a drop's exact
+// template choice lags a catalog edit by up to the TTL, never a wrong
+// grant (ownership/cost/RNG are untouched).
+// ---------------------------------------------------------------------------
+interface DropPoolTemplate {
+  id: string
+  required_level: number
+  item_family: string | null
+  required_class: string | null
+}
+
+let dropPoolCache: { templates: DropPoolTemplate[]; expiresAt: number } | null = null
+const DROP_POOL_CACHE_TTL_MS = 10 * 60 * 1000 // 10 minutes
+
+async function getDropPool(db: ReturnType<typeof createClient>): Promise<DropPoolTemplate[]> {
+  const now = Date.now()
+  if (dropPoolCache && dropPoolCache.expiresAt > now) {
+    return dropPoolCache.templates
+  }
+
+  const { data } = await db
+    .from('item_templates')
+    .select('id, required_level, item_family, required_class')
+    .not('item_family', 'in', '("sword","quiver","lucky-bow","money-bag","gem-bag")')
+
+  dropPoolCache = { templates: (data ?? []) as DropPoolTemplate[], expiresAt: now + DROP_POOL_CACHE_TTL_MS }
+  return dropPoolCache.templates
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: CORS_HEADERS })
@@ -1037,8 +1077,8 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     let creditedFraction = 1
 
     if (wholeKillsThisWindow > 0) {
-      // Fetched once (not per-roll) and reused for every drop this window
-      // rolls — level-appropriate selection (confirmed with the user,
+      // Module-level cached (see getDropPool above), not fetched per-call
+      // anymore — level-appropriate selection (confirmed with the user,
       // 2026-07-30): picks a random gear family available to the
       // character's class (excluding the standalone 'sword' family — the
       // legacy Wooden Sword freebie isn't meant to drop from monsters —
@@ -1047,13 +1087,10 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       // monster's own level. Mirrors pickLevelAppropriateTemplate in
       // useInventoryStore.ts — must stay in sync, same pattern as this
       // file's other client/server mirrors.
-      const { data: dropPool } = await db
-        .from('item_templates')
-        .select('id, required_level, item_family, required_class')
-        .not('item_family', 'in', '("sword","quiver","lucky-bow","money-bag","gem-bag")')
+      const dropPool = await getDropPool(db)
 
       const pickDropTemplate = (): { id: string; required_level: number } | null => {
-        const candidates = (dropPool ?? []).filter((t) => t.required_class === null || t.required_class === character.class)
+        const candidates = dropPool.filter((t) => t.required_class === null || t.required_class === character.class)
         if (candidates.length === 0) return null
         const families = [...new Set(candidates.map((t) => t.item_family))]
         const family = families[Math.floor(Math.random() * families.length)]

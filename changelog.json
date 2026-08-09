@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.78.3",
+    "date": "2026-08-13",
+    "changes": [
+      "Backend: cached the item drop-pool lookup during combat instead of re-fetching it every few seconds — no gameplay change, just cheaper on the server"
+    ]
+  },
+  {
     "version": "1.78.2",
     "date": "2026-08-13",
     "changes": [
