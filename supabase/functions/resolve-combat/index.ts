@@ -989,7 +989,21 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     const hitChance =
       1 - Math.min(Math.max(0, monsterDodge(monster) - derived.dexterity) * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
     const expectedDamagePerHit = resolvePhysicalDamage(attackMidpoint, monsterDefense(monster, character.level))
-    const totalExpectedDamage = totalAttacks * hitChance * expectedDamagePerHit
+    // Overkill cap (bug fixed 2026-08-09, reported by the user — a level-100+
+    // character idling a level-1 monster for 19 minutes came back to 12,493
+    // "kills"). One landed attack can only ever finish off the single monster
+    // in front of it — any damage past that monster's max_hp is wasted, not
+    // carried into the next spawn — but the uncapped formula divided total
+    // raw damage output by monster.max_hp, so overwhelming per-hit damage
+    // against a trivial monster inflated kills (and therefore gold/EXP/drop
+    // rolls) far past what totalAttacks could physically produce. Capping the
+    // *damage* input (rather than kills directly) keeps creditedDamage/
+    // damageExp below in the same proportion, instead of needing a second,
+    // separate cap. Mirrored in combatResolver.ts's expectedRewardPerAttack
+    // (its own per-single-attack version of the same cap) — keep in sync.
+    const rawExpectedDamage = totalAttacks * hitChance * expectedDamagePerHit
+    const maxUsefulDamage = totalAttacks * hitChance * monster.max_hp * RARE_BLENDED_HP_FACTOR
+    const totalExpectedDamage = Math.min(rawExpectedDamage, maxUsefulDamage)
     const expectedKillsThisWindow = totalExpectedDamage / (monster.max_hp * RARE_BLENDED_HP_FACTOR)
 
     // How many WHOLE kills this window actually crosses, combining the

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.74.5",
+    "date": "2026-08-09",
+    "changes": [
+      "Fixed idle/offline combat rewards being wildly overcounted (extra kills, gold, EXP, and item drops) when fighting a monster far below your character's power level"
+    ]
+  },
+  {
     "version": "1.74.4",
     "date": "2026-08-09",
     "changes": [

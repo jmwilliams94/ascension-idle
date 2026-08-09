@@ -324,7 +324,15 @@ export function expectedRewardPerAttack(
   const hitChance =
     1 - Math.min(Math.max(0, monsterDodge(type) - playerDexterity) * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
   const expectedDamagePerHit = resolvePhysicalDamage(attackMidpoint, monsterDefense(type, characterLevel))
-  const expectedDamage = hitChance * expectedDamagePerHit
+  // Overkill cap — mirrors resolve-combat/index.ts's own copy of this fix
+  // (see its comment for the full bug writeup). One attack can only ever
+  // land one kill, no matter how much its damage exceeds the monster's own
+  // max_hp, so expectedDamage (and everything derived from it below) is
+  // capped at "one hit's worth of this monster's HP," not left to scale
+  // unboundedly with raw attack power against a trivial monster.
+  const rawExpectedDamage = hitChance * expectedDamagePerHit
+  const maxUsefulDamage = hitChance * type.maxHp * RARE_BLENDED_HP_FACTOR
+  const expectedDamage = Math.min(rawExpectedDamage, maxUsefulDamage)
   const expectedKills = expectedDamage / (type.maxHp * RARE_BLENDED_HP_FACTOR)
   const expMultiplier = expMultiplierForLevelDiff(characterLevel, type.level)
 
