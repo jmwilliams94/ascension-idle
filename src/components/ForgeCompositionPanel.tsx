@@ -1,5 +1,5 @@
 import type { MaterialEntry } from './ForgeMaterialSlot'
-import { compositionPointValue, compositionPointsRequired, formatCompositionTier, simulateCompositionFeed } from '../game/items/forgeCosts'
+import { compositionPointValue, compositionPointsRequired, formatCompositionTier, isCompositionMaxed, simulateCompositionFeed } from '../game/items/forgeCosts'
 import type { ItemInstance } from '../game/items/useInventoryStore'
 
 interface ForgeCompositionPanelProps {
@@ -40,6 +40,7 @@ export function ProgressBar({ level, points, required }: { level: number; points
 // visibility at a glance — this panel is still the source of the Feed action
 // itself.
 export default function ForgeCompositionPanel({ item, entries, busy, onFeed, feedError }: ForgeCompositionPanelProps) {
+  const maxed = isCompositionMaxed(item.composition_level)
   const required = compositionPointsRequired(item.composition_level)
 
   const addedPoints = entries.reduce((sum, entry) => {
@@ -52,7 +53,7 @@ export default function ForgeCompositionPanel({ item, entries, busy, onFeed, fee
     return sum
   }, 0)
 
-  const preview = addedPoints > 0 ? simulateCompositionFeed(item.composition_level, item.composition_points, addedPoints) : null
+  const preview = !maxed && addedPoints > 0 ? simulateCompositionFeed(item.composition_level, item.composition_points, addedPoints) : null
   const tiersGained = preview ? preview.level - item.composition_level : 0
 
   return (
@@ -71,11 +72,12 @@ export default function ForgeCompositionPanel({ item, entries, busy, onFeed, fee
         </div>
       )}
 
+      {maxed && <p className="text-center text-[10px] text-slate-500">Already at maximum composition (+{item.composition_level}).</p>}
       {feedError && <p className="text-center text-[10px] text-red-400">{feedError}</p>}
 
       <button
         type="button"
-        disabled={busy || addedPoints <= 0}
+        disabled={busy || maxed || addedPoints <= 0}
         onClick={onFeed}
         className="w-full rounded-lg border border-emerald-600 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
       >

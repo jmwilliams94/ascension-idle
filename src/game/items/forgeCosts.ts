@@ -107,21 +107,45 @@ export function findNextTemplateInChain(templates: ItemTemplate[], current: Item
 // — keep in sync.
 export const COMPOSITION_STONE_TIERS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const
 
-// Confirmed formula: a stone of tier N is worth 10 * 3^(N-1) points (10, 30, 90,
-// 270...); a fuel item's own composition_level values the same way, except Normal
-// (level 0, uncomposed) contributes nothing.
+// Real Conquer-sourced values (2026-08-11, replacing the earlier flat
+// 10 * 3^(N-1) formula — see CLAUDE.md's Gear system section; the sourced
+// table was previously reviewed and rejected, then re-confirmed as wanted
+// after all). A stone of tier 1 is worth 10 points; tiers 2+ are worth
+// 40 * 3^(N-2) (40, 120, 360, 1080, 3240, 9720, 29160 for tiers 2-8, matching
+// the source table exactly). A fuel item's own composition_level values the
+// same way (Normal/level 0 contributes nothing). The source table only goes
+// to tier 8 — tiers 9-12 continue the same x3 step per level, since nothing
+// else is sourced.
 export function compositionPointValue(level: number): number {
   if (level <= 0) {
     return 0
   }
-  return 10 * 3 ** (level - 1)
+  if (level === 1) {
+    return 10
+  }
+  return 40 * 3 ** (level - 2)
 }
 
-// Confirmed formula: advancing from composition_level L to L+1 costs
-// 20 * 3^max(L-1, 0) points (Normal->+1 and +1->+2 both cost 20, +2->+3 costs 60,
-// +3->+4 costs 180, ...).
+// Composition now hard-caps at +12 (2026-08-11, per the same sourced table
+// below — there's no data past +12).
+export const COMPOSITION_MAX_LEVEL = 12
+
+// Real Conquer-sourced values (2026-08-11) — a genuine lookup table, not a
+// closed-form formula, since the source data has a deliberate discontinuity
+// at +9->+10 (drops from the x3 exponential pattern below it to a much
+// smaller flat-ish ramp above it) that no formula reproduces. Index i is the
+// cost to advance from level i to i+1; index 11 (+11->+12) is the last
+// defined step.
+const COMPOSITION_POINTS_REQUIRED_BY_LEVEL = [20, 20, 80, 240, 720, 2160, 6480, 19440, 58320, 2700, 5500, 9000] as const
+
+// Returns 0 once currentLevel is at or beyond COMPOSITION_MAX_LEVEL — ProgressBar
+// (ForgeCompositionPanel.tsx) already treats a 0 "required" as a complete/100% bar.
 export function compositionPointsRequired(currentLevel: number): number {
-  return 20 * 3 ** Math.max(currentLevel - 1, 0)
+  return COMPOSITION_POINTS_REQUIRED_BY_LEVEL[currentLevel] ?? 0
+}
+
+export function isCompositionMaxed(level: number): boolean {
+  return level >= COMPOSITION_MAX_LEVEL
 }
 
 export function formatCompositionTier(level: number): string {
@@ -140,15 +164,17 @@ export interface CompositionSimulation {
 export function simulateCompositionFeed(currentLevel: number, currentPoints: number, addedPoints: number): CompositionSimulation {
   let level = currentLevel
   let points = currentPoints + addedPoints
-  let required = compositionPointsRequired(level)
 
-  while (points >= required) {
+  while (!isCompositionMaxed(level)) {
+    const required = compositionPointsRequired(level)
+    if (points < required) {
+      break
+    }
     points -= required
     level += 1
-    required = compositionPointsRequired(level)
   }
 
-  return { level, points, required }
+  return { level, points, required: compositionPointsRequired(level) }
 }
 
 // Stones are drag-and-drop inventory items now (see InventoryPanel/ForgeFuelZone),

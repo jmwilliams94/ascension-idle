@@ -74,6 +74,8 @@ function describeFeedFailure(error?: string): string {
       return "An item can't be fed into itself."
     case 'no_points_contributed':
       return 'Place at least one stone or item in the Material slot.'
+    case 'already_max_composition':
+      return 'This item is already at maximum composition.'
     case 'not_owner':
     case 'item_not_found':
       return "Couldn't find that item."

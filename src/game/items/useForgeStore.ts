@@ -128,6 +128,7 @@ interface CompositionFeedResult {
     | 'fuel_not_owned'
     | 'fuel_is_target_item'
     | 'no_points_contributed'
+    | 'already_max_composition'
   composition_level?: number
   composition_points?: number
   points_required_for_next?: number
