@@ -138,6 +138,20 @@ interface InventoryPanelProps {
   // Potions and Scrolls are out of scope (confirmed with the user) and stay
   // exactly as they were — Scrolls keep their existing Bundle/Unbundle card.
   enableBankDeposit?: boolean
+  // Equipment-tab-only (2026-08-13, requested by the user) — adds a "Compare"
+  // toggle button above the grid. While on, every gear tile's hover peek
+  // shows the side-by-side compare view (this tile vs. whatever's equipped
+  // in the same slot) instead of just its own tooltip, and the tap-opened
+  // GearEquipPopover shows that same comparison automatically with no button
+  // of its own (see GearEquipPopover's autoCompare prop) — replacing the
+  // old per-tile "open the popover, then press Compare" flow. Also disables
+  // the long-press touch trigger on these tiles (see HoverTooltip's
+  // disableTouchPeek) since a plain tap already opens the popover showing
+  // the same content, making long-press a redundant second gesture here.
+  // Only CombatPage's equipPopoverEnabled-only embedding is unaffected by
+  // this — it doesn't pass this prop, so it keeps today's in-popover
+  // Compare button and long-press peek unchanged.
+  enableCompareToggle?: boolean
 }
 
 export default function InventoryPanel({
@@ -147,6 +161,7 @@ export default function InventoryPanel({
   columns = 8,
   equipPopoverEnabled = false,
   enableBankDeposit = false,
+  enableCompareToggle = false,
 }: InventoryPanelProps) {
   const items = useInventoryStore((state) => state.items)
   const sellItem = useInventoryStore((state) => state.sellItem)
@@ -242,6 +257,8 @@ export default function InventoryPanel({
   // sellBusy/sellError since they're independent actions on different tiles.
   const [scrollBusy, setScrollBusy] = useState(false)
   const [scrollError, setScrollError] = useState<string | null>(null)
+  // enableCompareToggle-only (Equipment tab) — see that prop's own doc comment.
+  const [compareMode, setCompareMode] = useState(false)
 
   // Suppresses a tile's own hover/long-press tooltip peek specifically while
   // its own click-opened popover (GearEquipPopover, or a TooltipActionPopover
@@ -369,15 +386,20 @@ export default function InventoryPanel({
   // a level 130 item. Client-side only, same trust model as equipping itself
   // (there's no server-side equip check at all, gated or not).
   const meetsLevelRequirement = Boolean(selectedTemplate && characterLevel >= selectedTemplate.required_level)
-  // GearEquipPopover-only (equipPopoverEnabled) — whatever's currently worn
-  // in the same slot_type as the selected item, for the Compare view. null
-  // when the slot is empty (first-time equip), in which case the popover
-  // simply doesn't offer Compare at all (confirmed with the user).
-  const equippedItemIdForSlot = selectedTemplate ? equippedIds[selectedTemplate.slot_type as EquipSlot] : null
-  const equippedItemForSlot = equippedItemIdForSlot ? items.find((entry) => entry.id === equippedItemIdForSlot) : undefined
-  const equippedTemplateForSlot = equippedItemForSlot && templates.find((entry) => entry.id === equippedItemForSlot.template_id)
-  const compareTooltip =
-    equippedItemForSlot && equippedTemplateForSlot ? buildGearTooltip(equippedItemForSlot, equippedTemplateForSlot) : null
+  // Whatever's currently worn in the same slot_type as the given item, if
+  // any — used both for the selected item's GearEquipPopover Compare view
+  // and (enableCompareToggle only) every gear tile's own hover-compare peek.
+  // Returns null when nothing's equipped in that slot (first-time equip),
+  // in which case the caller simply doesn't offer/show Compare at all
+  // (confirmed with the user).
+  const buildCompareTooltipForItem = (template?: (typeof templates)[number]): ItemTooltipData | null => {
+    const equippedItemId = template ? equippedIds[template.slot_type as EquipSlot] : null
+    const equippedItem = equippedItemId ? items.find((entry) => entry.id === equippedItemId) : undefined
+    const equippedTemplate = equippedItem && templates.find((entry) => entry.id === equippedItem.template_id)
+    return equippedItem && equippedTemplate ? buildGearTooltip(equippedItem, equippedTemplate) : null
+  }
+  // GearEquipPopover-only (equipPopoverEnabled).
+  const compareTooltip = buildCompareTooltipForItem(selectedTemplate)
   const selectedStoneTier = selectedSlot?.kind === 'stone' ? selectedSlot.tier : undefined
   const selectedGem = selectedSlot?.kind === 'gem' ? { gemId: selectedSlot.gemId, tier: selectedSlot.tier } : undefined
   const selectedPotionStack =
@@ -853,6 +875,20 @@ export default function InventoryPanel({
             Inventory ({occupiedCount}/{INVENTORY_SLOT_CAP})
           </p>
 
+          {enableCompareToggle && (
+            <button
+              type="button"
+              onClick={() => setCompareMode((current) => !current)}
+              className={`rounded border px-2 py-1 text-xs font-medium ${
+                compareMode
+                  ? 'border-amber-500 bg-amber-500/10 text-amber-300'
+                  : 'border-slate-700 text-slate-300 hover:border-slate-500'
+              }`}
+            >
+              {compareMode ? 'Comparing ✓' : 'Compare'}
+            </button>
+          )}
+
           {enableSelling && (
             <div className="flex items-center gap-2 text-xs">
               {sellError && <span className="text-amber-400">{sellError}</span>}
@@ -1259,6 +1295,13 @@ export default function InventoryPanel({
               // duplicate the popover's own tooltip (2026-08-05 fix — see
               // isPopoverOpenForSelection's own comment).
               tooltip: isPopoverOpenForSelection(isSelected) ? undefined : (bagTooltip ?? buildGearTooltip(item, template)),
+              // enableCompareToggle-only (Equipment tab, 2026-08-13) — see
+              // that prop's own doc comment.
+              compareTooltip:
+                enableCompareToggle && compareMode && !isBagItem && !isPopoverOpenForSelection(isSelected)
+                  ? buildCompareTooltipForItem(template)
+                  : null,
+              disableTouchPeek: equipPopoverEnabled && enableCompareToggle,
               selected: isSelected,
             }
 
@@ -1624,6 +1667,7 @@ export default function InventoryPanel({
             }
           }}
           onClose={closeGearPopover}
+          autoCompare={enableCompareToggle && compareMode}
         />
       )}
 

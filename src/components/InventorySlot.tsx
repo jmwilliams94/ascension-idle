@@ -1,6 +1,6 @@
 import type { DragEvent, PointerEvent } from 'react'
+import CompareTooltipRow from './CompareTooltipRow'
 import HoverTooltip from './HoverTooltip'
-import ItemTooltip from './ItemTooltip'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
 import { TierEmberEffect } from '../game/items/tierEffects'
 import { emberCountForColor, seedFromId } from '../game/items/tierEffectsData'
@@ -58,6 +58,13 @@ interface InventorySlotProps {
   // Universal Diablo/PoE-style hover tooltip content — see ItemTooltip.tsx. Used
   // everywhere a filled tile renders (Inventory grid, Forge's Upgrade/Fuel slots).
   tooltip?: ItemTooltipData
+  // Equipment tab's Compare mode only (2026-08-13) — whatever's currently
+  // equipped in this item's same slot, if any. When set alongside `tooltip`,
+  // the hover/long-press peek shows both side by side (see
+  // CompareTooltipRow) instead of just this tile's own tooltip.
+  compareTooltip?: ItemTooltipData | null
+  // Equipment tab's Compare mode only — see HoverTooltip's own doc comment.
+  disableTouchPeek?: boolean
   // Small corner readout, e.g. an arrow stack's "3/50" count — gear doesn't use this.
   badge?: string
   // Composition level ("+N") — shown top-right so it never collides with the
@@ -109,6 +116,8 @@ export default function InventorySlot({
   iconSizeClassName = 'h-4/5 w-4/5',
   label,
   tooltip,
+  compareTooltip,
+  disableTouchPeek,
   badge,
   compositionLevel,
   selected,
@@ -201,5 +210,9 @@ export default function InventorySlot({
   // absolute-positioned overlay — a tile near the edge of a scrollable ancestor
   // (e.g. the Forge overlay's scroll container) would otherwise get its tooltip
   // clipped by that ancestor's overflow, which is exactly what a portal escapes.
-  return <HoverTooltip content={<ItemTooltip {...tooltip} />}>{button}</HoverTooltip>
+  return (
+    <HoverTooltip content={<CompareTooltipRow tooltip={tooltip} compareTooltip={compareTooltip} />} disableTouchPeek={disableTouchPeek}>
+      {button}
+    </HoverTooltip>
+  )
 }

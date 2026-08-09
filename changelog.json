@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.80.2",
+    "date": "2026-08-13",
+    "changes": [
+      "Equipment tab: paper doll and Inventory now sit side by side on wider screens",
+      "Added a \"Compare\" toggle above the Equipment tab's Inventory — turn it on to see a gear tile's stats next to your currently equipped item just by hovering (or tapping on mobile), instead of opening each item and pressing Compare"
+    ]
+  },
+  {
     "version": "1.80.1",
     "date": "2026-08-13",
     "changes": [

@@ -36,6 +36,11 @@ const AUTO_DISMISS_MS = 4000
 interface HoverTooltipProps {
   content: ReactNode
   children: ReactNode
+  // Opt out of the long-press (touch) trigger while keeping mouse hover
+  // intact — for tiles where a plain tap already opens a richer popover with
+  // this same content (Equipment tab's Compare mode, 2026-08-13), long-press
+  // would just be a redundant second gesture for the same information.
+  disableTouchPeek?: boolean
 }
 
 // Wraps any trigger element and shows `content` on hover (mouse/pen) or
@@ -44,7 +49,7 @@ interface HoverTooltipProps {
 // it immune to clipping by a scrollable/overflow ancestor (e.g. a panel's
 // scroll container), unlike a plain CSS absolute-positioned tooltip nested
 // inside that same clipped DOM subtree.
-export default function HoverTooltip({ content, children }: HoverTooltipProps) {
+export default function HoverTooltip({ content, children, disableTouchPeek = false }: HoverTooltipProps) {
   const [rect, setRect] = useState<DOMRect | null>(null)
   const triggerRef = useRef<HTMLDivElement>(null)
 
@@ -90,7 +95,7 @@ export default function HoverTooltip({ content, children }: HoverTooltipProps) {
   }
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.pointerType !== 'touch') {
+    if (event.pointerType !== 'touch' || disableTouchPeek) {
       return
     }
     longPressStartRef.current = { x: event.clientX, y: event.clientY }

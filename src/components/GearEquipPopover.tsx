@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import ItemTooltip from './ItemTooltip'
+import CompareTooltipRow from './CompareTooltipRow'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
 
 // Inventory-grid-only (confirmed with the user, 2026-08-03 — scoped away from
@@ -39,6 +39,12 @@ interface GearEquipPopoverProps {
   equipLabel: string
   onEquip: () => void
   onClose: () => void
+  // Equipment tab's page-level Compare toggle (2026-08-13) — when true, this
+  // popover always shows the side-by-side compare view (if compareTooltip is
+  // available) with no button of its own, since the toggle lives above the
+  // grid instead. Combat page's own embedding omits this (defaults to false)
+  // and keeps the in-popover Compare button below.
+  autoCompare?: boolean
 }
 
 export default function GearEquipPopover({
@@ -50,8 +56,10 @@ export default function GearEquipPopover({
   equipLabel,
   onEquip,
   onClose,
+  autoCompare = false,
 }: GearEquipPopoverProps) {
   const [comparing, setComparing] = useState(false)
+  const effectiveComparing = autoCompare ? Boolean(compareTooltip) : comparing
 
   useEffect(() => {
     // Outside-pointerdown-to-dismiss, not mouseleave (this is a click-opened
@@ -77,7 +85,7 @@ export default function GearEquipPopover({
     }
   }, [onClose])
 
-  const sideBySide = comparing && Boolean(compareTooltip) && window.innerWidth >= SIDE_BY_SIDE_MIN_VIEWPORT
+  const sideBySide = effectiveComparing && Boolean(compareTooltip) && window.innerWidth >= SIDE_BY_SIDE_MIN_VIEWPORT
   const width = sideBySide ? POPOVER_CARD_WIDTH * 2 + 8 : POPOVER_CARD_WIDTH
   const showBelow = anchorRect.top < FLIP_BELOW_THRESHOLD
   const left = Math.min(
@@ -96,10 +104,7 @@ export default function GearEquipPopover({
       // listener above and self-dismissing.
       onPointerDown={(event) => event.stopPropagation()}
     >
-      <div className={`flex gap-2 ${sideBySide ? 'flex-row' : 'flex-col'}`}>
-        <ItemTooltip {...tooltip} />
-        {comparing && compareTooltip && <ItemTooltip {...compareTooltip} />}
-      </div>
+      <CompareTooltipRow tooltip={tooltip} compareTooltip={effectiveComparing ? compareTooltip : null} />
       <div className="mt-1.5 flex gap-1.5 rounded-lg border border-slate-700 bg-slate-950/95 p-1.5 shadow-xl shadow-black/50">
         <button
           type="button"
@@ -112,7 +117,7 @@ export default function GearEquipPopover({
         >
           {equipLabel}
         </button>
-        {compareTooltip && !alreadyEquipped && (
+        {!autoCompare && compareTooltip && !alreadyEquipped && (
           <button
             type="button"
             onClick={() => setComparing((current) => !current)}
