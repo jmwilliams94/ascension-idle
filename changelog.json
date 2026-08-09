@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.77.12",
+    "date": "2026-08-09",
+    "changes": [
+      "Fixed \"Couldn't bank that item\" — Banking a composition'd gear item for points, and withdrawing gear with composition points, both failed every time due to a database bug"
+    ]
+  },
+  {
     "version": "1.77.11",
     "date": "2026-08-09",
     "changes": [
