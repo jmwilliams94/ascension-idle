@@ -49,13 +49,12 @@ function parseGemRewardKind(kind: LuckyRewardKind): { tier: GemTier; gemId: GemT
 // draw_lucky_ticket migration's own header). A free ticket every 6 hours,
 // plus uncapped paid extras at LUCKY_TICKET_AP_COST Ascension Points each.
 //
-// Two-step pick (arm, then Confirm/Cancel) rather than firing the draw the
-// instant a card is tapped — matches this codebase's established Confirm/
-// Cancel convention (Forge, Marketplace) and gives an escape hatch before an
-// AP spend becomes irrevocable, without weakening the anti-cheat design at
-// all: arming a card is purely local state, nothing is sent to the server
-// (and nothing about the board exists anywhere) until Confirm actually calls
-// draw_lucky_ticket with that index baked into the request.
+// Payment-first flow (2026-08-10, requested by the user, supersedes the
+// earlier arm-a-card-then-Confirm/Cancel two-step): the player picks a
+// payment method (Lottery Ticket / Ascension Points) up front, then a single
+// tap on any chest fires the draw immediately with that payment baked in.
+// Still no cheating surface — nothing about the board exists anywhere until
+// the tap actually calls draw_lucky_ticket with that card index.
 function rewardLabel(reward: LuckyReward): string {
   switch (reward.kind) {
     case 'gold':
@@ -206,14 +205,12 @@ function LuckyCard({
   reward,
   won,
   onClick,
-  armed,
   disabled,
 }: {
   index: number
   reward: LuckyReward | null
   won: boolean
   onClick?: () => void
-  armed: boolean
   disabled: boolean
 }) {
   const visual = reward ? rewardVisual(reward) : null
@@ -227,11 +224,9 @@ function LuckyCard({
   const containerClassName = `relative flex aspect-square items-center justify-center rounded-xl border-2 p-1 text-center transition-colors ${
     won
       ? 'border-amber-400 bg-amber-500/10 shadow-lg shadow-amber-500/20'
-      : armed
-        ? 'border-sky-400 bg-sky-500/10'
-        : reward
-          ? 'border-slate-700 bg-slate-900/60'
-          : 'border-slate-700 bg-slate-800 hover:border-slate-500'
+      : reward
+        ? 'border-slate-700 bg-slate-900/60'
+        : 'border-slate-700 bg-slate-800 hover:border-slate-500'
   } disabled:cursor-not-allowed`
 
   // Once revealed, this is no longer the pick button — it's an inert
@@ -304,7 +299,7 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   const ascensionPoints = usePlayerRecordStore((state) => state.ascensionPoints)
   const lotteryTickets = useCurrencyStore((state) => state.lotteryTickets)
 
-  const [armedIndex, setArmedIndex] = useState<number | null>(null)
+  const [paymentChoice, setPaymentChoice] = useState<'lottery_ticket' | 'ascension_points' | null>(null)
   const [board, setBoard] = useState<LuckyReward[] | null>(null)
   const [wonIndex, setWonIndex] = useState<number | null>(null)
   const [paymentUsed, setPaymentUsed] = useState<'free' | 'ascension_points' | 'lottery_ticket' | null>(null)
@@ -326,16 +321,10 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   const canAffordTicket = lotteryTickets >= 1
   const canAffordPoints = freeAvailable || ascensionPoints >= LUCKY_TICKET_AP_COST
 
-  const handlePick = (index: number) => {
-    if (board || busy) return
+  const handleOpen = async (index: number) => {
+    if (board || busy || !paymentChoice) return
     setError(null)
-    setArmedIndex((current) => (current === index ? null : index))
-  }
-
-  const handleConfirm = async (useTicket: boolean) => {
-    if (armedIndex === null) return
-    setError(null)
-    const result = await draw(characterId, armedIndex, useTicket)
+    const result = await draw(characterId, index, paymentChoice === 'lottery_ticket')
 
     if (!result.ok || !result.board || typeof result.won_index !== 'number') {
       setError(
@@ -349,14 +338,12 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
                 ? 'Your Inventory is full — free up a slot and try again.'
                 : "Couldn't draw a ticket — try again.",
       )
-      setArmedIndex(null)
       return
     }
 
     setBoard(result.board)
     setWonIndex(result.won_index)
     setPaymentUsed(result.payment ?? null)
-    setArmedIndex(null)
   }
 
   const handleReset = () => {
@@ -364,6 +351,7 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
     setWonIndex(null)
     setPaymentUsed(null)
     setError(null)
+    setPaymentChoice(null)
   }
 
   return (
@@ -373,73 +361,68 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
           <img src={LUCKYLAD_ICON_SRC} alt="" className="h-8 w-8 object-contain" />
           <p className="text-sm font-semibold text-slate-200">LuckyLad</p>
         </div>
-        <p className="mt-1 text-xs text-slate-500">
-          Pick one of 9 chests for a shot at a reward — the rest reveal what they would have been, but only your pick counts.
-        </p>
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
-          <span>
-            Ascension Points: <span className="font-semibold text-purple-300">{ascensionPoints.toLocaleString()}</span>
-          </span>
-          <span>
-            Lottery Tickets: <span className="font-semibold text-sky-300">{lotteryTickets.toLocaleString()}</span>
-          </span>
-          <span>
-            {freeAvailable ? (
-              <span className="font-semibold text-emerald-400">Free ticket ready</span>
-            ) : (
-              <>Next free ticket in {formatCountdown(nextFreeTicketAt! - now)}</>
-            )}
-          </span>
-        </div>
       </div>
+
+      {!paymentChoice && !board && (
+        <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
+          <p className="text-xs text-slate-400">Choose how to pay for a draw:</p>
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              disabled={busy || !canAffordTicket}
+              onClick={() => setPaymentChoice('lottery_ticket')}
+              className="flex-1 rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {`Lottery Ticket (${lotteryTickets} owned)`}
+            </button>
+            <button
+              type="button"
+              disabled={busy || !canAffordPoints}
+              onClick={() => setPaymentChoice('ascension_points')}
+              className="flex-1 rounded-lg border border-purple-500 bg-purple-500/10 px-3 py-1.5 text-xs font-medium text-purple-300 hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {pointsCost === 0 ? 'Free Ticket' : `${pointsCost} AP`}
+            </button>
+          </div>
+          <p className="mt-2 text-[10px] text-slate-500">
+            {freeAvailable ? 'Free ticket ready' : `Next free ticket in ${formatCountdown(nextFreeTicketAt! - now)}`}
+          </p>
+        </div>
+      )}
+
+      {paymentChoice && !board && (
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs text-slate-400">
+            Tap a chest to open it — paying with{' '}
+            {paymentChoice === 'lottery_ticket' ? 'a Lottery Ticket' : pointsCost === 0 ? 'your free ticket' : `${pointsCost} AP`}.
+          </p>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setPaymentChoice(null)}
+            className="shrink-0 text-xs font-medium text-slate-400 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Change
+          </button>
+        </div>
+      )}
 
       {/* max-w-sm caps how wide each card can stretch on desktop — without
           it, grid-cols-3's fluid columns fill the whole (much wider) page
           width, and since each card is aspect-[3/4] (taller than wide), a
           wide card becomes proportionally very tall. */}
-      <div className="mx-auto grid max-w-sm grid-cols-3 gap-2">
-        {Array.from({ length: LUCKY_CARD_COUNT }, (_, index) => (
-          <LuckyCard
-            key={index}
-            index={index}
-            reward={board ? board[index] : null}
-            won={wonIndex === index}
-            armed={armedIndex === index}
-            disabled={busy || Boolean(board)}
-            onClick={board ? undefined : () => handlePick(index)}
-          />
-        ))}
-      </div>
-
-      {!board && armedIndex !== null && (
-        <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
-          <p className="text-xs text-slate-400">Choose how to pay for this draw:</p>
-          <div className="mt-2 flex gap-2">
-            <button
-              type="button"
-              disabled={busy || !canAffordTicket}
-              onClick={() => void handleConfirm(true)}
-              className="flex-1 rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {busy ? 'Drawing…' : `Lottery Ticket (${lotteryTickets} owned)`}
-            </button>
-            <button
-              type="button"
-              disabled={busy || !canAffordPoints}
-              onClick={() => void handleConfirm(false)}
-              className="flex-1 rounded-lg border border-purple-500 bg-purple-500/10 px-3 py-1.5 text-xs font-medium text-purple-300 hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {busy ? 'Drawing…' : pointsCost === 0 ? 'Free Ticket' : `${pointsCost} AP`}
-            </button>
-          </div>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => setArmedIndex(null)}
-            className="mt-2 w-full rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-300 hover:border-slate-400"
-          >
-            Cancel
-          </button>
+      {(paymentChoice || board) && (
+        <div className="mx-auto grid max-w-sm grid-cols-3 gap-2">
+          {Array.from({ length: LUCKY_CARD_COUNT }, (_, index) => (
+            <LuckyCard
+              key={index}
+              index={index}
+              reward={board ? board[index] : null}
+              won={wonIndex === index}
+              disabled={busy || Boolean(board)}
+              onClick={board ? undefined : () => void handleOpen(index)}
+            />
+          ))}
         </div>
       )}
 

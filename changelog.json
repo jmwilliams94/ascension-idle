@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.81.1",
+    "date": "2026-08-10",
+    "changes": [
+      "LuckyLad: pick how you're paying (Lottery Ticket or Ascension Points) first, then tap a single chest to open it — no more picking a chest and seeing the other 8"
+    ]
+  },
+  {
     "version": "1.81.0",
     "date": "2026-08-13",
     "changes": [
