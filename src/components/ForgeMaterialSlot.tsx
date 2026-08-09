@@ -5,10 +5,14 @@ import { buildGearTooltip, formatItemDisplayName, getGearIconSrc, getItemIcon, g
 import {
   FALLEN_STAR_COLOR,
   FALLEN_STAR_ICON_SRC,
+  FALLEN_STAR_SCROLL_ICON_SRC,
   MATERIAL_COLOR,
   COMET_ICON_SRC,
+  COMET_SCROLL_ICON_SRC,
   buildFallenStarTooltip,
+  buildFallenStarScrollTooltip,
   buildCometTooltip,
+  buildCometScrollTooltip,
   buildStoneTooltip,
   compositionPointValue,
   getStoneIconSrc,
@@ -21,11 +25,14 @@ import type { ItemTemplate } from '../game/items/useItemTemplatesStore'
 // ForgePanel — dropping one of these doesn't literally consume that exact
 // unit, it just tells the Material slot which action the player means:
 // Comet -> Level Upgrade, Fallen Star -> Quality Upgrade, both flat-cost-1
-// so there's never a reason to stack more than one).
+// so there's never a reason to stack more than one). A dropped Comet
+// Scroll/Fallen Star Scroll (2026-08-13) collapses to the same 'currency'
+// entry with `isScroll: true` — same currencyType-driven upgrade path, but
+// triggers the *Scroll* RPC (10 chained attempts) instead of a single one.
 export type MaterialEntry =
   | { kind: 'stone'; id: string; tier: number }
   | { kind: 'item'; id: string; item: ItemInstance }
-  | { kind: 'currency'; id: string; currencyType: 'comet' | 'fallen_star' }
+  | { kind: 'currency'; id: string; currencyType: 'comet' | 'fallen_star'; isScroll?: boolean }
 
 export const MAX_MATERIAL_ENTRIES = 2
 
@@ -66,16 +73,33 @@ export default function ForgeMaterialSlot({ entries, templates, onRemoveEntry }:
 
         {entries.map((entry) => {
           if (entry.kind === 'currency') {
+            const isComet = entry.currencyType === 'comet'
+            const iconSrc = entry.isScroll
+              ? isComet
+                ? COMET_SCROLL_ICON_SRC
+                : FALLEN_STAR_SCROLL_ICON_SRC
+              : isComet
+                ? COMET_ICON_SRC
+                : FALLEN_STAR_ICON_SRC
+            const label = entry.isScroll ? (isComet ? 'Comet Scroll' : 'Fallen Star Scroll') : isComet ? 'Comet' : 'Fallen Star'
+            const tooltip = entry.isScroll
+              ? isComet
+                ? buildCometScrollTooltip()
+                : buildFallenStarScrollTooltip()
+              : isComet
+                ? buildCometTooltip()
+                : buildFallenStarTooltip()
+
             return (
               <motion.div layout key={entry.id} className={SLOT_SIZE_CLASS}>
                 <InventorySlot
                   slotId={entry.id}
                   filled
                   sizeClassName={SLOT_SIZE_CLASS}
-                  iconSrc={entry.currencyType === 'comet' ? COMET_ICON_SRC : FALLEN_STAR_ICON_SRC}
-                  qualityColor={entry.currencyType === 'comet' ? MATERIAL_COLOR : FALLEN_STAR_COLOR}
-                  label={entry.currencyType === 'comet' ? 'Comet' : 'Fallen Star'}
-                  tooltip={entry.currencyType === 'comet' ? buildCometTooltip() : buildFallenStarTooltip()}
+                  iconSrc={iconSrc}
+                  qualityColor={isComet ? MATERIAL_COLOR : FALLEN_STAR_COLOR}
+                  label={label}
+                  tooltip={tooltip}
                   onClick={() => onRemoveEntry(entry.id)}
                 />
               </motion.div>

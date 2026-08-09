@@ -166,10 +166,48 @@ interface BlessItemResult {
   gems?: GemCounts
 }
 
+// Shape returned by quality_upgrade_scroll/level_upgrade_scroll (see
+// migration 20260813090000_forge_scroll_batch_upgrade.sql) -- consumes one
+// Comet Scroll/Fallen Star Scroll to chain up to 10 upgrade attempts in one
+// call, each re-evaluated against the item's state as of that roll. No
+// per-roll breakdown is shown client-side (by design) -- rolls_attempted/
+// rolls_succeeded are carried in the response mostly for completeness;
+// `upgraded` (true if rolls_succeeded > 0) is all the UI actually branches
+// on, same as the single-attempt result shapes above.
+interface QualityUpgradeScrollResult {
+  ok: boolean
+  error?: 'item_not_found' | 'not_owner' | 'already_max_quality' | 'not_enough_fallen_star_scrolls'
+  upgraded?: boolean
+  rolls_attempted?: number
+  rolls_succeeded?: number
+  quality_tier?: string
+  fallen_star_scrolls_remaining?: number
+  sockets?: ItemInstance['sockets']
+  socket_gained?: boolean
+}
+
+interface LevelUpgradeScrollResult {
+  ok: boolean
+  error?: 'item_not_found' | 'not_owner' | 'already_max_level' | 'no_upgrade_path' | 'not_enough_comet_scrolls'
+  upgraded?: boolean
+  rolls_attempted?: number
+  rolls_succeeded?: number
+  level?: number
+  template_id?: string
+  comet_scrolls_remaining?: number
+  sockets?: ItemInstance['sockets']
+  socket_gained?: boolean
+}
+
 interface ForgeState {
   busy: boolean
   qualityUpgrade: (itemId: string) => Promise<QualityUpgradeResult>
   levelUpgrade: (itemId: string) => Promise<LevelUpgradeResult>
+  // Scroll batch variants (2026-08-13) -- same effect as qualityUpgrade/
+  // levelUpgrade above but chains up to 10 attempts server-side off one
+  // Scroll, see CLAUDE.md's Forge section for the full rules.
+  qualityUpgradeScroll: (itemId: string) => Promise<QualityUpgradeScrollResult>
+  levelUpgradeScroll: (itemId: string) => Promise<LevelUpgradeScrollResult>
   // stoneAmounts keys are tier "1".."4"; fuelItemIds are other gear items to
   // sacrifice for their composition value (see CLAUDE.md's Composition section).
   compositionFeed: (
@@ -257,6 +295,63 @@ export const useForgeStore = create<ForgeState>((set) => ({
     }
     if (result.ok && typeof result.comets_remaining === 'number') {
       useCurrencyStore.getState().setComets(result.comets_remaining)
+    }
+    if (result.ok && typeof result.comet_scrolls_remaining === 'number') {
+      useCurrencyStore.getState().setCometScrolls(result.comet_scrolls_remaining)
+    }
+
+    return result
+  },
+
+  qualityUpgradeScroll: async (itemId) => {
+    set({ busy: true })
+
+    const { data, error } = await supabase.rpc('quality_upgrade_scroll', { item_id: itemId })
+
+    set({ busy: false })
+
+    if (error) {
+      console.error('Quality upgrade scroll call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as QualityUpgradeScrollResult
+
+    if (result.ok && result.quality_tier) {
+      useInventoryStore.getState().patchItem(itemId, { quality_tier: result.quality_tier })
+    }
+    if (result.ok && result.sockets) {
+      useInventoryStore.getState().patchItem(itemId, { sockets: result.sockets })
+    }
+    if (result.ok && typeof result.fallen_star_scrolls_remaining === 'number') {
+      useCurrencyStore.getState().setFallenStarScrolls(result.fallen_star_scrolls_remaining)
+    }
+
+    return result
+  },
+
+  levelUpgradeScroll: async (itemId) => {
+    set({ busy: true })
+
+    const { data, error } = await supabase.rpc('level_upgrade_scroll', { item_id: itemId })
+
+    set({ busy: false })
+
+    if (error) {
+      console.error('Level upgrade scroll call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as LevelUpgradeScrollResult
+
+    if (result.ok && typeof result.level === 'number') {
+      useInventoryStore.getState().patchItem(itemId, {
+        level: result.level,
+        ...(result.template_id ? { template_id: result.template_id } : {}),
+      })
+    }
+    if (result.ok && result.sockets) {
+      useInventoryStore.getState().patchItem(itemId, { sockets: result.sockets })
     }
     if (result.ok && typeof result.comet_scrolls_remaining === 'number') {
       useCurrencyStore.getState().setCometScrolls(result.comet_scrolls_remaining)

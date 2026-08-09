@@ -12,6 +12,8 @@ import {
   findNextTemplateInChain,
   isFallenStarDragId,
   isCometDragId,
+  isFallenStarScrollDragId,
+  isCometScrollDragId,
   previewLevelUpgradeCost,
   previewQualityUpgradeCost,
 } from '../game/items/forgeCosts'
@@ -34,6 +36,10 @@ function describeFailure(error?: string): string {
       return 'Not enough Fallen Stars.'
     case 'not_enough_comets':
       return 'Not enough Comets.'
+    case 'not_enough_fallen_star_scrolls':
+      return 'Not enough Fallen Star Scrolls.'
+    case 'not_enough_comet_scrolls':
+      return 'Not enough Comet Scrolls.'
     case 'not_enough_room_to_unbundle':
       return "Would need to unbundle a Scroll for this, but there's no Inventory room for it."
     case 'already_max_quality':
@@ -69,6 +75,8 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
   const busy = useForgeStore((state) => state.busy)
   const qualityUpgrade = useForgeStore((state) => state.qualityUpgrade)
   const levelUpgrade = useForgeStore((state) => state.levelUpgrade)
+  const qualityUpgradeScroll = useForgeStore((state) => state.qualityUpgradeScroll)
+  const levelUpgradeScroll = useForgeStore((state) => state.levelUpgradeScroll)
 
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [materialEntries, setMaterialEntries] = useState<MaterialEntry[]>([])
@@ -83,6 +91,11 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
       : materialEntries[0].currencyType === 'comet'
         ? 'level'
         : 'quality'
+
+  // A dropped Comet Scroll/Fallen Star Scroll (2026-08-13) picks the same
+  // upgrade path as its loose-unit counterpart, but triggers the batch RPC
+  // (10 chained attempts off one Scroll) instead of a single attempt.
+  const isBatch = materialEntries.length > 0 && materialEntries[0].kind === 'currency' && Boolean(materialEntries[0].isScroll)
 
   useEffect(() => {
     if (!attemptResult) {
@@ -138,6 +151,16 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
 
     if (isFallenStarDragId(id)) {
       setMaterialEntries([{ kind: 'currency', id, currencyType: 'fallen_star' }])
+      return
+    }
+
+    if (isCometScrollDragId(id)) {
+      setMaterialEntries([{ kind: 'currency', id, currencyType: 'comet', isScroll: true }])
+      return
+    }
+
+    if (isFallenStarScrollDragId(id)) {
+      setMaterialEntries([{ kind: 'currency', id, currencyType: 'fallen_star', isScroll: true }])
     }
   }
 
@@ -207,7 +230,13 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
       return
     }
 
-    const result = materialMode === 'quality' ? await qualityUpgrade(selectedItem.id) : await levelUpgrade(selectedItem.id)
+    const result = isBatch
+      ? materialMode === 'quality'
+        ? await qualityUpgradeScroll(selectedItem.id)
+        : await levelUpgradeScroll(selectedItem.id)
+      : materialMode === 'quality'
+        ? await qualityUpgrade(selectedItem.id)
+        : await levelUpgrade(selectedItem.id)
 
     if (!result.ok) {
       setAttemptResult({ success: false, message: describeFailure(result.error) })
@@ -243,9 +272,17 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
           {!selectedItem ? (
             <p className="text-center text-[11px] text-slate-600">Drag an item into the Upgrade Slot.</p>
           ) : !materialMode ? (
-            <p className="text-center text-[11px] text-slate-600">Drag a Comet or Fallen Star into the Material slot.</p>
+            <p className="text-center text-[11px] text-slate-600">
+              Drag a Comet, Fallen Star, or Scroll into the Material slot.
+            </p>
           ) : (
             <>
+              {isBatch && !attemptResult && (
+                <p className="text-center text-[11px] text-amber-400/80">
+                  Uses 1 {materialMode === 'quality' ? 'Fallen Star' : 'Comet'} Scroll — up to 10 automatic upgrade rolls.
+                </p>
+              )}
+
               {attemptResult && (
                 <div
                   className={`rounded-xl border p-3 text-center text-sm ${

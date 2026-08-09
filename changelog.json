@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.80.0",
+    "date": "2026-08-13",
+    "changes": [
+      "Forge: dropping a Comet Scroll or Fallen Star Scroll onto the Material slot now auto-rolls up to 10 upgrade attempts in one go, instead of a single Comet or Fallen Star's one attempt"
+    ]
+  },
+  {
     "version": "1.79.2",
     "date": "2026-08-13",
     "changes": [
