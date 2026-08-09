@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.82.1",
+    "date": "2026-08-13",
+    "changes": [
+      "Mail rows are narrower and better spaced, and now show the date each one arrived"
+    ]
+  },
+  {
     "version": "1.82.0",
     "date": "2026-08-13",
     "changes": [
