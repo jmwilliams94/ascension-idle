@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.86.1",
+    "date": "2026-08-19",
+    "changes": [
+      "Fixed the mobile bottom nav bar drifting up the screen mid-scroll instead of staying pinned to the bottom"
+    ]
+  },
+  {
     "version": "1.86.0",
     "date": "2026-08-19",
     "changes": [
