@@ -126,7 +126,19 @@ export default function EquipmentPanel() {
                 compositionLevel={equipped?.item.composition_level}
                 selected={selectedSlot === slot}
                 onClick={equipped ? () => setSelectedSlot((current) => (current === slot ? null : slot)) : undefined}
-                tooltip={equipped ? buildGearTooltip(equipped.item, equipped.template) : undefined}
+                tooltip={
+                  equipped
+                    ? buildGearTooltip(
+                        // Same mirror as glowQualityTier above (2026-08-14) —
+                        // the Quiver's own tooltip (title/color) should read
+                        // as whatever quality the equipped Bow is, not its
+                        // own always-Normal tier. Quiver has no base_stats,
+                        // so this can't affect any displayed stat numbers.
+                        slot === 'quiver' ? { ...equipped.item, quality_tier: glowQualityTier ?? 'normal' } : equipped.item,
+                        equipped.template,
+                      )
+                    : undefined
+                }
                 sizeClassName={SLOT_SIZE}
               />
             </div>

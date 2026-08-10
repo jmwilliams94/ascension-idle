@@ -9,14 +9,24 @@ import { describeSocketedGem, SOCKETED_GEM_COLOR } from './gemCatalog'
 
 // Plain white, used for a handful of gear tooltip lines that should read as
 // neutral/informational rather than tinted (Lvl, Class, the "Sockets"
-// header, and the Physical Defense/Dodge stat lines below) — per the user's
-// 2026-08-13 tooltip color pass. Magic Attack/Defense and Physical Attack/
-// Dexterity are deliberately left at the block's own default blue.
+// header, the Physical Defense/Dodge/Physical Attack/Dexterity stat lines
+// below, and the Progression line) — per the user's 2026-08-13/2026-08-14
+// tooltip color passes. Magic Attack/Defense are deliberately left at the
+// block's own default blue.
 const TOOLTIP_WHITE = '#FFFFFF'
 
 // Stat keys that get the white override above instead of the default stat
 // block color (sky blue) — everything else in base_stats keeps that default.
-const WHITE_STAT_KEYS = ['physical_defense', 'dodge']
+const WHITE_STAT_KEYS = ['physical_defense', 'dodge', 'physical_attack', 'dexterity']
+
+// Mirrors forgeCosts.ts's own COMPOSITION_POINTS_REQUIRED_BY_LEVEL/
+// compositionPointsRequired/COMPOSITION_MAX_LEVEL — duplicated locally rather
+// than imported, since forgeCosts.ts itself imports getGearIconSrc from this
+// file, and importing back the other way would create a circular import
+// (same reasoning as the gemCatalog.ts/gemTypes.ts split — see CLAUDE.md's
+// Gem system section). Keep this array in sync with forgeCosts.ts's copy.
+const TOOLTIP_COMPOSITION_MAX_LEVEL = 12
+const TOOLTIP_COMPOSITION_POINTS_REQUIRED_BY_LEVEL = [20, 20, 80, 240, 720, 2160, 6480, 19440, 58320, 2700, 5500, 9000] as const
 
 // How much stronger each quality tier is than the template's stored (Normal-tier)
 // base_stats — an approximate, rounded pattern (not any single sourced item's
@@ -549,6 +559,21 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
   const enchantHp = itemEnchant?.hp
   const blessPct = itemEnchant?.blessPct
 
+  // Progression toward the item's next Composition tier (2026-08-14,
+  // requested by the user) — only shown at +1 or higher (a Normal, +0 item
+  // shows nothing at all, per the user's explicit "if it's normal,
+  // progression shouldn't be visible") and only while there's a further tier
+  // to reach (nothing shown once maxed at +12). White, at the bottom of the
+  // main info block, below Sockets.
+  const compositionRemaining =
+    item.composition_level > 0 && item.composition_level < TOOLTIP_COMPOSITION_MAX_LEVEL
+      ? Math.max(0, (TOOLTIP_COMPOSITION_POINTS_REQUIRED_BY_LEVEL[item.composition_level] ?? 0) - item.composition_points)
+      : null
+  const progressionLine: TooltipLine | null =
+    compositionRemaining !== null
+      ? { text: `Progression: ${compositionRemaining} to +${item.composition_level + 1}`, color: TOOLTIP_WHITE }
+      : null
+
   return {
     title: template
       ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level)
@@ -568,6 +593,7 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
       ...(classLine ? [classLine] : []),
       ...(template ? buildStatTooltipLines(template.base_stats, item.quality_tier) : []),
       ...socketLines,
+      ...(progressionLine ? [progressionLine] : []),
     ],
     bonusStats: bonusStats.length > 0 ? bonusStats : undefined,
     enchantLine: enchantHp ? `Enchanted HP: ${enchantHp}` : undefined,

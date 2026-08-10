@@ -74,7 +74,7 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
   const busy = useForgeStore((state) => state.busy)
   const masterForgeUpgrade = useForgeStore((state) => state.masterForgeUpgrade)
 
-  const [upgradeType, setUpgradeType] = useState<'quality' | 'level' | null>(null)
+  const [upgradeType, setUpgradeType] = useState<'quality' | 'level' | null>('quality')
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
 

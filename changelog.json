@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.83.3",
+    "date": "2026-08-14",
+    "changes": [
+      "Master Forge now starts with Quality already selected",
+      "Equipped gear picker is now laid out in two rows (Headgear/Armor/Boots, then Weapon/Ring/Necklace) and shows its +N enhancement badge",
+      "Gear tooltips now show a Progression line for enhanced items, and color Physical Attack/Dexterity white",
+      "The Quiver's tooltip now reflects the quality of your equipped Bow, matching its icon"
+    ]
+  },
+  {
     "version": "1.83.2",
     "date": "2026-08-14",
     "changes": [
