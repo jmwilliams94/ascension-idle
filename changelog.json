@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.84.7",
+    "date": "2026-08-14",
+    "changes": [
+      "Added real art for the Random Gem Bag (Lucky Lad reward)"
+    ]
+  },
+  {
     "version": "1.84.6",
     "date": "2026-08-14",
     "changes": [

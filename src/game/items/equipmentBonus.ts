@@ -502,6 +502,9 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Class 8 Money Bag': `${import.meta.env.BASE_URL}item-icons/money-bag-8.png`,
   'Class 9 Money Bag': `${import.meta.env.BASE_URL}item-icons/money-bag-9.png`,
   'Class 10 Money Bag': `${import.meta.env.BASE_URL}item-icons/money-bag-10.png`,
+  // Random Gem Bag (2026-08-14) — user-supplied black-velvet crowned pouch
+  // art, same trim/pad/resize-to-160 pipeline as every other icon here.
+  'Random Gem Bag': `${import.meta.env.BASE_URL}item-icons/gem-bag.png`,
 }
 
 export function getGearIconSrc(templateName: string | undefined): string | undefined {

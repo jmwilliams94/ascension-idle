@@ -447,6 +447,7 @@ export function buildGemBagTooltip(): ItemTooltipData {
   return {
     title: 'Random Gem Bag',
     icon: '🎁',
+    iconSrc: getGearIconSrc('Random Gem Bag'),
     iconColor: MATERIAL_COLOR,
     lines: ['Lucky Lad reward'],
     stats: ['Open for 1 random Normal gem'],

@@ -108,7 +108,7 @@ function rewardVisual(reward: LuckyReward): { icon?: string; iconSrc?: string; c
     case 'money_bag':
       return { icon: '💰', iconSrc: getGearIconSrc(`Class ${reward.amount} Money Bag`), color: FALLEN_STAR_COLOR }
     case 'gem_bag':
-      return { icon: '🎁', color: MATERIAL_COLOR }
+      return { icon: '🎁', iconSrc: getGearIconSrc('Random Gem Bag'), color: MATERIAL_COLOR }
     case 'composition_stone':
       return { icon: '🔷', iconSrc: getStoneIconSrc(reward.amount), color: MATERIAL_COLOR }
     case 'gem_tempered_drake':
