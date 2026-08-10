@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.86.5",
+    "date": "2026-08-20",
+    "changes": [
+      "Fixed dragging items in the Forge feeling laggy, especially on the first drag"
+    ]
+  },
+  {
     "version": "1.86.4",
     "date": "2026-08-20",
     "changes": [

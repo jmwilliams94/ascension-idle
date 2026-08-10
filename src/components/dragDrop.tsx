@@ -2,15 +2,21 @@ import { useCallback, useRef, useState } from 'react'
 import type { ComponentProps, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
-import { DragDropContext, resolveDropTarget, useDraggableTile } from './dragDropContext'
-import type { ActiveDrag, DragPayload } from './dragDropContext'
+import { DragDropContext, queryDropZoneRects, resolveDropTarget, useDraggableTile } from './dragDropContext'
+import type { ActiveDrag, DragPayload, DropZoneRect } from './dragDropContext'
 
 export function DragDropProvider({ children }: { children: ReactNode }) {
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null)
   const activeDragRef = useRef<ActiveDrag | null>(null)
+  // Snapshotted once per drag (drop zones don't move mid-drag in this UI) so
+  // every subsequent pointermove's hit test is plain in-memory rect math
+  // instead of a DOM query — see dragDropContext.ts's queryDropZoneRects doc
+  // comment for why this replaced the old elementFromPoint-per-move approach.
+  const dropZoneRectsRef = useRef<DropZoneRect[]>([])
 
   const startDrag = useCallback((payload: DragPayload, x: number, y: number) => {
-    const next: ActiveDrag = { ...payload, x, y, overTarget: resolveDropTarget(x, y) }
+    dropZoneRectsRef.current = queryDropZoneRects()
+    const next: ActiveDrag = { ...payload, x, y, overTarget: resolveDropTarget(x, y, dropZoneRectsRef.current) }
     activeDragRef.current = next
     setActiveDrag(next)
   }, [])
@@ -19,7 +25,7 @@ export function DragDropProvider({ children }: { children: ReactNode }) {
     if (!activeDragRef.current) {
       return
     }
-    const next: ActiveDrag = { ...activeDragRef.current, x, y, overTarget: resolveDropTarget(x, y) }
+    const next: ActiveDrag = { ...activeDragRef.current, x, y, overTarget: resolveDropTarget(x, y, dropZoneRectsRef.current) }
     activeDragRef.current = next
     setActiveDrag(next)
   }, [])

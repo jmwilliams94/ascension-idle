@@ -11,8 +11,9 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 // which never fires on touchscreens — see CLAUDE.md's "PWA & Mobile" section.
 // A drop target just needs a `data-drop-zone="<key>"` attribute on its
 // wrapper element; the drag source resolves which target (if any) is under
-// the pointer via `document.elementFromPoint`, so drop targets themselves
-// need no handlers. Key namespacing is the caller's responsibility — Forge
+// the pointer via cached bounding-rect math (see queryDropZoneRects below),
+// so drop targets themselves need no handlers. Key namespacing is the
+// caller's responsibility — Forge
 // uses `"upgrade"`/`"fuel-0"`/`"fuel-1"`; each page's own DragDropProvider is
 // a separate React context, so there's no cross-page collision risk even
 // though the keys aren't prefixed.
@@ -70,17 +71,52 @@ export interface DragDropContextValue {
 
 export const DragDropContext = createContext<DragDropContextValue | null>(null)
 
-function hitTestDropZone(x: number, y: number): string | null {
-  const element = document.elementFromPoint(x, y)
-  const target = element?.closest<HTMLElement>('[data-drop-zone]')
-  return target?.dataset.dropZone ?? null
+export interface DropZoneRect {
+  key: string
+  rect: DOMRect
 }
 
-export function resolveDropTarget(x: number, y: number): string | null {
+// Snapshotting every `[data-drop-zone]` element's bounding rect once, at drag
+// start, rather than hit-testing the live DOM on every pointermove. The old
+// approach called `document.elementFromPoint` up to twice per move (see git
+// history) — that forces the browser to flush any pending layout before it
+// can answer, and with a React state update (the ghost tile's position)
+// landing right after each one, the two together formed a continuous
+// read-after-write layout-thrashing loop for the entire duration of a drag.
+// Profiling (2026-08-20, reported by the user: the *first* item dragged into
+// Forge felt laggy, every drag after felt smooth) showed "Rendering" as the
+// dominant main-thread cost and a ~500ms Presentation Delay on an interaction
+// whose own handler took ~30ms — consistent with forced layout, not
+// scripting. Drop zones don't move mid-drag in this UI, so caching their
+// rects once and doing plain point-in-rect math on every move is equivalent
+// in behavior but never touches the DOM/layout at all after drag-start.
+export function queryDropZoneRects(): DropZoneRect[] {
+  const elements = document.querySelectorAll<HTMLElement>('[data-drop-zone]')
+  return Array.from(elements, (element) => ({ key: element.dataset.dropZone as string, rect: element.getBoundingClientRect() }))
+}
+
+function pointInRect(x: number, y: number, rect: DOMRect): boolean {
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
+}
+
+// Iterates back-to-front so a later-in-DOM (visually topmost, for this app's
+// non-overlapping drop zones effectively "more specific") zone wins on the
+// rare chance two rects overlap — approximates elementFromPoint's own
+// topmost-wins behavior without needing an actual paint-order hit test.
+function hitTestDropZone(x: number, y: number, zones: DropZoneRect[]): string | null {
+  for (let i = zones.length - 1; i >= 0; i -= 1) {
+    if (pointInRect(x, y, zones[i].rect)) {
+      return zones[i].key
+    }
+  }
+  return null
+}
+
+export function resolveDropTarget(x: number, y: number, zones: DropZoneRect[]): string | null {
   const halfHeight = window.innerWidth >= DESKTOP_BREAKPOINT_PX ? GHOST_HALF_HEIGHT_DESKTOP_PX : GHOST_HALF_HEIGHT_MOBILE_PX
   const ghostY = y - GHOST_VERTICAL_OFFSET_PX - halfHeight
 
-  return hitTestDropZone(x, ghostY) ?? hitTestDropZone(x, y)
+  return hitTestDropZone(x, ghostY, zones) ?? hitTestDropZone(x, y, zones)
 }
 
 function useDragDropContext(): DragDropContextValue {
@@ -134,6 +170,44 @@ export function useDraggableTile({ enabled, payload, onDrop, onClick }: UseDragg
   const startRef = useRef<{ x: number; y: number } | null>(null)
   const draggingRef = useRef(false)
   const justDraggedRef = useRef(false)
+  // Coalesces bursts of pointermove events (a precise mouse/touchpad can fire
+  // several per animation frame) down to one drag.updateDrag call per frame,
+  // rather than one React state update per raw event.
+  const pendingPointRef = useRef<{ x: number; y: number } | null>(null)
+  const rafIdRef = useRef<number | null>(null)
+
+  const flushPendingMove = () => {
+    rafIdRef.current = null
+    if (pendingPointRef.current) {
+      drag.updateDrag(pendingPointRef.current.x, pendingPointRef.current.y)
+      pendingPointRef.current = null
+    }
+  }
+
+  const cancelPendingMove = () => {
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current)
+      rafIdRef.current = null
+    }
+    pendingPointRef.current = null
+  }
+
+  // Used on pointerup, not pointercancel — a drop must resolve against the
+  // freshest pointer position, not whatever the last *painted* frame had. A
+  // fast flick can pointerdown+move+up within a single animation frame,
+  // before the throttled rAF callback ever runs; cancelling instead of
+  // flushing here would silently drop that final move and resolve the drop
+  // against a stale (pre-move) overTarget.
+  const flushPendingMoveNow = () => {
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current)
+      rafIdRef.current = null
+    }
+    if (pendingPointRef.current) {
+      drag.updateDrag(pendingPointRef.current.x, pendingPointRef.current.y)
+      pendingPointRef.current = null
+    }
+  }
 
   const dragging = enabled && payload !== null && drag.activeDrag?.id === payload.id
 
@@ -166,11 +240,15 @@ export function useDraggableTile({ enabled, payload, onDrop, onClick }: UseDragg
     }
 
     event.preventDefault()
-    drag.updateDrag(event.clientX, event.clientY)
+    pendingPointRef.current = { x: event.clientX, y: event.clientY }
+    if (rafIdRef.current === null) {
+      rafIdRef.current = requestAnimationFrame(flushPendingMove)
+    }
   }
 
   const handlePointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
     startRef.current = null
+    flushPendingMoveNow()
     if (draggingRef.current) {
       draggingRef.current = false
       justDraggedRef.current = true
@@ -185,6 +263,7 @@ export function useDraggableTile({ enabled, payload, onDrop, onClick }: UseDragg
   }
 
   const handlePointerCancel = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    cancelPendingMove()
     startRef.current = null
     if (draggingRef.current) {
       draggingRef.current = false
