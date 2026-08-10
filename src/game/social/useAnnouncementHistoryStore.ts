@@ -22,6 +22,13 @@ interface AnnouncementHistoryState {
   loaded: boolean
   loading: boolean
   loadHistory: () => Promise<void>
+  // Live-append for a fresh announcement pushed over Realtime (2026-08-18,
+  // added alongside Global Chat) -- GlobalActivityConnection.tsx calls this
+  // next to its existing setLatestAnnouncement call, so both the ticker's
+  // "See more" dropdown and ChatOverlay's combined feed stay current without
+  // an extra reload. Dedupes by id and keeps the same HISTORY_LIMIT cap the
+  // explicit loadHistory() fetch already uses.
+  addEntry: (entry: AnnouncementHistoryEntry) => void
 }
 
 const HISTORY_LIMIT = 10
@@ -30,6 +37,12 @@ export const useAnnouncementHistoryStore = create<AnnouncementHistoryState>((set
   entries: [],
   loaded: false,
   loading: false,
+
+  addEntry: (entry) => {
+    set((state) => ({
+      entries: [entry, ...state.entries.filter((e) => e.id !== entry.id)].slice(0, HISTORY_LIMIT),
+    }))
+  },
 
   loadHistory: async () => {
     if (get().loading) {

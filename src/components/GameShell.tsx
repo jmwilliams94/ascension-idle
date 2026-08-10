@@ -6,7 +6,8 @@ import QuiverWarningHud from './QuiverWarningHud'
 import InventoryFullWarningHud from './InventoryFullWarningHud'
 import KnockoutHud from './KnockoutHud'
 import PlayersOnlineHud from './PlayersOnlineHud'
-import GlobalAnnouncementTicker from './GlobalAnnouncementTicker'
+import ChatAndAnnouncements from './ChatAndAnnouncements'
+import ChatOverlay from './ChatOverlay'
 import CombatPage from './CombatPage'
 import EquipmentTabPage from './EquipmentTabPage'
 import ExpBar from './ExpBar'
@@ -362,6 +363,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <CombatEngine />
       <GlobalActivityConnection accountId={accountId} />
       <MailRealtimeConnection characterId={characterId} />
+      <ChatOverlay characterId={characterId} />
 
       {/* pb-24 (was pb-6, matched by py-6 on lg): clearance for
           MobileBottomNav's fixed bar below `lg` — without it, the bar covers
@@ -376,7 +378,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
           <InventoryFullWarningHud />
           <KnockoutHud />
           <PlayersOnlineHud />
-          <GlobalAnnouncementTicker />
+          <ChatAndAnnouncements />
         </div>
 
         {/* Renders nothing when there's no pet to celebrate — safe to mount

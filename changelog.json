@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.85.0",
+    "date": "2026-08-18",
+    "changes": [
+      "Added Global Chat — a new chat button next to Players Online opens a live chat with every other player online, mixed in with the recent announcements feed",
+      "The Players Online indicator is now just a dot and a number"
+    ]
+  },
+  {
     "version": "1.84.10",
     "date": "2026-08-17",
     "changes": [
