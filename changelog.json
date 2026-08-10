@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.85.2",
+    "date": "2026-08-18",
+    "changes": [
+      "Fixed the Global Chat text box making the page zoom in slightly on mobile when tapped"
+    ]
+  },
+  {
     "version": "1.85.1",
     "date": "2026-08-18",
     "changes": [

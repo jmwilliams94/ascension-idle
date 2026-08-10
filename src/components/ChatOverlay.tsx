@@ -173,7 +173,10 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
             onChange={(event) => setDraft(event.target.value.slice(0, 280))}
             placeholder="Say something…"
             maxLength={280}
-            className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-sky-500 focus:outline-none"
+            // text-base (16px), not text-sm -- iOS/mobile browsers auto-zoom
+            // the viewport on focus for any text input under 16px, which is
+            // what the user was seeing here (reported 2026-08-18).
+            className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-base text-slate-100 placeholder:text-slate-600 focus:border-sky-500 focus:outline-none"
           />
           <button
             type="submit"
