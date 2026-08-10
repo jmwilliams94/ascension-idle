@@ -6,9 +6,18 @@ import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { usePotionStore } from '../game/items/usePotionStore'
 import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemTemplatesStore'
+import { useRepairStore } from '../game/items/useRepairStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { POTION_TYPES, HP_POTION_ORDER, MP_POTION_ORDER, type PotionTypeId } from '../game/items/potionTypes'
-import { buildGearTooltip, getGearIconSrc, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
+import {
+  buildGearTooltip,
+  computeMaxDurability,
+  computeRepairCost,
+  getGearIconSrc,
+  getItemIcon,
+  getQualityColor,
+  itemHasDurability,
+} from '../game/items/equipmentBonus'
 import { CONSUMABLE_COLOR } from '../game/items/forgeCosts'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
 
@@ -29,12 +38,13 @@ function previewInstance(template: ItemTemplate): ItemInstance {
     composition_points: 0,
     sockets: [],
     enchant: null,
+    durability: computeMaxDurability(template.slot_type, template.required_level) ?? 0,
     created_at: '',
     location: 'inventory',
   }
 }
 
-type ShopTab = 'weapons' | 'armor' | 'jeweller' | 'potions'
+type ShopTab = 'weapons' | 'armor' | 'jeweller' | 'potions' | 'repair'
 
 // 'quiver' rides along here (not a dedicated tab) so a Hunter can
 // re-purchase one through the same generic GearRow/grantItemDrop path if
@@ -49,6 +59,7 @@ const SHOP_TABS: { id: ShopTab; label: string; icon: string }[] = [
   { id: 'armor', label: 'Armor', icon: '🛡️' },
   { id: 'jeweller', label: 'Jeweller', icon: '💍' },
   { id: 'potions', label: 'Potions', icon: '🧪' },
+  { id: 'repair', label: 'Repair', icon: '🔨' },
 ]
 
 // A template is available to the current class if it has no class restriction
@@ -129,8 +140,13 @@ export default function ShopPanel() {
   const buyPotions = usePotionStore((state) => state.buyPotions)
 
   const templates = useItemTemplatesStore((state) => state.templates)
+  const items = useInventoryStore((state) => state.items)
+
+  const repairBusy = useRepairStore((state) => state.busy)
+  const repairAll = useRepairStore((state) => state.repairAll)
 
   const [tab, setTab] = useState<ShopTab>('weapons')
+  const [repairResult, setRepairResult] = useState<{ success: boolean; message: string } | null>(null)
 
   const buyPotionStack = (typeId: PotionTypeId) => {
     if (!characterId) {
@@ -164,13 +180,48 @@ export default function ShopPanel() {
     .filter((t) => JEWELLER_SLOTS.includes(t.slot_type) && availableToClass(t, selectedClassId))
     .sort((a, b) => a.required_level - b.required_level)
 
+  // Repair All (2026-08-14, requested by the user — a single flat action, no
+  // per-item picker) — every owned item (equipped, inventory, or bank) below
+  // its own max durability, excluding Quiver (no durability concept at all).
+  // Mirrors repair_all_items' own SQL filter/cost formula exactly.
+  const damagedItems = items.flatMap((item) => {
+    const template = templates.find((t) => t.id === item.template_id)
+    if (!template || !itemHasDurability(template.slot_type)) {
+      return []
+    }
+    const max = computeMaxDurability(template.slot_type, template.required_level)
+    if (max === null || item.durability >= max) {
+      return []
+    }
+    return [{ item, template, cost: computeRepairCost(template.required_level, item.quality_tier) }]
+  })
+  const repairTotalCost = damagedItems.reduce((sum, entry) => sum + entry.cost, 0)
+  const canAffordRepair = gold >= repairTotalCost
+
+  const handleRepairAll = async () => {
+    const result = await repairAll()
+    if (!result.ok) {
+      setRepairResult({
+        success: false,
+        message:
+          result.error === 'already_full'
+            ? 'Nothing needs repairing.'
+            : result.error === 'not_enough_gold'
+              ? `Need ${result.cost ?? repairTotalCost} gold (have ${result.gold ?? gold}).`
+              : 'Something went wrong.',
+      })
+      return
+    }
+    setRepairResult({ success: true, message: `Repaired ${result.items_repaired ?? 0} item${result.items_repaired === 1 ? '' : 's'}.` })
+  }
+
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="space-y-3">
         {/* Capped + centered at lg+ only (reported too large on desktop) —
             below lg the grid stays full-width, unchanged, since only the
             desktop sizing was flagged. */}
-        <div className="grid grid-cols-2 grid-rows-2 gap-3 lg:mx-auto lg:max-w-[260px]">
+        <div className="grid grid-cols-3 gap-3 lg:mx-auto lg:max-w-[380px]">
           {SHOP_TABS.map((entry) => (
             <button
               key={entry.id}
@@ -330,6 +381,57 @@ export default function ShopPanel() {
                 )
               })}
             </div>
+          </div>
+        )}
+
+        {tab === 'repair' && (
+          <div className="space-y-3">
+            <p className="text-xs text-slate-500">
+              Equipped gear slowly wears down the longer you fight. A broken (0-durability) item stays equipped but stops
+              contributing anything in combat until it's repaired.
+            </p>
+
+            {damagedItems.length === 0 ? (
+              <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">
+                Everything's in good repair.
+              </p>
+            ) : (
+              <div className="max-h-64 space-y-2 overflow-y-auto">
+                {damagedItems.map(({ item, template, cost }) => (
+                  <div key={item.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <InventorySlot
+                        slotId={item.id}
+                        filled
+                        sizeClassName={SLOT_SIZE_CLASS}
+                        icon={getItemIcon(template.slot_type)}
+                        iconSrc={getGearIconSrc(template.name)}
+                        qualityColor={getQualityColor(item.quality_tier)}
+                        broken={item.durability <= 0}
+                        label={template.name}
+                        tooltip={buildGearTooltip(item, template)}
+                      />
+                      <p className="truncate font-medium text-slate-200">{template.name}</p>
+                    </div>
+                    <p className="shrink-0 text-slate-500">{cost}g</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {repairResult && (
+              <p className={`text-xs ${repairResult.success ? 'text-emerald-400' : 'text-amber-400'}`}>{repairResult.message}</p>
+            )}
+
+            <button
+              type="button"
+              disabled={damagedItems.length === 0 || !canAffordRepair || repairBusy}
+              title={damagedItems.length === 0 ? undefined : !canAffordRepair ? `Need ${repairTotalCost} gold (have ${gold}).` : undefined}
+              onClick={() => void handleRepairAll()}
+              className="w-full rounded-lg border border-emerald-600 bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {repairBusy ? 'Repairing…' : `Repair All (${repairTotalCost.toLocaleString()} gold)`}
+            </button>
           </div>
         )}
       </div>

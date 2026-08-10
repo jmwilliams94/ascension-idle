@@ -1,6 +1,14 @@
 import InventorySlot, { SLOT_LABEL_HEIGHT_CLASS, SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
 import { useDraggableTile } from './dragDropContext'
-import { buildGearTooltip, formatItemDisplayName, formatItemLevel, getGearIconSrc, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
+import {
+  buildGearTooltip,
+  formatItemDisplayName,
+  formatItemLevel,
+  getGearIconSrc,
+  getItemIcon,
+  getQualityColor,
+  itemHasDurability,
+} from '../game/items/equipmentBonus'
 import { listableCurrencyLabel, listableCurrencyVisual } from '../game/marketplace/listableCurrency'
 import type { ListableCurrencyType } from '../game/marketplace/useMarketplaceStore'
 import type { ItemInstance } from '../game/items/useInventoryStore'
@@ -75,6 +83,7 @@ export default function MarketplaceListingSlot({ target, onRemove }: Marketplace
           icon={item ? icon : currencyVisual?.icon}
           iconSrc={item ? iconSrc : currencyVisual?.iconSrc}
           compositionLevel={item?.composition_level}
+          broken={item && itemHasDurability(template?.slot_type) ? item.durability <= 0 : undefined}
           label={label}
           tooltip={item ? buildGearTooltip(item, template ?? undefined) : undefined}
           draggable={drag.draggable}

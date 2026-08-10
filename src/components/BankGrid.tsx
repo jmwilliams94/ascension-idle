@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import TooltipActionPopover from './TooltipActionPopover'
-import { buildGearTooltip, getGearIconSrc, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
+import { buildGearTooltip, getGearIconSrc, getItemIcon, getQualityColor, itemHasDurability } from '../game/items/equipmentBonus'
 import {
   FALLEN_STAR_COLOR,
   FALLEN_STAR_ICON_SRC,
@@ -196,6 +196,7 @@ export default function BankGrid({ characterId }: BankGridProps) {
                     icon={icon}
                     iconSrc={iconSrc}
                     compositionLevel={item.composition_level}
+                    broken={itemHasDurability(template?.slot_type) ? item.durability <= 0 : undefined}
                     label={template?.name ?? 'Unknown item'}
                     tooltip={buildGearTooltip(item, template)}
                     selected={selectedBankedSlot?.kind === 'item' && selectedBankedSlot.id === item.id}

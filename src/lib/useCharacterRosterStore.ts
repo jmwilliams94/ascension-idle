@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from './supabaseClient'
 import type { ClassId } from '../game/stats/classes'
+import { computeMaxDurability } from '../game/items/equipmentBonus'
 
 export const MAX_CHARACTER_SLOTS = 5
 
@@ -68,7 +69,7 @@ async function grantStarterQuiver(characterId: string): Promise<void> {
 async function grantStarterBow(characterId: string): Promise<void> {
   const { data: template, error: templateError } = await supabase
     .from('item_templates')
-    .select('id, required_level')
+    .select('id, required_level, slot_type')
     .eq('name', 'Lucky Bow')
     .maybeSingle()
 
@@ -79,7 +80,12 @@ async function grantStarterBow(characterId: string): Promise<void> {
 
   const { data: item, error: itemError } = await supabase
     .from('item_instances')
-    .insert({ template_id: template.id, owner_id: characterId, level: template.required_level })
+    .insert({
+      template_id: template.id,
+      owner_id: characterId,
+      level: template.required_level,
+      durability: computeMaxDurability(template.slot_type, template.required_level) ?? 0,
+    })
     .select('id')
     .single()
 

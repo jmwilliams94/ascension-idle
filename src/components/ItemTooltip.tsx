@@ -21,7 +21,19 @@ function lineColor(line: TooltipLine, fallback: string): string {
 // secondary info lines, then a visually distinct stats block. Used everywhere an
 // item/weapon/stone/arrow tile is shown (see InventorySlot's `tooltip` prop and
 // EquipmentSlot) so hovering any of them looks and reads the same way.
-export default function ItemTooltip({ title, titleColor, icon, iconSrc, iconColor, lines, stats, bonusStats, enchantLine, blessLine }: ItemTooltipData) {
+export default function ItemTooltip({
+  title,
+  titleColor,
+  icon,
+  iconSrc,
+  iconColor,
+  lines,
+  stats,
+  bonusStats,
+  enchantLine,
+  blessLine,
+  progressionLine,
+}: ItemTooltipData) {
   const hasIcon = Boolean(icon || iconSrc)
   // Gear tooltips (2026-08-13 reorder) no longer populate `stats` — their
   // base stats moved into `lines` — but bonusStats/enchantLine/blessLine
@@ -68,6 +80,10 @@ export default function ItemTooltip({ title, titleColor, icon, iconSrc, iconColo
             </p>
           )}
         </div>
+      )}
+
+      {progressionLine && (
+        <p className="mt-1.5 border-t border-slate-800 pt-1.5 text-[11px] font-medium text-white">{progressionLine}</p>
       )}
     </>
   )

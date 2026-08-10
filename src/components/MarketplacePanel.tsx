@@ -24,7 +24,14 @@ import {
 import { LISTING_DURATION_OPTIONS, previewListingFee } from '../game/marketplace/marketplaceCosts'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
-import { buildGearTooltip, formatItemDisplayName, getGearIconSrc, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
+import {
+  buildGearTooltip,
+  formatItemDisplayName,
+  getGearIconSrc,
+  getItemIcon,
+  getQualityColor,
+  itemHasDurability,
+} from '../game/items/equipmentBonus'
 import { isFallenStarDragId, isFallenStarScrollDragId, isCometDragId, isCometScrollDragId } from '../game/items/forgeCosts'
 
 // Marketplace (see CLAUDE.md's Gear system / Marketplace section) — three
@@ -100,6 +107,12 @@ function snapshotPreviewItem(listing: MarketplaceListing): ItemInstance | null {
     composition_points: 0,
     sockets: [],
     enchant: null,
+    // Not part of the item_* snapshot columns (durability didn't exist when
+    // that snapshot shipped) — defaults to 0 purely to satisfy the type;
+    // ListingTile deliberately keys its "broken" badge off listing.item (the
+    // real live item) rather than this synthetic preview, so this value is
+    // never actually read for that purpose.
+    durability: 0,
     created_at: listing.created_at,
     location: 'inventory',
   }
@@ -153,6 +166,10 @@ function ListingTile({ listing, templates }: { listing: MarketplaceListing; temp
       iconSrc={resolved ? iconSrc : undefined}
       qualityColor={resolved ? getQualityColor(resolved.quality_tier) : undefined}
       compositionLevel={resolved?.composition_level}
+      // Keyed off the real live item, not `resolved` (which can fall back to
+      // snapshotPreviewItem's synthetic durability: 0 for an unavailable
+      // historical listing) — a snapshot preview has no real durability data.
+      broken={listing.item && itemHasDurability(template?.slot_type) ? listing.item.durability <= 0 : undefined}
       label={label}
       tooltip={resolved ? buildGearTooltip(resolved, template) : undefined}
     />
@@ -610,6 +627,7 @@ function MailEntryTile({
       iconSrc={entry.item ? getGearIconSrc(template?.name) : undefined}
       qualityColor={entry.item ? getQualityColor(entry.item.quality_tier) : undefined}
       compositionLevel={entry.item?.composition_level}
+      broken={entry.item && itemHasDurability(template?.slot_type) ? entry.item.durability <= 0 : undefined}
       label={mailEntryLabel(entry, templates)}
       tooltip={entry.item ? buildGearTooltip(entry.item, template) : undefined}
       selected={selected}

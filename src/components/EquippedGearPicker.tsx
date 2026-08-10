@@ -62,6 +62,7 @@ export default function EquippedGearPicker({ onSelect }: EquippedGearPickerProps
               iconSrc={getGearIconSrc(template?.name)}
               qualityColor={item ? getQualityColor(item.quality_tier) : undefined}
               compositionLevel={item?.composition_level}
+              broken={item ? item.durability <= 0 : undefined}
               tooltip={item ? buildGearTooltip(item, template ?? undefined) : undefined}
               label={EQUIP_SLOT_LABELS[slot]}
               onClick={() => item && onSelect(itemId)}

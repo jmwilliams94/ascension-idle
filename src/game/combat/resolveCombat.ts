@@ -46,6 +46,11 @@ export interface ResolveCombatResult {
   characterKillCount?: number
   accountKillCount?: number
   petObtained?: string | null
+  // Gear Durability (2026-08-14) — updated { id, durability } for whichever
+  // equipped items decayed this window (see resolve-combat's own comment on
+  // why this piggybacks on resolve_combat_apply_rewards rather than a
+  // separate RPC). Empty/absent when nothing was equipped or nothing decayed.
+  durabilityUpdates?: { id: string; durability: number }[]
 }
 
 export async function resolveCombat(characterId: string, mode: ResolveCombatMode): Promise<ResolveCombatResult | null> {
@@ -73,6 +78,10 @@ export async function resolveCombat(characterId: string, mode: ResolveCombatMode
 
   for (const item of result.itemsGranted ?? []) {
     useInventoryStore.getState().addItem(item)
+  }
+
+  for (const { id, durability } of result.durabilityUpdates ?? []) {
+    useInventoryStore.getState().patchItem(id, { durability })
   }
 
   if ((result.itemsHeld && result.itemsHeld.length > 0) || (result.currencyHeld && result.currencyHeld.length > 0)) {

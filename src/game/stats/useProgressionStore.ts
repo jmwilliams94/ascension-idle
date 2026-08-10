@@ -87,6 +87,13 @@ interface ProgressionState {
   // authoritative character_balance (see useBankStore) without touching EXP
   // or the level-up loop.
   setGold: (value: number) => void
+  // Delta-style gold change (2026-08-14, Repair All — see useRepairStore) —
+  // deliberately not setGold's absolute overwrite, since CombatEngine polls
+  // resolve-combat in the background regardless of which tab is open, so a
+  // Repair All can genuinely land mid-combat-resolve. Same "add a delta, never
+  // stomp a concurrent gain" reasoning as applyServerCombatResult's own
+  // goldGained handling below.
+  applyGoldDelta: (amount: number) => void
   // Reconciles local state with the resolve-combat Edge Function's authoritative
   // response (see resolveCombat.ts) — exp/level are granted server-side, so
   // those two replace rather than add. gold is intentionally NOT replaced the
@@ -206,6 +213,8 @@ export const useProgressionStore = create<ProgressionState>((set, get) => ({
   },
 
   setGold: (value) => set({ gold: value }),
+
+  applyGoldDelta: (amount) => set((state) => ({ gold: state.gold + amount })),
 
   applyServerCombatResult: (values) => {
     const state = get()

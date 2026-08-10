@@ -8,6 +8,7 @@ import { useBankStore, BANK_SLOT_CAP } from '../game/items/useBankStore'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 import {
   buildGearTooltip,
+  computeMaxDurability,
   formatItemDisplayName,
   getGearIconSrc,
   getItemIcon,
@@ -87,6 +88,10 @@ function previewInstanceForEntry(entry: LootHoldingEntry, template: ItemTemplate
     composition_points: 0,
     sockets: [],
     enchant: null,
+    // A not-yet-claimed drop has never been equipped, so it's genuinely at
+    // full durability — not a placeholder, unlike Marketplace's own
+    // snapshotPreviewItem (which really doesn't know the value).
+    durability: computeMaxDurability(template.slot_type, template.required_level) ?? 0,
     created_at: entry.created_at,
     location: 'inventory',
   }

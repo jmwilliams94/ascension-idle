@@ -150,6 +150,11 @@ export function computeEquipmentBonus(
     const template = item && templates.find((entry) => entry.id === item.template_id)
     if (!item || !template) continue
 
+    // Broken gear (2026-08-14, Durability) contributes nothing at all — same
+    // as if the slot were empty — mirrored in resolve-combat/index.ts's own
+    // equipped-items loop for the server-authoritative side.
+    if (item.durability <= 0) continue
+
     const itemEnchant = item.enchant as { hp?: number; blessPct?: number } | null
     bonus.enchantHpBonus += itemEnchant?.hp ?? 0
     bonus.blessDamageReductionPct += itemEnchant?.blessPct ?? 0
@@ -204,6 +209,43 @@ const SALVAGE_AP_BY_QUALITY: Record<string, number> = {
 
 export function previewSalvageApValue(qualityTier: string): number {
   return SALVAGE_AP_BY_QUALITY[qualityTier] ?? 0
+}
+
+// Gear Durability (2026-08-14) — client mirror of the SQL compute_max_durability
+// function (see the migration adding it) — must stay in sync. PLACEHOLDER
+// category-based curve, loosely shaped like real Conquer reference data
+// (rings run wider than armor, both plateau well before max level) without
+// matching it exactly. Returns null for Quiver/anything unrecognized — it
+// has no durability concept at all.
+const DURABILITY_RANGE_BY_CATEGORY: Record<string, { base: number; cap: number }> = {
+  weapon: { base: 10, cap: 70 },
+  ring: { base: 10, cap: 70 },
+  necklace: { base: 20, cap: 40 },
+  boots: { base: 20, cap: 40 },
+  hat: { base: 20, cap: 40 },
+  coat: { base: 20, cap: 40 },
+}
+const DURABILITY_PLATEAU_LEVEL = 110
+
+export function computeMaxDurability(slotType: string, requiredLevel: number): number | null {
+  const range = DURABILITY_RANGE_BY_CATEGORY[slotType]
+  if (!range) return null
+  const t = Math.min(1, requiredLevel / DURABILITY_PLATEAU_LEVEL)
+  return Math.round(range.base + (range.cap - range.base) * t)
+}
+
+// Whether a slot_type has a durability concept at all — used at every tile
+// render site to decide whether "broken" is even a meaningful thing to show
+// for this item (money bags/gem bags/Quiver/etc. all flow through the same
+// generic tile components as real gear, but none of them have durability).
+export function itemHasDurability(slotType: string | undefined): boolean {
+  return Boolean(slotType && slotType in DURABILITY_RANGE_BY_CATEGORY)
+}
+
+// Client mirror of the SQL compute_repair_cost function — must stay in sync.
+// Reuses QUALITY_STAT_MULTIPLIERS for consistency with sell-price scaling.
+export function computeRepairCost(requiredLevel: number, qualityTier: string): number {
+  return Math.round(2 * requiredLevel * (QUALITY_STAT_MULTIPLIERS[qualityTier] ?? 1))
 }
 
 // Bug fix (2026-07-31): every call site used to pass the template's raw,
@@ -563,15 +605,27 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
   // requested by the user) — only shown at +1 or higher (a Normal, +0 item
   // shows nothing at all, per the user's explicit "if it's normal,
   // progression shouldn't be visible") and only while there's a further tier
-  // to reach (nothing shown once maxed at +12). White, at the bottom of the
-  // main info block, below Sockets.
-  const compositionRemaining =
+  // to reach (nothing shown once maxed at +12). "X/N" — current points
+  // banked toward the next tier, out of how many that tier needs.
+  const compositionPointsRequiredForNext =
     item.composition_level > 0 && item.composition_level < TOOLTIP_COMPOSITION_MAX_LEVEL
-      ? Math.max(0, (TOOLTIP_COMPOSITION_POINTS_REQUIRED_BY_LEVEL[item.composition_level] ?? 0) - item.composition_points)
+      ? (TOOLTIP_COMPOSITION_POINTS_REQUIRED_BY_LEVEL[item.composition_level] ?? 0)
       : null
-  const progressionLine: TooltipLine | null =
-    compositionRemaining !== null
-      ? { text: `Progression: ${compositionRemaining} to +${item.composition_level + 1}`, color: TOOLTIP_WHITE }
+  const progressionLine =
+    compositionPointsRequiredForNext !== null ? `Progression: ${item.composition_points}/${compositionPointsRequiredForNext}` : undefined
+
+  // Durability (2026-08-14) — always shown for any non-Quiver gear item
+  // (unlike Progression, no gating), white when healthy, red (reusing the
+  // existing Ascended-tier red) at 0 to match the "broken" severity shown
+  // elsewhere (see InventorySlot/EquipmentSlot's broken badge). Quiver has
+  // no durability concept at all (computeMaxDurability returns null for it),
+  // so it gets no line, same as every other Quiver exclusion in this game.
+  // Positioned after Sockets (2026-08-14, per the user's explicit ordering
+  // request) — abbreviated "Dura" label, "X/Y" current/max.
+  const maxDurability = template ? computeMaxDurability(template.slot_type, template.required_level) : null
+  const durabilityLine: TooltipLine | null =
+    maxDurability !== null
+      ? { text: `Dura: ${Math.floor(item.durability)}/${maxDurability}`, color: item.durability <= 0 ? QUALITY_COLORS.ascended : TOOLTIP_WHITE }
       : null
 
   return {
@@ -593,10 +647,11 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
       ...(classLine ? [classLine] : []),
       ...(template ? buildStatTooltipLines(template.base_stats, item.quality_tier) : []),
       ...socketLines,
-      ...(progressionLine ? [progressionLine] : []),
+      ...(durabilityLine ? [durabilityLine] : []),
     ],
     bonusStats: bonusStats.length > 0 ? bonusStats : undefined,
     enchantLine: enchantHp ? `Enchanted HP: ${enchantHp}` : undefined,
     blessLine: blessPct ? `Damage: -${blessPct}%` : undefined,
+    progressionLine,
   }
 }

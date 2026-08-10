@@ -61,4 +61,11 @@ export interface ItemTooltipData {
   // "Damage: -N%", rendered directly below enchantLine in its own soft
   // orange (BLESS_COLOR). Omitted entirely for an item with no blessing.
   blessLine?: string
+  // Composition progression (see equipmentBonus.ts's buildGearTooltip) —
+  // "Progression: X/N" toward the item's next Composition tier. Kept as its
+  // own field (2026-08-14), rather than folded into `lines`/`bonusStats`, so
+  // it can render as the very last thing in the card regardless of whether
+  // the bonusStats/enchantLine/blessLine block is present. Omitted entirely
+  // below +1 or once maxed (see that function's own comment).
+  progressionLine?: string
 }

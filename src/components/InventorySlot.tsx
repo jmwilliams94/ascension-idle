@@ -71,6 +71,11 @@ interface InventorySlotProps {
   // existing bottom-right `badge` (e.g. ForgeMaterialSlot's composition-point
   // readout on the same tile). Omitted entirely at 0 (no "+0" clutter).
   compositionLevel?: number
+  // Gear Durability (2026-08-14) — a 0-durability item stays equipped but
+  // shows this "broken" badge, top-left (the only free corner — top-right is
+  // compositionLevel, bottom-right is badge). Omit/false for anything that
+  // doesn't have a durability concept at all (Quiver, non-gear tiles).
+  broken?: boolean
   selected?: boolean
   onClick?: () => void
   // Right-click shortcut (e.g. arrow stacks equip directly on right-click instead
@@ -120,6 +125,7 @@ export default function InventorySlot({
   disableTouchPeek,
   badge,
   compositionLevel,
+  broken,
   selected,
   onClick,
   onContextMenu,
@@ -190,6 +196,11 @@ export default function InventorySlot({
     >
       {emberCount > 0 && <TierEmberEffect color={qualityColor as string} count={emberCount} seed={seedFromId(slotId)} />}
       {iconSrc ? <img src={iconSrc} alt="" className={`relative z-10 object-contain ${iconSizeClassName}`} /> : <span className="relative z-10">{icon}</span>}
+      {broken && (
+        <span className="absolute left-1.5 top-1 z-10 text-[15px] leading-none text-red-500" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}>
+          🛡
+        </span>
+      )}
       {Boolean(compositionLevel) && (
         <span
           className="absolute right-1.5 top-1 z-10 text-[18px] font-extrabold leading-none text-slate-100"

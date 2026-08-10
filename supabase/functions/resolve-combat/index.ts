@@ -201,6 +201,40 @@ function compositionBonusStat(
   return Math.round(base * COMPOSITION_BONUS_PCT_PER_TIER * compositionLevel)
 }
 
+// Gear Durability (2026-08-14, requested by the user — a gold sink, decay
+// tied to elapsed combat time rather than damage taken, since this game has
+// no server-authoritative damage-taken/death tracking to hook into). Mirrors
+// src/game/items/equipmentBonus.ts's computeMaxDurability and the SQL
+// compute_max_durability function — PLACEHOLDER category-based curve, loosely
+// shaped like real Conquer reference data (rings run wider than armor, both
+// plateau well before max level) without matching it exactly. Quiver has no
+// durability at all (not in this table) — it's already excluded from
+// equippedItemIds below, so it never reaches this function.
+const DURABILITY_RANGE_BY_CATEGORY: Record<string, { base: number; cap: number }> = {
+  weapon: { base: 10, cap: 70 },
+  ring: { base: 10, cap: 70 },
+  necklace: { base: 20, cap: 40 },
+  boots: { base: 20, cap: 40 },
+  hat: { base: 20, cap: 40 },
+  coat: { base: 20, cap: 40 },
+}
+const DURABILITY_PLATEAU_LEVEL = 110
+
+function computeMaxDurability(slotType: string, requiredLevel: number): number | null {
+  const range = DURABILITY_RANGE_BY_CATEGORY[slotType]
+  if (!range) return null
+  const t = Math.min(1, requiredLevel / DURABILITY_PLATEAU_LEVEL)
+  return Math.round(range.base + (range.cap - range.base) * t)
+}
+
+// Every equipped item's own full durability pool empties after this many
+// cumulative hours of active combat, regardless of its own max size —
+// normalized (rather than a flat points-per-minute rate) so "roughly once a
+// day" is achievable across gear with very different pool sizes without
+// per-item tuning. PLACEHOLDER, same disclosed-not-final status as every
+// other economy number in this game.
+const DURABILITY_TARGET_HOURS_TO_EMPTY_MS = 6 * 60 * 60 * 1000
+
 // Mirrors src/game/combat/combatResolver.ts
 const RARE_CHANCE = 0.05
 const RARE_HP_MULTIPLIER = 2
@@ -571,6 +605,10 @@ interface DropPoolTemplate {
   required_level: number
   item_family: string | null
   required_class: string | null
+  // Added 2026-08-14 for gear Durability — a column addition to this
+  // already-cached query, not a new one, so it doesn't reintroduce the
+  // egress problem this cache itself was built to fix.
+  slot_type: string
 }
 
 let dropPoolCache: { templates: DropPoolTemplate[]; expiresAt: number } | null = null
@@ -584,7 +622,7 @@ async function getDropPool(db: ReturnType<typeof createClient>): Promise<DropPoo
 
   const { data } = await db
     .from('item_templates')
-    .select('id, required_level, item_family, required_class')
+    .select('id, required_level, item_family, required_class, slot_type')
     .not('item_family', 'in', '("sword","quiver","lucky-bow","money-bag","gem-bag")')
 
   dropPoolCache = { templates: (data ?? []) as DropPoolTemplate[], expiresAt: now + DROP_POOL_CACHE_TTL_MS }
@@ -821,6 +859,12 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // compositionBonusStat's comment), so it's added back in unscaled after.
   let compositionAttackBonus = 0
 
+  // Durability decay results for this window (see computeMaxDurability above)
+  // — collected here, applied via resolve_combat_apply_rewards' own
+  // p_durability_updates param further down (not a separate RPC call, so no
+  // new round-trip is added to this ~4s-cadence hot path).
+  const durabilityUpdates: { id: string; durability: number }[] = []
+
   const equippedItemIds = [
     character.equipped_weapon_id,
     character.equipped_ring_id,
@@ -833,13 +877,13 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   if (equippedItemIds.length > 0) {
     const { data: equippedItems } = await db
       .from('item_instances')
-      .select('id, quality_tier, template_id, composition_level')
+      .select('id, quality_tier, template_id, composition_level, durability')
       .in('id', equippedItemIds)
 
     if (equippedItems && equippedItems.length > 0) {
       const { data: equippedTemplates } = await db
         .from('item_templates')
-        .select('id, base_stats, slot_type')
+        .select('id, base_stats, slot_type, required_level')
         .in(
           'id',
           equippedItems.map((item) => item.template_id),
@@ -848,6 +892,23 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       for (const item of equippedItems) {
         const template = equippedTemplates?.find((t) => t.id === item.template_id)
         if (!template) continue
+
+        const maxDurability = computeMaxDurability(template.slot_type, template.required_level)
+        if (maxDurability !== null) {
+          const lost = (elapsedMs * maxDurability) / DURABILITY_TARGET_HOURS_TO_EMPTY_MS
+          const newDurability = Math.max(0, (item.durability ?? 0) - lost)
+          durabilityUpdates.push({ id: item.id, durability: newDurability })
+        }
+
+        // A broken (0-durability) item contributes nothing this window, as if
+        // the slot were empty — mirrors the same check in
+        // equipmentBonus.ts's computeEquipmentBonus. Uses this window's
+        // starting durability (not the post-decay value above), same "fixed
+        // for the whole window" simplification already used elsewhere in
+        // this function (e.g. a level-up mid-window doesn't retroactively
+        // change that window's own attack output).
+        if ((item.durability ?? 0) <= 0) continue
+
         equipmentBonus.physicalAttack += scaledStat(template.base_stats, 'physical_attack', item.quality_tier) ?? 0
         equipmentBonus.magicAttack += scaledStat(template.base_stats, 'magic_attack', item.quality_tier) ?? 0
         equipmentBonus.dexterity += scaledStat(template.base_stats, 'dexterity', item.quality_tier) ?? 0
@@ -899,7 +960,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // Loot Holding is now exclusively for the offline/idle catch-up window
   // (surfaced in OfflineProgressModal, not a persistent Warehouse card).
   let inventoryFull = false
-  const droppedTemplates: { id: string; required_level: number; qualityTier: string; compositionLevel: number }[] = []
+  const droppedTemplates: { id: string; required_level: number; slot_type: string; qualityTier: string; compositionLevel: number }[] = []
 
   // Excludes equipped and Bank-Storage gear from the room-fit baseline below
   // (fixed 2026-08-05, reported by the user via unbundle_currency_scroll's
@@ -1380,6 +1441,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
           level: template.required_level,
           quality_tier: template.qualityTier,
           composition_level: template.compositionLevel,
+          durability: computeMaxDurability(template.slot_type, template.required_level) ?? 0,
         })
         .select('*')
         .single()
@@ -1464,6 +1526,10 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       p_fallen_star_delta: fallenStarsToGrant,
       p_comet_scroll_delta: zoneCometScrollReward,
       p_resolved_at: new Date(now).toISOString(),
+      // Gear Durability (2026-08-14) — piggybacks on this same already-every-
+      // tick call rather than a separate RPC, see computeMaxDurability's own
+      // comment above for why.
+      p_durability_updates: durabilityUpdates,
     })
     .single()
 
@@ -1513,5 +1579,9 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     characterKillCount,
     accountKillCount,
     petObtained: petObtained ? character.selected_monster_id : null,
+    // Gear Durability (2026-08-14) — updated { id, durability } for whichever
+    // equipped items decayed this window, so the client can patch its local
+    // copy without a refetch. Empty when nothing was equipped/nothing decayed.
+    durabilityUpdates,
   })
 }

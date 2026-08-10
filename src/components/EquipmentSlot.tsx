@@ -19,6 +19,9 @@ interface EquipmentSlotProps {
   // Composition level ("+N") — mirrors InventorySlot's own top-right badge,
   // see its comment for why equipped gear needs its own copy.
   compositionLevel?: number
+  // Gear Durability (2026-08-14) — mirrors InventorySlot's own top-left
+  // broken badge, same reasoning as compositionLevel above.
+  broken?: boolean
   selected?: boolean
   onClick?: () => void
   // Universal Diablo/PoE-style hover tooltip (see ItemTooltip.tsx) — only Weapon
@@ -41,6 +44,7 @@ export default function EquipmentSlot({
   filled,
   qualityColor,
   compositionLevel,
+  broken,
   selected,
   onClick,
   tooltip,
@@ -84,6 +88,11 @@ export default function EquipmentSlot({
     >
       {emberCount > 0 && <TierEmberEffect color={qualityColor as string} count={emberCount} seed={seedFromId(label)} />}
       {iconSrc ? <img src={iconSrc} alt="" className="relative z-10 h-4/5 w-4/5 object-contain" /> : <span className="relative z-10">{icon}</span>}
+      {filled && broken && (
+        <span className="absolute left-1.5 top-1 z-10 text-[15px] leading-none text-red-500" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}>
+          🛡
+        </span>
+      )}
       {filled && Boolean(compositionLevel) && (
         <span
           className="absolute right-1.5 top-1 z-10 text-[18px] font-extrabold leading-none text-slate-100"

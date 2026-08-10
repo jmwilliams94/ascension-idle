@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.84.0",
+    "date": "2026-08-14",
+    "changes": [
+      "Added gear Durability — equipped gear slowly wears down the longer you fight",
+      "A broken (0-durability) item stays equipped but stops contributing to your stats until repaired",
+      "Added a Repair tab to the Shop with a single Repair All action, priced by each item's level and quality",
+      "Gear tooltips now show a Durability line"
+    ]
+  },
+  {
     "version": "1.83.3",
     "date": "2026-08-14",
     "changes": [

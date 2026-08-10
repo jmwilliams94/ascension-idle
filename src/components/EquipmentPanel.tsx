@@ -8,6 +8,7 @@ import {
   getGearIconSrc,
   getItemIcon,
   getQualityColor,
+  itemHasDurability,
 } from '../game/items/equipmentBonus'
 import { useEquipmentStore, type EquipSlot } from '../game/items/useEquipmentStore'
 import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
@@ -124,6 +125,7 @@ export default function EquipmentPanel() {
                 filled={Boolean(equipped)}
                 qualityColor={equipped ? getQualityColor(glowQualityTier ?? 'normal') : undefined}
                 compositionLevel={equipped?.item.composition_level}
+                broken={equipped && itemHasDurability(equipped.template.slot_type) ? equipped.item.durability <= 0 : undefined}
                 selected={selectedSlot === slot}
                 onClick={equipped ? () => setSelectedSlot((current) => (current === slot ? null : slot)) : undefined}
                 tooltip={

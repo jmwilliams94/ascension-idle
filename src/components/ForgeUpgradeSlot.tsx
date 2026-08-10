@@ -1,6 +1,14 @@
 import InventorySlot, { SLOT_LABEL_HEIGHT_CLASS, SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
 import { useDraggableTile, useIsDropTarget } from './dragDropContext'
-import { buildGearTooltip, formatItemDisplayName, formatItemLevel, getGearIconSrc, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
+import {
+  buildGearTooltip,
+  formatItemDisplayName,
+  formatItemLevel,
+  getGearIconSrc,
+  getItemIcon,
+  getQualityColor,
+  itemHasDurability,
+} from '../game/items/equipmentBonus'
 import type { ItemInstance } from '../game/items/useInventoryStore'
 import type { ItemTemplate } from '../game/items/useItemTemplatesStore'
 
@@ -50,6 +58,7 @@ export default function ForgeUpgradeSlot({ item, template, onRemove }: ForgeUpgr
           icon={item ? icon : undefined}
           iconSrc={item ? iconSrc : undefined}
           compositionLevel={item?.composition_level}
+          broken={item && itemHasDurability(template?.slot_type) ? item.durability <= 0 : undefined}
           label={item ? (template ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level) : 'Unknown item') : undefined}
           tooltip={item ? buildGearTooltip(item, template ?? undefined) : undefined}
           draggable={drag.draggable}

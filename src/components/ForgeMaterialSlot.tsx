@@ -1,7 +1,14 @@
 import { motion } from 'framer-motion'
 import InventorySlot, { SLOT_LABEL_HEIGHT_CLASS, SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
 import { useIsDropTarget } from './dragDropContext'
-import { buildGearTooltip, formatItemDisplayName, getGearIconSrc, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
+import {
+  buildGearTooltip,
+  formatItemDisplayName,
+  getGearIconSrc,
+  getItemIcon,
+  getQualityColor,
+  itemHasDurability,
+} from '../game/items/equipmentBonus'
 import {
   FALLEN_STAR_COLOR,
   FALLEN_STAR_ICON_SRC,
@@ -139,6 +146,7 @@ export default function ForgeMaterialSlot({ entries, templates, onRemoveEntry }:
                 qualityColor={getQualityColor(entry.item.quality_tier)}
                 badge={`${compositionPointValue(entry.item.composition_level)}`}
                 compositionLevel={entry.item.composition_level}
+                broken={itemHasDurability(template?.slot_type) ? entry.item.durability <= 0 : undefined}
                 label={template ? formatItemDisplayName(template.name, entry.item.quality_tier, entry.item.composition_level) : 'Unknown item'}
                 tooltip={buildGearTooltip(entry.item, template)}
                 onClick={() => onRemoveEntry(entry.id)}

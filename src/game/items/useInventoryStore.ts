@@ -7,6 +7,7 @@ import { useEquipmentStore } from './useEquipmentStore'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 import { useItemTemplatesStore, type ItemTemplate } from './useItemTemplatesStore'
+import { computeMaxDurability } from './equipmentBonus'
 import { useProgressionStore } from '../stats/useProgressionStore'
 import { useCharacterStore } from '../stats/useCharacterStore'
 import { useGemStore } from './useGemStore'
@@ -42,6 +43,12 @@ export interface ItemInstance {
   composition_points: number
   sockets: (null | string)[]
   enchant: { hp?: number; blessPct?: number } | null
+  // Gear Durability (2026-08-14) — numeric, not integer, so fractional
+  // per-window decay (see resolve-combat's own comment) accumulates exactly.
+  // Only ever decremented server-side (resolve_combat_apply_rewards' own
+  // p_durability_updates param) or reset to max (repair_all_items) — never
+  // write it via a normal update(). N/A for Quiver (always 0, never read).
+  durability: number
   created_at: string
   // Bank Storage (confirmed with the user, 2026-08-03, replaces the earlier
   // fungible warehouse_items token model for gear) — a genuinely additive
@@ -179,7 +186,10 @@ interface InventoryState {
   patchItem: (
     itemId: string,
     patch: Partial<
-      Pick<ItemInstance, 'quality_tier' | 'level' | 'composition_level' | 'composition_points' | 'template_id' | 'sockets' | 'enchant'>
+      Pick<
+        ItemInstance,
+        'quality_tier' | 'level' | 'composition_level' | 'composition_points' | 'template_id' | 'sockets' | 'enchant' | 'durability'
+      >
     >,
   ) => void
   // Resolves a pendingFullDrop: pass an existing gear item or potion stack to
@@ -267,7 +277,12 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     // Upgrade already does when it advances an item to a new template.
     const { data, error } = await supabase
       .from('item_instances')
-      .insert({ template_id: template.id, owner_id: characterId, level: template.required_level })
+      .insert({
+        template_id: template.id,
+        owner_id: characterId,
+        level: template.required_level,
+        durability: computeMaxDurability(template.slot_type, template.required_level) ?? 0,
+      })
       .select('*')
       .single()
 
@@ -317,7 +332,11 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
 
     const { data, error: insertError } = await supabase
       .from('item_instances')
-      .insert({ template_id: pending.template.id, owner_id: characterId })
+      .insert({
+        template_id: pending.template.id,
+        owner_id: characterId,
+        durability: computeMaxDurability(pending.template.slot_type, pending.template.required_level) ?? 0,
+      })
       .select('*')
       .single()
 
