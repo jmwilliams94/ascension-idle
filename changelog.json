@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.85.1",
+    "date": "2026-08-18",
+    "changes": [
+      "Global Chat now shows an unread-message bubble on the chat button"
+    ]
+  },
+  {
     "version": "1.85.0",
     "date": "2026-08-18",
     "changes": [

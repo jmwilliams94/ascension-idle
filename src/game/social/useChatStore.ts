@@ -42,12 +42,23 @@ interface ChatState {
   loaded: boolean
   loading: boolean
   sending: boolean
+  // Client-only read tracking for ChatButton's unread bubble (2026-08-18) --
+  // there's no server-side per-account read state for chat (that would need
+  // its own table), so this is purely in-memory and resets on reload, same
+  // as the announcement ticker's own collapse state. null means "nothing
+  // read yet this session" -- everything currently in `messages` counts as
+  // unread until the overlay is opened at least once.
+  lastReadAt: string | null
   loadRecentMessages: () => Promise<void>
   // Called both by the realtime INSERT listener and (indirectly, via
   // loadRecentMessages) by the initial history fetch -- dedupes by id since
   // a message can arrive over realtime before the backfill query returns.
   addMessage: (message: ChatMessage) => void
   sendMessage: (characterId: string, message: string) => Promise<SendChatMessageResult>
+  // ChatOverlay calls this whenever it's open and messages change, so the
+  // badge clears immediately on open and doesn't re-accumulate while the
+  // player is actively looking at the feed.
+  markAllRead: () => void
 }
 
 function mergeMessages(existing: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
@@ -65,6 +76,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   loaded: false,
   loading: false,
   sending: false,
+  lastReadAt: null,
 
   loadRecentMessages: async () => {
     if (get().loaded || get().loading) {
@@ -111,6 +123,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
 
     return data as SendChatMessageResult
+  },
+
+  markAllRead: () => {
+    const messages = get().messages
+    const latest = messages.length > 0 ? messages[messages.length - 1].createdAt : new Date().toISOString()
+    set({ lastReadAt: latest })
   },
 }))
 

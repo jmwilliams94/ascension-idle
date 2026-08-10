@@ -37,6 +37,7 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
   const loadRecentMessages = useChatStore((state) => state.loadRecentMessages)
   const sendMessage = useChatStore((state) => state.sendMessage)
   const sending = useChatStore((state) => state.sending)
+  const markAllRead = useChatStore((state) => state.markAllRead)
 
   const announcementEntries = useAnnouncementHistoryStore((state) => state.entries)
   const announcementLoaded = useAnnouncementHistoryStore((state) => state.loaded)
@@ -83,6 +84,15 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
       scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
     }
   }, [feed.length, open])
+
+  // Marks everything read on open, and again whenever a new message arrives
+  // while still open -- so the badge stays clear the whole time the overlay
+  // is visible, and only starts accumulating again once it's closed.
+  useEffect(() => {
+    if (open) {
+      markAllRead()
+    }
+  }, [open, messages.length, markAllRead])
 
   if (!open) {
     return null
