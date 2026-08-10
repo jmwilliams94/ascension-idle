@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.84.5",
+    "date": "2026-08-14",
+    "changes": [
+      "The gear-gained-a-socket announcement now says whether it was the 1st or 2nd socket"
+    ]
+  },
+  {
     "version": "1.84.4",
     "date": "2026-08-14",
     "changes": [

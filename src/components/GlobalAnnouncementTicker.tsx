@@ -31,16 +31,17 @@ const GEM_IDS: GemTypeId[] = ['drake', 'ember', 'bastion', 'iris']
 // only stores kind/character_name/message, see 20260808050000_global_announcements.sql)
 // so this parses the same fixed message shapes the SQL functions that insert
 // these rows always produce (quality_upgrade/level_upgrade/master_forge_upgrade's
-// "<name>'s <item> gained a socket!", draw_lucky_ticket's "<name> won a(n)
-// <Tier> <Gem> Gem/Ascended <item> from LL!" -- "LL" since 2026-08-13,
-// shortened from "Lucky Lad") -- brittle to a wording change there, but
-// keeps this a client-only change with no migration.
+// "<name>'s <item> gained its 1st/2nd socket!" -- ordinal added 2026-08-14, see
+// 20260814030000_socket_announcement_ordinal.sql --, draw_lucky_ticket's
+// "<name> won a(n) <Tier> <Gem> Gem/Ascended <item> from LL!" -- "LL" since
+// 2026-08-13, shortened from "Lucky Lad") -- brittle to a wording change
+// there, but keeps this a client-only change with no migration.
 // Returns undefined (falls back to the emoji above) if parsing or icon
 // lookup fails, e.g. a gear name not yet in ITEM_ICON_OVERRIDES.
 function resolveAnnouncementIconSrc(kind: string, message: string): string | undefined {
   switch (kind) {
     case 'armor_socket': {
-      const match = message.match(/'s (.+) gained a socket!$/)
+      const match = message.match(/'s (.+) gained its (?:1st|2nd) socket!$/)
       return match ? getGearIconSrc(match[1]) : undefined
     }
     case 'lucky_comet_scroll':
