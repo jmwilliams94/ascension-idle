@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.84.3",
+    "date": "2026-08-14",
+    "changes": [
+      "Bank's Comet/Fallen Star withdraw popup now toggles between Individual units and Scrolls, up to 40 at a time",
+      "Bank's Gem popup now shows Normal/Tempered/Ascended quantities side by side for the selected gem type"
+    ]
+  },
+  {
     "version": "1.84.2",
     "date": "2026-08-14",
     "changes": [

@@ -157,21 +157,32 @@ export default function BankSquares({
         />
       </div>
 
-      {selected?.kind === 'currency' && (
+      {selected?.kind === 'currency' && selected.id === 'gold' && (
+        <BankActionModal title="Gold" subtitle="Move currency between your Wallet and the account Bank." onClose={closeModal}>
+          <CurrencyPanel
+            label="Gold"
+            wallet={walletFor('gold')}
+            bank={bankFor('gold')}
+            busy={busy}
+            onDeposit={(amount) => depositCurrency(characterId, 'gold', amount)}
+            onWithdraw={(amount) => withdrawCurrency(characterId, 'gold', amount)}
+            onDone={closeModal}
+          />
+        </BankActionModal>
+      )}
+
+      {selected?.kind === 'currency' && selected.id !== 'gold' && (
         <BankActionModal
           title={CURRENCIES.find((c) => c.id === selected.id)!.label}
-          subtitle="Move currency between your Wallet and the account Bank."
+          subtitle="Withdraw from the account Bank into your Inventory, as Individual units or Scrolls."
           onClose={closeModal}
         >
-          <CurrencyPanel
-            currencyId={selected.id}
+          <CometFallenStarPanel
             label={CURRENCIES.find((c) => c.id === selected.id)!.label}
-            wallet={walletFor(selected.id)}
             bank={bankFor(selected.id)}
             iconSrc={CURRENCY_ICON_SRC[selected.id]}
             busy={busy}
-            onDeposit={(amount) => depositCurrency(characterId, selected.id, amount)}
-            onWithdraw={(amount) => withdrawCurrency(characterId, selected.id, amount)}
+            onWithdraw={(amount, forceIndividual) => withdrawCurrency(characterId, selected.id as 'comets' | 'fallen_stars', amount, forceIndividual)}
             onDone={closeModal}
             onLanded={onWithdrawLandedInInventory}
           />
@@ -291,44 +302,30 @@ function Square({
   )
 }
 
-// Gold has no Inventory tile at all, so this is Gold's only interaction —
-// both directions stay, unlike the two points-pool squares below (which
-// only ever withdraw, since deposit for those now happens via the per-item
-// Bank popover in Inventory).
-//
-// Redesigned (2026-08-07, confirmed with the user) — a single-unit slider
-// (0-BANK_ACTION_SLIDER_CAP, clamped further by whatever's actually
-// available) replaces the old plain number input with its native up/down
-// spinner arrows. Withdrawing Comets/Fallen Stars auto-bundles into Scrolls
-// server-side now (see transfer_currency's SQL) — this panel just previews
-// what that split will look like before confirming, purely informational.
+// Gold has no Inventory tile at all, so this Deposit/Withdraw panel is
+// Gold's only interaction with the Account Bank (Comets/Fallen Stars use
+// their own withdraw-only CometFallenStarPanel below instead, see the
+// 2026-08-14 rework). A single-unit slider (0-BANK_ACTION_SLIDER_CAP,
+// clamped further by whatever's actually available) replaces a plain number
+// input with its native up/down spinner arrows.
 const BANK_ACTION_SLIDER_CAP = 40
 
 function CurrencyPanel({
-  currencyId,
   label,
   wallet,
   bank,
-  iconSrc,
   busy,
   onDeposit,
   onWithdraw,
   onDone,
-  onLanded,
 }: {
-  currencyId: CurrencyId
   label: string
   wallet: number
   bank: number
-  iconSrc?: string
   busy: boolean
-  onDeposit: (amount: number) => Promise<{ ok: boolean; error?: string; max_withdrawable?: number }>
-  onWithdraw: (amount: number) => Promise<{ ok: boolean; error?: string; max_withdrawable?: number }>
+  onDeposit: (amount: number) => Promise<{ ok: boolean; error?: string }>
+  onWithdraw: (amount: number) => Promise<{ ok: boolean; error?: string }>
   onDone: () => void
-  // Called (in addition to onDone) after a successful WITHDRAW of a
-  // currency that actually lands as a tile in the Character Inventory
-  // (Comets/Fallen Stars — Gold has no tile, so this is skipped for Gold).
-  onLanded?: () => void
 }) {
   const showGainToast = useGainToastStore((state) => state.show)
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit')
@@ -339,49 +336,22 @@ function CurrencyPanel({
   const sliderMax = Math.max(0, Math.min(BANK_ACTION_SLIDER_CAP, available))
   const validAmount = amount > 0
 
-  const bundlesIntoScrolls = currencyId !== 'gold' && mode === 'withdraw' && amount >= 10
-  const scrollsForAmount = Math.floor(amount / 10)
-  const remainderForAmount = amount % 10
-
   const handleConfirm = async () => {
     if (!validAmount) return
     setError(null)
     const result = mode === 'deposit' ? await onDeposit(amount) : await onWithdraw(amount)
     if (!result.ok) {
-      setError(
-        result.error === 'not_enough_balance'
-          ? "You don't have that much."
-          : result.error === 'not_enough_room'
-            ? `Not enough Inventory space${
-                typeof result.max_withdrawable === 'number'
-                  ? ` (only ${result.max_withdrawable} unit${result.max_withdrawable === 1 ? '' : 's'} fit)`
-                  : ''
-              }.`
-            : 'Something went wrong.',
-      )
+      setError(result.error === 'not_enough_balance' ? "You don't have that much." : 'Something went wrong.')
       return
     }
 
-    // Bundled withdrawals (2026-08-07) land as Scroll tiles, not loose ones —
-    // spelled out explicitly in the toast itself (reported by a user who
-    // withdrew 40 Comets, got 4 Comet Scrolls as designed, and had no way to
-    // tell that's what happened from a toast that just said "+40 Comet").
-    const landsAsScrolls = mode === 'withdraw' && bundlesIntoScrolls
     showGainToast({
-      label: landsAsScrolls
-        ? `${label} Withdrawn — as ${scrollsForAmount} Scroll${scrollsForAmount === 1 ? '' : 's'}${
-            remainderForAmount > 0 ? ` + ${remainderForAmount} loose` : ''
-          }, in your Inventory`
-        : `${label} ${mode === 'deposit' ? 'Banked' : 'Withdrawn — in your Inventory'}`,
+      label: `${label} ${mode === 'deposit' ? 'Banked' : 'Withdrawn'}`,
       amount,
-      iconSrc,
-      icon: iconSrc ? undefined : '💰',
+      icon: '💰',
       color: mode === 'deposit' ? '#38bdf8' : '#fbbf24',
     })
     onDone()
-    if (mode === 'withdraw' && currencyId !== 'gold') {
-      onLanded?.()
-    }
   }
 
   return (
@@ -439,17 +409,6 @@ function CurrencyPanel({
           <span>{sliderMax.toLocaleString()}</span>
         </div>
 
-        {bundlesIntoScrolls && (
-          <p className="mt-2 text-[11px] text-slate-500">
-            → lands in your Character Inventory as {scrollsForAmount > 0 && `${scrollsForAmount} Scroll${scrollsForAmount === 1 ? '' : 's'}`}
-            {scrollsForAmount > 0 && remainderForAmount > 0 && ' + '}
-            {remainderForAmount > 0 && `${remainderForAmount} loose`}
-            {' '}(saves space vs. {amount} loose tiles)
-          </p>
-        )}
-        {mode === 'withdraw' && currencyId !== 'gold' && !bundlesIntoScrolls && amount > 0 && (
-          <p className="mt-2 text-[11px] text-slate-500">→ lands in your Character Inventory as {amount} loose tile{amount === 1 ? '' : 's'}.</p>
-        )}
       </div>
 
       <button
@@ -459,6 +418,154 @@ function CurrencyPanel({
         className="w-full rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-2 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
       >
         {busy ? 'Working…' : `Confirm ${mode === 'deposit' ? 'Deposit' : 'Withdraw'}`}
+      </button>
+      {error && <p className="text-xs text-amber-400">{error}</p>}
+    </div>
+  )
+}
+
+// Comets/Fallen Stars-only Account Bank withdraw panel (2026-08-14,
+// requested by the user) — replaces the shared Deposit/Withdraw
+// CurrencyPanel above for these two currencies specifically. Deposit still
+// exists for them, just from the per-tile "Bank"/"Bank All" popover in
+// Inventory instead of from here. Individual/Scroll is a genuine mode
+// switch, not a preview: Individual withdraws exactly the requested number
+// of loose units (force_individual on transfer_currency, see the
+// 20260814020000 migration); Scroll withdraws a chosen number of Scrolls by
+// requesting an exact multiple of 10, which the existing bundling logic
+// already turns into pure Scrolls with a zero remainder.
+function CometFallenStarPanel({
+  label,
+  bank,
+  iconSrc,
+  busy,
+  onWithdraw,
+  onDone,
+  onLanded,
+}: {
+  label: string
+  bank: number
+  iconSrc?: string
+  busy: boolean
+  onWithdraw: (amount: number, forceIndividual: boolean) => Promise<{ ok: boolean; error?: string; max_withdrawable?: number }>
+  onDone: () => void
+  onLanded?: () => void
+}) {
+  const showGainToast = useGainToastStore((state) => state.show)
+  const [mode, setMode] = useState<'individual' | 'scroll'>('individual')
+  // Units in Individual mode, Scroll count in Scroll mode.
+  const [amount, setAmount] = useState(0)
+  const [error, setError] = useState<string | null>(null)
+
+  const sliderMax =
+    mode === 'individual'
+      ? Math.max(0, Math.min(BANK_ACTION_SLIDER_CAP, bank))
+      : Math.max(0, Math.min(BANK_ACTION_SLIDER_CAP, Math.floor(bank / 10)))
+  const validAmount = amount > 0
+
+  const setModeAndReset = (nextMode: 'individual' | 'scroll') => {
+    setMode(nextMode)
+    setAmount(0)
+    setError(null)
+  }
+
+  const handleConfirm = async () => {
+    if (!validAmount) return
+    setError(null)
+    const requestAmount = mode === 'scroll' ? amount * 10 : amount
+    const result = await onWithdraw(requestAmount, mode === 'individual')
+    if (!result.ok) {
+      setError(
+        result.error === 'not_enough_balance'
+          ? "You don't have that much."
+          : result.error === 'not_enough_room'
+            ? `Not enough Inventory space${
+                typeof result.max_withdrawable === 'number'
+                  ? ` (only ${result.max_withdrawable} unit${result.max_withdrawable === 1 ? '' : 's'} fit)`
+                  : ''
+              }.`
+            : 'Something went wrong.',
+      )
+      return
+    }
+
+    showGainToast({
+      label:
+        mode === 'scroll'
+          ? `${label} Withdrawn — as ${amount} Scroll${amount === 1 ? '' : 's'}, in your Inventory`
+          : `${label} Withdrawn — in your Inventory`,
+      amount: requestAmount,
+      iconSrc,
+      icon: iconSrc ? undefined : '💰',
+      color: '#fbbf24',
+    })
+    onDone()
+    onLanded?.()
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-1.5">
+        <button
+          type="button"
+          onClick={() => setModeAndReset('individual')}
+          className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium ${
+            mode === 'individual' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
+          }`}
+        >
+          Individual
+        </button>
+        <button
+          type="button"
+          onClick={() => setModeAndReset('scroll')}
+          className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium ${
+            mode === 'scroll' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
+          }`}
+        >
+          Scroll
+        </button>
+      </div>
+
+      <p className="text-[11px] text-slate-500">Bank: {bank.toLocaleString()}</p>
+
+      <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-slate-500">{mode === 'scroll' ? 'Scrolls' : 'Amount'}</span>
+          <span className="text-lg font-semibold text-slate-100">{amount.toLocaleString()}</span>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={sliderMax}
+          value={Math.min(amount, sliderMax)}
+          disabled={sliderMax === 0}
+          onChange={(event) => setAmount(Number(event.target.value))}
+          className="mt-2 w-full accent-sky-500 disabled:opacity-40"
+        />
+        <div className="mt-1 flex justify-between text-[10px] text-slate-600">
+          <span>0</span>
+          <span>{sliderMax.toLocaleString()}</span>
+        </div>
+
+        {mode === 'individual' && amount > 0 && (
+          <p className="mt-2 text-[11px] text-slate-500">
+            → lands in your Character Inventory as {amount} loose tile{amount === 1 ? '' : 's'}.
+          </p>
+        )}
+        {mode === 'scroll' && amount > 0 && (
+          <p className="mt-2 text-[11px] text-slate-500">
+            → lands in your Character Inventory as {amount} Scroll{amount === 1 ? '' : 's'} ({(amount * 10).toLocaleString()} {label.toLowerCase()}).
+          </p>
+        )}
+      </div>
+
+      <button
+        type="button"
+        disabled={busy || !validAmount}
+        onClick={() => void handleConfirm()}
+        className="w-full rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-2 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        {busy ? 'Working…' : 'Withdraw'}
       </button>
       {error && <p className="text-xs text-amber-400">{error}</p>}
     </div>
@@ -753,34 +860,36 @@ function GemsPanel({
         ))}
       </div>
 
-      <div className="flex gap-1.5">
-        {GEM_TIERS.map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setTier(t)}
-            className={`flex-1 rounded-lg border px-2 py-1.5 text-[11px] font-medium ${
-              tier === t ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-            }`}
-          >
-            {formatGemTierLabel(t)}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-        <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 p-1"
-          style={{ borderColor: color, backgroundColor: `${color}22` }}
-        >
-          <img src={getGemIconSrc(gemId, tier)} alt="" className="h-full w-full object-contain" />
-        </div>
-        <div>
-          <p className="text-sm font-medium text-slate-200">
-            {formatGemTierLabel(tier)} {GEM_TYPES[gemId].displayName}
-          </p>
-          <p className="text-xs text-slate-500">{owned.toLocaleString()} banked</p>
-        </div>
+      {/* One tile per tier, quantity shown underneath each (2026-08-14,
+          requested by the user) — replaces the old tier-button row + single
+          preview box, so all three counts for the selected gem type are
+          visible at once instead of only the currently-selected tier's.
+          Clicking a tile both selects that tier and stays the withdraw
+          target below. */}
+      <div className="grid grid-cols-3 gap-1.5">
+        {GEM_TIERS.map((t) => {
+          const tierColor = getGemTierColor(t)
+          const tierOwned = gemsBanked[gemStorageKey(gemId, t)] ?? 0
+          return (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTier(t)}
+              className={`flex flex-col items-center gap-1 rounded-xl border p-2 ${
+                tier === t ? 'border-sky-500 bg-sky-500/10' : 'border-slate-800 bg-slate-950/60 hover:border-slate-600'
+              }`}
+            >
+              <div
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 p-1"
+                style={{ borderColor: tierColor, backgroundColor: `${tierColor}22` }}
+              >
+                <img src={getGemIconSrc(gemId, t)} alt="" className="h-full w-full object-contain" />
+              </div>
+              <span className="text-[10px] font-medium text-slate-400">{formatGemTierLabel(t)}</span>
+              <span className="text-sm font-semibold text-slate-100">{tierOwned.toLocaleString()}</span>
+            </button>
+          )
+        })}
       </div>
 
       <button

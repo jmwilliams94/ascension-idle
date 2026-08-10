@@ -146,7 +146,13 @@ interface BankState {
   depositStone: (characterId: string, tier: number, amount: number) => Promise<TransferStoneResult>
   withdrawStone: (characterId: string, tier: number, amount: number) => Promise<TransferStoneResult>
   depositCurrency: (characterId: string, currency: Currency, amount: number) => Promise<TransferCurrencyResult>
-  withdrawCurrency: (characterId: string, currency: Currency, amount: number) => Promise<TransferCurrencyResult>
+  // forceIndividual (2026-08-14) — Comets/Fallen Stars only, withdraw-only:
+  // when true, every requested unit lands as a loose tile with no
+  // auto-bundling into Scrolls (the Account Bank popup's "Individual" mode).
+  // Omitted/false preserves the existing auto-bundle behavior — "Scroll"
+  // mode just requests an exact multiple of 10, which already bundles into
+  // pure Scrolls with no remainder.
+  withdrawCurrency: (characterId: string, currency: Currency, amount: number, forceIndividual?: boolean) => Promise<TransferCurrencyResult>
   // Gems (2026-08-09) — physical, non-stacking Inventory tiles now, banked
   // the same symmetric per-unit way as Comets/Fallen Stars (transfer_gem),
   // not the points-liquidation way Stones use (gems have no points concept).
@@ -324,13 +330,14 @@ export const useBankStore = create<BankState>((set, get) => ({
     return applyCurrencyResult(currency, data as TransferCurrencyResult)
   },
 
-  withdrawCurrency: async (characterId, currency, amount) => {
+  withdrawCurrency: async (characterId, currency, amount, forceIndividual) => {
     set({ busy: true })
     const { data, error } = await supabase.rpc('transfer_currency', {
       character_id: characterId,
       currency,
       amount,
       direction: 'withdraw',
+      force_individual: forceIndividual ?? false,
     })
     set({ busy: false })
 
