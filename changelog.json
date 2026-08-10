@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.86.6",
+    "date": "2026-08-20",
+    "changes": [
+      "Fixed the Forge drag ghost visibly lagging behind the cursor"
+    ]
+  },
+  {
     "version": "1.86.5",
     "date": "2026-08-20",
     "changes": [
