@@ -197,7 +197,8 @@ function TownNavButton({ badges }: { badges: Partial<Record<TabId, number>> }) {
 export default function MobileBottomNav() {
   const characterKills = useAchievementsStore((state) => state.characterKills)
   const accountKills = useAchievementsStore((state) => state.accountKills)
-  const achievementsBadge = totalClaimableCount(characterKills, accountKills)
+  const zoneClaims = useAchievementsStore((state) => state.zoneClaims)
+  const achievementsBadge = totalClaimableCount(characterKills, accountKills, zoneClaims)
   // Unclaimed Mail count (2026-08-13, requested by the user) — see
   // TownNavButton's own doc comment for how this surfaces on mobile, where
   // Market lives inside the Town rollup rather than its own top-level slot.

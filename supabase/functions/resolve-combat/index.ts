@@ -325,12 +325,6 @@ function rollDroppedCompositionLevel(qualityBonusMultiplier = 1): number {
   return Math.random() < COMPOSITION_PLUS_ONE_DROP_CHANCE * qualityBonusMultiplier ? 1 : 0
 }
 
-// Achievements & Pets (confirmed shape, see CLAUDE.md — the tracking
-// mechanism is real, the reward VALUES below are a deliberate uniform
-// placeholder). Mirrors src/game/achievements/achievementData.ts — keep in
-// sync.
-const ACHIEVEMENT_TIERS = [100, 250, 500, 1000, 5000, 10000]
-
 // Reworked (2026-08-06, confirmed with the user) — supersedes the old
 // dual-track system (an always-on Kill Count bonus-drop multiplier + a paid
 // Prestige gold multiplier, both applied automatically as soon as a tier
@@ -348,37 +342,6 @@ const ACHIEVEMENT_TIERS = [100, 250, 500, 1000, 5000, 10000]
 // original 1/5000, 2026-08-03), independent of every other roll this
 // function makes. Mirrors achievementData.ts — keep in sync.
 const PET_DROP_CHANCE = 1 / 25000
-
-// Zone-level Achievements layer (2026-08-03, confirmed with the user,
-// additive to the per-monster system above, not a replacement — see the
-// migration's own header for the full write-up). Every zone has exactly 5
-// monsters (confirmed by CLAUDE.md's Zones section), so 5 monsters x 6 tiers
-// = 30 possible tier-milestones per zone, uniformly — this even 6-step
-// ladder (5/10/15/20/25/30) mirrors every other tier system in this game.
-// Comet Scroll reward per zone tier, PLACEHOLDER, escalating (was a Fallen
-// Star reward — switched 2026-08-07, confirmed with the user: every Fallen
-// Star reward on the Achievements system moves to a Comet Scroll instead,
-// same quantities). Granted unconditionally (no Inventory-cap gating, no
-// Loot Holding routing) — a rare, one-time milestone crossing, same
-// "shouldn't silently fail" reasoning as the tier-6 Infused gear reward.
-const ZONE_TIER_COMPLETIONS = [5, 10, 15, 20, 25, 30]
-const ZONE_TIER_COMET_SCROLL_REWARD = [1, 2, 3, 4, 5, 8]
-
-// How many of this zone's 30 possible tier-milestones a set of per-monster
-// kill counts has reached in total, and which zone tier (0-6) that maps to.
-function zoneTierCompletions(zoneMonsterKills: number[]): { completions: number; zoneTier: number } {
-  let completions = 0
-  for (const kills of zoneMonsterKills) {
-    for (const tier of ACHIEVEMENT_TIERS) {
-      if (kills >= tier) completions += 1
-    }
-  }
-  let zoneTier = 0
-  for (const threshold of ZONE_TIER_COMPLETIONS) {
-    if (completions >= threshold) zoneTier += 1
-  }
-  return { completions, zoneTier }
-}
 
 type LevelDiffColor = 'white' | 'green' | 'red' | 'black'
 
@@ -1337,78 +1300,6 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     await db.from('account_pets').insert({ account_id: character.account_id, monster_id: character.selected_monster_id })
   }
 
-  // Zone-level Achievements layer (2026-08-03, additive — see the migration's
-  // own header). Recomputes this zone's total tier-completions across its
-  // whole 5-monster roster (using the just-written characterKillCount for the
-  // fought monster, fresh DB reads for the other 4) and grants any newly
-  // crossed zone-tier reward exactly once, tracked via
-  // character_zone_progress. Granted as Comet Scrolls (2026-08-07, was
-  // Fallen Stars) straight through the atomic rewards RPC below —
-  // unconditional, no Inventory-cap gating/Loot-Holding routing, same
-  // "rare, deliberate, shouldn't silently fail" reasoning as the tier-6
-  // Infused gear reward.
-  let zoneCometScrollReward = 0
-  if (killsThisWindow > 0 && monster.zone_id) {
-    const { data: zoneMonsters } = await db.from('enemy_types').select('id').eq('zone_id', monster.zone_id)
-    const zoneMonsterIds = (zoneMonsters ?? []).map((row) => row.id as string)
-
-    const { data: zoneKillRows } = await db
-      .from('character_monster_kills')
-      .select('monster_id, kills')
-      .eq('character_id', characterId)
-      .in('monster_id', zoneMonsterIds)
-
-    const killsByMonster: Record<string, number> = {}
-    for (const row of zoneKillRows ?? []) {
-      killsByMonster[row.monster_id as string] = row.kills as number
-    }
-    // Authoritative for the just-fought monster regardless of whether the
-    // select above raced the upsert earlier in this function.
-    killsByMonster[character.selected_monster_id] = characterKillCount
-
-    const zoneMonsterKills = zoneMonsterIds.map((id) => killsByMonster[id] ?? 0)
-    const { zoneTier } = zoneTierCompletions(zoneMonsterKills)
-
-    // Fail-safe, not fail-open (2026-08-03, added after a real over-grant
-    // incident — see 20260803040000_grant_service_role_zone_progress_access.sql):
-    // a permission/query error here must NOT be treated the same as "no row
-    // yet" (highestGranted = 0), or a missing grant silently re-grants this
-    // zone's entire reward on every single call forever, live tick after
-    // live tick. If the read itself fails, skip granting anything this call
-    // rather than guessing — the next successful call will catch up
-    // correctly once whatever's wrong is fixed.
-    const { data: zoneProgressRow, error: zoneProgressError } = await db
-      .from('character_zone_progress')
-      .select('highest_zone_tier_granted')
-      .eq('character_id', characterId)
-      .eq('zone_id', monster.zone_id)
-      .maybeSingle()
-
-    if (zoneProgressError) {
-      console.error('resolve-combat character_zone_progress read failed:', zoneProgressError.message)
-    } else {
-      const highestGranted = zoneProgressRow?.highest_zone_tier_granted ?? 0
-
-      if (zoneTier > highestGranted) {
-        for (let tier = highestGranted + 1; tier <= zoneTier; tier += 1) {
-          zoneCometScrollReward += ZONE_TIER_COMET_SCROLL_REWARD[tier - 1]
-        }
-        const { error: zoneProgressWriteError } = await db
-          .from('character_zone_progress')
-          .upsert(
-            { character_id: characterId, zone_id: monster.zone_id, highest_zone_tier_granted: zoneTier },
-            { onConflict: 'character_id,zone_id' },
-          )
-        if (zoneProgressWriteError) {
-          // zoneCometScrollReward is already computed by this point — logging
-          // is what makes a future occurrence of this class of bug
-          // diagnosable via the Dashboard's Logs tab, not silent.
-          console.error('resolve-combat character_zone_progress write failed:', zoneProgressWriteError.message)
-        }
-      }
-    }
-  }
-
   interface GrantedItemRow {
     id: string
     template_id: string
@@ -1474,10 +1365,6 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // roll time — see the mirror-image reasoning above for gear); offline mode
   // always routes to Loot Holding instead, same "never silently rearrange
   // the bag while the player's away" rule the gear loop above now follows.
-  // (zoneCometScrollReward, if any, is granted separately below via the
-  // atomic rewards RPC — unconditional, not folded into this loop, since
-  // loot_holding's currency_type doesn't model Scrolls.)
-
   let cometsToGrant = 0
   for (let i = 0; i < cometsGained; i += 1) {
     if (mode === 'live') {
@@ -1524,7 +1411,6 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       p_level: level,
       p_comet_delta: cometsToGrant,
       p_fallen_star_delta: fallenStarsToGrant,
-      p_comet_scroll_delta: zoneCometScrollReward,
       p_resolved_at: new Date(now).toISOString(),
       // Gear Durability (2026-08-14) — piggybacks on this same already-every-
       // tick call rather than a separate RPC, see computeMaxDurability's own
@@ -1546,7 +1432,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const newGold = rewardRow?.gold ?? character.gold + goldGained
   const newComets = rewardRow?.comet_count ?? character.comet_count + cometsToGrant
   const newFallenStars = rewardRow?.fallen_star_count ?? character.fallen_star_count + fallenStarsToGrant
-  const newCometScrolls = rewardRow?.comet_scroll_count ?? character.comet_scroll_count + zoneCometScrollReward
+  const newCometScrolls = rewardRow?.comet_scroll_count ?? character.comet_scroll_count
 
   return json({
     ok: true,

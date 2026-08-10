@@ -92,6 +92,28 @@ function totalClaimable(kills: Record<string, MonsterKillEntry>, thresholds: rea
   return total
 }
 
+// Whether a zone has a newly-reached-but-unclaimed Zone Tier — feeds both
+// the zone header badge and the top-level Claimable total, same "reached
+// minus claimed" shape as the per-monster helpers above.
+function zoneTierClaimableCount(
+  zoneId: ZoneId,
+  characterKills: Record<string, MonsterKillEntry>,
+  zoneClaims: Record<string, number>,
+): number {
+  const zoneMonsterKills = ZONES[zoneId].monsterOrder.map((monsterId) => characterKills[monsterId]?.kills ?? 0)
+  const { zoneTier } = zoneTierCompletions(zoneMonsterKills)
+  const claimedZoneTier = zoneClaims[zoneId] ?? 0
+  return Math.max(0, zoneTier - claimedZoneTier)
+}
+
+function totalZoneTierClaimable(characterKills: Record<string, MonsterKillEntry>, zoneClaims: Record<string, number>): number {
+  let total = 0
+  for (const zoneId of ZONE_ORDER) {
+    total += zoneTierClaimableCount(zoneId, characterKills, zoneClaims)
+  }
+  return total
+}
+
 function describeClaimError(error: string | undefined, message: string | undefined): string {
   switch (error) {
     case 'already_maxed':
@@ -339,11 +361,17 @@ function PetTile({ monsterId, displayName }: { monsterId: EnemyTypeId; displayNa
   )
 }
 
-// Zone-level Achievements milestone bar — unaffected by the 2026-08-06
-// rework (this is the additive per-zone Fallen Star ladder, separate from
-// the per-monster Kill Count ladder above; see achievementData.ts).
+// Zone-level Achievements milestone bar — this is the additive per-zone
+// Comet Scroll ladder, separate from the per-monster Kill Count ladder
+// above; see achievementData.ts. Each dot's state now reflects three things
+// (2026-08-15, reworked alongside the zone reward becoming a real Claim
+// button below, instead of resolve-combat silently auto-granting it): a
+// dot the player has actually claimed (emerald), one that's reached but not
+// yet claimed (pulsing amber, matching the per-monster chip row), or one
+// still locked (gray).
 function ZoneMilestoneBar({ zoneId }: { zoneId: ZoneId }) {
   const characterKills = useAchievementsStore((state) => state.characterKills)
+  const claimedZoneTier = useAchievementsStore((state) => state.zoneClaims[zoneId] ?? 0)
   const zoneMonsterKills = ZONES[zoneId].monsterOrder.map((monsterId) => characterKills[monsterId]?.kills ?? 0)
   const { completions, zoneTier } = zoneTierCompletions(zoneMonsterKills)
   const overallPct = (completions / ZONE_TOTAL_TIER_MILESTONES) * 100
@@ -354,7 +382,7 @@ function ZoneMilestoneBar({ zoneId }: { zoneId: ZoneId }) {
         <span>
           {completions}/{ZONE_TOTAL_TIER_MILESTONES}
         </span>
-        {zoneTier > 0 && <span className="text-emerald-400">Zone Tier {zoneTier}</span>}
+        {claimedZoneTier > 0 && <span className="text-emerald-400">Zone Tier {claimedZoneTier}</span>}
       </div>
       <div className="relative py-1.5">
         <div className="h-3 w-full overflow-hidden rounded-full bg-slate-800">
@@ -362,7 +390,7 @@ function ZoneMilestoneBar({ zoneId }: { zoneId: ZoneId }) {
         </div>
         <div className="pointer-events-none absolute inset-0 flex items-center">
           {ZONE_TIER_COMPLETIONS.map((threshold, index) => {
-            const state: ChipState = completions >= threshold ? 'claimed' : 'locked'
+            const state = chipState(index, claimedZoneTier, zoneTier)
             const color = CHIP_STATE_COLOR[state]
             const leftPct = (threshold / ZONE_TOTAL_TIER_MILESTONES) * 100
 
@@ -372,7 +400,7 @@ function ZoneMilestoneBar({ zoneId }: { zoneId: ZoneId }) {
                 titleColor={color}
                 lines={[
                   `Reward: ${ZONE_TIER_COMET_SCROLL_REWARD[index]} Comet Scroll${ZONE_TIER_COMET_SCROLL_REWARD[index] === 1 ? '' : 's'}`,
-                  state === 'claimed' ? 'Granted' : `${(threshold - completions).toLocaleString()} to go`,
+                  state === 'claimed' ? 'Claimed' : state === 'claimable' ? 'Ready to claim!' : `${(threshold - completions).toLocaleString()} to go`,
                 ]}
               />
             )
@@ -381,7 +409,7 @@ function ZoneMilestoneBar({ zoneId }: { zoneId: ZoneId }) {
               <div key={threshold} className="pointer-events-auto absolute -translate-x-1/2" style={{ left: `${leftPct}%` }}>
                 <HoverTooltip content={tooltip}>
                   <div
-                    className="h-3 w-3 rounded-full border-2"
+                    className={`h-3 w-3 rounded-full border-2 ${state === 'claimable' ? 'animate-pulse' : ''}`}
                     style={{
                       borderColor: color,
                       backgroundColor: state === 'locked' ? '#020617' : color,
@@ -394,6 +422,58 @@ function ZoneMilestoneBar({ zoneId }: { zoneId: ZoneId }) {
           })}
         </div>
       </div>
+    </div>
+  )
+}
+
+// Zone Tier's own Claim button (2026-08-15) — mirrors CharacterMonsterCard's
+// Claim button shape: always targets the next zone tier in sequence, free
+// (the zone's tier-completion count is itself the cost), server-verified via
+// claim_zone_tier_reward rather than trusted from this component's own
+// display math. Supersedes the old behavior where resolve-combat silently
+// granted the Comet Scroll reward straight into the character's currency the
+// moment a zone tier was crossed mid-fight — confusing since nothing on
+// screen explained why a Comet Scroll count had gone up.
+function ZoneTierClaimSection({ characterId, zoneId }: { characterId: string; zoneId: ZoneId }) {
+  const characterKills = useAchievementsStore((state) => state.characterKills)
+  const claimedZoneTier = useAchievementsStore((state) => state.zoneClaims[zoneId] ?? 0)
+  const busy = useAchievementsStore((state) => state.busy)
+  const claimZoneTier = useAchievementsStore((state) => state.claimZoneTier)
+  const [error, setError] = useState<string | null>(null)
+
+  const zoneMonsterKills = ZONES[zoneId].monsterOrder.map((monsterId) => characterKills[monsterId]?.kills ?? 0)
+  const { zoneTier: reachedZoneTier } = zoneTierCompletions(zoneMonsterKills)
+  const claimable = reachedZoneTier > claimedZoneTier
+  const maxed = claimedZoneTier >= ZONE_TIER_COMPLETIONS.length
+  const nextThreshold = ZONE_TIER_COMPLETIONS[claimedZoneTier]
+  const nextReward = ZONE_TIER_COMET_SCROLL_REWARD[claimedZoneTier]
+
+  if (maxed) {
+    return <p className="mt-1 text-[11px] font-medium text-emerald-400">All Zone Tiers claimed</p>
+  }
+
+  const handleClaim = async () => {
+    setError(null)
+    const result = await claimZoneTier(characterId, zoneId)
+    if (!result.ok) {
+      setError(describeClaimError(result.error, result.message))
+    }
+  }
+
+  return (
+    <div className="mt-1.5" onClick={(event) => event.stopPropagation()}>
+      <button
+        type="button"
+        disabled={busy || !claimable}
+        onClick={() => void handleClaim()}
+        title={!claimable ? `Reach ${nextThreshold} zone-tier completions` : undefined}
+        className="rounded-lg border border-amber-500 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-transparent disabled:text-slate-500"
+      >
+        {claimable
+          ? `Claim Zone Tier ${claimedZoneTier + 1} (+${nextReward} Comet Scroll${nextReward === 1 ? '' : 's'})`
+          : `Zone Tier ${claimedZoneTier + 1} at ${nextThreshold} completions`}
+      </button>
+      {error && <p className="mt-1.5 text-[11px] text-amber-400">{error}</p>}
     </div>
   )
 }
@@ -423,6 +503,12 @@ function CollapsibleZoneGroups({
   // old standalone "Combat bonuses by zone" summary block that used to sit
   // above this whole list.
   renderZoneExtra?: (zoneId: ZoneId) => ReactNode
+  // Only the Character tab's own Zones passes this (2026-08-15) — the Zone
+  // Tier Claim button, rendered right under ZoneMilestoneBar. A real <button>
+  // element, so it can't nest inside the header's own toggle control below
+  // (that control was switched from a <button> to a <div role="button"> for
+  // exactly this reason).
+  renderZoneClaim?: (zoneId: ZoneId) => ReactNode
 }) {
   return (
     <>
@@ -445,7 +531,18 @@ function CollapsibleZoneGroups({
 
         return (
           <div key={zoneId} className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/80">
-            <button type="button" onClick={() => onToggleZone(zoneId)} className="flex w-full items-center justify-between p-4 text-left">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => onToggleZone(zoneId)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  onToggleZone(zoneId)
+                }
+              }}
+              className="flex w-full cursor-pointer items-center justify-between p-4 text-left"
+            >
               <div>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium text-slate-200">{zone.displayName}</p>
@@ -456,10 +553,11 @@ function CollapsibleZoneGroups({
                     <ZoneMilestoneBar zoneId={zoneId} />
                   </div>
                 )}
+                {renderZoneClaim && renderZoneClaim(zoneId)}
                 {renderZoneExtra && <div className="mt-1">{renderZoneExtra(zoneId)}</div>}
               </div>
               <span className={`text-slate-500 transition-transform ${expanded ? 'rotate-180' : ''}`}>▾</span>
-            </button>
+            </div>
             {expanded && (
               <div className="space-y-2 border-t border-slate-800 p-4 pt-3">
                 {rows.map((entry) => (
@@ -512,7 +610,12 @@ function PetZoneGroups({ renderMonster }: { renderMonster: (monsterId: EnemyType
 function PlayerTabContent({ characterId }: { characterId: string }) {
   const [expandedZoneId, setExpandedZoneId] = useState<ZoneId | null>(null)
   const characterKills = useAchievementsStore((state) => state.characterKills)
+  const zoneClaims = useAchievementsStore((state) => state.zoneClaims)
   const claimableByZone = claimableCountsByZone(characterKills, ACHIEVEMENT_TIERS)
+  for (const zoneId of ZONE_ORDER) {
+    const zoneTierExtra = zoneTierClaimableCount(zoneId, characterKills, zoneClaims)
+    if (zoneTierExtra > 0) claimableByZone[zoneId] = (claimableByZone[zoneId] ?? 0) + zoneTierExtra
+  }
 
   return (
     <div className="space-y-3">
@@ -524,6 +627,7 @@ function PlayerTabContent({ characterId }: { characterId: string }) {
         onToggleZone={(zoneId) => setExpandedZoneId((current) => (current === zoneId ? null : zoneId))}
         showZoneSummary
         claimableByZone={claimableByZone}
+        renderZoneClaim={(zoneId) => <ZoneTierClaimSection characterId={characterId} zoneId={zoneId} />}
         renderMonster={(monsterId, displayName) => (
           <CharacterMonsterCard characterId={characterId} monsterId={monsterId} displayName={displayName} />
         )}
@@ -588,10 +692,11 @@ export default function AchievementsPanel({ characterId, accountId }: { characte
   const characterName = useCharacterRecordStore((state) => state.characterName)
   const characterKills = useAchievementsStore((state) => state.characterKills)
   const accountKills = useAchievementsStore((state) => state.accountKills)
+  const zoneClaims = useAchievementsStore((state) => state.zoneClaims)
   const pets = useAchievementsStore((state) => state.pets)
   const [tab, setTab] = useState<AchievementsTab>('player')
 
-  const characterClaimable = totalClaimable(characterKills, ACHIEVEMENT_TIERS)
+  const characterClaimable = totalClaimable(characterKills, ACHIEVEMENT_TIERS) + totalZoneTierClaimable(characterKills, zoneClaims)
   const accountClaimable = totalClaimable(accountKills, ACCOUNT_TIER_THRESHOLDS)
 
   const TABS: { id: AchievementsTab; label: string; badge: number }[] = [

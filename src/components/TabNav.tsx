@@ -91,7 +91,8 @@ function TabButton({ id, label, badge }: { id: TabId; label: string; badge?: num
 export default function TabNav() {
   const characterKills = useAchievementsStore((state) => state.characterKills)
   const accountKills = useAchievementsStore((state) => state.accountKills)
-  const achievementsBadge = totalClaimableCount(characterKills, accountKills)
+  const zoneClaims = useAchievementsStore((state) => state.zoneClaims)
+  const achievementsBadge = totalClaimableCount(characterKills, accountKills, zoneClaims)
   // Unclaimed Mail count (2026-08-13, requested by the user) — same badge
   // treatment as Achievements, mirroring MarketplacePanel's own Mail sub-tab
   // badge (see that file) so a pending purchase/returned-listing item is

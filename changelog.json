@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.84.8",
+    "date": "2026-08-15",
+    "changes": [
+      "Zone milestone rewards (Comet Scrolls) are now claimed with a button in Achievements instead of being granted silently mid-fight"
+    ]
+  },
+  {
     "version": "1.84.7",
     "date": "2026-08-14",
     "changes": [

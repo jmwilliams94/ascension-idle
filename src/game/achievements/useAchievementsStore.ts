@@ -3,7 +3,8 @@ import { supabase } from '../../lib/supabaseClient'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 import { useInventoryStore, type ItemInstance } from '../items/useInventoryStore'
-import { characterTierIndexReached, accountTierIndexReached } from './achievementData'
+import { characterTierIndexReached, accountTierIndexReached, zoneTierCompletions } from './achievementData'
+import { ZONES, ZONE_ORDER } from '../zones/zoneData'
 
 // Achievements & Pets — client-side cache of the four server-authoritative
 // tables (character_monster_kills/account_monster_kills/account_pets, plus
@@ -58,16 +59,31 @@ interface ClaimAccountTierResult {
   account_zone_drop_bonus_pct?: Record<string, number>
 }
 
+interface ClaimZoneTierResult {
+  ok: boolean
+  error?: 'not_owner' | 'already_maxed' | 'not_reached' | 'rpc_failed'
+  message?: string
+  threshold?: number
+  completions?: number
+  claimed_zone_tier?: number
+  comet_scrolls_granted?: number
+  comet_scrolls_remaining?: number
+}
+
 interface AchievementsState {
   // Both keyed by monster id.
   characterKills: Record<string, MonsterKillEntry>
   accountKills: Record<string, MonsterKillEntry>
+  // Keyed by zone id — highest zone tier (0-6) actually claimed so far,
+  // mirrors character_zone_progress.claimed_zone_tier.
+  zoneClaims: Record<string, number>
   pets: Set<string>
   loaded: boolean
   busy: boolean
   loadAchievements: (characterId: string, accountId: string) => Promise<void>
   claimCharacterTier: (characterId: string, monsterId: string) => Promise<ClaimCharacterTierResult>
   claimAccountTier: (accountId: string, monsterId: string) => Promise<ClaimAccountTierResult>
+  claimZoneTier: (characterId: string, zoneId: string) => Promise<ClaimZoneTierResult>
   // Called from resolveCombat.ts with a resolve-combat response's
   // monsterId/characterKillCount/accountKillCount/petObtained — reflects the
   // server's already-confirmed result without a refetch, same pattern
@@ -83,21 +99,23 @@ interface AchievementsState {
 export const useAchievementsStore = create<AchievementsState>((set, get) => ({
   characterKills: {},
   accountKills: {},
+  zoneClaims: {},
   pets: new Set(),
   loaded: false,
   busy: false,
 
   loadAchievements: async (characterId, accountId) => {
-    const [characterResult, accountResult, petsResult] = await Promise.all([
+    const [characterResult, accountResult, petsResult, zoneProgressResult] = await Promise.all([
       supabase.from('character_monster_kills').select('monster_id, kills, claimed_tier_index').eq('character_id', characterId),
       supabase.from('account_monster_kills').select('monster_id, kills, claimed_tier_index').eq('account_id', accountId),
       supabase.from('account_pets').select('monster_id').eq('account_id', accountId),
+      supabase.from('character_zone_progress').select('zone_id, claimed_zone_tier').eq('character_id', characterId),
     ])
 
-    if (characterResult.error || accountResult.error || petsResult.error) {
+    if (characterResult.error || accountResult.error || petsResult.error || zoneProgressResult.error) {
       console.error(
         'Failed to load achievements',
-        characterResult.error ?? accountResult.error ?? petsResult.error,
+        characterResult.error ?? accountResult.error ?? petsResult.error ?? zoneProgressResult.error,
       )
       return
     }
@@ -114,7 +132,12 @@ export const useAchievementsStore = create<AchievementsState>((set, get) => ({
 
     const pets = new Set((petsResult.data ?? []).map((row) => row.monster_id as string))
 
-    set({ characterKills, accountKills, pets, loaded: true })
+    const zoneClaims: Record<string, number> = {}
+    for (const row of zoneProgressResult.data ?? []) {
+      zoneClaims[row.zone_id] = row.claimed_zone_tier
+    }
+
+    set({ characterKills, accountKills, pets, zoneClaims, loaded: true })
   },
 
   claimCharacterTier: async (characterId, monsterId) => {
@@ -197,6 +220,33 @@ export const useAchievementsStore = create<AchievementsState>((set, get) => ({
     return result
   },
 
+  claimZoneTier: async (characterId, zoneId) => {
+    set({ busy: true })
+    const { data, error } = await supabase.rpc('claim_zone_tier_reward', {
+      p_character_id: characterId,
+      p_zone_id: zoneId,
+    })
+    set({ busy: false })
+
+    if (error) {
+      console.error('Claim zone tier reward call failed', error)
+      return { ok: false, error: 'rpc_failed', message: error.message }
+    }
+
+    const result = data as ClaimZoneTierResult
+
+    if (result.ok && typeof result.claimed_zone_tier === 'number') {
+      if (typeof result.comet_scrolls_remaining === 'number') {
+        useCurrencyStore.getState().setCometScrolls(result.comet_scrolls_remaining)
+      }
+      set((state) => ({
+        zoneClaims: { ...state.zoneClaims, [zoneId]: result.claimed_zone_tier! },
+      }))
+    }
+
+    return result
+  },
+
   applyResolveResult: (monsterId, characterKillCount, accountKillCount, petObtained) => {
     set((state) => ({
       characterKills: {
@@ -227,9 +277,12 @@ export const useAchievementsStore = create<AchievementsState>((set, get) => ({
 // would allocate a new number-carrying closure result on every store
 // notification and risk the infinite-render pitfall documented for
 // array/object-producing selectors elsewhere in this codebase.
+// zoneClaims is optional so existing callers that haven't been updated yet
+// degrade gracefully (zone-tier claims just don't count toward the badge).
 export function totalClaimableCount(
   characterKills: Record<string, MonsterKillEntry>,
   accountKills: Record<string, MonsterKillEntry>,
+  zoneClaims?: Record<string, number>,
 ): number {
   let total = 0
   for (const entry of Object.values(characterKills)) {
@@ -237,6 +290,13 @@ export function totalClaimableCount(
   }
   for (const entry of Object.values(accountKills)) {
     total += Math.max(0, accountTierIndexReached(entry.kills) - entry.claimedTierIndex)
+  }
+  if (zoneClaims) {
+    for (const zoneId of ZONE_ORDER) {
+      const zoneMonsterKills = ZONES[zoneId].monsterOrder.map((monsterId) => characterKills[monsterId]?.kills ?? 0)
+      const { zoneTier } = zoneTierCompletions(zoneMonsterKills)
+      total += Math.max(0, zoneTier - (zoneClaims[zoneId] ?? 0))
+    }
   }
   return total
 }
