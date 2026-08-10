@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.86.3",
+    "date": "2026-08-20",
+    "changes": [
+      "Added a full-screen firework preview button to Settings' Item Effects section"
+    ]
+  },
+  {
     "version": "1.86.2",
     "date": "2026-08-20",
     "changes": [
