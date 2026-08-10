@@ -3,7 +3,7 @@
     "version": "1.84.10",
     "date": "2026-08-17",
     "changes": [
-      "Level Upgrade's gear socket chance is now rarer (1/400) than Quality Upgrade's (1/100) — previously the same for both"
+      "Level Upgrade now grants gear sockets less often than Quality Upgrade — previously the same rate for both"
     ]
   },
   {
