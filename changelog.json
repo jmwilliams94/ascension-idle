@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.86.2",
+    "date": "2026-08-20",
+    "changes": [
+      "Repair costs at the Shop are now half of what they used to be, across every gear level"
+    ]
+  },
+  {
     "version": "1.86.1",
     "date": "2026-08-19",
     "changes": [

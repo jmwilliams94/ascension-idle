@@ -253,8 +253,11 @@ export function itemHasDurability(slotType: string | undefined): boolean {
 // how much durability is actually missing — a lightly-worn item costs
 // proportionally less than a fully-broken one, not the same flat price
 // regardless of damage (the old, pre-rescale behavior).
-const REPAIR_COST_AT_LEVEL_1 = 7500
-const REPAIR_COST_AT_LEVEL_130 = 100000
+// Halved across the board 2026-08-20 (requested by the user) — halving both
+// curve endpoints keeps the same geometric shape/pacing while scaling every
+// resulting cost by exactly 0.5.
+const REPAIR_COST_AT_LEVEL_1 = 3750
+const REPAIR_COST_AT_LEVEL_130 = 50000
 
 export function computeRepairCost(requiredLevel: number, qualityTier: string, currentDurability: number, maxDurability: number): number {
   if (maxDurability <= 0) return 0
