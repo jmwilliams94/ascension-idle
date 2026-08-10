@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useChatOverlayStore } from '../game/social/useChatOverlayStore'
 import { useChatStore } from '../game/social/useChatStore'
 import { useAnnouncementHistoryStore } from '../game/social/useAnnouncementHistoryStore'
+import { useCharacterLoadoutStore } from '../game/social/useCharacterLoadoutStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 
 interface FeedItem {
@@ -44,6 +45,7 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
   const loadAnnouncementHistory = useAnnouncementHistoryStore((state) => state.loadHistory)
 
   const activeCharacterName = useCharacterRecordStore((state) => state.characterName)
+  const viewCharacter = useCharacterLoadoutStore((state) => state.viewCharacter)
 
   const [draft, setDraft] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -148,15 +150,18 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
                 </div>
               ) : (
                 <div key={item.id} className="text-sm text-slate-200">
-                  <span
-                    className={
+                  <button
+                    type="button"
+                    onClick={() => viewCharacter(item.characterName)}
+                    title="Inspect gear"
+                    className={`mr-1 inline-block rounded-full border px-1.5 py-0.5 align-middle text-xs font-semibold ${
                       item.characterName === activeCharacterName
-                        ? 'font-semibold text-sky-300'
-                        : 'font-semibold text-slate-400'
-                    }
+                        ? 'border-sky-700/60 bg-sky-500/10 text-sky-300 hover:border-sky-400'
+                        : 'border-slate-700 bg-slate-800/60 text-slate-300 hover:border-slate-500 hover:text-slate-100'
+                    }`}
                   >
-                    {item.characterName}:
-                  </span>{' '}
+                    {item.characterName}
+                  </button>
                   <span className="break-words">{item.message}</span>
                 </div>
               ),

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.86.0",
+    "date": "2026-08-19",
+    "changes": [
+      "Character names in Global Chat are now clickable badges — tap one to inspect that player's currently equipped gear"
+    ]
+  },
+  {
     "version": "1.85.2",
     "date": "2026-08-18",
     "changes": [

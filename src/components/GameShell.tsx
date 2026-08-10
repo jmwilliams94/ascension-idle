@@ -8,6 +8,7 @@ import KnockoutHud from './KnockoutHud'
 import PlayersOnlineHud from './PlayersOnlineHud'
 import ChatAndAnnouncements from './ChatAndAnnouncements'
 import ChatOverlay from './ChatOverlay'
+import CharacterLoadoutModal from './CharacterLoadoutModal'
 import CombatPage from './CombatPage'
 import EquipmentTabPage from './EquipmentTabPage'
 import ExpBar from './ExpBar'
@@ -364,6 +365,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <GlobalActivityConnection accountId={accountId} />
       <MailRealtimeConnection characterId={characterId} />
       <ChatOverlay characterId={characterId} />
+      <CharacterLoadoutModal />
 
       {/* pb-24 (was pb-6, matched by py-6 on lg): clearance for
           MobileBottomNav's fixed bar below `lg` — without it, the bar covers
