@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.84.1",
+    "date": "2026-08-14",
+    "changes": [
+      "Fixed the Dura display briefly showing a point lower than reality right after repairing"
+    ]
+  },
+  {
     "version": "1.84.0",
     "date": "2026-08-14",
     "changes": [

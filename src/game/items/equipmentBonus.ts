@@ -621,11 +621,19 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
   // no durability concept at all (computeMaxDurability returns null for it),
   // so it gets no line, same as every other Quiver exclusion in this game.
   // Positioned after Sockets (2026-08-14, per the user's explicit ordering
-  // request) — abbreviated "Dura" label, "X/Y" current/max.
+  // request) — abbreviated "Dura" label, "X/Y" current/max. Math.ceil, not
+  // floor (fixed 2026-08-14, reported by the user: freshly repaired gear
+  // read as e.g. "39/40" almost immediately) — durability decays
+  // continuously/fractionally, so flooring a value like 39.998 (barely worn)
+  // instantly displayed a full point lower than reality. Ceiling instead
+  // keeps the displayed number at its current point (e.g. "40") until
+  // durability actually drops to or below the next whole point down, so a
+  // point is only ever shown as lost once it's genuinely, fully lost — never
+  // shows a fake "0/N" either, since decay clamps at exactly 0 (ceil(0) = 0).
   const maxDurability = template ? computeMaxDurability(template.slot_type, template.required_level) : null
   const durabilityLine: TooltipLine | null =
     maxDurability !== null
-      ? { text: `Dura: ${Math.floor(item.durability)}/${maxDurability}`, color: item.durability <= 0 ? QUALITY_COLORS.ascended : TOOLTIP_WHITE }
+      ? { text: `Dura: ${Math.ceil(item.durability)}/${maxDurability}`, color: item.durability <= 0 ? QUALITY_COLORS.ascended : TOOLTIP_WHITE }
       : null
 
   return {
