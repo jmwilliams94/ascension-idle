@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import EquippedGearPicker from './EquippedGearPicker'
 import ForgeSocketSlot from './ForgeSocketSlot'
 import ForgeTwoColumnLayout from './ForgeTwoColumnLayout'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
@@ -143,9 +144,11 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
             <ForgeSocketSlot index={1} unlocked={socketCount >= 2} filledKey={selectedItem?.sockets[1] ?? null} />
           </div>
 
+          {!selectedItem && <EquippedGearPicker onSelect={handleDropItemId} />}
+
           <div className="w-full max-w-xs space-y-2">
             {!selectedItem ? (
-              <p className="text-center text-[11px] text-slate-600">Drag an item into the slot on the left.</p>
+              <p className="text-center text-[11px] text-slate-600">Drag an item into the slot on the left, or tap one you have equipped.</p>
             ) : isWeapon ? (
               maxed ? (
                 <p className="text-center text-[10px] text-slate-500">Both sockets unlocked.</p>

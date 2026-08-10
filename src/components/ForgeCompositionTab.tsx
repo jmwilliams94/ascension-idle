@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import CompositionLoadBar from './CompositionLoadBar'
+import EquippedGearPicker from './EquippedGearPicker'
 import ForgeCompositionPanel from './ForgeCompositionPanel'
 import ForgeMaterialSlot, { MAX_MATERIAL_ENTRIES, type MaterialEntry } from './ForgeMaterialSlot'
 import ForgeTwoColumnLayout from './ForgeTwoColumnLayout'
@@ -169,9 +170,11 @@ export default function ForgeCompositionTab({ onBack }: ForgeCompositionTabProps
           )}
         </div>
 
+        {!selectedItem && <EquippedGearPicker onSelect={handleDropItemId} />}
+
         <div className="w-full max-w-xs space-y-2">
           {!selectedItem ? (
-            <p className="text-center text-[11px] text-slate-600">Drag an item into the Upgrade Slot.</p>
+            <p className="text-center text-[11px] text-slate-600">Drag an item into the Upgrade Slot, or tap one you have equipped.</p>
           ) : (
             <ForgeCompositionPanel
               item={selectedItem}

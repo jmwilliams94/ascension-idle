@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import EnchantGemSlot from './EnchantGemSlot'
+import EquippedGearPicker from './EquippedGearPicker'
 import ForgeTwoColumnLayout from './ForgeTwoColumnLayout'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import { DragDropProvider } from './dragDrop'
@@ -307,6 +308,8 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
               <EnchantGemSlot gem={stagedGem} onRemove={handleRemoveGem} />
             </div>
 
+            {!selectedItem && <EquippedGearPicker onSelect={handleDropItemId} />}
+
             {selectedItem && (
               <p className="text-center text-[11px] text-slate-500">
                 Current Enchanted HP: <span style={{ color: ENCHANT_HP_COLOR }}>{currentEnchantHp}</span>
@@ -343,7 +346,7 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
 
             <div className="w-full max-w-xs space-y-2">
               {!selectedItem ? (
-                <p className="text-center text-[11px] text-slate-600">Drag an item into the Upgrade Slot.</p>
+                <p className="text-center text-[11px] text-slate-600">Drag an item into the Upgrade Slot, or tap one you have equipped.</p>
               ) : !stagedGem ? (
                 <p className="text-center text-[11px] text-slate-600">Drag a gem into the Gem slot.</p>
               ) : (
@@ -370,6 +373,8 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
               <EnchantGemSlot gem={blessGem} onRemove={handleRemoveBlessGem} />
             </div>
 
+            {!selectedItem && <EquippedGearPicker onSelect={handleDropItemId} />}
+
             {selectedItem && (
               <p className="text-center text-[11px] text-slate-500">
                 Current Blessing:{' '}
@@ -388,7 +393,7 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
 
             <div className="w-full max-w-xs space-y-2">
               {!selectedItem ? (
-                <p className="text-center text-[11px] text-slate-600">Drag an item into the Upgrade Slot.</p>
+                <p className="text-center text-[11px] text-slate-600">Drag an item into the Upgrade Slot, or tap one you have equipped.</p>
               ) : isBlessMaxed ? (
                 <p className="text-center text-[11px] text-slate-600">Already blessed to the max (+{BLESS_MAX_PCT}%).</p>
               ) : !blessGem ? (

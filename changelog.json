@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.83.2",
+    "date": "2026-08-14",
+    "changes": [
+      "Forge, Composition, Sockets, and Enchantress now let you pick an equipped item directly, without unequipping it first",
+      "Equipped gear can no longer be Level Upgraded past your character's own level (unequipped gear is unaffected)"
+    ]
+  },
+  {
     "version": "1.83.1",
     "date": "2026-08-13",
     "changes": [

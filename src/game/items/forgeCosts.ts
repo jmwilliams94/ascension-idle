@@ -101,6 +101,15 @@ export function findNextTemplateInChain(templates: ItemTemplate[], current: Item
   )
 }
 
+// Shared by Master Forge (unconditional) and the plain Forge tile
+// (equipped-items-only, see ForgeStandardPanel.tsx) — a Level Upgrade result
+// whose required_level would exceed the character's own level. Mirrors the
+// `v_next_required_level > v_character_level` check in master_forge_upgrade/
+// level_upgrade's SQL — keep in sync.
+export function exceedsCharacterLevel(nextTemplate: ItemTemplate | null, characterLevel: number): boolean {
+  return Boolean(nextTemplate && nextTemplate.required_level > characterLevel)
+}
+
 // Composition (see CLAUDE.md's Gear system section) — a points accumulator with
 // guaranteed progress and no RNG, distinct from Quality/Level Upgrade above.
 // Mirrors composition_feed's SQL exactly (supabase/migrations/20260728000000_add_composition.sql,

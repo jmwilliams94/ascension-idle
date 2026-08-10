@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import EquippedGearPicker from './EquippedGearPicker'
 import ForgeMaterialSlot, { type MaterialEntry } from './ForgeMaterialSlot'
 import ForgePreviewSlot from './ForgePreviewSlot'
 import ForgeTwoColumnLayout from './ForgeTwoColumnLayout'
@@ -6,9 +7,11 @@ import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import { DragDropProvider } from './dragDrop'
 import InventoryPanel from './InventoryPanel'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
+import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { nextQualityTier } from '../game/items/equipmentBonus'
 import {
   effectiveCurrencyAvailable,
+  exceedsCharacterLevel,
   findNextTemplateInChain,
   isFallenStarDragId,
   isCometDragId,
@@ -17,6 +20,7 @@ import {
   previewLevelUpgradeCost,
   previewQualityUpgradeCost,
 } from '../game/items/forgeCosts'
+import { useEquipmentStore } from '../game/items/useEquipmentStore'
 import { useForgeStore } from '../game/items/useForgeStore'
 import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
@@ -48,6 +52,8 @@ function describeFailure(error?: string): string {
       return 'Already at the top tier for this item.'
     case 'no_upgrade_path':
       return 'This item has no further upgrades.'
+    case 'exceeds_character_level':
+      return "This would exceed your character's own level."
     case 'not_owner':
     case 'item_not_found':
       return "Couldn't find that item."
@@ -72,6 +78,8 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
   const fallenStars = useCurrencyStore((state) => state.fallenStars)
   const cometScrolls = useCurrencyStore((state) => state.cometScrolls)
   const fallenStarScrolls = useCurrencyStore((state) => state.fallenStarScrolls)
+  const characterLevel = useProgressionStore((state) => state.level)
+  const isEquipped = useEquipmentStore((state) => state.isEquipped)
   const busy = useForgeStore((state) => state.busy)
   const qualityUpgrade = useForgeStore((state) => state.qualityUpgrade)
   const levelUpgrade = useForgeStore((state) => state.levelUpgrade)
@@ -185,6 +193,13 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
   const qualityCost = selectedItem ? previewQualityUpgradeCost() : 0
   const levelCost = selectedItem ? previewLevelUpgradeCost() : 0
 
+  // An equipped item can't Level Upgrade past the character's own level —
+  // it would become un-equippable with no way back short of another Level
+  // Upgrade. An item sitting in ordinary Inventory has no such restriction
+  // (deliberately, per the user — they just won't be able to re-equip it).
+  const isSelectedEquipped = selectedItem ? isEquipped(selectedItem.id) : false
+  const blockedByEquipLevel = materialMode === 'level' && isSelectedEquipped && exceedsCharacterLevel(nextLevelTemplate, characterLevel)
+
   const qualityDisabledReason = !selectedItem
     ? null
     : isMaxQuality
@@ -200,11 +215,13 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
       ? selectedTemplate?.item_family
         ? 'Already at the top tier for this item.'
         : 'This item has no further upgrades.'
-      : effectiveCurrencyAvailable(comets, cometScrolls) < levelCost
-        ? `Need ${levelCost} Comet${levelCost === 1 ? '' : 's'} (${
-            cometScrolls > 0 ? `have ${comets} + ${cometScrolls} Scroll${cometScrolls === 1 ? '' : 's'}` : `have ${comets}`
-          }).`
-        : null
+      : blockedByEquipLevel && nextLevelTemplate
+        ? `This would make the item level ${nextLevelTemplate.required_level}, above your own level ${characterLevel}. Unequip it first if you want to upgrade past your level.`
+        : effectiveCurrencyAvailable(comets, cometScrolls) < levelCost
+          ? `Need ${levelCost} Comet${levelCost === 1 ? '' : 's'} (${
+              cometScrolls > 0 ? `have ${comets} + ${cometScrolls} Scroll${cometScrolls === 1 ? '' : 's'}` : `have ${comets}`
+            }).`
+          : null
 
   const previewItem: ItemInstance | null = (() => {
     if (!selectedItem) {
@@ -227,6 +244,9 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
 
   const handleConfirm = async () => {
     if (!selectedItem || (materialMode !== 'quality' && materialMode !== 'level')) {
+      return
+    }
+    if (materialMode === 'level' && blockedByEquipLevel) {
       return
     }
 
@@ -268,9 +288,11 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
           <ForgePreviewSlot previewItem={previewItem} previewTemplate={previewTemplate} slotId="forge-standard-preview" />
         </div>
 
+        {!selectedItem && <EquippedGearPicker onSelect={handleDropItemId} />}
+
         <div className="w-full max-w-xs space-y-2">
           {!selectedItem ? (
-            <p className="text-center text-[11px] text-slate-600">Drag an item into the Upgrade Slot.</p>
+            <p className="text-center text-[11px] text-slate-600">Drag an item into the Upgrade Slot, or tap one you have equipped.</p>
           ) : !materialMode ? (
             <p className="text-center text-[11px] text-slate-600">
               Drag a Comet, Fallen Star, or Scroll into the Material slot.
@@ -295,7 +317,7 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
                 </div>
               )}
 
-              {previewItem ? (
+              {previewItem && !blockedByEquipLevel ? (
                 <div className="flex justify-center gap-2">
                   <button
                     type="button"

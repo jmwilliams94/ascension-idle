@@ -37,7 +37,16 @@ interface QualityUpgradeResult {
 
 interface LevelUpgradeResult {
   ok: boolean
-  error?: 'item_not_found' | 'not_owner' | 'already_max_level' | 'not_enough_comets' | 'no_upgrade_path' | 'not_enough_room_to_unbundle'
+  error?:
+    | 'item_not_found'
+    | 'not_owner'
+    | 'already_max_level'
+    | 'not_enough_comets'
+    | 'no_upgrade_path'
+    | 'not_enough_room_to_unbundle'
+    // Equipped-item-only guard (2026-08-14, mirrors master_forge_upgrade's own
+    // check) — an item pulled from ordinary Inventory has no such limit.
+    | 'exceeds_character_level'
   upgraded?: boolean
   level?: number
   // The item's new template on success (Level Upgrade now advances the item to
@@ -188,7 +197,16 @@ interface QualityUpgradeScrollResult {
 
 interface LevelUpgradeScrollResult {
   ok: boolean
-  error?: 'item_not_found' | 'not_owner' | 'already_max_level' | 'no_upgrade_path' | 'not_enough_comet_scrolls'
+  error?:
+    | 'item_not_found'
+    | 'not_owner'
+    | 'already_max_level'
+    | 'no_upgrade_path'
+    | 'not_enough_comet_scrolls'
+    // Same equipped-item-only guard as LevelUpgradeResult above — refused
+    // upfront (before the Scroll is spent) if even the first roll in the
+    // batch would already exceed the character's level.
+    | 'exceeds_character_level'
   upgraded?: boolean
   rolls_attempted?: number
   rolls_succeeded?: number

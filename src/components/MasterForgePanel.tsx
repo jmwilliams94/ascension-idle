@@ -1,34 +1,23 @@
 import { useState } from 'react'
 import { DragDropProvider } from './dragDrop'
+import EquippedGearPicker from './EquippedGearPicker'
 import ForgePreviewSlot from './ForgePreviewSlot'
 import ForgeTwoColumnLayout from './ForgeTwoColumnLayout'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import InventoryPanel from './InventoryPanel'
-import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
+import { nextQualityTier } from '../game/items/equipmentBonus'
 import {
-  buildGearTooltip,
-  getGearIconSrc,
-  getItemIcon,
-  getQualityColor,
-  nextQualityTier,
-} from '../game/items/equipmentBonus'
-import { computeUpgradeSuccessChancePct, effectiveCurrencyAvailable, findNextTemplateInChain, previewMasterForgeCost } from '../game/items/forgeCosts'
+  computeUpgradeSuccessChancePct,
+  effectiveCurrencyAvailable,
+  exceedsCharacterLevel,
+  findNextTemplateInChain,
+  previewMasterForgeCost,
+} from '../game/items/forgeCosts'
 import { useForgeStore } from '../game/items/useForgeStore'
 import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
-import { EQUIP_SLOTS, useEquipmentStore, type EquipSlot } from '../game/items/useEquipmentStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
-
-const EQUIP_SLOT_LABELS: Record<EquipSlot, string> = {
-  weapon: 'Main Hand',
-  ring: 'Ring',
-  necklace: 'Necklace',
-  boots: 'Boots',
-  hat: 'Head',
-  coat: 'Armor',
-  quiver: 'Quiver',
-}
 
 function describeFailure(error?: string): string {
   switch (error) {
@@ -77,7 +66,6 @@ interface MasterForgePanelProps {
 export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
   const items = useInventoryStore((state) => state.items)
   const templates = useItemTemplatesStore((state) => state.templates)
-  const equippedIds = useEquipmentStore((state) => state.equippedIds)
   const comets = useCurrencyStore((state) => state.comets)
   const fallenStars = useCurrencyStore((state) => state.fallenStars)
   const cometScrolls = useCurrencyStore((state) => state.cometScrolls)
@@ -141,8 +129,7 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
       : null
   const cost = successChancePct !== null ? previewMasterForgeCost(successChancePct) : null
 
-  const exceedsCharacterLevel =
-    upgradeType === 'level' && nextLevelTemplate ? nextLevelTemplate.required_level > characterLevel : false
+  const resultExceedsCharacterLevel = upgradeType === 'level' && exceedsCharacterLevel(nextLevelTemplate, characterLevel)
 
   const blockedReason = (() => {
     if (!selectedItem) return null
@@ -150,7 +137,7 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
     if (upgradeType === 'level' && !nextLevelTemplate) {
       return selectedTemplate?.item_family ? 'Already at the top tier for this item.' : 'This item has no further upgrades.'
     }
-    if (exceedsCharacterLevel && nextLevelTemplate) {
+    if (resultExceedsCharacterLevel && nextLevelTemplate) {
       return `This would make the item level ${nextLevelTemplate.required_level}, above your own level ${characterLevel}.`
     }
     if (cost !== null) {
@@ -177,10 +164,6 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
     setResult({ success: true, message: 'Guaranteed upgrade complete!' })
     setSelectedItemId(null)
   }
-
-  const equippedEntries = EQUIP_SLOTS.map((slot) => ({ slot, itemId: equippedIds[slot] })).filter(
-    (entry): entry is { slot: EquipSlot; itemId: string } => Boolean(entry.itemId),
-  )
 
   return (
     <DragDropProvider>
@@ -221,33 +204,7 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
               <ForgePreviewSlot previewItem={previewItem} previewTemplate={previewTemplate} slotId="master-forge-preview" />
             </div>
 
-            {!selectedItem && equippedEntries.length > 0 && (
-              <div className="w-full max-w-sm">
-                <p className="mb-1 text-center text-[10px] uppercase tracking-wide text-slate-500">Or pick an equipped item</p>
-                <div className="flex flex-wrap justify-center gap-2">
-                  {equippedEntries.map(({ slot, itemId }) => {
-                    const item = findItem(itemId)
-                    const template = item ? (templates.find((t) => t.id === item.template_id) ?? null) : null
-                    return (
-                      <div key={slot} className="flex flex-col items-center gap-1">
-                        <InventorySlot
-                          slotId={`equipped-${slot}`}
-                          filled={Boolean(item)}
-                          sizeClassName={SLOT_SIZE_CLASS}
-                          icon={getItemIcon(template?.slot_type)}
-                          iconSrc={getGearIconSrc(template?.name)}
-                          qualityColor={item ? getQualityColor(item.quality_tier) : undefined}
-                          tooltip={item ? buildGearTooltip(item, template ?? undefined) : undefined}
-                          label={EQUIP_SLOT_LABELS[slot]}
-                          onClick={() => handleSelectItem(itemId)}
-                        />
-                        <span className="text-[9px] text-slate-500">{EQUIP_SLOT_LABELS[slot]}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
+            {!selectedItem && <EquippedGearPicker onSelect={handleSelectItem} />}
 
             <div className="w-full max-w-xs space-y-2">
               {result && (
