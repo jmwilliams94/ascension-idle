@@ -756,9 +756,6 @@ export default function InventoryPanel({
     if (typeof result.goldGained === 'number') {
       showGainToast({ label: 'Gold', amount: result.goldGained, icon: '💰', color: '#fbbf24' })
     }
-    if (typeof result.apGained === 'number' && result.apGained > 0) {
-      showGainToast({ label: 'Ascension Points', amount: result.apGained, icon: '🎖️', color: '#a855f7' })
-    }
     setSelectedSlot(null)
   }
 
@@ -859,12 +856,8 @@ export default function InventoryPanel({
     // One aggregate toast per bulk sell, not one per item — avoids a toast
     // pileup when selling a dozen items at once.
     const totalGold = results.reduce((sum, result) => sum + (result.goldGained ?? 0), 0)
-    const totalAp = results.reduce((sum, result) => sum + (result.apGained ?? 0), 0)
     if (totalGold > 0) {
       showGainToast({ label: 'Gold', amount: totalGold, icon: '💰', color: '#fbbf24' })
-    }
-    if (totalAp > 0) {
-      showGainToast({ label: 'Ascension Points', amount: totalAp, icon: '🎖️', color: '#a855f7' })
     }
   }
 

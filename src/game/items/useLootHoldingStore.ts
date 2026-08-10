@@ -42,14 +42,14 @@ interface ClaimResult {
 // Loot Holding for gold, without claiming it into Inventory first. Mirrors
 // sell_item's own price formula exactly (see the migration). Currency-type
 // entries (Comet/Fallen Star) are rejected server-side with 'not_sellable' —
-// the UI only ever offers this on gear entries to begin with.
+// the UI only ever offers this on gear entries to begin with. Gold-only —
+// Ascension Points come from Salvage alone, removed from Sell 2026-08-14 at
+// the user's request.
 interface SellResult {
   ok: boolean
   error?: 'not_found' | 'not_owner' | 'not_sellable'
   gold_gained?: number
   gold?: number
-  ap_gained?: number
-  ascension_points?: number
 }
 
 // bank_loot_holding (2026-08-05) — routes a pending Comet/Fallen Star
@@ -176,9 +176,6 @@ export const useLootHoldingStore = create<LootHoldingState>((set) => ({
       // gold-only — addRewards(gold, 0) adds gold without touching EXP/level,
       // same convention useInventoryStore.sellItem already uses.
       useProgressionStore.getState().addRewards(result.gold_gained, 0)
-      if (typeof result.ap_gained === 'number' && result.ap_gained > 0) {
-        usePlayerRecordStore.getState().addAscensionPoints(result.ap_gained)
-      }
       set((state) => ({ entries: state.entries.filter((entry) => entry.id !== holdingId) }))
     }
 

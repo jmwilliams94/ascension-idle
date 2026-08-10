@@ -212,7 +212,9 @@ interface InventoryState {
   // Sells a gear item for gold from the Shop tab (see sell_item — item_instances
   // has no client-side delete grant, so this has to go through a SECURITY
   // DEFINER function even though gold itself is otherwise client-authoritative).
-  sellItem: (itemId: string) => Promise<{ ok: boolean; error?: string; goldGained?: number; apGained?: number }>
+  // Gold-only — Ascension Points come from Salvage alone (see salvageItem
+  // below), removed from Sell 2026-08-14 at the user's request.
+  sellItem: (itemId: string) => Promise<{ ok: boolean; error?: string; goldGained?: number }>
   // Forge's Salvage tab (see salvage_item) — destroys a gear item for
   // Ascension Points only, no gold. A separate action from sellItem since
   // the two have genuinely different payouts, not just different UI.
@@ -404,20 +406,15 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       error?: string
       gold_gained?: number
       gold?: number
-      ap_gained?: number
-      ascension_points?: number
     }
 
     if (result.ok && typeof result.gold_gained === 'number') {
       get().removeItems([itemId])
       // gold-only — addRewards(gold, 0) adds gold without touching EXP/level.
       useProgressionStore.getState().addRewards(result.gold_gained, 0)
-      if (typeof result.ap_gained === 'number' && result.ap_gained > 0) {
-        usePlayerRecordStore.getState().addAscensionPoints(result.ap_gained)
-      }
     }
 
-    return { ok: result.ok, error: result.error, goldGained: result.gold_gained, apGained: result.ap_gained }
+    return { ok: result.ok, error: result.error, goldGained: result.gold_gained }
   },
 
   salvageItem: async (itemId) => {

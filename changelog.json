@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.84.6",
+    "date": "2026-08-14",
+    "changes": [
+      "Selling gear to the Shop (or from Loot Holding) now only pays gold — Ascension Points are earned exclusively from Salvage"
+    ]
+  },
+  {
     "version": "1.84.5",
     "date": "2026-08-14",
     "changes": [
