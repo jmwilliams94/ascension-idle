@@ -488,6 +488,7 @@ function CollapsibleZoneGroups({
   showZoneSummary,
   claimableByZone,
   renderZoneExtra,
+  renderZoneClaim,
 }: {
   expandedZoneId: ZoneId | null
   onToggleZone: (zoneId: ZoneId) => void
