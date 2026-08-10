@@ -46,13 +46,16 @@ function previewInstance(template: ItemTemplate): ItemInstance {
 
 type ShopTab = 'weapons' | 'armor' | 'jeweller' | 'potions' | 'repair'
 
-// 'quiver' rides along here (not a dedicated tab) so a Hunter can
-// re-purchase one through the same generic GearRow/grantItemDrop path if
-// they ever sell or lose their starter Quiver. Rings/Necklaces split out
-// into their own Jeweller tab (2026-08-07, confirmed with the user) — Armor
-// keeps boots/hats/coats/quiver.
-const ARMOR_SLOTS = ['boots', 'hat', 'coat', 'quiver']
+// Rings/Necklaces split out into their own Jeweller tab (2026-08-07,
+// confirmed with the user) — Armor keeps boots/hats/coats. Quiver removed
+// from the Shop entirely (2026-08-14, requested by the user) — no longer
+// re-purchasable here if lost.
+const ARMOR_SLOTS = ['boots', 'hat', 'coat']
 const JEWELLER_SLOTS = ['ring', 'necklace']
+
+// Gear above level 120 removed from the Shop (2026-08-14, requested by the
+// user).
+const SHOP_MAX_LEVEL = 120
 
 const SHOP_TABS: { id: ShopTab; label: string; icon: string }[] = [
   { id: 'weapons', label: 'Weapons', icon: '🗡️' },
@@ -170,14 +173,17 @@ export default function ShopPanel() {
   const weaponTemplates = templates
     .filter((t) => t.slot_type === 'weapon' && availableToClass(t, selectedClassId))
     .filter((t) => !(selectedClassId === 'hunter' && t.name === 'Wooden Sword'))
+    .filter((t) => t.required_level <= SHOP_MAX_LEVEL)
     .sort((a, b) => a.required_level - b.required_level)
 
   const armorTemplates = templates
     .filter((t) => ARMOR_SLOTS.includes(t.slot_type) && availableToClass(t, selectedClassId))
+    .filter((t) => t.required_level <= SHOP_MAX_LEVEL)
     .sort((a, b) => a.required_level - b.required_level)
 
   const jewellerTemplates = templates
     .filter((t) => JEWELLER_SLOTS.includes(t.slot_type) && availableToClass(t, selectedClassId))
+    .filter((t) => t.required_level <= SHOP_MAX_LEVEL)
     .sort((a, b) => a.required_level - b.required_level)
 
   // Repair All (2026-08-14, requested by the user — a single flat action, no
@@ -193,7 +199,7 @@ export default function ShopPanel() {
     if (max === null || item.durability >= max) {
       return []
     }
-    return [{ item, template, cost: computeRepairCost(template.required_level, item.quality_tier) }]
+    return [{ item, template, cost: computeRepairCost(template.required_level, item.quality_tier, item.durability, max) }]
   })
   const repairTotalCost = damagedItems.reduce((sum, entry) => sum + entry.cost, 0)
   const canAffordRepair = gold >= repairTotalCost

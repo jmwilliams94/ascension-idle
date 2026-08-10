@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.84.2",
+    "date": "2026-08-14",
+    "changes": [
+      "Repair costs now scale much higher with gear level (up to 100k gold for max-level gear) and with how damaged the item actually is",
+      "The Shop no longer sells gear above level 120 or the Quiver",
+      "Removed the redundant Gold/EXP row above Inventory on the Fighting screen"
+    ]
+  },
+  {
     "version": "1.84.1",
     "date": "2026-08-14",
     "changes": [

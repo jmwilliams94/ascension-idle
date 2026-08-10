@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import CountUp from './CountUpNumber'
 import InventoryPanel from './InventoryPanel'
 import { ENEMY_TYPES, ZONES, ZONE_ORDER, type EnemyTypeId, type ZoneId } from '../game/zones/zoneData'
 import { useZoneStore } from '../game/zones/useZoneStore'
@@ -139,8 +138,6 @@ export default function CombatPage() {
   const stop = useCombatStore((state) => state.stop)
   const clearCombat = useCombatStore((state) => state.clear)
 
-  const gold = useProgressionStore((state) => state.gold)
-  const exp = useProgressionStore((state) => state.exp)
   const characterLevel = useProgressionStore((state) => state.level)
   const characterName = useCharacterRecordStore((state) => state.characterName)
 
@@ -709,16 +706,9 @@ export default function CombatPage() {
       </div>
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-950/80 px-4 py-3 text-xs text-slate-400">
-          <span>
-            Gold:{' '}
-            <CountUp end={gold} duration={0.6} preserveValue className="font-semibold text-amber-300" />
-          </span>
-          <span>
-            EXP: <CountUp end={exp} duration={0.6} preserveValue className="font-semibold text-sky-300" />
-          </span>
-        </div>
-
+        {/* Gold/EXP row removed (2026-08-14, requested by the user) —
+            redundant with ExpBar in GameShell's persistent top strip, same
+            reasoning the mobile layout above already used to skip it. */}
         <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
           <InventoryPanel columns={5} equipPopoverEnabled />
         </div>

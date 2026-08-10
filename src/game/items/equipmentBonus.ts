@@ -243,9 +243,25 @@ export function itemHasDurability(slotType: string | undefined): boolean {
 }
 
 // Client mirror of the SQL compute_repair_cost function — must stay in sync.
-// Reuses QUALITY_STAT_MULTIPLIERS for consistency with sell-price scaling.
-export function computeRepairCost(requiredLevel: number, qualityTier: string): number {
-  return Math.round(2 * requiredLevel * (QUALITY_STAT_MULTIPLIERS[qualityTier] ?? 1))
+// Rescaled 2026-08-14 (requested by the user: "level 130 gear should cost
+// like 100k per piece if their durability is at 0... early gear should cost
+// around 5k to 10k") — a fully-broken (0 durability) Normal-quality item's
+// repair cost climbs geometrically from REPAIR_COST_AT_LEVEL_1 to
+// REPAIR_COST_AT_LEVEL_130 (same log-scale-interpolation style
+// useProgressionStore's own EXP_CURVE_ANCHORS already uses), scaled by
+// QUALITY_STAT_MULTIPLIERS (consistent with sell-price scaling) and then by
+// how much durability is actually missing — a lightly-worn item costs
+// proportionally less than a fully-broken one, not the same flat price
+// regardless of damage (the old, pre-rescale behavior).
+const REPAIR_COST_AT_LEVEL_1 = 7500
+const REPAIR_COST_AT_LEVEL_130 = 100000
+
+export function computeRepairCost(requiredLevel: number, qualityTier: string, currentDurability: number, maxDurability: number): number {
+  if (maxDurability <= 0) return 0
+  const t = Math.max(0, Math.min(1, (requiredLevel - 1) / 129))
+  const fullBreakCost = REPAIR_COST_AT_LEVEL_1 * (REPAIR_COST_AT_LEVEL_130 / REPAIR_COST_AT_LEVEL_1) ** t
+  const missingFraction = Math.max(0, Math.min(1, (maxDurability - currentDurability) / maxDurability))
+  return Math.round(fullBreakCost * (QUALITY_STAT_MULTIPLIERS[qualityTier] ?? 1) * missingFraction)
 }
 
 // Bug fix (2026-07-31): every call site used to pass the template's raw,
