@@ -20,7 +20,8 @@ import MarketplacePanel from './MarketplacePanel'
 import OfflineProgressModal from './OfflineProgressModal'
 import MoneyBagRevealModal from './MoneyBagRevealModal'
 import SalvageRevealToast from './SalvageRevealToast'
-import FireworkTestOverlay from './FireworkTestOverlay'
+import FireworkOverlay from './FireworkOverlay'
+import LevelUpBanner from './LevelUpBanner'
 import UnclaimedLootBadge from './UnclaimedLootBadge'
 import SettingsModal from './SettingsModal'
 import ShopPanel from './ShopPanel'
@@ -360,7 +361,8 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <OfflineProgressModal />
       <MoneyBagRevealModal />
       <SalvageRevealToast />
-      <FireworkTestOverlay />
+      <FireworkOverlay />
+      <LevelUpBanner />
       <UnclaimedLootBadge />
       <GainToastHost />
       <CombatEngine />

@@ -66,6 +66,7 @@ function EmberBurst({ seed, color }: { seed: number; color: string }) {
 export default function MoneyBagRevealModal() {
   const reveal = useMoneyBagRevealStore((state) => state.reveal)
   const dismiss = useMoneyBagRevealStore((state) => state.dismiss)
+  const advanceQueue = useMoneyBagRevealStore((state) => state.advanceQueue)
 
   useEffect(() => {
     if (!reveal) {
@@ -83,7 +84,7 @@ export default function MoneyBagRevealModal() {
 
   return (
     <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center">
-      <AnimatePresence>
+      <AnimatePresence onExitComplete={advanceQueue}>
         {reveal && (
           <motion.div
             key={seed}

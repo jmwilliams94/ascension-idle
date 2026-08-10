@@ -1,6 +1,5 @@
 import { TierEmberEffect } from '../game/items/tierEffects'
 import { EMBER_DENSITY_BY_COLOR, emberCountForColor, seedFromId } from '../game/items/tierEffectsData'
-import { useFireworkTestStore } from '../game/items/useFireworkTestStore'
 
 // Confirmed 2026-08-02: the radiating-ember effect (tierEffects.tsx) is now
 // live on every real gear/material tile in the game via InventorySlot —
@@ -51,8 +50,6 @@ function ExampleTile({ example, index }: { example: Example; index: number }) {
 }
 
 export default function ItemEffectGallery() {
-  const fireFirework = useFireworkTestStore((state) => state.fire)
-
   return (
     <div className="space-y-4">
       <p className="text-xs text-slate-500">
@@ -66,20 +63,6 @@ export default function ItemEffectGallery() {
         {EXAMPLES.map((example, index) => (
           <ExampleTile key={example.label} example={example} index={index} />
         ))}
-      </div>
-
-      <div className="border-t border-slate-800 pt-4">
-        <p className="mb-2 text-xs text-slate-500">
-          Full-screen preview using the same confetti-burst embers as the Money Bag/Salvage reveals, scattered across the
-          whole screen in every quality color plus Comet/Stones and Fallen Star.
-        </p>
-        <button
-          type="button"
-          onClick={fireFirework}
-          className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800"
-        >
-          🎆 Test Full-Screen Firework
-        </button>
       </div>
     </div>
   )

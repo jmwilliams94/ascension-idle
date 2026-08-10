@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.86.4",
+    "date": "2026-08-20",
+    "changes": [
+      "Gaining a gear socket now triggers a full-screen firework celebration",
+      "Fixed the Money Bag reveal card jittering when several bags are opened in quick succession — reveals now show one at a time in order",
+      "The Level Up banner now floats above everything else on screen instead of sometimes sitting awkwardly behind other UI, and bursts with gold embers",
+      "Removed the firework test button from Settings"
+    ]
+  },
+  {
     "version": "1.86.3",
     "date": "2026-08-20",
     "changes": [

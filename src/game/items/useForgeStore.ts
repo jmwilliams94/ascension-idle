@@ -6,6 +6,7 @@ import { useGemStore } from './useGemStore'
 import type { GemCounts } from './gemCatalog'
 import { useInventoryStore, type ItemInstance } from './useInventoryStore'
 import type { GemTier, GemTypeId } from './gemCatalog'
+import { useFireworkStore } from './useFireworkStore'
 
 // Shape returned by the quality_upgrade/level_upgrade Postgres functions (see
 // migration 20260727050000). Both currency deduction and the item write happen
@@ -278,6 +279,9 @@ export const useForgeStore = create<ForgeState>((set) => ({
     if (result.ok && result.sockets) {
       useInventoryStore.getState().patchItem(itemId, { sockets: result.sockets })
     }
+    if (result.ok && result.socket_gained) {
+      useFireworkStore.getState().fire()
+    }
     if (result.ok && typeof result.fallen_stars_remaining === 'number') {
       useCurrencyStore.getState().setFallenStars(result.fallen_stars_remaining)
     }
@@ -311,6 +315,9 @@ export const useForgeStore = create<ForgeState>((set) => ({
     if (result.ok && result.sockets) {
       useInventoryStore.getState().patchItem(itemId, { sockets: result.sockets })
     }
+    if (result.ok && result.socket_gained) {
+      useFireworkStore.getState().fire()
+    }
     if (result.ok && typeof result.comets_remaining === 'number') {
       useCurrencyStore.getState().setComets(result.comets_remaining)
     }
@@ -341,6 +348,9 @@ export const useForgeStore = create<ForgeState>((set) => ({
     if (result.ok && result.sockets) {
       useInventoryStore.getState().patchItem(itemId, { sockets: result.sockets })
     }
+    if (result.ok && result.socket_gained) {
+      useFireworkStore.getState().fire()
+    }
     if (result.ok && typeof result.fallen_star_scrolls_remaining === 'number') {
       useCurrencyStore.getState().setFallenStarScrolls(result.fallen_star_scrolls_remaining)
     }
@@ -370,6 +380,9 @@ export const useForgeStore = create<ForgeState>((set) => ({
     }
     if (result.ok && result.sockets) {
       useInventoryStore.getState().patchItem(itemId, { sockets: result.sockets })
+    }
+    if (result.ok && result.socket_gained) {
+      useFireworkStore.getState().fire()
     }
     if (result.ok && typeof result.comet_scrolls_remaining === 'number') {
       useCurrencyStore.getState().setCometScrolls(result.comet_scrolls_remaining)
@@ -429,6 +442,7 @@ export const useForgeStore = create<ForgeState>((set) => ({
 
     if (result.ok && result.sockets) {
       useInventoryStore.getState().patchItem(itemId, { sockets: result.sockets })
+      useFireworkStore.getState().fire()
     }
     if (result.ok && typeof result.fallen_stars_remaining === 'number') {
       useCurrencyStore.getState().setFallenStars(result.fallen_stars_remaining)
@@ -465,6 +479,9 @@ export const useForgeStore = create<ForgeState>((set) => ({
     }
     if (result.ok && result.sockets) {
       useInventoryStore.getState().patchItem(itemId, { sockets: result.sockets })
+    }
+    if (result.ok && result.socket_gained) {
+      useFireworkStore.getState().fire()
     }
     if (result.ok && typeof result.fallen_stars_remaining === 'number') {
       useCurrencyStore.getState().setFallenStars(result.fallen_stars_remaining)

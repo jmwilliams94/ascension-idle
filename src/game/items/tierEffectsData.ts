@@ -40,7 +40,10 @@ export function emberCountForColor(color: string | undefined): number {
 // Tiny deterministic PRNG (mulberry32) so a given tile's ember layout is
 // stable across re-renders (no jitter every time the surrounding UI
 // re-renders) while still looking organically varied from tile to tile.
-function mulberry32(seed: number): () => number {
+// Exported so call sites needing their own seeded randomness (e.g.
+// FireworkOverlay's burst-point layout) can use it instead of Math.random,
+// which the react-hooks/purity lint rule forbids calling during render.
+export function mulberry32(seed: number): () => number {
   let a = seed
   return () => {
     a |= 0

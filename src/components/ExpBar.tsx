@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { MAX_CHARACTER_LEVEL, requiredExpForLevel, useProgressionStore } from '../game/stats/useProgressionStore'
 import { formatGoldAmount, goldColorClass } from '../game/stats/formatGold'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
@@ -19,10 +18,9 @@ const AP_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/ascension-points.png`
 // that card duplicated Level/EXP (already shown here) plus Gold in a
 // separate box below this bar; removed as redundant, with Gold moved into
 // this same row (rightmost) instead of losing it. The level-up toast
-// ProgressionPanel used to own (a 2.2s auto-clearing notice) moved here too,
-// rather than being silently dropped along with the rest of the card — it's
-// a distinct celebratory moment, not just another restatement of the level
-// number.
+// ProgressionPanel used to own now lives in its own component,
+// LevelUpBanner.tsx (moved out 2026-08-20, see that file's own comment for
+// why) — mounted separately in GameShell, not rendered from here at all.
 //
 // Ascension Points added (2026-08-05, confirmed with the user — "Can we add
 // AP next to the gold in the same row as the exp bar?"), rightmost, its own
@@ -60,8 +58,6 @@ export default function ExpBar() {
   // numbers.
   const predictedLevel = useProgressionStore((state) => state.predictedLevel)
   const predictedExp = useProgressionStore((state) => state.predictedExp)
-  const lastLevelUp = useProgressionStore((state) => state.lastLevelUp)
-  const clearLevelUpNotice = useProgressionStore((state) => state.clearLevelUpNotice)
   const isMaxLevel = predictedLevel >= MAX_CHARACTER_LEVEL
   const required = requiredExpForLevel(predictedLevel)
   // predictedGold is a genuine float now (2026-08-11 expected-value rewrite
@@ -72,17 +68,8 @@ export default function ExpBar() {
   const displayedGold = Math.floor(gold + predictedGold)
   const percent = isMaxLevel ? 100 : required > 0 ? Math.min(100, (predictedExp / required) * 100) : 100
 
-  useEffect(() => {
-    if (lastLevelUp === null) {
-      return undefined
-    }
-
-    const timeout = setTimeout(() => clearLevelUpNotice(), 2200)
-    return () => clearTimeout(timeout)
-  }, [lastLevelUp, clearLevelUpNotice])
-
   return (
-    <div className="relative flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950/80 px-2 py-1 text-[10px] text-slate-300 backdrop-blur lg:gap-3 lg:px-3 lg:py-2 lg:text-sm">
+    <div className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950/80 px-2 py-1 text-[10px] text-slate-300 backdrop-blur lg:gap-3 lg:px-3 lg:py-2 lg:text-sm">
       {/* Larger than its siblings even at desktop — this is the number the
           user specifically flagged as too small to read at a glance. */}
       <span className="shrink-0 text-xs font-semibold lg:text-lg">Lv {predictedLevel}</span>
@@ -97,12 +84,6 @@ export default function ExpBar() {
         <img src={AP_ICON_SRC} alt="" className="h-3.5 w-3.5 object-contain lg:h-4 lg:w-4" />
         {ascensionPoints.toLocaleString()}
       </span>
-
-      {lastLevelUp !== null && (
-        <div className="absolute left-0 right-0 top-full z-10 mt-1 rounded-lg border border-amber-400/60 bg-amber-400/10 px-3 py-1.5 text-center text-xs font-semibold text-amber-300 backdrop-blur">
-          Level up! You're now level {lastLevelUp}.
-        </div>
-      )}
     </div>
   )
 }
