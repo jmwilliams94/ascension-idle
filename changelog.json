@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.84.4",
+    "date": "2026-08-14",
+    "changes": [
+      "Fixed the Bank's Gold Deposit/Withdraw slider being stuck at a max of 40 gold"
+    ]
+  },
+  {
     "version": "1.84.3",
     "date": "2026-08-14",
     "changes": [

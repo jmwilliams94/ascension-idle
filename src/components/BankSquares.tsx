@@ -305,11 +305,11 @@ function Square({
 // Gold has no Inventory tile at all, so this Deposit/Withdraw panel is
 // Gold's only interaction with the Account Bank (Comets/Fallen Stars use
 // their own withdraw-only CometFallenStarPanel below instead, see the
-// 2026-08-14 rework). A single-unit slider (0-BANK_ACTION_SLIDER_CAP,
-// clamped further by whatever's actually available) replaces a plain number
-// input with its native up/down spinner arrows.
-const BANK_ACTION_SLIDER_CAP = 40
-
+// 2026-08-14 rework). BANK_ACTION_SLIDER_CAP (below) doesn't apply here —
+// that cap exists only because Comets/Fallen Stars/Scrolls each occupy a
+// real Inventory tile capped at 40 slots; Gold has no such tile, so its
+// slider just runs the full available balance (fixed 2026-08-14, reported
+// by the user — Gold deposits were silently capped at 40 gold).
 function CurrencyPanel({
   label,
   wallet,
@@ -333,7 +333,7 @@ function CurrencyPanel({
   const [error, setError] = useState<string | null>(null)
 
   const available = mode === 'deposit' ? wallet : bank
-  const sliderMax = Math.max(0, Math.min(BANK_ACTION_SLIDER_CAP, available))
+  const sliderMax = Math.max(0, available)
   const validAmount = amount > 0
 
   const handleConfirm = async () => {
@@ -434,6 +434,13 @@ function CurrencyPanel({
 // 20260814020000 migration); Scroll withdraws a chosen number of Scrolls by
 // requesting an exact multiple of 10, which the existing bundling logic
 // already turns into pure Scrolls with a zero remainder.
+//
+// Capped at 40 (BANK_ACTION_SLIDER_CAP) unlike Gold's own panel above —
+// Comets/Fallen Stars/Scrolls each occupy a real Inventory tile, capped at
+// the same 40-slot Inventory grid, so a slider past that would just fail on
+// confirm anyway.
+const BANK_ACTION_SLIDER_CAP = 40
+
 function CometFallenStarPanel({
   label,
   bank,
