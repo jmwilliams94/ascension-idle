@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.83.1",
+    "date": "2026-08-13",
+    "changes": [
+      "Added a \"Forgot your password?\" option to the login screen"
+    ]
+  },
+  {
     "version": "1.83.0",
     "date": "2026-08-13",
     "changes": [
