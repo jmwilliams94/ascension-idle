@@ -6,6 +6,7 @@ import { useSuggestionStore, countOpenSuggestions } from '../game/suggestions/us
 import AdminMailSection from './AdminMailSection'
 import ChangelogEntries from './ChangelogEntries'
 import ItemEffectGallery from './ItemEffectGallery'
+import PlanPanel from './PlanPanel'
 import SuggestionsPanel from './SuggestionsPanel'
 import BugReportPanel from './BugReportPanel'
 
@@ -16,13 +17,16 @@ interface SettingsSection {
   badge?: number
 }
 
-// Suggestions/Bug Reports (2026-08-21, requested by the user) live here
-// rather than as their own top-level TabNav/MobileBottomNav tabs — both are
-// meta/support pages, not gameplay pages, same shelf as Changelog/Item
-// Effects/Admin. Suggestions replaces the earlier To-Do board entirely (see
-// useSuggestionStore.ts's own doc comment). Unlike Admin, both are visible
-// to every player (not isAdmin-gated) — each panel internally shows an
-// extra admin-only "Admin Queue" toggle (see those components).
+// Plans/Suggestions/Bug Reports (2026-08-21, requested by the user) live
+// here rather than as their own top-level TabNav/MobileBottomNav tabs — all
+// three are meta/support pages, not gameplay pages, same shelf as
+// Changelog/Item Effects/Admin. Plans re-adds the original To-Do board
+// (dropped when Suggestions was first introduced) with one addition:
+// admin-only drag-and-drop reordering (see PlanPanel.tsx). Unlike Admin,
+// all three are visible to every player (not isAdmin-gated) — Suggestions/
+// Bug Reports each internally show an extra admin-only "Admin Queue" toggle
+// (see those components); Plans shows its add/remove/drag controls the
+// same cosmetic isAdmin-gated way.
 export default function SettingsModal({ characterId, onClose }: { characterId: string; onClose: () => void }) {
   const isAdmin = useIsAdmin()
   // Admin-only badges (2026-08-21) — count of still-open reports/suggestions
@@ -44,6 +48,7 @@ export default function SettingsModal({ characterId, onClose }: { characterId: s
   const sections: SettingsSection[] = [
     { id: 'effects', label: 'Item Effects', content: <ItemEffectGallery /> },
     { id: 'changelog', label: 'Changelog', content: <ChangelogEntries entries={changelogNewestFirst()} /> },
+    { id: 'plans', label: 'Plans', content: <PlanPanel /> },
     {
       id: 'suggestions',
       label: 'Suggestions',
