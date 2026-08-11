@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.87.1",
+    "date": "2026-08-21",
+    "changes": [
+      "To-Do and Bug Reports now live under Settings (the gear icon) instead of their own tabs",
+      "Fixed the Bug Reports admin queue getting stuck on \"Loading…\""
+    ]
+  },
+  {
     "version": "1.87.0",
     "date": "2026-08-21",
     "changes": [
