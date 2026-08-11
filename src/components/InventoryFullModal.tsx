@@ -4,14 +4,16 @@ import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { usePotionStore } from '../game/items/usePotionStore'
 import { POTION_TYPES } from '../game/items/potionTypes'
 
-// Only ever set while actively playing (see useInventoryStore.grantItemDrop) — a
-// full inventory during the not-yet-built AFK/offline simulation just wastes the
-// drop silently instead, per CLAUDE.md's Inventory design. Renders nothing when
-// there's no pending decision, so it's safe to mount unconditionally in GameShell.
+// Only ever set from a Shop purchase (see useInventoryStore.buyShopItem) that
+// couldn't fit — combat drops go through resolve-combat's own server-side
+// full-inventory handling instead (see CLAUDE.md's Inventory design). Renders
+// nothing when there's no pending decision, so it's safe to mount
+// unconditionally in GameShell.
 export default function InventoryFullModal() {
   const pendingFullDrop = useInventoryStore((state) => state.pendingFullDrop)
   const items = useInventoryStore((state) => state.items)
-  const resolvePendingDrop = useInventoryStore((state) => state.resolvePendingDrop)
+  const buyShopItem = useInventoryStore((state) => state.buyShopItem)
+  const cancelPendingDrop = useInventoryStore((state) => state.cancelPendingDrop)
   const templates = useItemTemplatesStore((state) => state.templates)
   // Potion stacks occupy a slot exactly like gear does (see occupiedSlotCount
   // in useInventoryStore), so they're listed here as discardable too.
@@ -55,7 +57,7 @@ export default function InventoryFullModal() {
 
                 <button
                   type="button"
-                  onClick={() => void resolvePendingDrop({ kind: 'potion', id: stack.id })}
+                  onClick={() => void buyShopItem(pendingFullDrop.template, { kind: 'potion', id: stack.id })}
                   className="shrink-0 rounded border border-red-900 px-2 py-1 text-red-400 hover:bg-red-500/10"
                 >
                   Discard this
@@ -85,7 +87,7 @@ export default function InventoryFullModal() {
 
                 <button
                   type="button"
-                  onClick={() => void resolvePendingDrop({ kind: 'item', id: item.id })}
+                  onClick={() => void buyShopItem(pendingFullDrop.template, { kind: 'item', id: item.id })}
                   className="shrink-0 rounded border border-red-900 px-2 py-1 text-red-400 hover:bg-red-500/10"
                 >
                   Discard this
@@ -97,7 +99,7 @@ export default function InventoryFullModal() {
 
         <button
           type="button"
-          onClick={() => void resolvePendingDrop(null)}
+          onClick={cancelPendingDrop}
           className="mt-4 w-full rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:border-slate-500"
         >
           Discard the new item instead

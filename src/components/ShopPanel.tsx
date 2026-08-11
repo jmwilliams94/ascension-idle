@@ -24,9 +24,9 @@ import type { ItemTooltipData } from '../game/items/itemTooltip'
 // A Shop template isn't an owned ItemInstance yet, but buildGearTooltip (the
 // same universal tooltip builder Inventory/Equipment/Forge all use) needs one
 // — this stands in a synthetic Normal-quality, level-at-required-level,
-// no-composition preview instance, matching exactly what grantItemDrop
-// actually creates on purchase (see useInventoryStore.grantItemDrop), so the
-// preview honestly reflects what buying yields.
+// no-composition preview instance, matching exactly what the shop_buy_item
+// RPC actually creates on purchase (see useInventoryStore.buyShopItem), so
+// the preview honestly reflects what buying yields.
 function previewInstance(template: ItemTemplate): ItemInstance {
   return {
     id: template.id,
@@ -79,21 +79,21 @@ function GearRow({ template }: { template: ItemTemplate }) {
   const characterId = useActiveCharacterStore((state) => state.characterId)
   const level = useProgressionStore((state) => state.level)
   const gold = useProgressionStore((state) => state.gold)
-  const spendGold = useProgressionStore((state) => state.spendGold)
-  const grantItemDrop = useInventoryStore((state) => state.grantItemDrop)
+  const buyShopItem = useInventoryStore((state) => state.buyShopItem)
 
   const meetsLevel = level >= template.required_level
   const canAfford = gold >= template.price
   const canBuy = meetsLevel && canAfford
 
+  // Gold is deducted server-side (shop_buy_item RPC) only once the purchase
+  // actually succeeds — no local spendGold pre-deduction, so an
+  // 'inventory_full' response never costs the player gold they didn't
+  // actually spend (see InventoryFullModal for how that gets resolved).
   const handleBuy = async () => {
     if (!characterId || !canBuy) {
       return
     }
-    if (!spendGold(template.price)) {
-      return
-    }
-    await grantItemDrop(template, true)
+    await buyShopItem(template)
   }
 
   return (
@@ -137,7 +137,6 @@ export default function ShopPanel() {
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
   const level = useProgressionStore((state) => state.level)
   const gold = useProgressionStore((state) => state.gold)
-  const spendGold = useProgressionStore((state) => state.spendGold)
 
   const potionStacks = usePotionStore((state) => state.stacks)
   const buyPotions = usePotionStore((state) => state.buyPotions)
@@ -151,18 +150,14 @@ export default function ShopPanel() {
   const [tab, setTab] = useState<ShopTab>('weapons')
   const [repairResult, setRepairResult] = useState<{ success: boolean; message: string } | null>(null)
 
+  // Gold is deducted server-side (shop_buy_potion RPC) only once the
+  // purchase actually succeeds — see the matching note on GearRow.handleBuy.
   const buyPotionStack = (typeId: PotionTypeId) => {
     if (!characterId) {
       return
     }
 
-    const type = POTION_TYPES[typeId]
-    const cost = type.price * type.stackSize
-    if (!spendGold(cost)) {
-      return
-    }
-
-    void buyPotions(characterId, typeId, type.stackSize)
+    void buyPotions(characterId, typeId, POTION_TYPES[typeId].stackSize)
   }
 
   // Wooden Sword is a class-agnostic legacy freebie item kept around for

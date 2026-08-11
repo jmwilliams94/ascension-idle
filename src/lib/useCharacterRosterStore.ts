@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from './supabaseClient'
 import type { ClassId } from '../game/stats/classes'
-import { computeMaxDurability } from '../game/items/equipmentBonus'
 
 export const MAX_CHARACTER_SLOTS = 5
 
@@ -23,81 +22,20 @@ export type CreateCharacterResult =
   | { ok: true; id: string }
   | { ok: false; error: 'duplicate_name' | 'invalid_name' | 'unknown' }
 
-// Hunters start with a Quiver already equipped (confirmed with the user,
-// 2026-07-31) — the first starter-item grant this game has ever had (the
-// legacy "Wooden Sword" is just a seeded template, never auto-granted to
-// anyone). Best-effort: a failure here logs but doesn't fail character
-// creation — a missing starter item is recoverable (buyable in the Shop),
-// unlike the character row itself.
-async function grantStarterQuiver(characterId: string): Promise<void> {
-  const { data: template, error: templateError } = await supabase
-    .from('item_templates')
-    .select('id, required_level')
-    .eq('name', "Hunter's Quiver")
-    .maybeSingle()
+// Hunters start with a Quiver + a real Bow already equipped (confirmed with
+// the user, 2026-07-31). Used to be two direct client-side item_instances
+// inserts + equip updates — only worked because of a since-revoked blanket
+// INSERT grant (see migration 20260821000000_lock_down_direct_table_writes.sql,
+// which also closed the same grant for the Shop-purchase path). Now a single
+// SECURITY DEFINER RPC that creates + equips both in one transaction and
+// refuses to run twice for the same character. Best-effort: a failure here
+// logs but doesn't fail character creation — missing starter items are
+// recoverable (buyable in the Shop), unlike the character row itself.
+async function grantStarterItems(characterId: string): Promise<void> {
+  const { error } = await supabase.rpc('grant_starter_items', { p_character_id: characterId })
 
-  if (templateError || !template) {
-    console.error('Failed to find starter Quiver template', templateError)
-    return
-  }
-
-  const { data: item, error: itemError } = await supabase
-    .from('item_instances')
-    .insert({ template_id: template.id, owner_id: characterId, level: template.required_level })
-    .select('id')
-    .single()
-
-  if (itemError || !item) {
-    console.error('Failed to grant starter Quiver', itemError)
-    return
-  }
-
-  const { error: equipError } = await supabase.from('characters').update({ equipped_quiver_id: item.id }).eq('id', characterId)
-
-  if (equipError) {
-    console.error('Failed to auto-equip starter Quiver', equipError)
-  }
-}
-
-// Hunters also start with a real bow equipped (confirmed with the user,
-// 2026-07-31) — previously no class started with any weapon at all, leaving
-// Hunters with nothing until they bought either the generic Wooden Sword or
-// saved up for the real Bow chain's cheapest entry. Mirrors
-// grantStarterQuiver's exact pattern; kept as a separate function rather than
-// a shared generic helper since there are only these two starter-item grants
-// so far (see CLAUDE.md — revisit if a third starter item ever needs this).
-async function grantStarterBow(characterId: string): Promise<void> {
-  const { data: template, error: templateError } = await supabase
-    .from('item_templates')
-    .select('id, required_level, slot_type')
-    .eq('name', 'Lucky Bow')
-    .maybeSingle()
-
-  if (templateError || !template) {
-    console.error('Failed to find starter Lucky Bow template', templateError)
-    return
-  }
-
-  const { data: item, error: itemError } = await supabase
-    .from('item_instances')
-    .insert({
-      template_id: template.id,
-      owner_id: characterId,
-      level: template.required_level,
-      durability: computeMaxDurability(template.slot_type, template.required_level) ?? 0,
-    })
-    .select('id')
-    .single()
-
-  if (itemError || !item) {
-    console.error('Failed to grant starter Lucky Bow', itemError)
-    return
-  }
-
-  const { error: equipError } = await supabase.from('characters').update({ equipped_weapon_id: item.id }).eq('id', characterId)
-
-  if (equipError) {
-    console.error('Failed to auto-equip starter Lucky Bow', equipError)
+  if (error) {
+    console.error('Failed to grant starter items', error)
   }
 }
 
@@ -161,8 +99,7 @@ export const useCharacterRosterStore = create<CharacterRosterState>((set) => ({
     }
 
     if (classId === 'hunter') {
-      await grantStarterQuiver(data.id)
-      await grantStarterBow(data.id)
+      await grantStarterItems(data.id)
     }
 
     set((state) => {

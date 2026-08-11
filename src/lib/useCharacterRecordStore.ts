@@ -135,18 +135,18 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
       return
     }
 
-    const character = useCharacterStore.getState()
-    const progression = useProgressionStore.getState()
     const zone = useZoneStore.getState()
     const equipment = useEquipmentStore.getState()
 
+    // gold/level/exp/class are deliberately NOT written here — `characters`
+    // only grants `authenticated` UPDATE on the session/cosmetic columns
+    // below (see migration 20260821000000_lock_down_direct_table_writes.sql).
+    // Those fields are server-authoritative now: gold/level/exp move only via
+    // resolve-combat (service role) or a SECURITY DEFINER RPC that validates
+    // the change, and class is fixed at creation and never changes again.
     const { error } = await supabase
       .from('characters')
       .update({
-        class: character.selectedClassId,
-        level: progression.level,
-        gold: progression.gold,
-        exp: progression.exp,
         current_zone: zone.currentZoneId,
         equipped_weapon_id: equipment.equippedIds.weapon,
         equipped_ring_id: equipment.equippedIds.ring,

@@ -7,7 +7,6 @@ import { useEquipmentStore } from './useEquipmentStore'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 import { useItemTemplatesStore, type ItemTemplate } from './useItemTemplatesStore'
-import { computeMaxDurability } from './equipmentBonus'
 import { useProgressionStore } from '../stats/useProgressionStore'
 import { useCharacterStore } from '../stats/useCharacterStore'
 import { useGemStore } from './useGemStore'
@@ -158,9 +157,11 @@ export function occupiedSlotCount(items: ItemInstance[]): number {
 interface InventoryState {
   items: ItemInstance[]
   loaded: boolean
-  // Set when a drop occurs while the inventory is already full during active play —
-  // holds the template that would have been granted, awaiting the player's choice of
-  // what to discard (see resolvePendingDrop). Null means no decision pending.
+  // Set when a Shop purchase can't fit (buyShopItem returned 'inventory_full') —
+  // holds the template that would have been bought, awaiting the player's choice
+  // of what to discard, or null to cancel the purchase. Null means no decision
+  // pending. Gold is never deducted until the purchase actually completes, so a
+  // cancel here is a genuine no-op, not a refund.
   pendingFullDrop: { template: ItemTemplate } | null
   loadInventory: (characterId: string) => Promise<void>
   // Decides only whether an item drops and which template — no DB write, no
@@ -171,15 +172,20 @@ interface InventoryState {
   // reasonable (if independently rolled) preview of what the next resolve will
   // actually confirm.
   rollItemDrop: (monsterLevel: number, dropMultiplier?: number) => { template: ItemTemplate } | null
-  // Performs the actual DB insert once a ground item pickup is collected. Returns
-  // the granted item + its template on success, or null (no active character, an
-  // error, or the inventory is full) — lets the caller (the combat scene) know
-  // whether to remove the ground pickup's visual. `interactive` distinguishes
-  // actively-played kills (the only path that exists today) from the not-yet-built
-  // AFK/offline simulation (see CLAUDE.md's Persistence section) — a full inventory
-  // silently wastes the drop when not interactive, or surfaces pendingFullDrop for
-  // the player to resolve when it is.
-  grantItemDrop: (template: ItemTemplate, interactive?: boolean) => Promise<{ item: ItemInstance; template: ItemTemplate } | null>
+  // Shop purchase (Weapons/Armor/Jeweller tabs) — the only caller of the
+  // shop_buy_item RPC. item_instances has no client-side INSERT grant, so cost/
+  // level/class validation and the actual row creation happen server-side in one
+  // transaction (see migration 20260821000000_lock_down_direct_table_writes.sql).
+  // Pass `discard` to resolve a prior 'inventory_full' response (an existing gear
+  // item or potion stack to free up, or omit to just cancel the purchase).
+  buyShopItem: (
+    template: ItemTemplate,
+    discard?: { kind: 'item' | 'potion'; id: string },
+  ) => Promise<{ ok: boolean; error?: string; item?: ItemInstance }>
+  // Cancels a pending 'inventory_full' purchase decision without spending
+  // anything — gold is only ever deducted server-side once the purchase (or
+  // its discard-and-retry) actually succeeds, so there's nothing to refund.
+  cancelPendingDrop: () => void
   // Reflects a successful quality_upgrade/level_upgrade/composition_feed RPC result
   // in the local cache — the functions already wrote the real values server-side,
   // this just keeps the client's copy in sync without a full refetch.
@@ -192,10 +198,6 @@ interface InventoryState {
       >
     >,
   ) => void
-  // Resolves a pendingFullDrop: pass an existing gear item or potion stack to
-  // discard (freeing its slot) and grant the new drop in its place, or null to
-  // discard the new drop instead and keep the inventory as-is.
-  resolvePendingDrop: (discard: { kind: 'item' | 'potion'; id: string } | null) => Promise<void>
   // Drops the given items from the local cache without touching the DB — used
   // after composition_feed destroys fuel items server-side, so the client doesn't
   // need a full refetch just to stop showing them.
@@ -257,45 +259,61 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     return template ? { template } : null
   },
 
-  grantItemDrop: async (template, interactive = true) => {
+  buyShopItem: async (template, discard) => {
     const characterId = useActiveCharacterStore.getState().characterId
 
     if (!characterId) {
-      return null
+      return { ok: false }
     }
 
-    if (occupiedSlotCount(get().items) >= INVENTORY_SLOT_CAP) {
-      if (!interactive) {
-        return null
-      }
-
-      set({ pendingFullDrop: { template } })
-      return null
-    }
-
-    // level starts at the template's own required_level (not the schema
-    // default of 1) so a freshly-granted item's displayed level honestly
-    // reflects which tier it actually is — matching what a successful Level
-    // Upgrade already does when it advances an item to a new template.
-    const { data, error } = await supabase
-      .from('item_instances')
-      .insert({
-        template_id: template.id,
-        owner_id: characterId,
-        level: template.required_level,
-        durability: computeMaxDurability(template.slot_type, template.required_level) ?? 0,
-      })
-      .select('*')
-      .single()
+    // Routed through the shop_buy_item RPC (see migration
+    // 20260821000000_lock_down_direct_table_writes.sql) — item_instances has
+    // no direct client INSERT grant anymore, so cost/level/class validation
+    // and the actual row creation all happen server-side in one transaction.
+    // A prior 'inventory_full' response leaves `pendingFullDrop` set; the
+    // caller resolves it by calling this again with a `discard` target
+    // (or `null` to just cancel), same round-trip shape as before.
+    const { data, error } = await supabase.rpc('shop_buy_item', {
+      p_character_id: characterId,
+      p_template_id: template.id,
+      p_discard_item_id: discard?.kind === 'item' ? discard.id : null,
+      p_discard_potion_stack_id: discard?.kind === 'potion' ? discard.id : null,
+    })
 
     if (error) {
-      console.error('Failed to grant item drop', error)
-      return null
+      console.error('Shop item purchase failed', error)
+      set({ pendingFullDrop: null })
+      return { ok: false }
     }
 
-    const item = data as ItemInstance
-    set((state) => ({ items: [...state.items, item] }))
-    return { item, template }
+    const result = data as { ok: boolean; error?: string; item?: ItemInstance; gold?: number }
+
+    if (!result.ok) {
+      if (result.error === 'inventory_full') {
+        set({ pendingFullDrop: { template } })
+      } else {
+        set({ pendingFullDrop: null })
+      }
+      return { ok: false, error: result.error }
+    }
+
+    if (typeof result.gold === 'number') {
+      useProgressionStore.getState().setGold(result.gold)
+    }
+
+    set((state) => ({
+      items: [
+        ...(discard?.kind === 'item' ? state.items.filter((item) => item.id !== discard.id) : state.items),
+        ...(result.item ? [result.item] : []),
+      ],
+      pendingFullDrop: null,
+    }))
+
+    if (discard?.kind === 'potion') {
+      await usePotionStore.getState().loadStacks(characterId)
+    }
+
+    return { ok: true, item: result.item }
   },
 
   patchItem: (itemId, patch) => {
@@ -304,59 +322,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     }))
   },
 
-  resolvePendingDrop: async (discard) => {
-    const pending = get().pendingFullDrop
-    if (!pending) {
-      return
-    }
-
-    if (discard === null) {
-      set({ pendingFullDrop: null })
-      return
-    }
-
-    const characterId = useActiveCharacterStore.getState().characterId
-    if (!characterId) {
-      set({ pendingFullDrop: null })
-      return
-    }
-
-    if (discard.kind === 'potion') {
-      await usePotionStore.getState().deleteStack(discard.id)
-    } else {
-      const { error: deleteError } = await supabase.from('item_instances').delete().eq('id', discard.id)
-      if (deleteError) {
-        console.error('Failed to discard item', deleteError)
-        set({ pendingFullDrop: null })
-        return
-      }
-    }
-
-    const { data, error: insertError } = await supabase
-      .from('item_instances')
-      .insert({
-        template_id: pending.template.id,
-        owner_id: characterId,
-        durability: computeMaxDurability(pending.template.slot_type, pending.template.required_level) ?? 0,
-      })
-      .select('*')
-      .single()
-
-    if (insertError) {
-      console.error('Failed to grant item drop', insertError)
-      set((state) => ({
-        items: discard.kind === 'item' ? state.items.filter((item) => item.id !== discard.id) : state.items,
-        pendingFullDrop: null,
-      }))
-      return
-    }
-
-    const newItem = data as ItemInstance
-    set((state) => ({
-      items: [...(discard.kind === 'item' ? state.items.filter((item) => item.id !== discard.id) : state.items), newItem],
-      pendingFullDrop: null,
-    }))
-  },
+  cancelPendingDrop: () => set({ pendingFullDrop: null }),
 
   removeItems: (itemIds) => {
     if (itemIds.length === 0) {

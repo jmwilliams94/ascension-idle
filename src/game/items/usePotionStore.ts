@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { supabase } from '../../lib/supabaseClient'
+import { useActiveCharacterStore } from '../../lib/useActiveCharacterStore'
 import { useCombatStore } from '../combat/useCombatStore'
+import { useProgressionStore } from '../stats/useProgressionStore'
 import { POTION_TYPES, type PotionTypeId } from './potionTypes'
 
 export interface PotionStack {
@@ -24,16 +26,17 @@ interface PotionState {
   stacks: PotionStack[]
   loaded: boolean
   loadStacks: (characterId: string) => Promise<void>
-  buyPotions: (characterId: string, type: PotionTypeId, quantity: number) => Promise<void>
+  // Routed through the shop_buy_potion RPC (see migration
+  // 20260821000000_lock_down_direct_table_writes.sql) — potion_stacks has no
+  // direct client INSERT/UPDATE grant anymore, so cost/level validation and
+  // the actual stack top-up/creation happen server-side in one transaction.
+  buyPotions: (characterId: string, type: PotionTypeId, quantity: number) => Promise<{ ok: boolean; error?: string }>
   // Consumes one potion from the stack. For an 'hp' potion, also heals the
   // player via useCombatStore.healPlayerHp. 'mp' potions have nothing to
   // restore into yet (no ability/skill system exists) — the UI disables Use
   // for them entirely, so this is never called with an 'mp' stack in
   // practice, but stays honest (no-op heal) if it ever were.
   usePotion: (stackId: string) => Promise<void>
-  // Permanently removes a stack — used only when discarding to make room for
-  // a full-inventory gear drop (see useInventoryStore.resolvePendingDrop).
-  deleteStack: (stackId: string) => Promise<void>
 }
 
 export const usePotionStore = create<PotionState>((set, get) => ({
@@ -61,86 +64,69 @@ export const usePotionStore = create<PotionState>((set, get) => ({
   },
 
   buyPotions: async (characterId, type, quantity) => {
-    const stackSize = POTION_TYPES[type].stackSize
-    let remaining = quantity
+    const { data, error } = await supabase.rpc('shop_buy_potion', {
+      p_character_id: characterId,
+      p_potion_type: type,
+      p_quantity: quantity,
+    })
 
-    const { stacks } = get()
-    const nextStacks = stacks.map((stack) => ({ ...stack }))
-    const stackUpdates: { id: string; count: number }[] = []
-
-    for (const stack of nextStacks) {
-      if (remaining <= 0) break
-      if (stack.potionType !== type || stack.count >= stackSize) continue
-
-      const add = Math.min(stackSize - stack.count, remaining)
-      stack.count += add
-      remaining -= add
-      stackUpdates.push({ id: stack.id, count: stack.count })
+    if (error) {
+      console.error('Potion purchase failed', error)
+      return { ok: false }
     }
 
-    const newStackInserts: { character_id: string; potion_type: PotionTypeId; count: number }[] = []
-    while (remaining > 0) {
-      const count = Math.min(stackSize, remaining)
-      remaining -= count
-      newStackInserts.push({ character_id: characterId, potion_type: type, count })
+    const result = data as { ok: boolean; error?: string; gold?: number }
+
+    if (!result.ok) {
+      return { ok: false, error: result.error }
     }
 
-    for (const update of stackUpdates) {
-      const { error } = await supabase.from('potion_stacks').update({ count: update.count }).eq('id', update.id)
-      if (error) {
-        console.error('Failed to update potion stack', error)
-      }
+    if (typeof result.gold === 'number') {
+      useProgressionStore.getState().setGold(result.gold)
     }
 
-    let insertedStacks: PotionStack[] = []
-    if (newStackInserts.length > 0) {
-      const { data, error } = await supabase.from('potion_stacks').insert(newStackInserts).select('id, potion_type, count')
-
-      if (error) {
-        console.error('Failed to create potion stack', error)
-      } else {
-        insertedStacks = ((data ?? []) as PotionStackRow[]).map((row) => ({
-          id: row.id,
-          potionType: row.potion_type,
-          count: row.count,
-        }))
-      }
-    }
-
-    set({ stacks: [...nextStacks, ...insertedStacks] })
+    // The RPC already wrote the real stacks server-side (topped up existing
+    // ones, created new ones as needed) — refetch rather than reconstruct
+    // that locally, since which stacks got new rows isn't returned.
+    await get().loadStacks(characterId)
+    return { ok: true }
   },
 
   usePotion: async (stackId) => {
+    const characterId = useActiveCharacterStore.getState().characterId
     const { stacks } = get()
     const stack = stacks.find((entry) => entry.id === stackId)
 
-    if (!stack || stack.count <= 0) {
+    if (!characterId || !stack || stack.count <= 0) {
       return
     }
 
     const type = POTION_TYPES[stack.potionType]
     const nextCount = stack.count - 1
 
+    // Optimistic — heals/decrements immediately for responsiveness, then
+    // reconciles against the RPC's authoritative count (potion_stacks has no
+    // direct client UPDATE grant anymore, see use_potion_stack in migration
+    // 20260821000000_lock_down_direct_table_writes.sql).
     set({ stacks: stacks.map((entry) => (entry.id === stackId ? { ...entry, count: nextCount } : entry)) })
 
     if (type.kind === 'hp') {
       useCombatStore.getState().healPlayerHp(type.healAmount)
     }
 
-    const { error } = await supabase.from('potion_stacks').update({ count: nextCount }).eq('id', stackId)
+    const { data, error } = await supabase.rpc('use_potion_stack', { p_stack_id: stackId, p_character_id: characterId })
+
     if (error) {
       console.error('Failed to save potion use', error)
-    }
-  },
-
-  deleteStack: async (stackId) => {
-    const { error } = await supabase.from('potion_stacks').delete().eq('id', stackId)
-
-    if (error) {
-      console.error('Failed to delete potion stack', error)
       return
     }
 
-    set((state) => ({ stacks: state.stacks.filter((stack) => stack.id !== stackId) }))
+    const result = data as { ok: boolean; error?: string; count?: number }
+    if (!result.ok || typeof result.count !== 'number') {
+      console.error('Potion use rejected', result.error)
+      return
+    }
+
+    set((state) => ({ stacks: state.stacks.map((entry) => (entry.id === stackId ? { ...entry, count: result.count! } : entry)) }))
   },
 }))

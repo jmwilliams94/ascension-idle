@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.86.7",
+    "date": "2026-08-21",
+    "changes": [
+      "Tightened up account security around gold, items, and potions",
+      "Fixed the \"discard an item to make room\" button in the full-inventory prompt not actually working"
+    ]
+  },
+  {
     "version": "1.86.6",
     "date": "2026-08-20",
     "changes": [
