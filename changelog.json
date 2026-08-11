@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.89.1",
+    "date": "2026-08-21",
+    "changes": [
+      "Fixed opening a Suggestion or Bug Report crashing to a blank screen"
+    ]
+  },
+  {
     "version": "1.89.0",
     "date": "2026-08-21",
     "changes": [

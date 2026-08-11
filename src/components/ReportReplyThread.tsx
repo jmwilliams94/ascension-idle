@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react'
-import { useReportReplyStore, type ReportReplyParentType } from '../game/reports/useReportReplyStore'
+import { useReportReplyStore, type ReportReply, type ReportReplyParentType } from '../game/reports/useReportReplyStore'
 
 const MESSAGE_MAX_LENGTH = 1000
+
+// Stable reference for the "not loaded yet" fallback -- a selector must
+// return the same reference across calls when nothing has actually changed,
+// since Zustand's useSyncExternalStore-based subscription compares snapshots
+// by reference. `state.repliesByParentId[parentId] ?? []` would allocate a
+// brand-new array every render while the key is still missing, which reads
+// as "the store changed" on every single render and crashes with React
+// error #185 (Maximum update depth exceeded) -- the same Zustand selector
+// pitfall documented elsewhere in this project's notes.
+const EMPTY_REPLIES: ReportReply[] = []
 
 // Shared by BugReportPanel.tsx and SuggestionsPanel.tsx (2026-08-21,
 // requested by the user) -- the underlying report_replies table and its
@@ -21,7 +31,7 @@ export default function ReportReplyThread({
   viewerRole: 'player' | 'admin'
   characterId?: string
 }) {
-  const replies = useReportReplyStore((state) => state.repliesByParentId[parentId] ?? [])
+  const replies = useReportReplyStore((state) => state.repliesByParentId[parentId] ?? EMPTY_REPLIES)
   const busy = useReportReplyStore((state) => state.busy)
   const loadReplies = useReportReplyStore((state) => state.loadReplies)
   const sendPlayerReply = useReportReplyStore((state) => state.sendPlayerReply)
