@@ -434,7 +434,7 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
               value={priceAmount}
               onChange={(event) => setPriceAmount(event.target.value)}
               placeholder="Price"
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-200 placeholder:text-slate-600 focus:border-sky-500 focus:outline-none"
+              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-base text-slate-200 placeholder:text-slate-600 focus:border-sky-500 focus:outline-none"
             />
 
             <div className="flex flex-wrap gap-1.5">

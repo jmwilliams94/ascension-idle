@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.86.9",
+    "date": "2026-08-21",
+    "changes": [
+      "Fixed several more text fields (character naming/deletion, login, password reset, marketplace listing price) making the page zoom in slightly on mobile when tapped"
+    ]
+  },
+  {
     "version": "1.86.8",
     "date": "2026-08-21",
     "changes": [

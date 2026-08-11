@@ -159,7 +159,7 @@ export default function AdminMailSection() {
               setLookupResult(null)
             }}
             placeholder="Character name"
-            className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-200 disabled:opacity-40"
+            className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-base text-slate-200 disabled:opacity-40"
           />
           <button
             type="button"
@@ -198,7 +198,7 @@ export default function AdminMailSection() {
           value={subject}
           onChange={(event) => setSubject(event.target.value.slice(0, SUBJECT_MAX_LENGTH))}
           placeholder="Shown in the mail list"
-          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-200"
+          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-base text-slate-200"
         />
       </div>
 
@@ -214,7 +214,7 @@ export default function AdminMailSection() {
           onChange={(event) => setMessage(event.target.value.slice(0, MESSAGE_MAX_LENGTH))}
           rows={3}
           placeholder="Message shown on the mail card"
-          className="w-full resize-none rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-200"
+          className="w-full resize-none rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-base text-slate-200"
         />
       </div>
 
@@ -237,7 +237,7 @@ export default function AdminMailSection() {
             min={1}
             value={currencyAmount}
             onChange={(event) => setCurrencyAmount(Math.max(1, Number(event.target.value)))}
-            className="w-20 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-slate-200"
+            className="w-20 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-base text-slate-200"
           />
           <button
             type="button"
@@ -256,7 +256,7 @@ export default function AdminMailSection() {
           value={itemFilter}
           onChange={(event) => setItemFilter(event.target.value)}
           placeholder="Filter by name…"
-          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-slate-200"
+          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-base text-slate-200"
         />
         <select
           value={itemTemplateId}
@@ -289,7 +289,7 @@ export default function AdminMailSection() {
             value={itemComposition}
             onChange={(event) => setItemComposition(Math.min(12, Math.max(0, Number(event.target.value))))}
             title="Composition level (+N)"
-            className="w-20 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-slate-200"
+            className="w-20 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-base text-slate-200"
           />
           <button
             type="button"
