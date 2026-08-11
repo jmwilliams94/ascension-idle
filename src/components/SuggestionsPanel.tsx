@@ -170,7 +170,8 @@ function MySuggestionsSection({ characterId }: { characterId: string }) {
                   <p className="whitespace-pre-wrap text-slate-200">{suggestion.description}</p>
                   <StatusBadge status={suggestion.status} />
                 </div>
-                <p className="mt-1 text-[11px] text-slate-500">{new Date(suggestion.created_at).toLocaleString()}</p>
+                <p className="mt-1 text-[11px] text-slate-500">{suggestion.character_name}</p>
+                <p className="text-[11px] text-slate-500">{new Date(suggestion.created_at).toLocaleString()}</p>
                 {suggestion.admin_comment && (
                   <p className="mt-2 rounded-lg border border-slate-800 bg-slate-950/60 px-2 py-1.5 text-xs text-slate-400">
                     “{suggestion.admin_comment}”
@@ -237,9 +238,8 @@ function ResolvedSuggestionRow({ suggestion }: { suggestion: Suggestion }) {
         <p className="whitespace-pre-wrap text-slate-300">{suggestion.description}</p>
         <StatusBadge status={suggestion.status} />
       </div>
-      <p className="mt-1 text-[11px] text-slate-500">
-        {suggestion.character_name} · {new Date(suggestion.created_at).toLocaleString()}
-      </p>
+      <p className="mt-1 text-[11px] text-slate-500">{suggestion.character_name}</p>
+      <p className="text-[11px] text-slate-500">{new Date(suggestion.created_at).toLocaleString()}</p>
       {suggestion.admin_comment && <p className="mt-2 text-xs text-slate-400">“{suggestion.admin_comment}”</p>}
     </div>
   )
@@ -292,9 +292,8 @@ function AdminSuggestionRow({ suggestion }: { suggestion: Suggestion }) {
       >
         <div>
           <p className="whitespace-pre-wrap text-slate-200">{suggestion.description}</p>
-          <p className="mt-1 text-[11px] text-slate-500">
-            {suggestion.character_name} · {new Date(suggestion.created_at).toLocaleString()}
-          </p>
+          <p className="mt-1 text-[11px] text-slate-500">{suggestion.character_name}</p>
+          <p className="text-[11px] text-slate-500">{new Date(suggestion.created_at).toLocaleString()}</p>
         </div>
         <span className="shrink-0 text-xs text-slate-500">{expanded ? '▲' : '▼'}</span>
       </button>

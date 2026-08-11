@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.88.1",
+    "date": "2026-08-21",
+    "changes": [
+      "Suggestions and Bug Reports now show which character submitted each one"
+    ]
+  },
+  {
     "version": "1.88.0",
     "date": "2026-08-21",
     "changes": [

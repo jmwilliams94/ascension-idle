@@ -180,7 +180,8 @@ function MyReportsSection({ characterId }: { characterId: string }) {
                   <p className="whitespace-pre-wrap text-slate-200">{report.description}</p>
                   <StatusBadge status={report.status} />
                 </div>
-                <p className="mt-1 text-[11px] text-slate-500">{new Date(report.created_at).toLocaleString()}</p>
+                <p className="mt-1 text-[11px] text-slate-500">{report.character_name}</p>
+                <p className="text-[11px] text-slate-500">{new Date(report.created_at).toLocaleString()}</p>
                 {report.admin_comment && (
                   <p className="mt-2 rounded-lg border border-slate-800 bg-slate-950/60 px-2 py-1.5 text-xs text-slate-400">
                     “{report.admin_comment}”
@@ -247,9 +248,8 @@ function ResolvedReportRow({ report }: { report: BugReport }) {
         <p className="whitespace-pre-wrap text-slate-300">{report.description}</p>
         <StatusBadge status={report.status} />
       </div>
-      <p className="mt-1 text-[11px] text-slate-500">
-        {report.character_name} · {new Date(report.created_at).toLocaleString()}
-      </p>
+      <p className="mt-1 text-[11px] text-slate-500">{report.character_name}</p>
+      <p className="text-[11px] text-slate-500">{new Date(report.created_at).toLocaleString()}</p>
       {report.admin_comment && <p className="mt-2 text-xs text-slate-400">“{report.admin_comment}”</p>}
     </div>
   )
@@ -302,9 +302,8 @@ function AdminReportRow({ report }: { report: BugReport }) {
       >
         <div>
           <p className="whitespace-pre-wrap text-slate-200">{report.description}</p>
-          <p className="mt-1 text-[11px] text-slate-500">
-            {report.character_name} · {new Date(report.created_at).toLocaleString()}
-          </p>
+          <p className="mt-1 text-[11px] text-slate-500">{report.character_name}</p>
+          <p className="text-[11px] text-slate-500">{new Date(report.created_at).toLocaleString()}</p>
         </div>
         <span className="shrink-0 text-xs text-slate-500">{expanded ? '▲' : '▼'}</span>
       </button>
