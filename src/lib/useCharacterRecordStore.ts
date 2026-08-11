@@ -11,6 +11,7 @@ import { useCompositionStore, type CompositionStones } from '../game/items/useCo
 import { useGemStore } from '../game/items/useGemStore'
 import type { GemCounts } from '../game/items/gemTypes'
 import { useLuckyStore } from '../game/lucky/useLuckyStore'
+import { useCombatStore } from '../game/combat/useCombatStore'
 
 // Loads/saves the active character's row (characters table) — class, level, gold,
 // exp, zone, equipped items (including the Quiver, for Hunters). Replaces what
@@ -84,6 +85,22 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
 
   loadCharacterRecord: async (characterId) => {
     set({ loaded: false })
+
+    // Bug fix: useCombatStore (isFighting/monsterTypeId/HP) is a global store
+    // that persists across a character switch — nothing was ever resetting it,
+    // unlike zone/equipment/currency below, which all get a real hydrate()
+    // call. Switching characters mid-fight (without a full page reload, which
+    // resets every JS module from scratch) left a "zombie" fight running:
+    // CombatEngine's tick loop kept ticking against the PREVIOUS character's
+    // monster, producing real-looking damage/EXP-bar animation via
+    // addPredictedRewards, while resolve-combat's periodic calls — correctly
+    // scoped to the new active characterId — found no real monster selected
+    // server-side and kept confirming 0 progress. That server 0 is what
+    // applyServerCombatResult resyncs predictedExp back down to every ~4s,
+    // producing the "climbs a few %, snaps back to 0" cycle. Mirrors the
+    // existing zone-switch precedent (CombatPage.tsx's handleSelectZone
+    // already calls this same clear() before switching zones).
+    useCombatStore.getState().clear()
 
     const { data, error } = await supabase
       .from('characters')

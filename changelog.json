@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.86.8",
+    "date": "2026-08-21",
+    "changes": [
+      "Fixed EXP repeatedly climbing then resetting to 0 after switching characters mid-fight without reloading the page"
+    ]
+  },
+  {
     "version": "1.86.7",
     "date": "2026-08-21",
     "changes": [
