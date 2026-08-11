@@ -33,6 +33,7 @@ import LuckyPanel from './LuckyPanel'
 import { useAuthStore } from '../lib/useAuthStore'
 import { useIsAdmin } from '../lib/adminConfig'
 import { useBugReportStore } from '../game/bugReports/useBugReportStore'
+import { useSuggestionStore } from '../game/suggestions/useSuggestionStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { usePersistGameState } from '../lib/usePersistGameState'
@@ -72,6 +73,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
   const loadMyListings = useMarketplaceStore((state) => state.loadMyListings)
   const loadMail = useMailStore((state) => state.loadMail)
   const loadAllBugReports = useBugReportStore((state) => state.loadAllReports)
+  const loadAllSuggestions = useSuggestionStore((state) => state.loadAllSuggestions)
   const activeTab = useTabStore((state) => state.activeTab)
   const accountId = session?.user.id
   const isAdmin = useIsAdmin()
@@ -92,11 +94,12 @@ export default function GameShell({ characterId }: { characterId: string }) {
         // conditional-spread pattern loadAchievements below already uses for
         // the same reason.
         ...(accountId ? [loadBankItems(accountId), loadAchievements(characterId, accountId)] : []),
-        // Bug Reports' admin queue (2026-08-21) — eager-loaded only for the
-        // admin account so its nav badge (open report count) is accurate
-        // without having to open the tab first; a no-op fetch for everyone
-        // else, not worth conditioning out.
-        ...(isAdmin ? [loadAllBugReports()] : []),
+        // Bug Reports' and Suggestions' admin queues (2026-08-21) —
+        // eager-loaded only for the admin account so their Settings-sidebar
+        // badges (open count) are accurate without having to open the
+        // section first; a no-op fetch for everyone else, not worth
+        // conditioning out.
+        ...(isAdmin ? [loadAllBugReports(), loadAllSuggestions()] : []),
       ])
 
       if (cancelled) {
@@ -144,6 +147,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
     accountId,
     isAdmin,
     loadAllBugReports,
+    loadAllSuggestions,
   ])
 
   // Re-run the offline-progress check whenever the app comes back to the

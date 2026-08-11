@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.88.0",
+    "date": "2026-08-21",
+    "changes": [
+      "Replaced the To-Do list with Suggestions (Settings menu) — submit your own ideas, track their status, and see the reply once reviewed"
+    ]
+  },
+  {
     "version": "1.87.1",
     "date": "2026-08-21",
     "changes": [

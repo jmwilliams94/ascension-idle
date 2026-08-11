@@ -2,10 +2,11 @@ import { useState, type ReactNode } from 'react'
 import { changelogNewestFirst } from '../lib/changelog'
 import { useIsAdmin } from '../lib/adminConfig'
 import { useBugReportStore, countOpenBugReports } from '../game/bugReports/useBugReportStore'
+import { useSuggestionStore, countOpenSuggestions } from '../game/suggestions/useSuggestionStore'
 import AdminMailSection from './AdminMailSection'
 import ChangelogEntries from './ChangelogEntries'
 import ItemEffectGallery from './ItemEffectGallery'
-import TodoPanel from './TodoPanel'
+import SuggestionsPanel from './SuggestionsPanel'
 import BugReportPanel from './BugReportPanel'
 
 interface SettingsSection {
@@ -15,21 +16,25 @@ interface SettingsSection {
   badge?: number
 }
 
-// To-Do/Bug Reports (2026-08-21, requested by the user) live here rather
-// than as their own top-level TabNav/MobileBottomNav tabs — both are
+// Suggestions/Bug Reports (2026-08-21, requested by the user) live here
+// rather than as their own top-level TabNav/MobileBottomNav tabs — both are
 // meta/support pages, not gameplay pages, same shelf as Changelog/Item
-// Effects/Admin. Unlike Admin, both are visible to every player (not
-// isAdmin-gated) — BugReportPanel itself internally shows an extra
-// admin-only "Admin Queue" toggle (see that component).
+// Effects/Admin. Suggestions replaces the earlier To-Do board entirely (see
+// useSuggestionStore.ts's own doc comment). Unlike Admin, both are visible
+// to every player (not isAdmin-gated) — each panel internally shows an
+// extra admin-only "Admin Queue" toggle (see those components).
 export default function SettingsModal({ characterId, onClose }: { characterId: string; onClose: () => void }) {
   const isAdmin = useIsAdmin()
-  // Admin-only badge (2026-08-21) — count of still-open bug reports across
-  // every account, mirroring the badge treatment TabNav.tsx/MobileBottomNav.tsx
-  // already use for Achievements/Mail. Relies on GameShell eager-loading
-  // allReports for the admin account only (see that file) so this is
-  // accurate without having to open the section first.
+  // Admin-only badges (2026-08-21) — count of still-open reports/suggestions
+  // across every account, mirroring the badge treatment TabNav.tsx/
+  // MobileBottomNav.tsx already use for Achievements/Mail. Relies on
+  // GameShell eager-loading allReports/allSuggestions for the admin account
+  // only (see that file) so this is accurate without having to open the
+  // section first.
   const allBugReports = useBugReportStore((state) => state.allReports)
   const bugsBadge = isAdmin ? countOpenBugReports(allBugReports) : undefined
+  const allSuggestions = useSuggestionStore((state) => state.allSuggestions)
+  const suggestionsBadge = isAdmin ? countOpenSuggestions(allSuggestions) : undefined
 
   // Display section (monster name/health/item-drop-text toggles) removed
   // 2026-08-13 (confirmed with the user, "obsolete") — those three flags
@@ -39,7 +44,12 @@ export default function SettingsModal({ characterId, onClose }: { characterId: s
   const sections: SettingsSection[] = [
     { id: 'effects', label: 'Item Effects', content: <ItemEffectGallery /> },
     { id: 'changelog', label: 'Changelog', content: <ChangelogEntries entries={changelogNewestFirst()} /> },
-    { id: 'todo', label: 'To-Do', content: <TodoPanel /> },
+    {
+      id: 'suggestions',
+      label: 'Suggestions',
+      content: <SuggestionsPanel characterId={characterId} />,
+      badge: suggestionsBadge,
+    },
     { id: 'bugs', label: 'Bug Reports', content: <BugReportPanel characterId={characterId} />, badge: bugsBadge },
     // Admin tab (2026-08-13, requested by the user) — only ever shown for the
     // hardcoded admin account (see useIsAdmin's own doc comment); real
