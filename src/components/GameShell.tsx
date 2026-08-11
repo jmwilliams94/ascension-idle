@@ -30,7 +30,11 @@ import MobileBottomNav from './MobileBottomNav'
 import BankPanel from './BankPanel'
 import AchievementsPanel from './AchievementsPanel'
 import LuckyPanel from './LuckyPanel'
+import TodoPanel from './TodoPanel'
+import BugReportPanel from './BugReportPanel'
 import { useAuthStore } from '../lib/useAuthStore'
+import { useIsAdmin } from '../lib/adminConfig'
+import { useBugReportStore } from '../game/bugReports/useBugReportStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { usePersistGameState } from '../lib/usePersistGameState'
@@ -69,8 +73,10 @@ export default function GameShell({ characterId }: { characterId: string }) {
   const loadAchievements = useAchievementsStore((state) => state.loadAchievements)
   const loadMyListings = useMarketplaceStore((state) => state.loadMyListings)
   const loadMail = useMailStore((state) => state.loadMail)
+  const loadAllBugReports = useBugReportStore((state) => state.loadAllReports)
   const activeTab = useTabStore((state) => state.activeTab)
   const accountId = session?.user.id
+  const isAdmin = useIsAdmin()
 
   useEffect(() => {
     let cancelled = false
@@ -88,6 +94,11 @@ export default function GameShell({ characterId }: { characterId: string }) {
         // conditional-spread pattern loadAchievements below already uses for
         // the same reason.
         ...(accountId ? [loadBankItems(accountId), loadAchievements(characterId, accountId)] : []),
+        // Bug Reports' admin queue (2026-08-21) — eager-loaded only for the
+        // admin account so its nav badge (open report count) is accurate
+        // without having to open the tab first; a no-op fetch for everyone
+        // else, not worth conditioning out.
+        ...(isAdmin ? [loadAllBugReports()] : []),
       ])
 
       if (cancelled) {
@@ -133,6 +144,8 @@ export default function GameShell({ characterId }: { characterId: string }) {
     loadMyListings,
     loadMail,
     accountId,
+    isAdmin,
+    loadAllBugReports,
   ])
 
   // Re-run the offline-progress check whenever the app comes back to the
@@ -402,6 +415,8 @@ export default function GameShell({ characterId }: { characterId: string }) {
           {activeTab === 'bank' && <BankPanel characterId={characterId} />}
           {activeTab === 'achievements' && <AchievementsPanel characterId={characterId} accountId={accountId} />}
           {activeTab === 'lucky' && <LuckyPanel characterId={characterId} />}
+          {activeTab === 'todo' && <TodoPanel />}
+          {activeTab === 'bugs' && <BugReportPanel characterId={characterId} />}
         </section>
       </main>
 

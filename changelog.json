@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.87.0",
+    "date": "2026-08-21",
+    "changes": [
+      "Added a To-Do tab showing what's planned or being worked on next",
+      "Added a Bug Reports tab — submit a bug against your character, track its status, and see the reply once it's closed out"
+    ]
+  },
+  {
     "version": "1.86.9",
     "date": "2026-08-21",
     "changes": [

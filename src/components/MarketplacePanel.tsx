@@ -563,6 +563,8 @@ function reasonLabel(reason: MailEntry['reason']): string {
       return 'Listing expired unsold'
     case 'admin_gift':
       return 'Gift'
+    case 'bug_report_reward':
+      return 'Bug Report Reward'
   }
 }
 

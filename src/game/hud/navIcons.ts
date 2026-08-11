@@ -29,6 +29,10 @@ export const TAB_ICONS: Partial<Record<TabId, NavIcon>> = {
   shop: { kind: 'image', src: `${BASE_URL}nav-icons/shop.png`, alt: 'Shop' },
   bank: { kind: 'image', src: `${BASE_URL}nav-icons/bank.png`, alt: 'Bank' },
   achievements: { kind: 'image', src: `${BASE_URL}nav-icons/achievements.png`, alt: 'Achievements' },
+  // No real art for either of these yet — same deliberately mixed icon
+  // language as Market's 🤝 above.
+  todo: { kind: 'emoji', value: '📋' },
+  bugs: { kind: 'emoji', value: '🐛' },
 }
 
 // Reflects whatever's actually equipped in the Main Hand slot (confirmed
