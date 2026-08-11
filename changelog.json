@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.90.1",
+    "date": "2026-08-21",
+    "changes": [
+      "Reduced server load during combat to help keep the game running smoothly"
+    ]
+  },
+  {
     "version": "1.90.0",
     "date": "2026-08-21",
     "changes": [

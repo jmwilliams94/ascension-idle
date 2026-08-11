@@ -592,6 +592,35 @@ async function getDropPool(db: ReturnType<typeof createClient>): Promise<DropPoo
   return dropPoolCache.templates
 }
 
+// ---------------------------------------------------------------------------
+// enemy_types cache — same module-scope pattern and motivation as
+// getDropPool above: this table only changes when zoneData.ts's server
+// mirror is edited, but was queried fresh (select('*'), one row) on every
+// single ~4s resolve tick of every actively-fighting session — the second
+// largest per-call PostgREST round trip after the drop pool. Only 5 columns
+// are actually read anywhere in this file (id/zone_id/level/max_hp/gold_reward),
+// so this also trims the row itself, not just the call count.
+// ---------------------------------------------------------------------------
+interface EnemyTypeRow {
+  id: string
+  zone_id: string | null
+  level: number
+  max_hp: number
+  gold_reward: number
+}
+
+let enemyTypesCache: { rows: EnemyTypeRow[]; expiresAt: number } | null = null
+const ENEMY_TYPES_CACHE_TTL_MS = 10 * 60 * 1000 // 10 minutes
+
+async function getMonster(db: ReturnType<typeof createClient>, monsterId: string): Promise<EnemyTypeRow | null> {
+  const now = Date.now()
+  if (!enemyTypesCache || enemyTypesCache.expiresAt <= now) {
+    const { data } = await db.from('enemy_types').select('id, zone_id, level, max_hp, gold_reward')
+    enemyTypesCache = { rows: (data ?? []) as EnemyTypeRow[], expiresAt: now + ENEMY_TYPES_CACHE_TTL_MS }
+  }
+  return enemyTypesCache.rows.find((row) => row.id === monsterId) ?? null
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: CORS_HEADERS })
@@ -774,7 +803,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     })
   }
 
-  const { data: monster } = await db.from('enemy_types').select('*').eq('id', character.selected_monster_id).maybeSingle()
+  const monster = await getMonster(db, character.selected_monster_id)
 
   if (!monster) {
     return json({ ok: false, error: 'unknown_monster' })
