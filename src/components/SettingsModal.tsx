@@ -1,42 +1,53 @@
 import { useState, type ReactNode } from 'react'
 import { changelogNewestFirst } from '../lib/changelog'
 import { useIsAdmin } from '../lib/adminConfig'
+import { useBugReportStore, countOpenBugReports } from '../game/bugReports/useBugReportStore'
 import AdminMailSection from './AdminMailSection'
 import ChangelogEntries from './ChangelogEntries'
 import ItemEffectGallery from './ItemEffectGallery'
+import TodoPanel from './TodoPanel'
+import BugReportPanel from './BugReportPanel'
 
 interface SettingsSection {
   id: string
   label: string
   content: ReactNode
+  badge?: number
 }
 
-// Add more sections here later (audio, etc.) — the modal itself doesn't need to
-// change, just this list. Display section (monster name/health/item-drop-text
-// toggles) removed 2026-08-13 (confirmed with the user, "obsolete") — those
-// three flags were never actually read anywhere outside the settings store
-// itself, so the whole section (plus useDisplaySettingsStore.ts and the
-// now-unused ToggleRow.tsx) was deleted rather than left as dead UI.
-const SECTIONS: SettingsSection[] = [
-  {
-    id: 'effects',
-    label: 'Item Effects',
-    content: <ItemEffectGallery />,
-  },
-  {
-    id: 'changelog',
-    label: 'Changelog',
-    content: <ChangelogEntries entries={changelogNewestFirst()} />,
-  },
-]
-
-export default function SettingsModal({ onClose }: { onClose: () => void }) {
+// To-Do/Bug Reports (2026-08-21, requested by the user) live here rather
+// than as their own top-level TabNav/MobileBottomNav tabs — both are
+// meta/support pages, not gameplay pages, same shelf as Changelog/Item
+// Effects/Admin. Unlike Admin, both are visible to every player (not
+// isAdmin-gated) — BugReportPanel itself internally shows an extra
+// admin-only "Admin Queue" toggle (see that component).
+export default function SettingsModal({ characterId, onClose }: { characterId: string; onClose: () => void }) {
   const isAdmin = useIsAdmin()
-  // Admin tab (2026-08-13, requested by the user) — only ever shown for the
-  // hardcoded admin account (see useIsAdmin's own doc comment); real
-  // enforcement lives server-side in the RPCs it calls, this is cosmetic.
-  const sections = isAdmin ? [...SECTIONS, { id: 'admin', label: 'Admin', content: <AdminMailSection /> }] : SECTIONS
-  const [activeSectionId, setActiveSectionId] = useState(SECTIONS[0].id)
+  // Admin-only badge (2026-08-21) — count of still-open bug reports across
+  // every account, mirroring the badge treatment TabNav.tsx/MobileBottomNav.tsx
+  // already use for Achievements/Mail. Relies on GameShell eager-loading
+  // allReports for the admin account only (see that file) so this is
+  // accurate without having to open the section first.
+  const allBugReports = useBugReportStore((state) => state.allReports)
+  const bugsBadge = isAdmin ? countOpenBugReports(allBugReports) : undefined
+
+  // Display section (monster name/health/item-drop-text toggles) removed
+  // 2026-08-13 (confirmed with the user, "obsolete") — those three flags
+  // were never actually read anywhere outside the settings store itself, so
+  // the whole section (plus useDisplaySettingsStore.ts and the now-unused
+  // ToggleRow.tsx) was deleted rather than left as dead UI.
+  const sections: SettingsSection[] = [
+    { id: 'effects', label: 'Item Effects', content: <ItemEffectGallery /> },
+    { id: 'changelog', label: 'Changelog', content: <ChangelogEntries entries={changelogNewestFirst()} /> },
+    { id: 'todo', label: 'To-Do', content: <TodoPanel /> },
+    { id: 'bugs', label: 'Bug Reports', content: <BugReportPanel characterId={characterId} />, badge: bugsBadge },
+    // Admin tab (2026-08-13, requested by the user) — only ever shown for the
+    // hardcoded admin account (see useIsAdmin's own doc comment); real
+    // enforcement lives server-side in the RPCs it calls, this is cosmetic.
+    ...(isAdmin ? [{ id: 'admin', label: 'Admin', content: <AdminMailSection /> }] : []),
+  ]
+
+  const [activeSectionId, setActiveSectionId] = useState(sections[0].id)
   const activeSection = sections.find((section) => section.id === activeSectionId) ?? sections[0]
 
   return (
@@ -54,13 +65,18 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
               key={section.id}
               type="button"
               onClick={() => setActiveSectionId(section.id)}
-              className={`block w-full rounded-lg px-3 py-2 text-left text-sm ${
+              className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm ${
                 section.id === activeSectionId
                   ? 'bg-sky-500/10 text-sky-300'
                   : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
               }`}
             >
-              {section.label}
+              <span>{section.label}</span>
+              {Boolean(section.badge) && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-slate-950">
+                  {section.badge! > 99 ? '99+' : section.badge}
+                </span>
+              )}
             </button>
           ))}
         </nav>

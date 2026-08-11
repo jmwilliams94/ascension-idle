@@ -6,8 +6,6 @@ import { TAB_ICONS, useEquippedWeaponIcon } from '../game/hud/navIcons'
 import NavIconGlyph from './NavIconGlyph'
 import { useAchievementsStore, totalClaimableCount } from '../game/achievements/useAchievementsStore'
 import { useMailStore, countUnreadMail } from '../game/marketplace/useMailStore'
-import { useBugReportStore, countOpenBugReports } from '../game/bugReports/useBugReportStore'
-import { useIsAdmin } from '../lib/adminConfig'
 
 // Fixed bottom nav bar, mobile-only (`lg:hidden` — desktop keeps TabNav.tsx
 // unchanged, now `hidden lg:grid`). Combat is centered as "Fight"/"Idle" —
@@ -39,17 +37,11 @@ const LEFT_ITEMS: { id: TabId; label: string }[] = [
 // and Combat (always centered). No art exists for Market yet, same
 // established "mixed icon language until more art arrives" precedent as
 // before this restructure.
-// To-Do/Bugs (2026-08-21) folded into the same rollup rather than claiming
-// two more of the 5 permanent bottom-bar slots — neither is a hot path on
-// mobile, same "infrequently used, so it lives in the rollup" reasoning as
-// the 4 items above, even though neither is a literal "town" location.
 const TOWN_ITEMS: { id: TabId; label: string }[] = [
   { id: 'marketplace', label: 'Market' },
   { id: 'bank', label: 'Bank' },
   { id: 'shop', label: 'Shop' },
   { id: 'forge', label: 'Forge' },
-  { id: 'todo', label: 'To-Do' },
-  { id: 'bugs', label: 'Bugs' },
 ]
 
 const RIGHT_ITEMS: { id: TabId; label: string }[] = [{ id: 'achievements', label: 'Achiev.' }]
@@ -214,12 +206,6 @@ export default function MobileBottomNav() {
   // TabNav.tsx's matching fix for why.
   const mailEntries = useMailStore((state) => state.entries)
   const mailBadge = countUnreadMail(mailEntries)
-  // Bugs badge (2026-08-21, requested by the user) — admin-only, same open-
-  // report count TabNav.tsx's desktop bar shows (see that file's own doc
-  // comment for why this is never shown to a non-admin).
-  const isAdmin = useIsAdmin()
-  const allBugReports = useBugReportStore((state) => state.allReports)
-  const bugsBadge = isAdmin ? countOpenBugReports(allBugReports) : undefined
 
   return (
     <nav
@@ -239,7 +225,7 @@ export default function MobileBottomNav() {
           <NavButton key={item.id} {...item} />
         ))}
         <FightNavButton />
-        <TownNavButton badges={{ marketplace: mailBadge, bugs: bugsBadge }} />
+        <TownNavButton badges={{ marketplace: mailBadge }} />
         {RIGHT_ITEMS.map((item) => (
           <NavButton key={item.id} {...item} badge={item.id === 'achievements' ? achievementsBadge : undefined} />
         ))}

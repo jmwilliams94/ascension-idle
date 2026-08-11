@@ -4,8 +4,6 @@ import { TAB_ICONS, useEquippedWeaponIcon } from '../game/hud/navIcons'
 import NavIconGlyph from './NavIconGlyph'
 import { useAchievementsStore, totalClaimableCount } from '../game/achievements/useAchievementsStore'
 import { useMailStore, countUnreadMail } from '../game/marketplace/useMailStore'
-import { useBugReportStore, countOpenBugReports } from '../game/bugReports/useBugReportStore'
-import { useIsAdmin } from '../lib/adminConfig'
 
 const TAB_ITEMS: { id: TabId; label: string }[] = [
   { id: 'combat', label: 'Combat' },
@@ -16,8 +14,6 @@ const TAB_ITEMS: { id: TabId; label: string }[] = [
   { id: 'shop', label: 'Shop' },
   { id: 'bank', label: 'Bank' },
   { id: 'achievements', label: 'Achievements' },
-  { id: 'todo', label: 'To-Do' },
-  { id: 'bugs', label: 'Bugs' },
 ]
 
 const TAB_BUTTON_CLASS =
@@ -109,32 +105,16 @@ export default function TabNav() {
   // array reference.
   const mailEntries = useMailStore((state) => state.entries)
   const mailBadge = countUnreadMail(mailEntries)
-  // Bugs tab badge (2026-08-21, requested by the user) — admin-only, count
-  // of still-open reports across every account (see GameShell.tsx's
-  // admin-gated eager load of loadAllReports). Never shown to a non-admin —
-  // there's no nav badge for a player's own reports today (see
-  // BugReportPanel.tsx/useBugReportStore.ts's own doc comments).
-  const isAdmin = useIsAdmin()
-  const allBugReports = useBugReportStore((state) => state.allReports)
-  const bugsBadge = isAdmin ? countOpenBugReports(allBugReports) : undefined
 
   return (
-    <div className="hidden grid-cols-10 gap-2 lg:grid">
+    <div className="hidden grid-cols-8 gap-2 lg:grid">
       <CombatTabButton />
       {TAB_ITEMS.filter((item) => item.id !== 'combat').map((item) => (
         <TabButton
           key={item.id}
           id={item.id}
           label={item.label}
-          badge={
-            item.id === 'achievements'
-              ? achievementsBadge
-              : item.id === 'marketplace'
-                ? mailBadge
-                : item.id === 'bugs'
-                  ? bugsBadge
-                  : undefined
-          }
+          badge={item.id === 'achievements' ? achievementsBadge : item.id === 'marketplace' ? mailBadge : undefined}
         />
       ))}
     </div>

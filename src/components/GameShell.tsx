@@ -30,8 +30,6 @@ import MobileBottomNav from './MobileBottomNav'
 import BankPanel from './BankPanel'
 import AchievementsPanel from './AchievementsPanel'
 import LuckyPanel from './LuckyPanel'
-import TodoPanel from './TodoPanel'
-import BugReportPanel from './BugReportPanel'
 import { useAuthStore } from '../lib/useAuthStore'
 import { useIsAdmin } from '../lib/adminConfig'
 import { useBugReportStore } from '../game/bugReports/useBugReportStore'
@@ -369,7 +367,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
         </div>
       </header>
 
-      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && <SettingsModal characterId={characterId} onClose={() => setSettingsOpen(false)} />}
       <InventoryFullModal />
       <OfflineProgressModal />
       <MoneyBagRevealModal />
@@ -415,8 +413,6 @@ export default function GameShell({ characterId }: { characterId: string }) {
           {activeTab === 'bank' && <BankPanel characterId={characterId} />}
           {activeTab === 'achievements' && <AchievementsPanel characterId={characterId} accountId={accountId} />}
           {activeTab === 'lucky' && <LuckyPanel characterId={characterId} />}
-          {activeTab === 'todo' && <TodoPanel />}
-          {activeTab === 'bugs' && <BugReportPanel characterId={characterId} />}
         </section>
       </main>
 
