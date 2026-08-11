@@ -8,6 +8,7 @@ import {
 import { mailCurrencyLabel } from '../game/marketplace/listableCurrency'
 import type { MailCurrencyType } from '../game/marketplace/useMailStore'
 import { useIsAdmin } from '../lib/adminConfig'
+import ReportReplyThread from './ReportReplyThread'
 
 const DESCRIPTION_MAX_LENGTH = 2000
 const COMMENT_MAX_LENGTH = 1000
@@ -175,23 +176,48 @@ function MyReportsSection({ characterId }: { characterId: string }) {
         ) : (
           <div className="space-y-2">
             {myReports.map((report) => (
-              <div key={report.id} className="rounded-lg border border-slate-800 bg-slate-900/60 p-3 text-sm">
-                <div className="flex items-start justify-between gap-3">
-                  <p className="whitespace-pre-wrap text-slate-200">{report.description}</p>
-                  <StatusBadge status={report.status} />
-                </div>
-                <p className="mt-1 text-[11px] text-slate-500">{report.character_name}</p>
-                <p className="text-[11px] text-slate-500">{new Date(report.created_at).toLocaleString()}</p>
-                {report.admin_comment && (
-                  <p className="mt-2 rounded-lg border border-slate-800 bg-slate-950/60 px-2 py-1.5 text-xs text-slate-400">
-                    “{report.admin_comment}”
-                  </p>
-                )}
-              </div>
+              <MyReportRow key={report.id} report={report} characterId={characterId} />
             ))}
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// Expandable so the player can open the reply thread on their own report —
+// mirrors AdminReportRow's own expand/collapse shape below, just with a
+// player-authored ReportReplyThread instead of the resolve controls.
+function MyReportRow({ report, characterId }: { report: BugReport; characterId: string }) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3 text-sm">
+      <button
+        type="button"
+        onClick={() => setExpanded((current) => !current)}
+        className="flex w-full items-start justify-between gap-3 text-left"
+      >
+        <div>
+          <p className="whitespace-pre-wrap text-slate-200">{report.description}</p>
+          <p className="mt-1 text-[11px] text-slate-500">{report.character_name}</p>
+          <p className="text-[11px] text-slate-500">{new Date(report.created_at).toLocaleString()}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <StatusBadge status={report.status} />
+          <span className="text-xs text-slate-500">{expanded ? '▲' : '▼'}</span>
+        </div>
+      </button>
+      {report.admin_comment && (
+        <p className="mt-2 rounded-lg border border-slate-800 bg-slate-950/60 px-2 py-1.5 text-xs text-slate-400">
+          “{report.admin_comment}”
+        </p>
+      )}
+      {expanded && (
+        <div className="mt-3 border-t border-slate-800 pt-3">
+          <ReportReplyThread parentType="bug" parentId={report.id} viewerRole="player" characterId={characterId} />
+        </div>
+      )}
     </div>
   )
 }
@@ -242,15 +268,31 @@ function AdminQueueSection() {
 }
 
 function ResolvedReportRow({ report }: { report: BugReport }) {
+  const [expanded, setExpanded] = useState(false)
+
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-3 text-sm opacity-80">
-      <div className="flex items-start justify-between gap-3">
-        <p className="whitespace-pre-wrap text-slate-300">{report.description}</p>
-        <StatusBadge status={report.status} />
-      </div>
-      <p className="mt-1 text-[11px] text-slate-500">{report.character_name}</p>
-      <p className="text-[11px] text-slate-500">{new Date(report.created_at).toLocaleString()}</p>
+      <button
+        type="button"
+        onClick={() => setExpanded((current) => !current)}
+        className="flex w-full items-start justify-between gap-3 text-left"
+      >
+        <div>
+          <p className="whitespace-pre-wrap text-slate-300">{report.description}</p>
+          <p className="mt-1 text-[11px] text-slate-500">{report.character_name}</p>
+          <p className="text-[11px] text-slate-500">{new Date(report.created_at).toLocaleString()}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <StatusBadge status={report.status} />
+          <span className="text-xs text-slate-500">{expanded ? '▲' : '▼'}</span>
+        </div>
+      </button>
       {report.admin_comment && <p className="mt-2 text-xs text-slate-400">“{report.admin_comment}”</p>}
+      {expanded && (
+        <div className="mt-3 border-t border-slate-800 pt-3">
+          <ReportReplyThread parentType="bug" parentId={report.id} viewerRole="admin" />
+        </div>
+      )}
     </div>
   )
 }
@@ -310,6 +352,12 @@ function AdminReportRow({ report }: { report: BugReport }) {
 
       {expanded && (
         <div className="mt-3 space-y-3 border-t border-slate-800 pt-3">
+          <div>
+            <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">Conversation</p>
+            <ReportReplyThread parentType="bug" parentId={report.id} viewerRole="admin" />
+          </div>
+
+          <p className="text-xs uppercase tracking-wide text-slate-500">Close This Out</p>
           <textarea
             value={comment}
             onChange={(event) => setComment(event.target.value.slice(0, COMMENT_MAX_LENGTH))}

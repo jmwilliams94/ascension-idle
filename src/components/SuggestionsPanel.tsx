@@ -8,6 +8,7 @@ import {
 import { mailCurrencyLabel } from '../game/marketplace/listableCurrency'
 import type { MailCurrencyType } from '../game/marketplace/useMailStore'
 import { useIsAdmin } from '../lib/adminConfig'
+import ReportReplyThread from './ReportReplyThread'
 
 const DESCRIPTION_MAX_LENGTH = 2000
 const COMMENT_MAX_LENGTH = 1000
@@ -165,23 +166,49 @@ function MySuggestionsSection({ characterId }: { characterId: string }) {
         ) : (
           <div className="space-y-2">
             {mySuggestions.map((suggestion) => (
-              <div key={suggestion.id} className="rounded-lg border border-slate-800 bg-slate-900/60 p-3 text-sm">
-                <div className="flex items-start justify-between gap-3">
-                  <p className="whitespace-pre-wrap text-slate-200">{suggestion.description}</p>
-                  <StatusBadge status={suggestion.status} />
-                </div>
-                <p className="mt-1 text-[11px] text-slate-500">{suggestion.character_name}</p>
-                <p className="text-[11px] text-slate-500">{new Date(suggestion.created_at).toLocaleString()}</p>
-                {suggestion.admin_comment && (
-                  <p className="mt-2 rounded-lg border border-slate-800 bg-slate-950/60 px-2 py-1.5 text-xs text-slate-400">
-                    “{suggestion.admin_comment}”
-                  </p>
-                )}
-              </div>
+              <MySuggestionRow key={suggestion.id} suggestion={suggestion} characterId={characterId} />
             ))}
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// Expandable so the player can open the reply thread on their own
+// suggestion — mirrors AdminSuggestionRow's own expand/collapse shape
+// below, just with a player-authored ReportReplyThread instead of the
+// resolve controls.
+function MySuggestionRow({ suggestion, characterId }: { suggestion: Suggestion; characterId: string }) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3 text-sm">
+      <button
+        type="button"
+        onClick={() => setExpanded((current) => !current)}
+        className="flex w-full items-start justify-between gap-3 text-left"
+      >
+        <div>
+          <p className="whitespace-pre-wrap text-slate-200">{suggestion.description}</p>
+          <p className="mt-1 text-[11px] text-slate-500">{suggestion.character_name}</p>
+          <p className="text-[11px] text-slate-500">{new Date(suggestion.created_at).toLocaleString()}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <StatusBadge status={suggestion.status} />
+          <span className="text-xs text-slate-500">{expanded ? '▲' : '▼'}</span>
+        </div>
+      </button>
+      {suggestion.admin_comment && (
+        <p className="mt-2 rounded-lg border border-slate-800 bg-slate-950/60 px-2 py-1.5 text-xs text-slate-400">
+          “{suggestion.admin_comment}”
+        </p>
+      )}
+      {expanded && (
+        <div className="mt-3 border-t border-slate-800 pt-3">
+          <ReportReplyThread parentType="suggestion" parentId={suggestion.id} viewerRole="player" characterId={characterId} />
+        </div>
+      )}
     </div>
   )
 }
@@ -232,15 +259,31 @@ function AdminQueueSection() {
 }
 
 function ResolvedSuggestionRow({ suggestion }: { suggestion: Suggestion }) {
+  const [expanded, setExpanded] = useState(false)
+
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-3 text-sm opacity-80">
-      <div className="flex items-start justify-between gap-3">
-        <p className="whitespace-pre-wrap text-slate-300">{suggestion.description}</p>
-        <StatusBadge status={suggestion.status} />
-      </div>
-      <p className="mt-1 text-[11px] text-slate-500">{suggestion.character_name}</p>
-      <p className="text-[11px] text-slate-500">{new Date(suggestion.created_at).toLocaleString()}</p>
+      <button
+        type="button"
+        onClick={() => setExpanded((current) => !current)}
+        className="flex w-full items-start justify-between gap-3 text-left"
+      >
+        <div>
+          <p className="whitespace-pre-wrap text-slate-300">{suggestion.description}</p>
+          <p className="mt-1 text-[11px] text-slate-500">{suggestion.character_name}</p>
+          <p className="text-[11px] text-slate-500">{new Date(suggestion.created_at).toLocaleString()}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <StatusBadge status={suggestion.status} />
+          <span className="text-xs text-slate-500">{expanded ? '▲' : '▼'}</span>
+        </div>
+      </button>
       {suggestion.admin_comment && <p className="mt-2 text-xs text-slate-400">“{suggestion.admin_comment}”</p>}
+      {expanded && (
+        <div className="mt-3 border-t border-slate-800 pt-3">
+          <ReportReplyThread parentType="suggestion" parentId={suggestion.id} viewerRole="admin" />
+        </div>
+      )}
     </div>
   )
 }
@@ -300,6 +343,12 @@ function AdminSuggestionRow({ suggestion }: { suggestion: Suggestion }) {
 
       {expanded && (
         <div className="mt-3 space-y-3 border-t border-slate-800 pt-3">
+          <div>
+            <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">Conversation</p>
+            <ReportReplyThread parentType="suggestion" parentId={suggestion.id} viewerRole="admin" />
+          </div>
+
+          <p className="text-xs uppercase tracking-wide text-slate-500">Close This Out</p>
           <textarea
             value={comment}
             onChange={(event) => setComment(event.target.value.slice(0, COMMENT_MAX_LENGTH))}

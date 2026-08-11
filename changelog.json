@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.89.0",
+    "date": "2026-08-21",
+    "changes": [
+      "Suggestions and Bug Reports now support back-and-forth replies — open one to see the full conversation and reply"
+    ]
+  },
+  {
     "version": "1.88.1",
     "date": "2026-08-21",
     "changes": [
