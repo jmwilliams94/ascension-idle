@@ -10,7 +10,11 @@ const packageJson = JSON.parse(
 ) as { version: string }
 
 export default defineConfig({
-  base: '/ascension-idle/',
+  // Custom domain (ascensionidle.com) serves at the domain root, not a
+  // /ascension-idle/ subpath — was '/ascension-idle/' back when this only
+  // lived at jmwilliams94.github.io/ascension-idle/. Do not flip back
+  // without also removing public/CNAME.
+  base: '/',
   plugins: [
     react(),
     tailwindcss(),
@@ -36,8 +40,8 @@ export default defineConfig({
         background_color: '#0b0f19',
         display: 'standalone',
         orientation: 'portrait-primary',
-        start_url: '/ascension-idle/',
-        scope: '/ascension-idle/',
+        start_url: '/',
+        scope: '/',
         icons: [
           { src: 'pwa-icons/pwa-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-icons/pwa-512.png', sizes: '512x512', type: 'image/png' },

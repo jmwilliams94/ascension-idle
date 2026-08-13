@@ -92,9 +92,9 @@ export interface EnemyTypeDef {
   // Real portrait art, first used for Quailwing (2026-08-01) — a static PNG in
   // public/monsters/, referenced via import.meta.env.BASE_URL (same pattern
   // useAuthStore.ts already uses) so it resolves correctly under the
-  // '/ascension-idle/' GitHub Pages base path, not just local dev. Optional —
-  // every other monster still falls back to the plain color swatch (see
-  // CombatPage's portrait rendering) until it gets its own art.
+  // configured Vite base path, not just local dev. Optional — every other
+  // monster still falls back to the plain color swatch (see CombatPage's
+  // portrait rendering) until it gets its own art.
   portraitUrl?: string
 }
 

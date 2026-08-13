@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.90.2",
+    "date": "2026-08-13",
+    "changes": [
+      "Prepared the game to move to its new home at ascensionidle.com"
+    ]
+  },
+  {
     "version": "1.90.1",
     "date": "2026-08-21",
     "changes": [
