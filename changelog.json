@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.90.4",
+    "date": "2026-08-14",
+    "changes": [
+      "Added a \"Calculating your rewards\" indicator when returning to the game, instead of a silent wait before the welcome-back summary"
+    ]
+  },
+  {
     "version": "1.90.3",
     "date": "2026-08-21",
     "changes": [

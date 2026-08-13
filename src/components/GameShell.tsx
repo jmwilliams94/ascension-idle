@@ -110,14 +110,19 @@ export default function GameShell({ characterId }: { characterId: string }) {
       // reads the *previous* last_active_at (captured by loadCharacterRecord
       // above, before its own saveNow inside here refreshes it) so a quick
       // reload can't double-count the same window.
-      const offlineResult = await runOfflineProgressCheck(characterId)
+      useOfflineProgressStore.getState().setChecking(true)
+      try {
+        const offlineResult = await runOfflineProgressCheck(characterId)
 
-      if (cancelled) {
-        return
-      }
+        if (cancelled) {
+          return
+        }
 
-      if (offlineResult) {
-        useOfflineProgressStore.getState().show(offlineResult)
+        if (offlineResult) {
+          useOfflineProgressStore.getState().show(offlineResult)
+        }
+      } finally {
+        useOfflineProgressStore.getState().setChecking(false)
       }
 
       // Resume the live fight against whatever monster was last selected — a fresh
@@ -207,6 +212,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
         return
       }
       checkInFlight = true
+      useOfflineProgressStore.getState().setChecking(true)
       try {
         const offlineResult = await runOfflineProgressCheck(characterId)
         if (offlineResult) {
@@ -214,6 +220,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
         }
       } finally {
         checkInFlight = false
+        useOfflineProgressStore.getState().setChecking(false)
       }
     }
 

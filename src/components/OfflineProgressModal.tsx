@@ -49,13 +49,21 @@ function formatDuration(ms: number): string {
 // remains the way back to anything still unresolved.
 export default function OfflineProgressModal() {
   const result = useOfflineProgressStore((state) => state.result)
+  const checking = useOfflineProgressStore((state) => state.checking)
   const dismissResult = useOfflineProgressStore((state) => state.dismiss)
   const selectedMonsterId = useZoneStore((state) => state.selectedMonsterId)
   const lootHoldingCount = useLootHoldingStore((state) => state.entries.length)
   const manuallyOpened = useLootHoldingModalStore((state) => state.open)
   const closeManualModal = useLootHoldingModalStore((state) => state.closeModal)
 
-  if (!result && !manuallyOpened) {
+  // Calculating takes priority over an explicit "Unclaimed rewards" open —
+  // a background resume check finishing mid-view will flip straight into the
+  // real "Welcome back" content via `show()`, which is fine; but a check
+  // starting *while* the player already has the manual view open shouldn't
+  // yank it away, so it's excluded here.
+  const isCalculating = checking && !result && !manuallyOpened
+
+  if (!result && !manuallyOpened && !isCalculating) {
     return null
   }
 
@@ -74,88 +82,97 @@ export default function OfflineProgressModal() {
           no way to reach whatever's below the fold (Loot Holding's grid,
           bulk-action bar, detail card, even the "Got it" button itself). */}
       <div className="max-h-[90vh] w-full max-w-md space-y-4 overflow-y-auto rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900 to-slate-950 p-5 shadow-2xl shadow-black/60">
-        <div className="flex items-start gap-3">
-          <span className="text-2xl">{result ? '👋' : '📦'}</span>
-          <div>
-            <h2 className="text-lg font-semibold text-white">{result ? 'Welcome back' : 'Unclaimed rewards'}</h2>
-            {result && type && (
-              <p className="mt-1 text-sm text-slate-400">
-                While you were away ({formatDuration(result.elapsedMs)}), your character kept fighting {type.displayName}.
-              </p>
-            )}
+        {isCalculating ? (
+          <div className="flex flex-col items-center gap-3 py-6 text-center">
+            <span className="text-3xl animate-pulse">⏳</span>
+            <p className="text-sm font-medium text-slate-300">Calculating your rewards…</p>
           </div>
-        </div>
-
-        {result && result.petObtained && (
-          <div className="relative rounded-xl border border-amber-400 bg-amber-500/10 p-3 text-center shadow-lg shadow-amber-500/20">
-            <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold text-slate-950">
-              NEW PET
-            </span>
-            <p className="mt-1 text-sm font-semibold text-amber-300">
-              🎉 You obtained the {result.petObtained} pet while you were away!
-            </p>
-          </div>
-        )}
-
-        {result && result.fallenStars > 0 && (
-          <div className="relative rounded-xl border border-violet-400 bg-violet-500/10 p-3 text-center shadow-lg shadow-violet-500/20">
-            <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-violet-500 px-1.5 py-0.5 text-[9px] font-bold text-slate-950">
-              RARE DROP
-            </span>
-            <p className="mt-1 text-sm font-semibold text-violet-300">
-              ✨ A Fallen Star dropped while you were away! (+{result.fallenStars})
-            </p>
-          </div>
-        )}
-
-        {result && (
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-sm text-slate-300">
-            <div className="flex justify-between">
-              <dt className="text-slate-400">Kills</dt>
-              <dd>{result.kills}</dd>
+        ) : (
+          <>
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">{result ? '👋' : '📦'}</span>
+              <div>
+                <h2 className="text-lg font-semibold text-white">{result ? 'Welcome back' : 'Unclaimed rewards'}</h2>
+                {result && type && (
+                  <p className="mt-1 text-sm text-slate-400">
+                    While you were away ({formatDuration(result.elapsedMs)}), your character kept fighting {type.displayName}.
+                  </p>
+                )}
+              </div>
             </div>
-            {result.rareKills > 0 && (
-              <div className="flex justify-between">
-                <dt className="text-slate-400">Rare kills</dt>
-                <dd className="text-amber-300">{result.rareKills}</dd>
+
+            {result && result.petObtained && (
+              <div className="relative rounded-xl border border-amber-400 bg-amber-500/10 p-3 text-center shadow-lg shadow-amber-500/20">
+                <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold text-slate-950">
+                  NEW PET
+                </span>
+                <p className="mt-1 text-sm font-semibold text-amber-300">
+                  🎉 You obtained the {result.petObtained} pet while you were away!
+                </p>
               </div>
             )}
-            <div className="flex justify-between">
-              <dt className="text-slate-400">Gold</dt>
-              <dd>
-                <CountUp end={result.gold} duration={1.2} className="font-semibold text-amber-300" />
-              </dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-slate-400">EXP</dt>
-              <dd>
-                <CountUp end={result.exp} duration={1.2} className="font-semibold text-sky-300" />
-              </dd>
-            </div>
-            {result.itemsFoundCount > 0 && (
-              <div className="col-span-2 flex justify-between">
-                <dt className="text-slate-400">Items found</dt>
-                <dd>{result.itemsFoundCount}</dd>
+
+            {result && result.fallenStars > 0 && (
+              <div className="relative rounded-xl border border-violet-400 bg-violet-500/10 p-3 text-center shadow-lg shadow-violet-500/20">
+                <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-violet-500 px-1.5 py-0.5 text-[9px] font-bold text-slate-950">
+                  RARE DROP
+                </span>
+                <p className="mt-1 text-sm font-semibold text-violet-300">
+                  ✨ A Fallen Star dropped while you were away! (+{result.fallenStars})
+                </p>
               </div>
             )}
-            {result.comets > 0 && (
-              <div className="flex justify-between">
-                <dt className="text-slate-400">Comets</dt>
-                <dd className="font-semibold text-slate-200">+{result.comets}</dd>
-              </div>
+
+            {result && (
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-sm text-slate-300">
+                <div className="flex justify-between">
+                  <dt className="text-slate-400">Kills</dt>
+                  <dd>{result.kills}</dd>
+                </div>
+                {result.rareKills > 0 && (
+                  <div className="flex justify-between">
+                    <dt className="text-slate-400">Rare kills</dt>
+                    <dd className="text-amber-300">{result.rareKills}</dd>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <dt className="text-slate-400">Gold</dt>
+                  <dd>
+                    <CountUp end={result.gold} duration={1.2} className="font-semibold text-amber-300" />
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-slate-400">EXP</dt>
+                  <dd>
+                    <CountUp end={result.exp} duration={1.2} className="font-semibold text-sky-300" />
+                  </dd>
+                </div>
+                {result.itemsFoundCount > 0 && (
+                  <div className="col-span-2 flex justify-between">
+                    <dt className="text-slate-400">Items found</dt>
+                    <dd>{result.itemsFoundCount}</dd>
+                  </div>
+                )}
+                {result.comets > 0 && (
+                  <div className="flex justify-between">
+                    <dt className="text-slate-400">Comets</dt>
+                    <dd className="font-semibold text-slate-200">+{result.comets}</dd>
+                  </div>
+                )}
+              </dl>
             )}
-          </dl>
+
+            {lootHoldingCount > 0 && <LootHoldingCard />}
+
+            <button
+              type="button"
+              onClick={handleClose}
+              className="w-full rounded-lg border border-sky-500 bg-sky-500/10 py-2 text-sm font-medium text-sky-300 hover:bg-sky-500/20"
+            >
+              Got it
+            </button>
+          </>
         )}
-
-        {lootHoldingCount > 0 && <LootHoldingCard />}
-
-        <button
-          type="button"
-          onClick={handleClose}
-          className="w-full rounded-lg border border-sky-500 bg-sky-500/10 py-2 text-sm font-medium text-sky-300 hover:bg-sky-500/20"
-        >
-          Got it
-        </button>
       </div>
     </div>
   )
