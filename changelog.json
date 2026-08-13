@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.90.5",
+    "date": "2026-08-14",
+    "changes": [
+      "Stopped the \"Calculating your rewards\" indicator from flashing on a plain tab-switch where nothing was actually missed"
+    ]
+  },
+  {
     "version": "1.90.4",
     "date": "2026-08-14",
     "changes": [

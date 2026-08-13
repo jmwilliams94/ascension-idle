@@ -14,8 +14,10 @@ import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
 
 // Below this elapsed-window size, don't bother showing the "welcome back"
 // summary modal — a normal page refresh/reload would otherwise pop it for a
-// few seconds' worth of nothing.
-const OFFLINE_SUMMARY_THRESHOLD_MS = 60_000
+// few seconds' worth of nothing. Exported so GameShell's resume-detection can
+// use the same number to decide whether a "Calculating…" spinner is worth
+// showing before the result is even known (see the hiddenAt gating there).
+export const OFFLINE_SUMMARY_THRESHOLD_MS = 60_000
 
 export interface OfflineProgressResult {
   elapsedMs: number

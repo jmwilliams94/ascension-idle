@@ -47,7 +47,7 @@ import { useMailStore } from '../game/marketplace/useMailStore'
 import { useTabStore } from '../game/hud/useTabStore'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
-import { runOfflineProgressCheck } from '../game/combat/offlineProgress'
+import { runOfflineProgressCheck, OFFLINE_SUMMARY_THRESHOLD_MS } from '../game/combat/offlineProgress'
 import { useOfflineProgressStore } from '../game/combat/useOfflineProgressStore'
 
 // Rendered once a character is active (see App.tsx) — everything that was the whole
@@ -207,12 +207,32 @@ export default function GameShell({ characterId }: { characterId: string }) {
     // means no wasted round-trip.
     let checkInFlight = false
 
+    // Set on every hidden transition, cleared once consumed by a resume
+    // check (below). CombatEngine keeps its own resolve interval running
+    // unconditionally even while backgrounded ("so the fight keeps advancing
+    // while the player is on another tab" — see its own comment), so on a
+    // plain desktop tab-switch there's usually nothing to catch up: combat
+    // kept resolving live the whole time and this will be a same-tick no-op.
+    // iOS/Android genuinely suspend JS execution while backgrounded, so a
+    // real away period still shows up here as a large gap — the *hidden*
+    // transition itself is the reliable half of visibilitychange even on
+    // WebKit (it's specifically the *resume* direction that's flaky there,
+    // which is why the heartbeat fallback below exists at all). Null means
+    // "never observed a clean hidden event" — treated as an unknown/possibly
+    // real gap, not a known-short one, so the spinner still shows rather than
+    // risk hiding a genuine wait.
+    let hiddenAt: number | null = null
+
     const checkOfflineProgressOnResume = async () => {
       if (checkInFlight || useOfflineProgressStore.getState().result !== null) {
         return
       }
       checkInFlight = true
-      useOfflineProgressStore.getState().setChecking(true)
+      const awayMs = hiddenAt === null ? Infinity : Date.now() - hiddenAt
+      hiddenAt = null
+      if (awayMs >= OFFLINE_SUMMARY_THRESHOLD_MS) {
+        useOfflineProgressStore.getState().setChecking(true)
+      }
       try {
         const offlineResult = await runOfflineProgressCheck(characterId)
         if (offlineResult) {
@@ -227,6 +247,8 @@ export default function GameShell({ characterId }: { characterId: string }) {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         void checkOfflineProgressOnResume()
+      } else {
+        hiddenAt = Date.now()
       }
     }
     const handleFocus = () => {
