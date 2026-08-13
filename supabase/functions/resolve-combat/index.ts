@@ -5,7 +5,7 @@
 // modified client could insert any template/quality/level it wanted).
 //
 // Invoked via `supabase.functions.invoke('resolve-combat', { body: { characterId } })`
-// from both live combat (a periodic ~15s background call, see CombatEngine.tsx)
+// from both live combat (a periodic ~4s background call, see CombatEngine.tsx)
 // and the offline-progress check at login (see offlineProgress.ts) — one
 // server-side code path decides the real economy state either way, rather than
 // two parallel client-side resolvers that used to have to be kept in sync.
@@ -30,6 +30,20 @@
 // kill or two most windows. Item/currency/pet drops and the rare-monster
 // visual flavor still roll real RNG server-side — see the reward-math block
 // itself for which quantities are which.
+//
+// DATA-ACCESS CONSOLIDATION (2026-08-21) — a single invocation used to make
+// ~15 separate PostgREST/RPC round trips (see notes/resolve-combat-postgres-
+// reduction.md). Now down to ~2-4: one `resolve_combat_gather_state` RPC
+// (reads + the concurrency claim, atomically), the pure reward-math block
+// below (unchanged), an occasional `pick_drop_template` RPC only when a drop
+// roll actually succeeds, and one `resolve_combat_apply_results` RPC that
+// writes everything atomically. All three functions live in
+// supabase/migrations/20260821060000_consolidate_resolve_combat.sql. The
+// module-scope item_templates/enemy_types caches this file used to keep are
+// gone — real edge logs showed they weren't reliably surviving between
+// invocations anyway (likely separate concurrent isolates each getting their
+// own empty cache), and folding the underlying reads into the gather RPC as
+// single indexed lookups makes the cache unnecessary rather than fixing it.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
@@ -375,9 +389,10 @@ interface EnemyType {
   level: number
   max_hp: number
   gold_reward: number
-  // exp_reward column still exists on enemy_types but is deliberately not
-  // read here anymore — see expRewardForLevel above.
-  attack_damage: number
+  zone_id: string | null
+  // exp_reward/attack_damage columns still exist on enemy_types but are
+  // deliberately not read here — see expRewardForLevel above / the
+  // player-HP-never-simulated-server-side note elsewhere in this file.
 }
 
 function rollIsRare(): boolean {
@@ -502,7 +517,7 @@ const DAMAGE_EXP_SHARE = 0.5
 // rebased 2026-08-06 onto the reworked single Kill Count track now that
 // Prestige is gone — see the achievements-rework migration) — the bounded
 // elapsed-time window a single resolve call will simulate (shared by live
-// ~15s calls and the once-at-login offline catch-up) scales with the
+// ~4s calls and the once-at-login offline catch-up) scales with the
 // highest Achievements tier this account has *claimed* on any monster,
 // rather than a flat 2 hours for everyone regardless of progress.
 // PLACEHOLDER tier->hours table, same disclosed-not-final status as the
@@ -548,79 +563,6 @@ function json(body: unknown, status = 200) {
   })
 }
 
-// ---------------------------------------------------------------------------
-// In-memory drop-pool cache (2026-08-13, PostgREST egress fix). This Edge
-// Function's module scope stays warm across invocations on the same
-// instance (Deno doesn't tear it down between requests, only on a cold
-// start), so a plain top-level variable survives between calls. The
-// item_templates rows this backs barely ever change (only when the gear
-// catalog itself is edited), but the query used to re-run from scratch on
-// every ~4s resolve tick of every actively-fighting session — by far the
-// largest driver of PostgREST egress on the free tier, since it pulled
-// ~110 of the 117 templates every time. Caching it here turns "every tick"
-// into "roughly once per warm instance, refreshed every
-// DROP_POOL_CACHE_TTL_MS" — a stale cache only means a drop's exact
-// template choice lags a catalog edit by up to the TTL, never a wrong
-// grant (ownership/cost/RNG are untouched).
-// ---------------------------------------------------------------------------
-interface DropPoolTemplate {
-  id: string
-  required_level: number
-  item_family: string | null
-  required_class: string | null
-  // Added 2026-08-14 for gear Durability — a column addition to this
-  // already-cached query, not a new one, so it doesn't reintroduce the
-  // egress problem this cache itself was built to fix.
-  slot_type: string
-}
-
-let dropPoolCache: { templates: DropPoolTemplate[]; expiresAt: number } | null = null
-const DROP_POOL_CACHE_TTL_MS = 10 * 60 * 1000 // 10 minutes
-
-async function getDropPool(db: ReturnType<typeof createClient>): Promise<DropPoolTemplate[]> {
-  const now = Date.now()
-  if (dropPoolCache && dropPoolCache.expiresAt > now) {
-    return dropPoolCache.templates
-  }
-
-  const { data } = await db
-    .from('item_templates')
-    .select('id, required_level, item_family, required_class, slot_type')
-    .not('item_family', 'in', '("sword","quiver","lucky-bow","money-bag","gem-bag")')
-
-  dropPoolCache = { templates: (data ?? []) as DropPoolTemplate[], expiresAt: now + DROP_POOL_CACHE_TTL_MS }
-  return dropPoolCache.templates
-}
-
-// ---------------------------------------------------------------------------
-// enemy_types cache — same module-scope pattern and motivation as
-// getDropPool above: this table only changes when zoneData.ts's server
-// mirror is edited, but was queried fresh (select('*'), one row) on every
-// single ~4s resolve tick of every actively-fighting session — the second
-// largest per-call PostgREST round trip after the drop pool. Only 5 columns
-// are actually read anywhere in this file (id/zone_id/level/max_hp/gold_reward),
-// so this also trims the row itself, not just the call count.
-// ---------------------------------------------------------------------------
-interface EnemyTypeRow {
-  id: string
-  zone_id: string | null
-  level: number
-  max_hp: number
-  gold_reward: number
-}
-
-let enemyTypesCache: { rows: EnemyTypeRow[]; expiresAt: number } | null = null
-const ENEMY_TYPES_CACHE_TTL_MS = 10 * 60 * 1000 // 10 minutes
-
-async function getMonster(db: ReturnType<typeof createClient>, monsterId: string): Promise<EnemyTypeRow | null> {
-  const now = Date.now()
-  if (!enemyTypesCache || enemyTypesCache.expiresAt <= now) {
-    const { data } = await db.from('enemy_types').select('id, zone_id, level, max_hp, gold_reward')
-    enemyTypesCache = { rows: (data ?? []) as EnemyTypeRow[], expiresAt: now + ENEMY_TYPES_CACHE_TTL_MS }
-  }
-  return enemyTypesCache.rows.find((row) => row.id === monsterId) ?? null
-}
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: CORS_HEADERS })
@@ -641,6 +583,87 @@ Deno.serve(async (req) => {
     return json({ ok: false, error: 'unhandled_exception', detail }, 500)
   }
 })
+
+// Shape returned by resolve_combat_gather_state (see the migration) —
+// deliberately loose/`unknown`-leaning where the SQL just passes through a
+// full table row via to_jsonb(), since only a subset of columns are ever
+// read below.
+interface CharacterSnapshot {
+  id: string
+  account_id: string
+  class: string | null
+  level: number
+  gold: number
+  exp: number
+  comet_count: number
+  fallen_star_count: number
+  comet_scroll_count: number
+  fallen_star_scroll_count: number
+  equipped_weapon_id: string | null
+  equipped_ring_id: string | null
+  equipped_necklace_id: string | null
+  equipped_boots_id: string | null
+  equipped_hat_id: string | null
+  equipped_coat_id: string | null
+  equipped_quiver_id: string | null
+  selected_monster_id: string | null
+  combat_last_resolved_at: string
+  composition_stones: Record<string, number> | null
+}
+
+interface EquippedItemRow {
+  id: string
+  quality_tier: string
+  template_id: string
+  composition_level: number
+  durability: number | null
+  base_stats: Record<string, number>
+  slot_type: string
+  required_level: number
+}
+
+interface GatherStateResult {
+  ok: boolean
+  error?: string
+  claimed?: boolean
+  character?: CharacterSnapshot
+  monster?: EnemyType | null
+  equipped_items?: EquippedItemRow[]
+  gear_count?: number
+  potion_count?: number
+  holding_count?: number
+  character_kills?: { kills: number | string; claimed_tier_index: number } | null
+  account_kills?: { kills: number | string } | null
+  best_claimed_tier?: number
+  pet_exists?: boolean
+  player?: {
+    account_zone_attack_bonus_pct: Record<string, number> | null
+    account_zone_drop_bonus_pct: Record<string, number> | null
+  } | null
+}
+
+interface GrantedItemRow {
+  id: string
+  template_id: string
+  owner_id: string
+  quality_tier: string
+  level: number
+  composition_level: number
+  composition_points: number
+  sockets: unknown[]
+  enchant: unknown | null
+  created_at: string
+}
+
+interface ApplyResultsResponse {
+  gold?: number
+  comet_count?: number
+  fallen_star_count?: number
+  comet_scroll_count?: number
+  character_kills?: number | string | null
+  account_kills?: number | string | null
+  granted_items?: GrantedItemRow[]
+}
 
 async function handleResolveCombat(req: Request): Promise<Response> {
   const authHeader = req.headers.get('Authorization')
@@ -690,23 +713,36 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // act with elevated privilege), just in a different runtime.
   const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
-  const { data: character, error: characterError } = await db
-    .from('characters')
-    .select(
-      'id, account_id, class, level, gold, exp, comet_count, fallen_star_count, comet_scroll_count, fallen_star_scroll_count, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, selected_monster_id, combat_last_resolved_at',
-    )
-    .eq('id', characterId)
-    .maybeSingle()
+  // One round trip: reads the character row, claims this window via the same
+  // optimistic-CAS UPDATE the old two-call version used (see the migration),
+  // and — if the claim succeeds and a monster is selected — gathers every
+  // other baseline this function needs (monster, equipped items + templates,
+  // room-check counts, kill rows, pet/player state) in the same call.
+  const { data: gatherData, error: gatherError } = await db.rpc('resolve_combat_gather_state', {
+    p_character_id: characterId,
+  })
 
-  // Distinct from the ownership check below — a query error (e.g. a column
-  // that doesn't exist yet because the migration hasn't run) should surface
-  // as its own diagnosable error, not get silently folded into "not_owner".
-  if (characterError) {
-    console.error('resolve-combat characters query failed:', characterError.message)
-    return json({ ok: false, error: 'query_failed', detail: characterError.message }, 500)
+  if (gatherError || !gatherData) {
+    console.error('resolve-combat gather failed:', gatherError?.message)
+    return json({ ok: false, error: 'query_failed', detail: gatherError?.message }, 500)
   }
 
-  if (!character || character.account_id !== user.id) {
+  const gathered = gatherData as GatherStateResult
+
+  if (!gathered.ok) {
+    if (gathered.error === 'not_found') {
+      return json({ ok: false, error: 'not_owner' }, 403)
+    }
+    console.error('resolve-combat gather returned an error:', gathered.error)
+    return json({ ok: false, error: gathered.error ?? 'query_failed' }, 500)
+  }
+
+  const character = gathered.character
+  if (!character) {
+    return json({ ok: false, error: 'query_failed' }, 500)
+  }
+
+  if (character.account_id !== user.id) {
     return json({ ok: false, error: 'not_owner' }, 403)
   }
 
@@ -714,42 +750,12 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const lastResolvedMs = new Date(character.combat_last_resolved_at).getTime()
 
   // Compare-and-swap claim on combat_last_resolved_at (2026-08-09, fixed a
-  // real duplicate-reward bug reported by the user: two "Welcome back" popups
-  // back to back after a long AFK, one currency-only and one item-heavy —
-  // two independent reward batches for the same overlapping away-window).
-  // Root cause: GameShell's resume detection fires from three independent
-  // triggers (visibilitychange, focus, a heartbeat fallback) that can all
-  // legitimately go off within milliseconds of each other on a single real
-  // resume, and nothing stopped two resulting resolve-combat calls from
-  // running concurrently — both would read the same stale
-  // combat_last_resolved_at, each simulate/roll its own full reward window
-  // for the same elapsed time, and each apply its own atomic reward delta on
-  // top of the other's. resolve_combat_apply_rewards's atomicity only
-  // protects the write of a single call's deltas — it never guaranteed only
-  // one call gets to compute a delta for a given window in the first place.
-  // This UPDATE...WHERE-old-value-matches is a standard optimistic-
-  // concurrency claim: whichever concurrent call's write lands first
-  // advances the timestamp and its `.eq` still matches (1 row updated); any
-  // other call's `.eq` no longer matches (the value already moved under it,
-  // 0 rows updated), and that call bails out as a harmless no-op below
-  // instead of proceeding to simulate/grant a duplicate window. Placed before
-  // the elapsed-window math (not after) so it claims as early as possible,
-  // and covers every return path below (nothing-selected/unknown-monster
-  // included) — those branches no longer need their own separate
-  // combat_last_resolved_at update.
-  const { data: claimedRows, error: claimError } = await db
-    .from('characters')
-    .update({ combat_last_resolved_at: new Date(now).toISOString() })
-    .eq('id', characterId)
-    .eq('combat_last_resolved_at', character.combat_last_resolved_at)
-    .select('id')
-
-  if (claimError) {
-    console.error('resolve-combat claim failed:', claimError.message)
-    return json({ ok: false, error: 'claim_failed', detail: claimError.message }, 500)
-  }
-
-  if (!claimedRows || claimedRows.length === 0) {
+  // real duplicate-reward bug reported by the user: two "Welcome back"
+  // popups back to back after a long AFK, one currency-only and one
+  // item-heavy — two independent reward batches for the same overlapping
+  // away-window). See resolve_combat_gather_state's own comment for why this
+  // stays an instant-no-op optimistic claim rather than a blocking lock.
+  if (!gathered.claimed) {
     return json({
       ok: true,
       elapsedMs: 0,
@@ -775,9 +781,9 @@ async function handleResolveCombat(req: Request): Promise<Response> {
 
   // Nothing selected to fight — the claim above already advanced the clock,
   // so a later resolve won't get an inflated window once a monster IS
-  // selected. The AFK-cap Prestige tier bonus (see below) doesn't matter
-  // here since nothing is being simulated either way — a flat base cap is
-  // enough for this cosmetic elapsedMs value.
+  // selected. The AFK-cap Prestige tier bonus doesn't matter here since
+  // nothing is being simulated either way — a flat base cap is enough for
+  // this cosmetic elapsedMs value.
   if (!character.selected_monster_id) {
     const provisionalElapsedMs = Math.min(Math.max(now - lastResolvedMs, 0), BASE_AFK_CAP_MS)
     return json({
@@ -803,7 +809,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     })
   }
 
-  const monster = await getMonster(db, character.selected_monster_id)
+  const monster = gathered.monster
 
   if (!monster) {
     return json({ ok: false, error: 'unknown_monster' })
@@ -812,17 +818,8 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // AFK cap — Achievements tier reward (see AFK_CAP_MS_BY_ACCOUNT_TIER
   // above): the highest tier this ACCOUNT has *claimed* on any monster's
   // account-wide ladder decides how much away-time this call will credit,
-  // capped at BASE_AFK_CAP_MS (2 hours) for an account with no claims at
-  // all. Queries account_monster_kills (not character_monster_kills) — see
-  // this constant's own header comment for why.
-  const { data: bestClaimedTierRow } = await db
-    .from('account_monster_kills')
-    .select('claimed_tier_index')
-    .eq('account_id', character.account_id)
-    .order('claimed_tier_index', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  const bestClaimedTier = Math.min(Math.max(bestClaimedTierRow?.claimed_tier_index ?? 0, 0), 6)
+  // capped at BASE_AFK_CAP_MS (2 hours) for an account with no claims at all.
+  const bestClaimedTier = Math.min(Math.max(gathered.best_claimed_tier ?? 0, 0), 6)
   const afkCapMs = AFK_CAP_MS_BY_ACCOUNT_TIER[bestClaimedTier] ?? BASE_AFK_CAP_MS
   const elapsedMs = Math.min(Math.max(now - lastResolvedMs, 0), afkCapMs)
 
@@ -852,81 +849,40 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   let compositionAttackBonus = 0
 
   // Durability decay results for this window (see computeMaxDurability above)
-  // — collected here, applied via resolve_combat_apply_rewards' own
+  // — collected here, applied via resolve_combat_apply_results' own
   // p_durability_updates param further down (not a separate RPC call, so no
   // new round-trip is added to this ~4s-cadence hot path).
   const durabilityUpdates: { id: string; durability: number }[] = []
 
-  const equippedItemIds = [
-    character.equipped_weapon_id,
-    character.equipped_ring_id,
-    character.equipped_necklace_id,
-    character.equipped_boots_id,
-    character.equipped_hat_id,
-    character.equipped_coat_id,
-  ].filter((id): id is string => Boolean(id))
-
-  if (equippedItemIds.length > 0) {
-    const { data: equippedItems } = await db
-      .from('item_instances')
-      .select('id, quality_tier, template_id, composition_level, durability')
-      .in('id', equippedItemIds)
-
-    if (equippedItems && equippedItems.length > 0) {
-      const { data: equippedTemplates } = await db
-        .from('item_templates')
-        .select('id, base_stats, slot_type, required_level')
-        .in(
-          'id',
-          equippedItems.map((item) => item.template_id),
-        )
-
-      for (const item of equippedItems) {
-        const template = equippedTemplates?.find((t) => t.id === item.template_id)
-        if (!template) continue
-
-        const maxDurability = computeMaxDurability(template.slot_type, template.required_level)
-        if (maxDurability !== null) {
-          const lost = (elapsedMs * maxDurability) / DURABILITY_TARGET_HOURS_TO_EMPTY_MS
-          const newDurability = Math.max(0, (item.durability ?? 0) - lost)
-          durabilityUpdates.push({ id: item.id, durability: newDurability })
-        }
-
-        // A broken (0-durability) item contributes nothing this window, as if
-        // the slot were empty — mirrors the same check in
-        // equipmentBonus.ts's computeEquipmentBonus. Uses this window's
-        // starting durability (not the post-decay value above), same "fixed
-        // for the whole window" simplification already used elsewhere in
-        // this function (e.g. a level-up mid-window doesn't retroactively
-        // change that window's own attack output).
-        if ((item.durability ?? 0) <= 0) continue
-
-        equipmentBonus.physicalAttack += scaledStat(template.base_stats, 'physical_attack', item.quality_tier) ?? 0
-        equipmentBonus.magicAttack += scaledStat(template.base_stats, 'magic_attack', item.quality_tier) ?? 0
-        equipmentBonus.dexterity += scaledStat(template.base_stats, 'dexterity', item.quality_tier) ?? 0
-        compositionAttackBonus += compositionBonusStat(
-          template.base_stats,
-          'physical_attack',
-          template.slot_type,
-          item.composition_level,
-        )
-        compositionAttackBonus += compositionBonusStat(
-          template.base_stats,
-          'magic_attack',
-          template.slot_type,
-          item.composition_level,
-        )
-      }
+  for (const item of gathered.equipped_items ?? []) {
+    const maxDurability = computeMaxDurability(item.slot_type, item.required_level)
+    if (maxDurability !== null) {
+      const lost = (elapsedMs * maxDurability) / DURABILITY_TARGET_HOURS_TO_EMPTY_MS
+      const newDurability = Math.max(0, (item.durability ?? 0) - lost)
+      durabilityUpdates.push({ id: item.id, durability: newDurability })
     }
+
+    // A broken (0-durability) item contributes nothing this window, as if
+    // the slot were empty — mirrors the same check in
+    // equipmentBonus.ts's computeEquipmentBonus. Uses this window's
+    // starting durability (not the post-decay value above), same "fixed
+    // for the whole window" simplification already used elsewhere in
+    // this function (e.g. a level-up mid-window doesn't retroactively
+    // change that window's own attack output).
+    if ((item.durability ?? 0) <= 0) continue
+
+    equipmentBonus.physicalAttack += scaledStat(item.base_stats, 'physical_attack', item.quality_tier) ?? 0
+    equipmentBonus.magicAttack += scaledStat(item.base_stats, 'magic_attack', item.quality_tier) ?? 0
+    equipmentBonus.dexterity += scaledStat(item.base_stats, 'dexterity', item.quality_tier) ?? 0
+    compositionAttackBonus += compositionBonusStat(item.base_stats, 'physical_attack', item.slot_type, item.composition_level)
+    compositionAttackBonus += compositionBonusStat(item.base_stats, 'magic_attack', item.slot_type, item.composition_level)
   }
 
   const derived = computeDerivedStats(attributes, equipmentBonus)
   const attackIntervalMs = 1000 / derived.attackSpeed
-  // Account-wide attack buff (see accountAttackBonusPct below, fetched
-  // further down) is applied once this value is reassigned right after that
-  // fetch completes — declared here (before totalAttacks/the Quiver gate,
-  // which don't depend on it) so the rest of this function reads it in one
-  // place.
+  // Account-wide attack buff (see accountAttackBonusPct below) is applied
+  // once that value is available further down (declared here since the
+  // rest of the function reads attackMidpoint from one place).
   let attackMidpoint = derived.physicalAttack + derived.magicAttack
 
   // Hunter must have the Quiver equipped to attack at all (confirmed with the
@@ -954,92 +910,17 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   let inventoryFull = false
   const droppedTemplates: { id: string; required_level: number; slot_type: string; qualityTier: string; compositionLevel: number }[] = []
 
-  // Excludes equipped and Bank-Storage gear from the room-fit baseline below
-  // (fixed 2026-08-05, reported by the user via unbundle_currency_scroll's
-  // own copy of this same bug — see that migration's comment for the full
-  // writeup). Matches useInventoryStore.occupiedSlotCount's client-side
-  // formula exactly: neither an equipped item (shown only on the paper doll)
-  // nor a Bank-Storage item (shown only in Bank Storage) occupies a real
-  // Inventory slot, but the query below used to count both anyway.
-  const equippedIdsForRoomCheck = [
-    character.equipped_weapon_id,
-    character.equipped_ring_id,
-    character.equipped_necklace_id,
-    character.equipped_boots_id,
-    character.equipped_hat_id,
-    character.equipped_coat_id,
-    character.equipped_quiver_id,
-  ].filter((id): id is string => Boolean(id))
+  const characterKillsBefore = Number(gathered.character_kills?.kills ?? 0)
+  const accountKillsBefore = Number(gathered.account_kills?.kills ?? 0)
+  const petAlreadyUnlocked = Boolean(gathered.pet_exists)
 
-  let gearCountQuery = db.from('item_instances').select('id', { count: 'exact', head: true }).eq('owner_id', characterId).neq('location', 'bank')
-  if (equippedIdsForRoomCheck.length > 0) {
-    gearCountQuery = gearCountQuery.not('id', 'in', `(${equippedIdsForRoomCheck.join(',')})`)
-  }
-
-  // Inventory-full handling baseline — fetched BEFORE the loop now (used to
-  // be after), so live mode can check fit live, kill by kill, as the window
-  // is simulated. Functionally identical for offline mode either way, since
-  // nothing else in this function touches these tables mid-request.
-  const [
-    { count: gearCount },
-    { data: composition },
-    { count: holdingCount },
-    { count: potionCount },
-    { data: characterKillsRow },
-    { data: accountKillsRow },
-    { data: petRow },
-    { data: playerRow },
-  ] = await Promise.all([
-    gearCountQuery,
-    db.from('characters').select('composition_stones').eq('id', characterId).maybeSingle(),
-    db.from('loot_holding').select('id', { count: 'exact', head: true }).eq('character_id', characterId),
-    db.from('potion_stacks').select('id', { count: 'exact', head: true }).eq('character_id', characterId).gt('count', 0),
-    // Achievements & Pets — this monster's existing kill-count rows (both
-    // ladders) and whether its pet is already obtained account-wide.
-    // Fetched here, alongside the other per-request baselines, rather than a
-    // separate round-trip. claimed_tier_index is read only for the upsert
-    // below (to preserve it — claiming itself happens in a separate RPC,
-    // never here), not for any reward math anymore (see the achievements
-    // rework note above).
-    db
-      .from('character_monster_kills')
-      .select('kills, claimed_tier_index')
-      .eq('character_id', characterId)
-      .eq('monster_id', character.selected_monster_id)
-      .maybeSingle(),
-    db
-      .from('account_monster_kills')
-      .select('kills')
-      .eq('account_id', character.account_id)
-      .eq('monster_id', character.selected_monster_id)
-      .maybeSingle(),
-    db.from('account_pets').select('id').eq('account_id', character.account_id).eq('monster_id', character.selected_monster_id).maybeSingle(),
-    // Achievements rework (2026-08-06) — the account-wide claimed-buff
-    // totals, read fresh every resolve and applied directly below (attack
-    // to the damage roll, drop to both the gear and Comet/Fallen Star
-    // rolls). Permanent once claimed, so no separate "is this active" gate
-    // is needed the way the old per-monster tier lookups needed — just read
-    // and apply.
-    db.from('players').select('account_zone_attack_bonus_pct, account_zone_drop_bonus_pct').eq('id', character.account_id).maybeSingle(),
-  ])
-
-  // Number(...) defensively — PostgREST can serialize a `numeric` column as
-  // a JSON string in some client configurations to avoid float precision
-  // loss; a plain number passes through Number() unchanged either way.
-  const characterKillsBefore = Number(characterKillsRow?.kills ?? 0)
-  const accountKillsBefore = Number(accountKillsRow?.kills ?? 0)
-  const petAlreadyUnlocked = Boolean(petRow)
-  // Both per-zone now (2026-08-07, confirmed with the user — attack bonus
-  // was previously a flat account-wide number applied to every fight
-  // regardless of zone, "I hope it's not a global attack bonus"), scoped to
-  // whichever zone the currently-fought monster belongs to. Grinding one
-  // zone's own account-tier claims only pays off specifically while
-  // farming that zone. Quality's own bonus total is deliberately higher for
-  // later zones (see claim_account_achievement_reward's own
-  // zone_quality_bonus_per_tier_pct); Attack is flat 1%/tier everywhere.
+  // Both per-zone (2026-08-07, confirmed with the user — attack bonus was
+  // previously a flat account-wide number applied to every fight regardless
+  // of zone). Grinding one zone's own account-tier claims only pays off
+  // specifically while farming that zone.
   const zoneKey = monster.zone_id ?? ''
-  const accountAttackBonusPct = (playerRow?.account_zone_attack_bonus_pct as Record<string, number> | null)?.[zoneKey] ?? 0
-  const zoneDropBonusPct = (playerRow?.account_zone_drop_bonus_pct as Record<string, number> | null)?.[zoneKey] ?? 0
+  const accountAttackBonusPct = gathered.player?.account_zone_attack_bonus_pct?.[zoneKey] ?? 0
+  const zoneDropBonusPct = gathered.player?.account_zone_drop_bonus_pct?.[zoneKey] ?? 0
   const accountDropMultiplier = 1 + zoneDropBonusPct / 100
   attackMidpoint *= 1 + accountAttackBonusPct / 100
   // Added in unscaled, after the account-wide multiplier — see
@@ -1052,25 +933,24 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   let killsThisWindow = 0
   let petObtained = false
 
-  const stoneSlotCount = Object.values((composition?.composition_stones as Record<string, number>) ?? {}).reduce(
+  const stoneSlotCount = Object.values(character.composition_stones ?? {}).reduce(
     (sum, v) => sum + (typeof v === 'number' ? v : 0),
     0,
   )
   // Bug fix (2026-07-31): this baseline previously omitted potions and the
   // character's own already-owned Comet/Fallen Star/Scroll counts entirely —
   // it only ever counted gear + stones, silently under-counting real
-  // Inventory fullness (see CLAUDE.md's Warehouse economy redesign note,
-  // stage 2 — caught while adding Scroll accounting here). Mirrors
-  // useInventoryStore.occupiedSlotCount's client-side formula in full now.
+  // Inventory fullness. Mirrors useInventoryStore.occupiedSlotCount's
+  // client-side formula in full.
   let occupied =
-    (gearCount ?? 0) +
+    (gathered.gear_count ?? 0) +
     stoneSlotCount +
-    (potionCount ?? 0) +
+    (gathered.potion_count ?? 0) +
     character.comet_count +
     character.fallen_star_count +
     character.comet_scroll_count +
     character.fallen_star_scroll_count
-  let heldCount = holdingCount ?? 0
+  let heldCount = gathered.holding_count ?? 0
   // Live mode only — a running projection of `occupied` as this window's
   // kills are simulated, so a mid-window fit-check can be made without
   // mutating the real `occupied` the post-loop granting pass still uses.
@@ -1130,27 +1010,27 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     let creditedFraction = 1
 
     if (wholeKillsThisWindow > 0) {
-      // Module-level cached (see getDropPool above), not fetched per-call
-      // anymore — level-appropriate selection (confirmed with the user,
-      // 2026-07-30): picks a random gear family available to the
-      // character's class (excluding the standalone 'sword' family — the
-      // legacy Wooden Sword freebie isn't meant to drop from monsters —
-      // and 'quiver', a starter/shop-only item for the same reason), then
-      // the template in that family whose required_level is closest to the
-      // monster's own level. Mirrors pickLevelAppropriateTemplate in
-      // useInventoryStore.ts — must stay in sync, same pattern as this
-      // file's other client/server mirrors.
-      const dropPool = await getDropPool(db)
-
-      const pickDropTemplate = (): { id: string; required_level: number } | null => {
-        const candidates = dropPool.filter((t) => t.required_class === null || t.required_class === character.class)
-        if (candidates.length === 0) return null
-        const families = [...new Set(candidates.map((t) => t.item_family))]
-        const family = families[Math.floor(Math.random() * families.length)]
-        const inFamily = candidates.filter((t) => t.item_family === family)
-        return inFamily.reduce((closest, t) =>
-          Math.abs(t.required_level - monster.level) < Math.abs(closest.required_level - monster.level) ? t : closest,
-        )
+      // Level-appropriate selection (confirmed with the user, 2026-07-30):
+      // picks a random gear family available to the character's class
+      // (excluding the standalone 'sword' family and 'quiver'/'lucky-bow'/
+      // 'money-bag'/'gem-bag'), then the template in that family whose
+      // required_level is closest to the monster's own level. Done as a
+      // single indexed SQL query now (pick_drop_template, see the
+      // migration) instead of transferring the whole eligible-template
+      // list over the wire — called only when a drop roll actually
+      // succeeds below (rare), not once per resolve. Mirrors
+      // pickLevelAppropriateTemplate in useInventoryStore.ts — must stay
+      // in sync, same pattern as this file's other client/server mirrors.
+      const pickDropTemplate = async (): Promise<{ id: string; required_level: number; slot_type: string } | null> => {
+        const { data, error } = await db.rpc('pick_drop_template', {
+          p_class: character.class,
+          p_level: monster.level,
+        })
+        if (error) {
+          console.error('resolve-combat pick_drop_template call failed:', error.message)
+          return null
+        }
+        return (data as { id: string; required_level: number; slot_type: string } | null) ?? null
       }
 
       let killsProcessed = 0
@@ -1171,15 +1051,14 @@ async function handleResolveCombat(req: Request): Promise<Response> {
         // Per-zone quality-only drop bonus (2026-08-07, confirmed with the
         // user — supersedes the old flat, drop-FREQUENCY-boosting
         // account_drop_bonus_pct). accountDropMultiplier is now derived
-        // from whichever zone this monster belongs to (see below) and is
-        // deliberately NOT applied to the base drop roll anymore — a
-        // claimed zone's bonus no longer makes a normal item drop more
-        // often, only improves its odds of rolling a higher quality tier
-        // once a drop already happened. Comet/Fallen Star drop chance
-        // (just below) still uses the same multiplier, now zone-scoped
-        // instead of flat.
+        // from whichever zone this monster belongs to and is deliberately
+        // NOT applied to the base drop roll anymore — a claimed zone's
+        // bonus no longer makes a normal item drop more often, only
+        // improves its odds of rolling a higher quality tier once a drop
+        // already happened. Comet/Fallen Star drop chance (just below)
+        // still uses the same multiplier, now zone-scoped instead of flat.
         if (Math.random() < DROP_CHANCE) {
-          const dropped = pickDropTemplate()
+          const dropped = await pickDropTemplate()
           if (dropped) {
             // Quality (and now composition +1, 2026-08-12) is rolled once, at
             // drop time, and carried with the template through to whichever
@@ -1260,7 +1139,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       expMultiplier *
       RARE_BLENDED_DAMAGE_EXP_FACTOR
     expGained += Math.round(killExp + damageExp)
-    // Feeds resolve_combat_apply_kill_counts as a fractional delta — see the
+    // Feeds resolve_combat_apply_results as a fractional delta — see the
     // migration widening character_monster_kills/account_monster_kills.kills
     // to numeric, and this same value's use in the zone-tier layer below.
     killsThisWindow = creditedKills
@@ -1286,102 +1165,45 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     level += 1
   }
 
-  // Atomic increment (2026-08-11) — was a plain read-old-value-then-write-
-  // absolute-total upsert (`characterKillsBefore + killsThisWindow`, from a
-  // row read at the *start* of this function), the same "lost update" race
-  // resolve_combat_apply_rewards was already fixed for below: two
-  // resolve-combat calls for the same character landing close together (the
-  // periodic interval call and an immediate call on stop/switch/
-  // visibilitychange/beforeunload can easily overlap) would both read the
-  // same starting kill count, and whichever finished last silently
-  // discarded the other's kills. resolve_combat_apply_kill_counts does
-  // `kills = kills + delta` as a single upsert, safe against any
-  // interleaving. claimed_tier_index is untouched by this RPC — it's only
-  // ever written by claim_kill_count_reward.
-  let characterKillCount = characterKillsBefore
-  let accountKillCount = accountKillsBefore
-
-  if (killsThisWindow > 0) {
-    const { data: killCountRow, error: killCountError } = await db
-      .rpc('resolve_combat_apply_kill_counts', {
-        p_character_id: characterId,
-        p_account_id: character.account_id,
-        p_monster_id: character.selected_monster_id,
-        p_kills_delta: killsThisWindow,
-      })
-      .single()
-
-    if (killCountError || !killCountRow) {
-      console.error('resolve-combat resolve_combat_apply_kill_counts call failed:', killCountError?.message)
-      // Falls back to the old (racy) locally-computed totals only if the RPC
-      // itself somehow failed to return a row — keeps the response shape
-      // intact rather than crashing, at the cost of reintroducing the race
-      // for just this one call.
-      characterKillCount = characterKillsBefore + killsThisWindow
-      accountKillCount = accountKillsBefore + killsThisWindow
-    } else {
-      characterKillCount = Number(killCountRow.character_kills)
-      accountKillCount = Number(killCountRow.account_kills)
-    }
-  }
-
-  if (petObtained) {
-    await db.from('account_pets').insert({ account_id: character.account_id, monster_id: character.selected_monster_id })
-  }
-
-  interface GrantedItemRow {
-    id: string
-    template_id: string
-    owner_id: string
-    quality_tier: string
-    level: number
-    composition_level: number
-    composition_points: number
-    sockets: unknown[]
-    enchant: unknown | null
-    created_at: string
-  }
-
-  const itemsGranted: GrantedItemRow[] = []
+  // Post-loop granting pass — pure computation, no I/O (matches the pre-
+  // consolidation version's own separation between "decide what dropped"
+  // above and "write it" here; only the writing itself is now batched into
+  // one resolve_combat_apply_results call below instead of N sequential
+  // inserts). heldCount/occupied are advanced the same way, in the same
+  // order, as the old per-item-await version — offline mode's Loot Holding
+  // cap is still enforced incrementally, item by item, here.
   const itemsHeld: { template_id: string }[] = []
   const currencyHeld: { currency_type: 'comet' | 'fallen_star' }[] = []
+  const itemDropsPayload: {
+    template_id: string
+    required_level: number
+    quality_tier: string
+    composition_level: number
+    max_durability: number
+  }[] = []
+  const currencyDropsPayload: { currency_type: 'comet' | 'fallen_star' }[] = []
 
   for (const template of droppedTemplates) {
+    const payloadEntry = {
+      template_id: template.id,
+      required_level: template.required_level,
+      quality_tier: template.qualityTier,
+      composition_level: template.compositionLevel,
+      max_durability: computeMaxDurability(template.slot_type, template.required_level) ?? 0,
+    }
     if (mode === 'live') {
       // droppedTemplates only ever contains items already confirmed to fit
       // at roll time for live mode (see above) — always goes straight into
-      // Inventory. level starts at the template's own required_level (not
-      // the schema default of 1) so a freshly-granted item's displayed level
-      // honestly reflects which tier it actually is.
-      const { data: inserted } = await db
-        .from('item_instances')
-        .insert({
-          template_id: template.id,
-          owner_id: characterId,
-          level: template.required_level,
-          quality_tier: template.qualityTier,
-          composition_level: template.compositionLevel,
-          durability: computeMaxDurability(template.slot_type, template.required_level) ?? 0,
-        })
-        .select('*')
-        .single()
+      // Inventory.
+      itemDropsPayload.push(payloadEntry)
       occupied += 1
-      if (inserted) itemsGranted.push(inserted)
     } else if (heldCount < LOOT_HOLDING_CAP) {
       // Offline/idle catch-up always routes to Loot Holding, never straight
       // into Inventory, regardless of whether Inventory happened to have
-      // room (confirmed with the user, 2026-08-01 — supersedes the earlier
-      // "only overflows to Loot Holding once Inventory is full" behavior) —
-      // so an idle session never silently rearranges the player's bag while
-      // they're away; everything gets reviewed via Loot Holding on return.
-      await db
-        .from('loot_holding')
-        .insert({
-          character_id: characterId,
-          template_id: template.id,
-          quality_tier: template.qualityTier,
-          composition_level: template.compositionLevel,
-        })
+      // room (confirmed with the user, 2026-08-01) — so an idle session
+      // never silently rearranges the player's bag while they're away;
+      // everything gets reviewed via Loot Holding on return.
+      itemDropsPayload.push(payloadEntry)
       heldCount += 1
       itemsHeld.push({ template_id: template.id })
     }
@@ -1400,7 +1222,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       cometsToGrant += 1
       occupied += 1
     } else if (heldCount < LOOT_HOLDING_CAP) {
-      await db.from('loot_holding').insert({ character_id: characterId, currency_type: 'comet' })
+      currencyDropsPayload.push({ currency_type: 'comet' })
       heldCount += 1
       currencyHeld.push({ currency_type: 'comet' })
     }
@@ -1412,56 +1234,55 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       fallenStarsToGrant += 1
       occupied += 1
     } else if (heldCount < LOOT_HOLDING_CAP) {
-      await db.from('loot_holding').insert({ character_id: characterId, currency_type: 'fallen_star' })
+      currencyDropsPayload.push({ currency_type: 'fallen_star' })
       heldCount += 1
       currencyHeld.push({ currency_type: 'fallen_star' })
     }
   }
 
-  // Atomic, not a read-modify-write blanket overwrite (fixed 2026-08-05,
-  // reported by the user: "I tried to Bundle some comets in the shop
-  // interface. They bundled but then the action reversed"). The old version
-  // of this wrote `character.gold + goldGained`/`character.comet_count +
-  // cometsToGrant` — plain JS-computed values from the `character` row read
-  // once at the very start of this call — via a single `.update({...})`. If
-  // anything else touched gold/comet_count/fallen_star_count on this same
-  // row in between (bundle_currency_scroll, sell_item, a Forge upgrade's
-  // comet/fallen-star cost, ...), that change was silently clobbered back to
-  // this stale snapshot the moment this call's own write landed — a lost
-  // update, not a display glitch. `resolve_combat_apply_rewards` (see its
-  // own migration) does the increment as a single `column = column + delta`
-  // SQL statement instead, which Postgres guarantees is safe against any
-  // concurrent writer to the same row, no matter how the two calls interleave.
-  const { data: rewardRow, error: rewardError } = await db
-    .rpc('resolve_combat_apply_rewards', {
-      p_character_id: characterId,
-      p_gold_delta: goldGained,
-      p_exp: exp,
-      p_level: level,
-      p_comet_delta: cometsToGrant,
-      p_fallen_star_delta: fallenStarsToGrant,
-      p_resolved_at: new Date(now).toISOString(),
-      // Gear Durability (2026-08-14) — piggybacks on this same already-every-
-      // tick call rather than a separate RPC, see computeMaxDurability's own
-      // comment above for why.
-      p_durability_updates: durabilityUpdates,
-    })
-    .single()
+  // One atomic call for everything this resolve produced — kill counts,
+  // gold/EXP/level/currencies, durability, pet unlock, and every item/
+  // currency drop. Always called (even with all-zero deltas), same as the
+  // old resolve_combat_apply_rewards was. Atomic per-column increments
+  // (2026-08-05 fix, see the migration) — never a read-modify-write blanket
+  // overwrite, so nothing here can clobber a concurrent Forge spend/Bank
+  // transfer landing on the same row.
+  const { data: applyData, error: applyError } = await db.rpc('resolve_combat_apply_results', {
+    p_character_id: characterId,
+    p_account_id: character.account_id,
+    p_monster_id: character.selected_monster_id,
+    p_mode: mode,
+    p_kills_delta: killsThisWindow,
+    p_gold_delta: goldGained,
+    p_exp: exp,
+    p_level: level,
+    p_comet_delta: cometsToGrant,
+    p_fallen_star_delta: fallenStarsToGrant,
+    p_durability_updates: durabilityUpdates,
+    p_pet_obtained: petObtained,
+    p_item_drops: itemDropsPayload,
+    p_currency_drops: currencyDropsPayload,
+  })
 
-  if (rewardError || !rewardRow) {
-    console.error('resolve-combat resolve_combat_apply_rewards call failed:', rewardError?.message)
+  if (applyError || !applyData) {
+    console.error('resolve-combat resolve_combat_apply_results call failed:', applyError?.message)
   }
 
-  // Falls back to the old (racy) JS-computed values only if the RPC itself
-  // somehow failed to return a row — keeps the response shape intact rather
-  // than crashing, at the cost of reintroducing the race for just this one
-  // call; the RPC's own row-not-found case would mean characterId itself was
-  // bad, which every earlier query in this function would already have
-  // caught.
-  const newGold = rewardRow?.gold ?? character.gold + goldGained
-  const newComets = rewardRow?.comet_count ?? character.comet_count + cometsToGrant
-  const newFallenStars = rewardRow?.fallen_star_count ?? character.fallen_star_count + fallenStarsToGrant
-  const newCometScrolls = rewardRow?.comet_scroll_count ?? character.comet_scroll_count
+  const apply = (applyData ?? {}) as ApplyResultsResponse
+
+  // Falls back to the old (racy) locally-computed totals only if the RPC
+  // itself somehow failed to return a row — keeps the response shape intact
+  // rather than crashing, at the cost of reintroducing the race for just
+  // this one call. Also the natural correct value whenever killsThisWindow
+  // is legitimately 0 (character_kills/account_kills are only set by the
+  // RPC when p_kills_delta > 0), since adding 0 is a no-op either way.
+  const newGold = apply.gold ?? character.gold + goldGained
+  const newComets = apply.comet_count ?? character.comet_count + cometsToGrant
+  const newFallenStars = apply.fallen_star_count ?? character.fallen_star_count + fallenStarsToGrant
+  const newCometScrolls = apply.comet_scroll_count ?? character.comet_scroll_count
+  const characterKillCount = apply.character_kills != null ? Number(apply.character_kills) : characterKillsBefore + killsThisWindow
+  const accountKillCount = apply.account_kills != null ? Number(apply.account_kills) : accountKillsBefore + killsThisWindow
+  const itemsGranted = apply.granted_items ?? []
 
   return json({
     ok: true,
