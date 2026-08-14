@@ -6,7 +6,7 @@ import { Button } from './ui/Button'
 import { Select } from './ui/Select'
 import { ENEMY_TYPES, ZONES, ZONE_ORDER, type EnemyTypeId, type ZoneId } from '../game/zones/zoneData'
 import { useZoneStore } from '../game/zones/useZoneStore'
-import { useCombatStore, type CombatLogEntry } from '../game/combat/useCombatStore'
+import { useCombatStore } from '../game/combat/useCombatStore'
 import { getLevelDiffColor } from '../game/combat/combatResolver'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
@@ -61,30 +61,6 @@ function hexColor(value: number): string {
 
 // How long a floating damage number stays visible after its log entry lands.
 const FLOATING_NUMBER_LIFETIME_MS = 800
-
-function logLineClass(kind: CombatLogEntry['kind']): string {
-  switch (kind) {
-    case 'kill':
-      return 'text-emerald-400'
-    case 'rare-kill':
-    case 'pet':
-      return 'text-amber-300 font-semibold'
-    case 'item':
-    case 'currency':
-      return 'text-sky-300'
-    case 'no-quiver':
-    case 'knockout':
-    case 'inventory-full':
-      return 'text-red-400'
-    case 'player-damage':
-      return 'text-rose-400'
-    case 'dodge':
-    case 'miss':
-      return 'text-cyan-300'
-    default:
-      return 'text-slate-400'
-  }
-}
 
 function HpBar({ current, max, barColorClass = 'bg-emerald-500' }: { current: number; max: number; barColorClass?: string }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0
@@ -147,10 +123,9 @@ export default function CombatPage() {
   const potionStacks = usePotionStore((state) => state.stacks)
   const handleUsePotion = usePotionStore((state) => state.usePotion)
 
-  const [logExpanded, setLogExpanded] = useState(false)
   // Mobile-only (see the lg:hidden layout below) — Inventory defaults collapsed
   // there so the action area (monster/player HP, Fight/Stop) is what's visible
-  // without scrolling, matching the Combat Log's existing collapse convention.
+  // without scrolling.
   const [inventoryExpanded, setInventoryExpanded] = useState(false)
 
   // Floating damage numbers are derived from the log itself (recent 'damage'
@@ -231,13 +206,13 @@ export default function CombatPage() {
       {/* Mobile-only layout (below `lg`) — action area (monster/player HP,
           Fight/Stop, Consumable) prioritized at the top since that's what's
           looked at moment-to-moment; Zone/Monster picker below it (still
-          always reachable, just not the first thing on screen); Inventory and
-          Combat Log both collapsed by default so the initial view is short
-          enough to not require scrolling on a phone. No Gold/EXP row here —
-          ExpBar (GameShell's persistent top strip, shown above every tab)
-          already covers that, so repeating it here would just be more
-          scroll for nothing. Desktop's layout (below) is untouched — this is
-          entirely separate markup, not a responsive reflow of the same JSX, so
+          always reachable, just not the first thing on screen); Inventory
+          collapsed by default so the initial view is short enough to not
+          require scrolling on a phone. No Gold/EXP row here — ExpBar
+          (GameShell's persistent top strip, shown above every tab) already
+          covers that, so repeating it here would just be more scroll for
+          nothing. Desktop's layout (below) is untouched — this is entirely
+          separate markup, not a responsive reflow of the same JSX, so
           nothing here can regress the desktop view. */}
       <div className="space-y-3 lg:hidden">
         {activeType && (
@@ -435,40 +410,6 @@ export default function CombatPage() {
             </div>
           )}
         </AscensionCard>
-
-        <AscensionCard>
-          <button
-            type="button"
-            onClick={() => setLogExpanded((value) => !value)}
-            className="flex w-full items-center justify-between text-left"
-          >
-            <p className="text-sm font-medium text-slate-200">Combat Log</p>
-            <span className="text-xs text-slate-400">{logExpanded ? 'Hide ▲' : 'Show ▼'}</span>
-          </button>
-
-          {logExpanded && (
-            <div className="mt-3 max-h-64 space-y-1 overflow-y-auto text-xs">
-              <AnimatePresence initial={false}>
-                {log.length === 0 && (
-                  <p key="empty" className="text-slate-600">
-                    Pick a monster from the roster to start fighting.
-                  </p>
-                )}
-                {log.map((entry) => (
-                  <motion.p
-                    key={entry.id}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0 }}
-                    className={logLineClass(entry.kind)}
-                  >
-                    {entry.message}
-                  </motion.p>
-                ))}
-              </AnimatePresence>
-            </div>
-          )}
-        </AscensionCard>
       </div>
 
       {/* Desktop layout (`lg` and up) — unchanged from before this step. */}
@@ -657,43 +598,6 @@ export default function CombatPage() {
             </div>
           </div>
         )}
-
-        {/* Collapsed by default — the roster/fight panel above is the primary
-            view; the log is a detail view for players who want to see individual
-            hits, matching StatsPanel's collapse convention elsewhere. */}
-        <AscensionCard>
-          <button
-            type="button"
-            onClick={() => setLogExpanded((value) => !value)}
-            className="flex w-full items-center justify-between text-left"
-          >
-            <p className="text-sm font-medium text-slate-200">Combat Log</p>
-            <span className="text-xs text-slate-400">{logExpanded ? 'Hide ▲' : 'Show ▼'}</span>
-          </button>
-
-          {logExpanded && (
-            <div className="mt-3 max-h-64 space-y-1 overflow-y-auto text-xs">
-              <AnimatePresence initial={false}>
-                {log.length === 0 && (
-                  <p key="empty" className="text-slate-600">
-                    Pick a monster from the roster to start fighting.
-                  </p>
-                )}
-                {log.map((entry) => (
-                  <motion.p
-                    key={entry.id}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0 }}
-                    className={logLineClass(entry.kind)}
-                  >
-                    {entry.message}
-                  </motion.p>
-                ))}
-              </AnimatePresence>
-            </div>
-          )}
-        </AscensionCard>
       </div>
 
       <div className="space-y-4">
