@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.91.10",
+    "date": "2026-08-14",
+    "changes": [
+      "Fixed the true background at the bottom of the screen (visible when overscrolling) to match the darker end of the page gradient instead of staying light"
+    ]
+  },
+  {
     "version": "1.91.9",
     "date": "2026-08-14",
     "changes": [

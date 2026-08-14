@@ -25,7 +25,7 @@ body,
 
 body {
   min-width: 320px;
-  background: var(--ascension-ink-soft);
+  background: linear-gradient(180deg, var(--ascension-ink-soft) 0%, var(--ascension-ink) 100%);
 }
 
 /* Every gear/currency icon in the game now renders as a real <img> (see
