@@ -5,7 +5,7 @@
   line-height: 1.5;
   font-weight: 400;
   color: #e2e8f0;
-  background-color: var(--ascension-ink-soft);
+  background-color: var(--ascension-ink);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -25,18 +25,15 @@ body,
 
 /* Only ever visible as the rubber-band overscroll color at the very top/
    bottom edges of the screen (the app's own GameShell div covers
-   everything else). A 0%-100% gradient sized to body's own (potentially
-   very long, multi-viewport-tall) box only finishes fading to the dark
-   --ascension-ink endpoint at the literal bottom of the page, so a fixed
-   px distance either undershoots on a tall phone screen (top overscroll
-   reads as dark, reported 2026-08-14) or overshoots on a short one. `50vh`
-   ties the fade to the actual viewport instead of either the page's length
-   or a guessed pixel count — top-of-screen overscroll always lands on the
-   light half of the fade, bottom-of-screen overscroll is always well past
-   it into flat ink, on any device. */
+   everything else). Tried a light-top/dark-bottom gradient here (both a
+   fixed-px and a 50vh fade, 2026-08-14) — both fought mobile browsers'
+   dynamic viewport-chrome resizing (`vh` shrinks/grows as the URL bar
+   shows/hides) and produced a visible seam in the wrong place rather than
+   a clean split. Flat --ascension-ink is the reliable choice: no seam is
+   possible since there's nothing to mis-time. */
 body {
   min-width: 320px;
-  background: linear-gradient(180deg, var(--ascension-ink-soft) 0%, var(--ascension-ink) 50vh);
+  background: var(--ascension-ink);
 }
 
 /* Every gear/currency icon in the game now renders as a real <img> (see
@@ -289,22 +286,17 @@ img {
   animation: ascension-glow-pulse 3s infinite alternate ease-in-out;
 }
 
-/* GameShell's page background — a `circle_at_top` radial-gradient sized to
-   the element's own box scales its fade distance to the page's total
-   height, which on a long stacked-card page (Combat's Fighting/Switchee/
-   Zone&Monster/Inventory cards) means the gradient hasn't finished fading
-   to the dark --ascension-ink endpoint until literally the bottom of the
-   page — everywhere above that shows a lingering lighter blend, reported
-   as a "light grey" band below the fold. A fixed px fade distance fixes
-   that but doesn't scale across device screen heights (undershoots on a
-   tall phone, overshoots on a short one). `50vh` ties the fade to the
-   actual viewport instead of either the page's length or a guessed pixel
-   count — always a clean top-half-light/bottom-half-dark split on any
-   device, same idea as body's own background further up this file. */
+/* GameShell's page background. Tried a `circle_at_top` radial-gradient
+   fading to --ascension-ink here (sized to the element's own box, then to
+   a fixed px distance, then to 50vh, 2026-08-14) — every version either
+   left a lingering lighter blend far down a long stacked-card page, or hit
+   mobile browsers' dynamic viewport-chrome resizing and put the seam in
+   the wrong place. Flat --ascension-ink is the reliable choice: the
+   header's own background already carries the "light" chrome at the top
+   of the screen, so the content area behind the cards doesn't need its
+   own separate fade to read correctly. */
 .ascension-page-bg {
-  background:
-    radial-gradient(circle at top, var(--ascension-ink-soft), transparent 50vh),
-    var(--ascension-ink);
+  background: var(--ascension-ink);
 }
 
 /* Thin metallic gold-to-steel gradient frame + inset dark panel — the

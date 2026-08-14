@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.91.13",
+    "date": "2026-08-14",
+    "changes": [
+      "Simplified the page's true background to a single flat dark color — the light-to-dark fade kept landing in the wrong place on mobile as the browser's address bar showed/hid, so it's no longer worth the visible seam risk"
+    ]
+  },
+  {
     "version": "1.91.12",
     "date": "2026-08-14",
     "changes": [
