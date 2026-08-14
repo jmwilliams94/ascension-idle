@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.92.21",
+    "date": "2026-08-14",
+    "changes": [
+      "Restyled the mobile Tavern pop-out menu to match the app's gold/steel theme instead of a plain flat box"
+    ]
+  },
+  {
     "version": "1.92.20",
     "date": "2026-08-14",
     "changes": [

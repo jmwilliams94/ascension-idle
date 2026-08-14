@@ -144,33 +144,35 @@ function TavernNavButton({ badges }: { badges: Partial<Record<TabId, number>> })
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 14 }}
             transition={{ duration: 0.18, ease: 'easeOut' }}
-            className="absolute bottom-full mb-2 flex flex-col items-stretch gap-1 rounded-xl border border-slate-800 bg-slate-950/95 p-1.5 shadow-xl shadow-black/60"
+            className="ascension-chip-frame absolute bottom-full mb-2 shadow-xl shadow-black/60"
           >
-            {TAVERN_ITEMS.map((item) => {
-              const icon = TAB_ICONS[item.id]
-              const badge = badges[item.id]
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    setActiveTab(item.id)
-                    setExpanded(false)
-                  }}
-                  className={`relative flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-left text-xs font-medium ${
-                    activeTab === item.id ? 'bg-amber-500/10 text-amber-300' : 'text-slate-300 hover:bg-slate-800'
-                  }`}
-                >
-                  {icon && <NavIconGlyph icon={icon} />}
-                  {item.label}
-                  {Boolean(badge) && (
-                    <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-bold text-slate-950">
-                      {badge! > 99 ? '99+' : badge}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
+            <div className="ascension-chip-inner flex flex-col items-stretch gap-0.5 p-1">
+              {TAVERN_ITEMS.map((item) => {
+                const icon = TAB_ICONS[item.id]
+                const badge = badges[item.id]
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(item.id)
+                      setExpanded(false)
+                    }}
+                    className={`relative flex items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-left text-xs font-medium ${
+                      activeTab === item.id ? 'bg-amber-500/10 text-amber-300' : 'text-slate-300 hover:bg-slate-800/80'
+                    }`}
+                  >
+                    {icon && <NavIconGlyph icon={icon} sizeClassName="h-5 w-5" />}
+                    {item.label}
+                    {Boolean(badge) && (
+                      <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-bold text-slate-950">
+                        {badge! > 99 ? '99+' : badge}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
