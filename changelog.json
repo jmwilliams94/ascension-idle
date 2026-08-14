@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.91.11",
+    "date": "2026-08-14",
+    "changes": [
+      "Fixed a lingering lighter-grey band on long pages (like Combat's stacked cards) — the background now fades to its dark tone within a fixed distance of the top instead of stretching across the whole page"
+    ]
+  },
+  {
     "version": "1.91.10",
     "date": "2026-08-14",
     "changes": [

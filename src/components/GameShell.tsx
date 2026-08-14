@@ -305,7 +305,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
   usePersistGameState(characterId, loaded)
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_var(--ascension-ink-soft),_var(--ascension-ink)_70%)] text-slate-100">
+    <div className="ascension-page-bg min-h-screen text-slate-100">
       <header className="ascension-edge-b bg-[linear-gradient(180deg,_var(--ascension-ink-soft)_0%,_var(--ascension-ink)_100%)]">
         {/* Single row at every viewport size — no flex-wrap. "Idle Combat"
             removed entirely (it was redundant with the tab the player is

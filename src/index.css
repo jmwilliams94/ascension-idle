@@ -23,9 +23,20 @@ body,
   min-height: 100%;
 }
 
+/* A 0%-100% gradient sized to body's own (potentially very long,
+   multi-viewport-tall) box would only finish fading to the dark
+   --ascension-ink endpoint at the literal bottom of the page — everywhere
+   above that keeps showing a lingering lighter blend, which is exactly the
+   "light grey" band reported below the fold on a tall page like Combat's
+   stacked cards. Capping the fade at a fixed 220px instead means it always
+   resolves to flat --ascension-ink well before the header ends, regardless
+   of how long the rest of the page is — matching GameShell's own
+   .ascension-page-bg fade below. */
 body {
   min-width: 320px;
-  background: linear-gradient(180deg, var(--ascension-ink-soft) 0%, var(--ascension-ink) 100%);
+  background:
+    linear-gradient(180deg, var(--ascension-ink-soft) 0, transparent 220px),
+    var(--ascension-ink);
 }
 
 /* Every gear/currency icon in the game now renders as a real <img> (see
@@ -276,6 +287,23 @@ img {
 
 .ascension-glow-pulse {
   animation: ascension-glow-pulse 3s infinite alternate ease-in-out;
+}
+
+/* GameShell's page background (2026-08-14 fix) — a `circle_at_top`
+   radial-gradient sized to the element's own box (the old approach) scales
+   its fade distance to the page's total height, which on a long stacked-
+   card page (Combat's Fighting/Switchee/Zone&Monster/Inventory cards) means
+   the gradient hasn't finished fading to the dark --ascension-ink endpoint
+   until literally the bottom of the page — everywhere above that shows a
+   lingering lighter blend, reported as a "light grey" band below the fold.
+   Capping the fade at a fixed 650px instead means it always resolves to
+   flat ink well before the header/HUD strip ends, regardless of how long
+   the rest of the page's card stack is. Same fixed-distance-fade idea as
+   body's own background further up this file. */
+.ascension-page-bg {
+  background:
+    radial-gradient(circle at top, var(--ascension-ink-soft), transparent 650px),
+    var(--ascension-ink);
 }
 
 /* Thin metallic gold-to-steel gradient frame + inset dark panel — the
