@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import EquipmentSlot from './EquipmentSlot'
 import { AscensionCard } from './ui/AscensionCard'
 import { Button } from './ui/Button'
@@ -86,6 +86,16 @@ export default function EquipmentPanel() {
 
   const selected = selectedSlot ? findEquipped(selectedSlot) : null
 
+  // Same onError-fallback fix as InventorySlot.tsx/EquipmentSlot.tsx (see
+  // their comments for the full root cause): this detail card renders its
+  // own third, inline copy of the iconSrc-over-icon gear icon, so it needs
+  // its own copy of the failure tracking too. Reset whenever the selected
+  // item changes so a stale failure doesn't stick to a different item.
+  const [detailIconLoadFailed, setDetailIconLoadFailed] = useState(false)
+  useEffect(() => {
+    setDetailIconLoadFailed(false)
+  }, [selected?.item.id])
+
   return (
     <div className="space-y-4">
       <AscensionCard>
@@ -165,8 +175,13 @@ export default function EquipmentPanel() {
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-lg"
               style={{ borderColor: getQualityColor(selected.item.quality_tier) }}
             >
-              {getGearIconSrc(selected.template.name) ? (
-                <img src={getGearIconSrc(selected.template.name)} alt="" className="h-4/5 w-4/5 object-contain" />
+              {getGearIconSrc(selected.template.name) && !detailIconLoadFailed ? (
+                <img
+                  src={getGearIconSrc(selected.template.name)}
+                  alt=""
+                  className="h-4/5 w-4/5 object-contain"
+                  onError={() => setDetailIconLoadFailed(true)}
+                />
               ) : (
                 getItemIcon(selected.template.slot_type)
               )}

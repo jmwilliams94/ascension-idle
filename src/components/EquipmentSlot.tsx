@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import HoverTooltip from './HoverTooltip'
 import ItemTooltip from './ItemTooltip'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
@@ -50,6 +51,18 @@ export default function EquipmentSlot({
   tooltip,
   sizeClassName = 'h-16 w-16',
 }: EquipmentSlotProps) {
+  // Same fix as InventorySlot.tsx's own iconLoadFailed state — this is a
+  // separate, bespoke tile component (not built on InventorySlot, see the
+  // tooltip note above), so it needs its own independent copy of the same
+  // onError-fallback wiring. See InventorySlot.tsx for the full root-cause
+  // comment: no <img> anywhere in this app previously had error handling, so
+  // a genuinely failed image load rendered the *browser's own* native broken-
+  // image glyph, which differs visibly between mobile and desktop browsers.
+  const [iconLoadFailed, setIconLoadFailed] = useState(false)
+  useEffect(() => {
+    setIconLoadFailed(false)
+  }, [iconSrc])
+  const showIconImage = Boolean(iconSrc) && !iconLoadFailed
   // Fixed pixel size rather than aspect-square/w-full — this tile sits inside a
   // grid cell whose column can be much wider than the tile itself (the columns are
   // percentage-based so the paper-doll's positions stay proportional), so sizing
@@ -87,7 +100,16 @@ export default function EquipmentSlot({
       style={filled ? { borderColor: qualityColor, backgroundColor: qualityColor ? `${qualityColor}22` : undefined } : undefined}
     >
       {emberCount > 0 && <TierEmberEffect color={qualityColor as string} count={emberCount} seed={seedFromId(label)} />}
-      {iconSrc ? <img src={iconSrc} alt="" className="relative z-10 h-4/5 w-4/5 object-contain" /> : <span className="relative z-10">{icon}</span>}
+      {showIconImage ? (
+        <img
+          src={iconSrc}
+          alt=""
+          className="relative z-10 h-4/5 w-4/5 object-contain"
+          onError={() => setIconLoadFailed(true)}
+        />
+      ) : (
+        <span className="relative z-10">{icon}</span>
+      )}
       {filled && broken && (
         <span className="absolute left-1.5 top-1 z-10 text-[15px] leading-none text-red-500" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}>
           🛡

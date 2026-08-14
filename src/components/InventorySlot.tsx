@@ -1,4 +1,4 @@
-import type { DragEvent, PointerEvent } from 'react'
+import { useEffect, useState, type DragEvent, type PointerEvent } from 'react'
 import CompareTooltipRow from './CompareTooltipRow'
 import HoverTooltip from './HoverTooltip'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
@@ -140,6 +140,24 @@ export default function InventorySlot({
   sizeClassName = '',
   emptyHint,
 }: InventorySlotProps) {
+  // No <img> in this app has ever had error handling — a genuinely failed
+  // image load (bad path, or a stale PWA service-worker cache still pointing
+  // at an old asset, see CLAUDE.pwa-and-mobile.md) just leaves the bare <img>
+  // in the DOM, so the *browser's own* native "broken image" glyph renders.
+  // That glyph looks meaningfully different across mobile vs desktop
+  // browsers — which is exactly the "mobile fallback doesn't match desktop"
+  // symptom, even though this component's own code path is identical on
+  // both. Tracking load failure here lets a failed image fall through to the
+  // same emoji `icon` span used when `iconSrc` isn't set at all, so both
+  // platforms show one consistent, app-controlled fallback instead of
+  // whatever the host browser does on its own. Reset whenever `iconSrc`
+  // itself changes (e.g. this slot id gets reused for a different item)
+  // so a stale failure doesn't stick to a since-fixed/replaced icon.
+  const [iconLoadFailed, setIconLoadFailed] = useState(false)
+  useEffect(() => {
+    setIconLoadFailed(false)
+  }, [iconSrc])
+  const showIconImage = Boolean(iconSrc) && !iconLoadFailed
   // Mutually exclusive, not additive — sizeClassName sets its own width/height
   // (e.g. SLOT_SIZE_CLASS), so it must fully replace aspect-square/w-full rather
   // than sit alongside them. Both classes set `width`, and which one wins would
@@ -195,7 +213,16 @@ export default function InventorySlot({
       style={{ borderColor: qualityColor, backgroundColor: qualityColor ? `${qualityColor}22` : undefined }}
     >
       {emberCount > 0 && <TierEmberEffect color={qualityColor as string} count={emberCount} seed={seedFromId(slotId)} />}
-      {iconSrc ? <img src={iconSrc} alt="" className={`relative z-10 object-contain ${iconSizeClassName}`} /> : <span className="relative z-10">{icon}</span>}
+      {showIconImage ? (
+        <img
+          src={iconSrc}
+          alt=""
+          className={`relative z-10 object-contain ${iconSizeClassName}`}
+          onError={() => setIconLoadFailed(true)}
+        />
+      ) : (
+        <span className="relative z-10">{icon}</span>
+      )}
       {broken && (
         <span className="absolute left-1.5 top-1 z-10 text-[15px] leading-none text-red-500" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}>
           🛡
