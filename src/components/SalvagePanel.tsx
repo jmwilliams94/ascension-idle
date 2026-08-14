@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { motion } from 'framer-motion'
 import ForgeTwoColumnLayout from './ForgeTwoColumnLayout'
 import InventoryPanel from './InventoryPanel'
@@ -6,7 +6,16 @@ import InventorySlot, { SLOT_LABEL_HEIGHT_CLASS, SLOT_SIZE_CLASS, SLOT_WIDTH_CLA
 import { DragDropProvider } from './dragDrop'
 import { useDraggableTile, useIsDropTarget } from './dragDropContext'
 import { AscensionCard } from './ui/AscensionCard'
-import { buildGearTooltip, formatItemDisplayName, formatItemLevel, getGearIconSrc, getItemIcon, getQualityColor, previewSalvageApValue } from '../game/items/equipmentBonus'
+import {
+  buildGearTooltip,
+  formatItemDisplayName,
+  formatItemLevel,
+  getGearIconSrc,
+  getItemIcon,
+  getQualityColor,
+  previewSalvageApValue,
+  QUALITY_COLORS,
+} from '../game/items/equipmentBonus'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
 import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemTemplatesStore'
@@ -27,6 +36,20 @@ const BULK_TIER_LABEL: Record<BulkSalvageTier, string> = {
   tempered: 'Tempered',
   infused: 'Infused',
   radiant: 'Radiant',
+}
+
+// .btn-glow color stops per bulk-salvage tier (2026-08-14, requested by the
+// user — these buttons should get the same press-feedback treatment as
+// LuckyLad's purple/emerald buttons, in each tier's own quality color rather
+// than the flat purple every tier previously shared). `base` is the same
+// hex as QUALITY_COLORS so the idle border/label matches a gear tile's own
+// tier color exactly; bright/dark are hand-picked lighter/darker steps for
+// the hover/press gradient, same relationship .btn-gold's own three
+// ascension-gold stops have to each other.
+const BULK_TIER_GLOW: Record<BulkSalvageTier, { bright: string; base: string; dark: string }> = {
+  tempered: { bright: '#7dd3fc', base: QUALITY_COLORS.tempered, dark: '#0369a1' },
+  infused: { bright: '#5b8fd9', base: QUALITY_COLORS.infused, dark: '#1e3a6e' },
+  radiant: { bright: '#c084fc', base: QUALITY_COLORS.radiant, dark: '#7e22ce' },
 }
 
 // Bulk salvage runs the exact same per-item animation as a single salvage
@@ -305,9 +328,19 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
               type="button"
               disabled={phase !== 'idle' || group.items.length === 0}
               onClick={() => void handleBulkSalvage(group.tier)}
-              className="flex w-full items-center justify-between gap-2 rounded-lg border border-purple-800/60 bg-purple-500/5 px-3 py-2 text-left hover:bg-purple-500/10 disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-transparent"
+              style={
+                {
+                  '--glow-bright': BULK_TIER_GLOW[group.tier].bright,
+                  '--glow-base': BULK_TIER_GLOW[group.tier].base,
+                  '--glow-dark': BULK_TIER_GLOW[group.tier].dark,
+                } as CSSProperties
+              }
+              className="btn-glow flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left disabled:cursor-not-allowed"
             >
-              <span className={`text-xs font-medium ${group.items.length === 0 ? 'text-slate-600' : 'text-purple-300'}`}>
+              <span
+                className="text-xs font-medium"
+                style={{ color: group.items.length === 0 ? '#475569' : BULK_TIER_GLOW[group.tier].base }}
+              >
                 Salvage All {BULK_TIER_LABEL[group.tier]} ({group.items.length})
               </span>
               <span className="shrink-0 text-[10px] text-slate-500">

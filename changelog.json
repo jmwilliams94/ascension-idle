@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.92.7",
+    "date": "2026-08-14",
+    "changes": [
+      "LuckyLad's Ascension Points and Bulk Draw buttons, and Salvage's Tempered/Infused/Radiant bulk buttons, now flash a bright colored glow on click/tap (matching gear's own quality colors for Salvage), same feedback style as the game's gold buttons"
+    ]
+  },
+  {
     "version": "1.92.6",
     "date": "2026-08-14",
     "changes": [

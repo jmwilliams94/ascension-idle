@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { motion } from 'framer-motion'
 import {
   useLuckyStore,
@@ -511,7 +511,8 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
               type="button"
               disabled={busy || !canAffordPoints}
               onClick={() => setPaymentChoice('ascension_points')}
-              className="flex flex-1 flex-col items-center justify-center gap-0.5 rounded-lg border border-purple-500 bg-purple-500/10 px-4 py-2.5 text-center font-heading text-sm font-bold uppercase leading-tight tracking-[0.12em] text-purple-300 transition hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+              style={{ '--glow-bright': '#c084fc', '--glow-base': '#a855f7', '--glow-dark': '#7e22ce' } as CSSProperties}
+              className="btn-glow flex flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-4 py-2.5 text-center font-heading text-sm font-bold uppercase leading-tight tracking-[0.12em] disabled:cursor-not-allowed"
             >
               <span>One</span>
               <span>Entry</span>
@@ -528,7 +529,8 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
               type="button"
               disabled={busy || !canAffordBulk}
               onClick={() => void handleBulkDraw()}
-              className="flex flex-1 flex-col items-center justify-center gap-0.5 rounded-lg border border-emerald-500 bg-emerald-500/10 px-4 py-2.5 text-center font-heading text-sm font-bold uppercase leading-tight tracking-[0.12em] text-emerald-300 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+              style={{ '--glow-bright': '#34d399', '--glow-base': '#10b981', '--glow-dark': '#047857' } as CSSProperties}
+              className="btn-glow flex flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-4 py-2.5 text-center font-heading text-sm font-bold uppercase leading-tight tracking-[0.12em] disabled:cursor-not-allowed"
             >
               <span>9 for 8</span>
               <span className="text-[10px] font-normal normal-case tracking-normal text-emerald-300/70">{LUCKY_BULK_AP_COST} AP</span>

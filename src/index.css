@@ -362,6 +362,34 @@ img {
   opacity: 0.4;
 }
 
+/* Colored variant of .btn-gold's idle-dark/hover-bright-gradient-plus-glow
+   treatment (2026-08-14, requested by the user — LuckyLad's purple/emerald
+   payment buttons and Salvage's per-tier Tempered/Infused/Radiant buttons
+   should get the same press feedback .btn-gold gives Fight/Buy/Confirm, just
+   in their own color). One shared rule rather than one class per color — the
+   three gradient stops and glow color come from --glow-bright/--glow-base/
+   --glow-dark, set inline per button. Fires on :active as well as :hover
+   (unlike .btn-gold, which only needs :hover since it's the sole always-
+   present CTA) so it reads as a real press on touch, where :hover alone can
+   linger after the tap instead of releasing. */
+.btn-glow {
+  background: linear-gradient(180deg, #1c1c24 0%, #0e0e14 100%);
+  border: 1px solid var(--glow-base);
+  color: var(--glow-bright);
+  transition: all 0.2s ease;
+}
+
+.btn-glow:hover:not(:disabled),
+.btn-glow:active:not(:disabled) {
+  background: linear-gradient(180deg, var(--glow-bright) 0%, var(--glow-base) 60%, var(--glow-dark) 100%);
+  color: var(--ascension-ink);
+  box-shadow: 0 0 20px var(--glow-base);
+}
+
+.btn-glow:disabled {
+  opacity: 0.4;
+}
+
 /* Horizontal gold/steel/gold edge line (2026-08-14) — same three-stop
    palette as .ascension-card-frame's vertical gradient, rotated 90° for a
    straight top/bottom rule rather than a boxed panel. Used where a card-
