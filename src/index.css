@@ -341,6 +341,20 @@ img {
   z-index: 1;
 }
 
+/* Large ribbon variant (2026-08-14, requested by the user — LuckyLad's own
+   heading "increased by about double," then Forge/Market/Shop/Bank given a
+   "large one like Lucky Lad") — same floating-ribbon shape, just sized (and
+   re-centered via a bigger negative `top`) for the roughly-2x h3 font size
+   AscensionCard's titleSize="large" pairs this with. Page-identity headers
+   only (one per top-level tab); in-page section titles (Zone & Monster,
+   Storage, Achievements, ...) stay on the plain .ascension-card-ribbon size. */
+.ascension-card-ribbon-lg {
+  top: -22px;
+  gap: 10px;
+  padding: 6px 20px;
+  border-radius: 6px;
+}
+
 /* Gold CTA button — dark-gold idle state, full gradient + glow on hover.
    Layout/sizing (padding, rounding, tracking) stays as Tailwind utility
    classes on the consuming <button>; this class only owns the color

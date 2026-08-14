@@ -16,6 +16,7 @@ import { useEquipmentStore, type EquipSlot } from '../game/items/useEquipmentSto
 import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemTemplatesStore'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
+import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 
 // Slot size for this paper-doll — scaled up from the default h-16 w-16 now that
 // there's no central character placeholder competing for room (see below).
@@ -74,6 +75,7 @@ export default function EquipmentPanel() {
   const templates = useItemTemplatesStore((state) => state.templates)
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
   const isHunter = selectedClassId === 'hunter'
+  const characterName = useCharacterRecordStore((state) => state.characterName)
 
   const [selectedSlot, setSelectedSlot] = useState<EquipSlot | null>(null)
 
@@ -98,7 +100,7 @@ export default function EquipmentPanel() {
 
   return (
     <div className="space-y-4">
-      <AscensionCard>
+      <AscensionCard title={characterName || 'Character'}>
       <div
         className="mx-auto grid max-w-sm gap-x-2 gap-y-3 lg:gap-x-3 lg:gap-y-4"
         style={{

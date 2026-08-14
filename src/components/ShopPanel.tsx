@@ -221,6 +221,7 @@ export default function ShopPanel() {
   }
 
   return (
+    <AscensionCard title="Shop" titleSize="large">
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="space-y-3">
         {/* One row of 5 (2026-08-14, requested by the user) — was grid-cols-3,
@@ -457,5 +458,6 @@ export default function ShopPanel() {
         <InventoryPanel columns={5} enableSelling />
       </AscensionCard>
     </div>
+    </AscensionCard>
   )
 }

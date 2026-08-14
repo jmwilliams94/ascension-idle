@@ -24,7 +24,8 @@ export default function BankPanel({ characterId }: { characterId: string }) {
   const [view, setView] = useState<BankView>('inventory')
 
   return (
-    <div className="space-y-4">
+    <AscensionCard title="Bank" titleSize="large">
+      <div className="space-y-4">
       <div className="grid grid-cols-2 gap-2 lg:max-w-xs">
         {view === 'inventory' ? (
           <button
@@ -92,6 +93,7 @@ export default function BankPanel({ characterId }: { characterId: string }) {
           <BankSquares characterId={characterId} onWithdrawLandedInInventory={() => setView('inventory')} />
         </div>
       </div>
-    </div>
+      </div>
+    </AscensionCard>
   )
 }

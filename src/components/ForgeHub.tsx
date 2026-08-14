@@ -72,24 +72,26 @@ interface ForgeHubProps {
 
 export default function ForgeHub({ onSelect }: ForgeHubProps) {
   return (
-    <div className="mx-auto grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-3">
-      {FORGE_TILES.map((tile) => (
-        <button
-          key={tile.mode}
-          type="button"
-          onClick={() => onSelect(tile.mode)}
-          className="group text-left transition hover:-translate-y-0.5"
-        >
-          <AscensionCard
-            className="h-full transition group-hover:shadow-[0_0_18px_rgba(212,175,55,0.25)]"
-            contentClassName="flex min-h-40 flex-col items-center gap-2 p-5 text-center"
+    <AscensionCard title="Forge" titleSize="large" className="mx-auto max-w-3xl">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {FORGE_TILES.map((tile) => (
+          <button
+            key={tile.mode}
+            type="button"
+            onClick={() => onSelect(tile.mode)}
+            className="group text-left transition hover:-translate-y-0.5"
           >
-            <img src={tile.iconSrc} alt="" className={`${tile.iconClassName ?? 'h-14 w-14'} object-contain`} />
-            <span className="font-heading text-sm font-semibold text-slate-200">{tile.title}</span>
-            <span className="text-[11px] leading-snug text-slate-500">{tile.description}</span>
-          </AscensionCard>
-        </button>
-      ))}
-    </div>
+            <AscensionCard
+              className="h-full transition group-hover:shadow-[0_0_18px_rgba(212,175,55,0.25)]"
+              contentClassName="flex min-h-40 flex-col items-center gap-2 p-5 text-center"
+            >
+              <img src={tile.iconSrc} alt="" className={`${tile.iconClassName ?? 'h-14 w-14'} object-contain`} />
+              <span className="font-heading text-sm font-semibold text-slate-200">{tile.title}</span>
+              <span className="text-[11px] leading-snug text-slate-500">{tile.description}</span>
+            </AscensionCard>
+          </button>
+        ))}
+      </div>
+    </AscensionCard>
   )
 }

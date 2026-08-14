@@ -842,6 +842,7 @@ export default function MarketplacePanel() {
   }
 
   return (
+    <AscensionCard title="Market" titleSize="large">
     <div className="space-y-3">
       <div className="grid grid-cols-3 gap-2">
         {tab === 'browse' ? (
@@ -893,5 +894,6 @@ export default function MarketplacePanel() {
       {tab === 'my-listings' && <MyListingsTab characterId={characterId} templates={templates} />}
       {tab === 'mail' && <MailTab characterId={characterId} templates={templates} />}
     </div>
+    </AscensionCard>
   )
 }

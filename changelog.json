@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.92.11",
+    "date": "2026-08-14",
+    "changes": [
+      "In-page section headings (like \"Zone & Monster\") are a bit bigger everywhere",
+      "Added a large page-title heading to Forge, Market, Shop, and Bank, matching LuckyLad's own — and doubled LuckyLad's own heading to match",
+      "Added \"Idling\" and \"Equipment\" title headings to the Combat and Equipment tabs, and a Character-Name heading to the gear paper-doll (replacing the plain name text above it)",
+      "Doubled the character name's font size on the Combat tab's HP card"
+    ]
+  },
+  {
     "version": "1.92.10",
     "date": "2026-08-14",
     "changes": [

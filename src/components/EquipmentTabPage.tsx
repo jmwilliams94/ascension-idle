@@ -2,7 +2,6 @@ import EquipmentPanel from './EquipmentPanel'
 import StatsPanel from './StatsPanel'
 import InventoryPanel from './InventoryPanel'
 import { AscensionCard } from './ui/AscensionCard'
-import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 
 // Combines what used to be split across the Equipment overlay (the paper-doll)
 // and the always-visible SideHud sidebar (EquipmentBar/Stats) into one page,
@@ -32,11 +31,8 @@ import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 // InventoryPanel's own doc comment on that prop). Equipment-tab-only, by
 // design — CombatPage's own Inventory copies don't pass this.
 export default function EquipmentTabPage() {
-  const characterName = useCharacterRecordStore((state) => state.characterName)
-
   return (
-    <div className="space-y-4">
-      <p className="text-lg font-semibold text-white">{characterName}</p>
+    <AscensionCard title="Equipment">
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <EquipmentPanel />
@@ -46,6 +42,6 @@ export default function EquipmentTabPage() {
           <InventoryPanel columns={5} equipPopoverEnabled enableCompareToggle />
         </AscensionCard>
       </div>
-    </div>
+    </AscensionCard>
   )
 }

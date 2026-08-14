@@ -202,7 +202,7 @@ export default function CombatPage() {
   }
 
   return (
-    <>
+    <AscensionCard title="Idling">
       {/* Mobile-only layout (below `lg`) — action area (monster/player HP,
           Fight/Stop, Consumable) prioritized at the top since that's what's
           looked at moment-to-moment; Zone/Monster picker below it (still
@@ -281,7 +281,13 @@ export default function CombatPage() {
 
         {activeType && (
           <AscensionCard>
-            <p className="text-heading-label">{characterName}</p>
+            {/* Doubled from the shared .text-heading-label 0.7rem base
+                (2026-08-14, requested by the user) — inline style, not a
+                Tailwind text-size utility, so it reliably wins over the
+                class's own font-size regardless of generated CSS order. */}
+            <p className="text-heading-label" style={{ fontSize: '1.4rem' }}>
+              {characterName}
+            </p>
             <div className="relative mt-1">
               <p className="text-xs text-slate-500">
                 {currentPlayerHp} / {maxPlayerHp} HP
@@ -479,7 +485,13 @@ export default function CombatPage() {
 
         {activeType && (
           <AscensionCard>
-            <p className="text-heading-label">{characterName}</p>
+            {/* Doubled from the shared .text-heading-label 0.7rem base
+                (2026-08-14, requested by the user) — inline style, not a
+                Tailwind text-size utility, so it reliably wins over the
+                class's own font-size regardless of generated CSS order. */}
+            <p className="text-heading-label" style={{ fontSize: '1.4rem' }}>
+              {characterName}
+            </p>
             <div className="relative mt-1">
               <p className="text-xs text-slate-500">
                 {currentPlayerHp} / {maxPlayerHp} HP
@@ -609,6 +621,6 @@ export default function CombatPage() {
         </AscensionCard>
       </div>
       </div>
-    </>
+    </AscensionCard>
   )
 }
