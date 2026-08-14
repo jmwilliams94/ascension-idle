@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.92.24",
+    "date": "2026-08-15",
+    "changes": [
+      "Added real monster art for all 5 Rimehollow monsters (Rime Serpent, Serpent Herald, Serpent Warden, Fiend Sovereign, Frostblade Fiend) — every zone now has full monster art"
+    ]
+  },
+  {
     "version": "1.92.23",
     "date": "2026-08-15",
     "changes": [
