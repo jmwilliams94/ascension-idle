@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useMoneyBagRevealStore } from '../game/items/useMoneyBagRevealStore'
 import { GEM_TYPES, getGemIconSrc, getGemTierColor, formatGemTierLabel } from '../game/items/gemTypes'
 import { buildConfettiEmbers, seedFromId } from '../game/items/tierEffectsData'
+import { COMET_ICON_SRC, MATERIAL_COLOR } from '../game/items/forgeCosts'
 
 // The "what did I just open" reveal for a Money Bag/Gem Bag's Open action
 // (Lucky Lad rewards expansion, 2026-08-09) — see useMoneyBagRevealStore.
@@ -20,6 +21,12 @@ import { buildConfettiEmbers, seedFromId } from '../game/items/tierEffectsData'
 // roomier than it needed to be; not shrunk all the way to
 // SalvageRevealToast's own tighter padding since this one still needs to
 // fit an optional two-line title+subtitle (gem reveals), not just one line.
+//
+// Also shown directly from a Lucky Lad draw for the 'comet_box' reward kind
+// (2026-08-21) — that one has no separate "open" step (it's an instant
+// currency grant, not an item), so LuckyPanel.tsx's handleOpen calls show()
+// itself right after a winning draw, same as InventoryPanel's handleOpenBag
+// does for gold/gem.
 
 const REVEAL_DISPLAY_MS = 2800
 const GOLD_BURST_COLOR = '#FFD700'
@@ -77,9 +84,18 @@ export default function MoneyBagRevealModal() {
   }, [reveal, dismiss])
 
   const isGem = reveal?.kind === 'gem'
-  const color = !reveal ? undefined : isGem ? getGemTierColor(reveal.tier) : GOLD_BURST_COLOR
-  const seed = reveal ? seedFromId(isGem ? `gem:${reveal.gemId}:${reveal.tier}` : `gold:${reveal.amount}`) : 0
-  const title = !reveal ? '' : isGem ? `${formatGemTierLabel(reveal.tier)} ${GEM_TYPES[reveal.gemId].displayName}` : 'Gold'
+  const isCometBox = reveal?.kind === 'comet_box'
+  const color = !reveal ? undefined : isGem ? getGemTierColor(reveal.tier) : isCometBox ? MATERIAL_COLOR : GOLD_BURST_COLOR
+  const seed = reveal
+    ? seedFromId(isGem ? `gem:${reveal.gemId}:${reveal.tier}` : isCometBox ? `comet-box:${reveal.amount}` : `gold:${reveal.amount}`)
+    : 0
+  const title = !reveal
+    ? ''
+    : isGem
+      ? `${formatGemTierLabel(reveal.tier)} ${GEM_TYPES[reveal.gemId].displayName}`
+      : isCometBox
+        ? `+${reveal.amount.toLocaleString()} Comets`
+        : 'Gold'
   const subtitle = isGem && reveal.kind === 'gem' ? `${GEM_TYPES[reveal.gemId].effectLabel} +${GEM_TYPES[reveal.gemId].percentByTier[reveal.tier]}%` : null
 
   return (
@@ -102,6 +118,8 @@ export default function MoneyBagRevealModal() {
             >
               {isGem && reveal.kind === 'gem' ? (
                 <img src={getGemIconSrc(reveal.gemId, reveal.tier)} alt="" className="h-4/5 w-4/5 object-contain" />
+              ) : isCometBox ? (
+                <img src={COMET_ICON_SRC} alt="" className="h-4/5 w-4/5 object-contain" />
               ) : reveal?.kind === 'gold' && reveal.iconSrc ? (
                 <img src={reveal.iconSrc} alt="" className="h-4/5 w-4/5 object-contain" />
               ) : (

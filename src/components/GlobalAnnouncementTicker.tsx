@@ -3,7 +3,7 @@ import { useGlobalActivityStore } from '../game/social/useGlobalActivityStore'
 import { useAnnouncementHistoryStore } from '../game/social/useAnnouncementHistoryStore'
 import { getGearIconSrc } from '../game/items/equipmentBonus'
 import { getGemIconSrc, type GemTier, type GemTypeId } from '../game/items/gemCatalog'
-import { COMET_SCROLL_ICON_SRC, FALLEN_STAR_SCROLL_ICON_SRC, FALLEN_STAR_ICON_SRC } from '../game/items/forgeCosts'
+import { COMET_SCROLL_ICON_SRC, FALLEN_STAR_SCROLL_ICON_SRC, FALLEN_STAR_ICON_SRC, COMET_ICON_SRC } from '../game/items/forgeCosts'
 
 // Emoji fallback, kept for any kind resolveAnnouncementIconSrc can't turn
 // into a real icon (an unrecognized future kind, or a gear name that isn't
@@ -11,6 +11,7 @@ import { COMET_SCROLL_ICON_SRC, FALLEN_STAR_SCROLL_ICON_SRC, FALLEN_STAR_ICON_SR
 // below can reuse the same fallback map instead of a second copy.
 export const ANNOUNCEMENT_ICONS: Record<string, string> = {
   armor_socket: '💠',
+  lucky_comet_box: '☄️',
   lucky_comet_scroll: '🎰',
   lucky_fallen_star_scroll: '🎰',
   lucky_fallen_star: '🌠',
@@ -44,6 +45,8 @@ function resolveAnnouncementIconSrc(kind: string, message: string): string | und
       const match = message.match(/'s (.+) gained its (?:1st|2nd) socket!$/)
       return match ? getGearIconSrc(match[1]) : undefined
     }
+    case 'lucky_comet_box':
+      return COMET_ICON_SRC
     case 'lucky_comet_scroll':
       return COMET_SCROLL_ICON_SRC
     case 'lucky_fallen_star_scroll':

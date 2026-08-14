@@ -14,13 +14,14 @@ export const LUCKY_TICKET_ITEM_COST = 1
 // migration's own header for the full write-up). The tab/mascot is named
 // "LuckyLad" (renamed from the plain "Lucky" label, 2026-08-03, confirmed
 // with the user, wording + mascot art only — TabId/route/store names are all
-// unchanged). Free draw every 6 hours, uncapped paid extras at a flat cost.
-// draw() is the whole mechanic in one call — eligibility, the blind 9-card
-// roll, granting the pick, and revealing the board all happen server-side
-// inside draw_lucky_ticket before anything is returned, so there's nothing
-// to inspect ahead of an irrevocable choice.
+// unchanged). Free draw every 4 hours (lowered from 6, requested by the
+// user), uncapped paid extras at a flat cost. draw() is the whole mechanic
+// in one call — eligibility, the blind 9-card roll, granting the pick, and
+// revealing the board all happen server-side inside draw_lucky_ticket before
+// anything is returned, so there's nothing to inspect ahead of an
+// irrevocable choice.
 export const LUCKY_TICKET_AP_COST = 20
-export const LUCKY_FREE_TICKET_COOLDOWN_MS = 6 * 60 * 60 * 1000
+export const LUCKY_FREE_TICKET_COOLDOWN_MS = 4 * 60 * 60 * 1000
 export const LUCKY_CARD_COUNT = 9
 
 // Real art (2026-08-03), user-supplied, same trim/pad/resize-to-160
@@ -46,9 +47,18 @@ export const CHEST_OPEN_ICON_SRC = `${BASE_URL}lucky-icons/chest-open.png`
 // entry — won or not — now carries its real specific gem, not a placeholder
 // "Tempered Gem"/"Ascended Gem" label. The original two weights were split
 // evenly 4 ways across drake/ember/bastion/iris in pick_lucky_reward.
+//
+// comet_box (2026-08-21, requested by the user) — a flat, instant +100
+// Comets, distinct from the plain 'comet' kind (+1 loose Comet). `amount` on
+// this kind carries the literal grant amount (100), unlike most other kinds
+// where `amount` means a tier/class index — see pick_lucky_reward's own
+// comment for the weight (1.0, PLACEHOLDER). Reveals via the same
+// center-screen MoneyBagRevealModal a Money Bag's gold/gem reveal uses (see
+// LuckyPanel.tsx's handleOpen), not the inline board tile alone.
 export type LuckyRewardKind =
   | 'gold'
   | 'comet'
+  | 'comet_box'
   | 'fallen_star'
   | 'comet_scroll'
   | 'fallen_star_scroll'
@@ -105,12 +115,12 @@ export interface DrawLuckyTicketResult {
 
 interface LuckyState {
   // Epoch ms the free ticket next becomes available — null means it's
-  // available right now (never claimed, or the 6h window has already passed).
+  // available right now (never claimed, or the 4h window has already passed).
   nextFreeTicketAt: number | null
   busy: boolean
   hydrate: (claimedAt: string | null) => void
   // useTicket (2026-08-06, Achievements rework) — a third, independent
-  // payment path alongside the free 6h cooldown and the 20-AP paid draw:
+  // payment path alongside the free 4h cooldown and the 20-AP paid draw:
   // consumes 1 Lottery Ticket instead, bypassing both the cooldown and AP
   // entirely. See draw_lucky_ticket's own p_use_ticket parameter.
   draw: (characterId: string, cardIndex: number, useTicket?: boolean) => Promise<DrawLuckyTicketResult>

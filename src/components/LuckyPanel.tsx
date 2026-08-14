@@ -35,6 +35,7 @@ import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
 import { AscensionCard } from './ui/AscensionCard'
 import { Button } from './ui/Button'
+import { useMoneyBagRevealStore } from '../game/items/useMoneyBagRevealStore'
 
 // Parses the gem type/tier back out of a gem_tempered_<id>/gem_ascended_<id>
 // reward kind (see useLuckyStore.ts's LuckyRewardKind for why the gem
@@ -48,8 +49,9 @@ function parseGemRewardKind(kind: LuckyRewardKind): { tier: GemTier; gemId: GemT
 }
 
 // Lucky — Stage 1 (confirmed design, see CLAUDE.md's Lucky section and the
-// draw_lucky_ticket migration's own header). A free ticket every 6 hours,
-// plus uncapped paid extras at LUCKY_TICKET_AP_COST Ascension Points each.
+// draw_lucky_ticket migration's own header). A free ticket every 4 hours
+// (lowered from 6, requested by the user), plus uncapped paid extras at
+// LUCKY_TICKET_AP_COST Ascension Points each.
 //
 // Payment-first flow (2026-08-10, requested by the user, supersedes the
 // earlier arm-a-card-then-Confirm/Cancel two-step): the player picks a
@@ -63,6 +65,8 @@ function rewardLabel(reward: LuckyReward): string {
       return `${reward.amount.toLocaleString()} Gold`
     case 'comet':
       return 'Comet'
+    case 'comet_box':
+      return `Comet Box (+${reward.amount.toLocaleString()})`
     case 'fallen_star':
       return 'Fallen Star'
     case 'comet_scroll':
@@ -100,6 +104,8 @@ function rewardVisual(reward: LuckyReward): { icon?: string; iconSrc?: string; c
     case 'gold':
       return { icon: '💰', color: '#F0B87A' }
     case 'comet':
+      return { iconSrc: COMET_ICON_SRC, color: MATERIAL_COLOR }
+    case 'comet_box':
       return { iconSrc: COMET_ICON_SRC, color: MATERIAL_COLOR }
     case 'fallen_star':
       return { iconSrc: FALLEN_STAR_ICON_SRC, color: FALLEN_STAR_COLOR }
@@ -147,6 +153,14 @@ function buildLuckyRewardTooltip(reward: LuckyReward): ItemTooltipData {
       return { title: 'Gold', icon: '💰', iconColor: '#F0B87A', stats: [`${reward.amount.toLocaleString()} gold`] }
     case 'comet':
       return buildCometTooltip()
+    case 'comet_box':
+      return {
+        title: 'Comet Box',
+        iconSrc: COMET_ICON_SRC,
+        iconColor: MATERIAL_COLOR,
+        lines: ['Lucky Lad reward'],
+        stats: [`Grants ${reward.amount.toLocaleString()} Comets instantly`],
+      }
     case 'fallen_star':
       return buildFallenStarTooltip()
     case 'comet_scroll':
@@ -309,6 +323,7 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   const draw = useLuckyStore((state) => state.draw)
   const ascensionPoints = usePlayerRecordStore((state) => state.ascensionPoints)
   const lotteryTickets = useCurrencyStore((state) => state.lotteryTickets)
+  const showMoneyBagReveal = useMoneyBagRevealStore((state) => state.show)
 
   const [paymentChoice, setPaymentChoice] = useState<'lottery_ticket' | 'ascension_points' | null>(null)
   const [board, setBoard] = useState<LuckyReward[] | null>(null)
@@ -355,6 +370,15 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
     setBoard(result.board)
     setWonIndex(result.won_index)
     setPaymentUsed(result.payment ?? null)
+
+    // comet_box grants instantly (no separate "open" step, unlike Money
+    // Bag/Gem Bag), so its own MoneyBagRevealModal fires straight off the
+    // draw result — same reveal card InventoryPanel.handleOpenBag shows for
+    // a gold/gem bag, styled the same way (see useMoneyBagRevealStore.ts).
+    const won = result.board[result.won_index]
+    if (won.kind === 'comet_box') {
+      showMoneyBagReveal({ kind: 'comet_box', amount: won.amount })
+    }
   }
 
   const handleReset = () => {

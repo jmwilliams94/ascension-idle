@@ -3,10 +3,13 @@ import type { GemTier, GemTypeId } from './gemTypes'
 
 // Drives MoneyBagRevealModal — the center-screen "what did I just open" card
 // shown after open_reward_item resolves a Money Bag/Gem Bag (Lucky Lad
-// rewards expansion, 2026-08-09).
+// rewards expansion, 2026-08-09), and also (2026-08-21) shown directly from
+// a Lucky Lad draw for the instant-grant 'comet_box' reward kind (no
+// separate "open" step, unlike Money Bag/Gem Bag).
 export type MoneyBagReveal =
   | { kind: 'gold'; amount: number; iconSrc?: string }
   | { kind: 'gem'; gemId: GemTypeId; tier: GemTier }
+  | { kind: 'comet_box'; amount: number }
 
 // Queued, not overwritten (fixed 2026-08-20, reported by the user — opening
 // several bags in quick succession made the reveal card jitter/move). The
