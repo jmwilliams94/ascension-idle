@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.91.2",
+    "date": "2026-08-14",
+    "changes": [
+      "Behind-the-scenes maintenance and cleanup"
+    ]
+  },
+  {
     "version": "1.91.1",
     "date": "2026-08-14",
     "changes": [
