@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.92.25",
+    "date": "2026-08-15",
+    "changes": [
+      "Fixed a bug where idle/AFK rewards could sometimes vanish silently (the \"Calculating rewards\" spinner would clear with no summary popup and no gold/items gained) if the reward calculation was interrupted partway through — that time window is now recovered on the next check instead of being lost"
+    ]
+  },
+  {
     "version": "1.92.24",
     "date": "2026-08-15",
     "changes": [

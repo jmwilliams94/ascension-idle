@@ -629,6 +629,11 @@ interface GatherStateResult {
   ok: boolean
   error?: string
   claimed?: boolean
+  // Exact timestamp resolve_combat_gather_state's claim UPDATE wrote (and
+  // the pre-claim value it overwrote) — see the claim-rollback migration.
+  // Absent/null when claimed is false (nothing was written to release).
+  claimed_at?: string | null
+  restore_at?: string | null
   character?: CharacterSnapshot
   monster?: EnemyType | null
   equipped_items?: EquippedItemRow[]
@@ -740,12 +745,45 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     return json({ ok: false, error: gathered.error ?? 'query_failed' }, 500)
   }
 
+  // Best-effort compensating rollback for the claim resolve_combat_gather_state
+  // already committed above — call from any path below that returns without
+  // having durably applied rewards for the claimed window, so a retry
+  // recovers the real elapsed time instead of silently losing it (see the
+  // claim-rollback migration's comment for the full "why"). A no-op if
+  // claimed_at/restore_at weren't set (claim itself didn't succeed) or if
+  // another call has already re-claimed the row since.
+  const claimedAt = gathered.claimed_at ?? null
+  const restoreAt = gathered.restore_at ?? null
+  // Reassigned to a const here so the closure below captures a definitely-
+  // string value — TS can't carry the `!characterId` guard's narrowing
+  // through a nested function capturing the outer `let`.
+  const resolvedCharacterId: string = characterId
+  async function releaseClaim(reason: string) {
+    if (!claimedAt || !restoreAt) return
+    try {
+      const { data: released, error: releaseError } = await db.rpc('resolve_combat_release_claim', {
+        p_character_id: resolvedCharacterId,
+        p_claimed_at: claimedAt,
+        p_restore_to: restoreAt,
+      })
+      if (releaseError) {
+        console.error(`resolve-combat release_claim failed after ${reason}:`, releaseError.message)
+      } else if (!released) {
+        console.error(`resolve-combat release_claim no-op (already re-claimed) after ${reason}`)
+      }
+    } catch (err) {
+      console.error(`resolve-combat release_claim threw after ${reason}:`, err instanceof Error ? err.message : String(err))
+    }
+  }
+
   const character = gathered.character
   if (!character) {
+    await releaseClaim('missing character after gather')
     return json({ ok: false, error: 'query_failed' }, 500)
   }
 
   if (character.account_id !== user.id) {
+    await releaseClaim('ownership mismatch')
     return json({ ok: false, error: 'not_owner' }, 403)
   }
 
@@ -815,8 +853,16 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const monster = gathered.monster
 
   if (!monster) {
+    await releaseClaim('unknown monster')
     return json({ ok: false, error: 'unknown_monster' })
   }
+
+  // Everything below spends the claim resolve_combat_gather_state already
+  // committed — wrapped so any failure (thrown exception, a failed
+  // pick_drop_template/resolve_combat_apply_results call) releases that
+  // claim via the catch below instead of silently eating the window (see
+  // the claim-rollback migration's comment).
+  try {
 
   // AFK cap — Achievements tier reward (see AFK_CAP_MS_BY_ACCOUNT_TIER
   // above): the highest tier this ACCOUNT has *claimed* on any monster's
@@ -1268,17 +1314,18 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   })
 
   if (applyError || !applyData) {
-    console.error('resolve-combat resolve_combat_apply_results call failed:', applyError?.message)
+    // Was previously logged-and-swallowed, falling through to a locally-
+    // computed fake success below (a phantom reward shown to the player that
+    // was never actually saved) — now thrown so the catch below releases the
+    // claim instead, and the client gets an honest failure it can retry.
+    throw new Error(`resolve_combat_apply_results failed: ${applyError?.message ?? 'no data returned'}`)
   }
 
-  const apply = (applyData ?? {}) as ApplyResultsResponse
+  const apply = applyData as ApplyResultsResponse
 
-  // Falls back to the old (racy) locally-computed totals only if the RPC
-  // itself somehow failed to return a row — keeps the response shape intact
-  // rather than crashing, at the cost of reintroducing the race for just
-  // this one call. Also the natural correct value whenever killsThisWindow
-  // is legitimately 0 (character_kills/account_kills are only set by the
-  // RPC when p_kills_delta > 0), since adding 0 is a no-op either way.
+  // apply is guaranteed present past the throw above; these ?? fallbacks
+  // only cover killsThisWindow legitimately being 0 (character_kills/
+  // account_kills are only set by the RPC when p_kills_delta > 0).
   const newGold = apply.gold ?? character.gold + goldGained
   const newComets = apply.comet_count ?? character.comet_count + cometsToGrant
   const newFallenStars = apply.fallen_star_count ?? character.fallen_star_count + fallenStarsToGrant
@@ -1323,4 +1370,14 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     // copy without a refetch. Empty when nothing was equipped/nothing decayed.
     durabilityUpdates,
   })
+  } catch (err) {
+    // Anything that threw between the claim above and the successful return
+    // means this window's rewards were never durably applied — release the
+    // claim so the next resolve call (live's next ~4s tick, or the player's
+    // next login) recovers the real elapsed time instead of it vanishing.
+    await releaseClaim('unhandled error during reward resolution')
+    const detail = err instanceof Error ? (err.stack ?? err.message) : String(err)
+    console.error('resolve-combat reward resolution failed:', detail)
+    return json({ ok: false, error: 'resolve_failed', detail }, 500)
+  }
 }
