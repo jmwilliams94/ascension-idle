@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.91.4",
+    "date": "2026-08-14",
+    "changes": [
+      "Lucky Lad's free ticket now refreshes every 4 hours instead of 6",
+      "Added a new Comet Box reward to Lucky Lad, worth +100 Comets"
+    ]
+  },
+  {
     "version": "1.91.3",
     "date": "2026-08-14",
     "changes": [
