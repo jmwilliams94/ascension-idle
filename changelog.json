@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.92.6",
+    "date": "2026-08-14",
+    "changes": [
+      "Money Bags now have an Open All button alongside Open — opens every Money Bag in your Inventory at once and shows the combined gold total"
+    ]
+  },
+  {
     "version": "1.92.5",
     "date": "2026-08-14",
     "changes": [

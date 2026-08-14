@@ -737,6 +737,44 @@ export default function InventoryPanel({
     }
   }
 
+  // Money Bag "Open All" — opens every Money Bag currently in the Inventory
+  // (any class, not just the clicked tile's own), one open_reward_item call
+  // at a time (sequential, not Promise.all, same reasoning as the "All"
+  // deposit handlers above — and here it also avoids firing several
+  // concurrent RPCs off one busy flag), then shows a single reveal card with
+  // the summed gold total rather than one card per bag.
+  const handleOpenAllBags = async () => {
+    setBagError(null)
+    setBagBusy(true)
+
+    const moneyBagItems = items.filter((entry) => {
+      const t = templates.find((tpl) => tpl.id === entry.template_id)
+      return t?.item_family === 'money-bag'
+    })
+
+    let totalGold = 0
+    let anyFailed = false
+
+    for (const bagItem of moneyBagItems) {
+      const result = await openRewardItem(bagItem.id)
+      if (result.ok && result.granted?.kind === 'gold') {
+        totalGold += result.granted.amount
+      } else {
+        anyFailed = true
+      }
+    }
+
+    setBagBusy(false)
+    closeBagPopover()
+
+    if (totalGold > 0) {
+      showMoneyBagReveal({ kind: 'gold', amount: totalGold })
+    }
+    if (anyFailed) {
+      setBagError("Couldn't open all of your money bags.")
+    }
+  }
+
   const handleTileDrop = (overTarget: string | null, id: string) => {
     if (overTarget) {
       onTileDrop?.(overTarget, id)
@@ -1512,6 +1550,17 @@ export default function InventoryPanel({
                 onClick: () => void handleOpenBag(selectedItem.id),
                 disabled: bagBusy,
               },
+              // Money Bag only (not Gem Bag) — sums gold across every Money
+              // Bag in the Inventory, any class, into one reveal card.
+              ...(selectedTemplate.item_family === 'money-bag'
+                ? [
+                    {
+                      label: bagBusy ? 'Opening…' : 'Open All',
+                      onClick: () => void handleOpenAllBags(),
+                      disabled: bagBusy,
+                    },
+                  ]
+                : []),
             ]}
             onClose={closeBagPopover}
           />
