@@ -33,6 +33,8 @@ import { GEM_TYPES, formatGemTierLabel, getGemIconSrc, getGemTierColor, buildGem
 import { QUALITY_COLORS, getGearIconSrc } from '../game/items/equipmentBonus'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
+import { AscensionCard } from './ui/AscensionCard'
+import { Button } from './ui/Button'
 
 // Parses the gem type/tier back out of a gem_tempered_<id>/gem_ascended_<id>
 // reward kind (see useLuckyStore.ts's LuckyRewardKind for why the gem
@@ -365,12 +367,11 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900/80 to-slate-950/80 p-4">
-        <div className="flex items-center gap-2">
+      <AscensionCard title="LuckyLad">
+        <div className="flex items-center justify-center">
           <img src={LUCKYLAD_ICON_SRC} alt="" className="h-8 w-8 object-contain" />
-          <p className="text-sm font-semibold text-slate-200">LuckyLad</p>
         </div>
-      </div>
+      </AscensionCard>
 
       {/* max-w-sm caps how wide each card can stretch on desktop — without
           it, grid-cols-3's fluid columns fill the whole (much wider) page
@@ -450,13 +451,9 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
                 ? ' (paid 1 Lottery Ticket)'
                 : ' (free ticket)'}
           </p>
-          <button
-            type="button"
-            onClick={handleReset}
-            className="mt-2 rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/20"
-          >
+          <Button variant="secondary" onClick={handleReset} className="mt-2">
             Draw Again
-          </button>
+          </Button>
         </div>
       )}
 

@@ -5,6 +5,7 @@ import ForgeTwoColumnLayout from './ForgeTwoColumnLayout'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import InventoryPanel from './InventoryPanel'
 import { DragDropProvider } from './dragDrop'
+import { Button } from './ui/Button'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useForgeStore } from '../game/items/useForgeStore'
 import { effectiveCurrencyAvailable } from '../game/items/forgeCosts'
@@ -153,8 +154,8 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
               maxed ? (
                 <p className="text-center text-[10px] text-slate-500">Both sockets unlocked.</p>
               ) : (
-                <button
-                  type="button"
+                <Button
+                  variant="primary"
                   disabled={busy || effectiveCurrencyAvailable(fallenStars, fallenStarScrolls) < unlockCost}
                   onClick={() => void handleUnlock()}
                   title={
@@ -166,10 +167,10 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
                         }).`
                       : undefined
                   }
-                  className="w-full rounded-lg border border-emerald-600 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full"
                 >
                   {busy ? 'Working…' : `Unlock Socket ${socketCount + 1} (${unlockCost} Fallen Star${unlockCost === 1 ? '' : 's'})`}
-                </button>
+                </Button>
               )
             ) : isArmor ? (
               <p className="text-center text-[10px] text-slate-500">

@@ -4,6 +4,8 @@ import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemT
 import { mailCurrencyLabel } from '../game/marketplace/listableCurrency'
 import type { MailCurrencyType } from '../game/marketplace/useMailStore'
 import { useAdminMailStore, type AdminMailReward } from '../game/admin/useAdminMailStore'
+import { Button } from './ui/Button'
+import { Select } from './ui/Select'
 
 const MAIL_CURRENCY_TYPES: MailCurrencyType[] = [
   'comet',
@@ -161,14 +163,9 @@ export default function AdminMailSection() {
             placeholder="Character name"
             className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-base text-slate-200 disabled:opacity-40"
           />
-          <button
-            type="button"
-            disabled={sendToAll || !targetName.trim() || lookupBusy}
-            onClick={() => void handleLookup()}
-            className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
-          >
+          <Button variant="secondary" disabled={sendToAll || !targetName.trim() || lookupBusy} onClick={() => void handleLookup()}>
             {lookupBusy ? 'Looking…' : 'Look Up'}
-          </button>
+          </Button>
         </div>
         {lookupResult && (
           <p className={`mt-1 text-xs ${lookupResult.ok ? 'text-emerald-400' : 'text-amber-400'}`}>{lookupResult.label}</p>
@@ -221,17 +218,13 @@ export default function AdminMailSection() {
       <div className="space-y-2 rounded-lg border border-slate-800 bg-slate-950/40 p-3">
         <p className="text-xs uppercase tracking-wide text-slate-500">Add Currency</p>
         <div className="flex items-center gap-2">
-          <select
-            value={currencyType}
-            onChange={(event) => setCurrencyType(event.target.value as MailCurrencyType)}
-            className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-slate-200"
-          >
+          <Select value={currencyType} onChange={(event) => setCurrencyType(event.target.value as MailCurrencyType)} className="flex-1">
             {MAIL_CURRENCY_TYPES.map((type) => (
               <option key={type} value={type}>
                 {mailCurrencyLabel(type)}
               </option>
             ))}
-          </select>
+          </Select>
           <input
             type="number"
             min={1}
@@ -258,30 +251,22 @@ export default function AdminMailSection() {
           placeholder="Filter by name…"
           className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-base text-slate-200"
         />
-        <select
-          value={itemTemplateId}
-          onChange={(event) => setItemTemplateId(event.target.value)}
-          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-slate-200"
-        >
+        <Select value={itemTemplateId} onChange={(event) => setItemTemplateId(event.target.value)} className="w-full">
           <option value="">Select an item…</option>
           {filteredTemplates.map((template) => (
             <option key={template.id} value={template.id}>
               {template.name} (Lv {template.required_level} {template.slot_type})
             </option>
           ))}
-        </select>
+        </Select>
         <div className="flex items-center gap-2">
-          <select
-            value={itemQuality}
-            onChange={(event) => setItemQuality(event.target.value)}
-            className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-slate-200"
-          >
+          <Select value={itemQuality} onChange={(event) => setItemQuality(event.target.value)} className="flex-1">
             {QUALITY_TIER_OPTIONS.map((tier) => (
               <option key={tier} value={tier}>
                 {tier}
               </option>
             ))}
-          </select>
+          </Select>
           <input
             type="number"
             min={0}
@@ -320,26 +305,13 @@ export default function AdminMailSection() {
       )}
 
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          disabled={!canSend || busy}
-          onClick={() => void handleSend()}
-          className={`rounded-lg border px-4 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-40 ${
-            confirmingAll
-              ? 'border-amber-500 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
-              : 'border-emerald-600 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
-          }`}
-        >
+        <Button variant="primary" disabled={!canSend || busy} onClick={() => void handleSend()}>
           {busy ? 'Sending…' : confirmingAll ? 'Confirm — Send to ALL characters?' : 'Send'}
-        </button>
+        </Button>
         {confirmingAll && (
-          <button
-            type="button"
-            onClick={() => setConfirmingAll(false)}
-            className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 hover:border-slate-500"
-          >
+          <Button variant="secondary" onClick={() => setConfirmingAll(false)}>
             Cancel
-          </button>
+          </Button>
         )}
       </div>
 

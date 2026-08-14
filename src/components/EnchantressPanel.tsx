@@ -5,6 +5,7 @@ import ForgeTwoColumnLayout from './ForgeTwoColumnLayout'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import { DragDropProvider } from './dragDrop'
 import InventoryPanel from './InventoryPanel'
+import { Button } from './ui/Button'
 import {
   BLESS_COLOR,
   BLESS_MAX_PCT,
@@ -350,14 +351,9 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
               ) : !stagedGem ? (
                 <p className="text-center text-[11px] text-slate-600">Drag a gem into the Gem slot.</p>
               ) : (
-                <button
-                  type="button"
-                  disabled={busy || rolling}
-                  onClick={() => void handleEnchant()}
-                  className="w-full rounded-lg border border-emerald-600 bg-emerald-500/10 px-4 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                >
+                <Button variant="primary" disabled={busy || rolling} onClick={() => void handleEnchant()} className="w-full">
                   {rolling ? 'Rolling…' : 'Enchant'}
-                </button>
+                </Button>
               )}
             </div>
           </>
@@ -399,14 +395,9 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
               ) : !blessGem ? (
                 <p className="text-center text-[11px] text-slate-600">Drag an Ascended Bastion Gem into the Gem slot.</p>
               ) : (
-                <button
-                  type="button"
-                  disabled={busy || blessing}
-                  onClick={() => void handleBless()}
-                  className="w-full rounded-lg border border-sky-600 bg-sky-500/10 px-4 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                >
+                <Button variant="primary" disabled={busy || blessing} onClick={() => void handleBless()} className="w-full">
                   {blessing ? 'Blessing…' : 'Bless'}
-                </button>
+                </Button>
               )}
             </div>
           </>

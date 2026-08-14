@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import ItemTooltip from './ItemTooltip'
+import { Button } from './ui/Button'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
 
 // Generic click-opened, portaled action popover — the same shell
@@ -33,6 +34,32 @@ interface TooltipActionPopoverProps {
   tooltip: ItemTooltipData
   actions: TooltipActionPopoverAction[]
   onClose: () => void
+}
+
+// Maps a generic action to one of Button's three variants, going purely off
+// its own label text (this popover is fed arbitrary action lists from many
+// call sites — Bank deposit/liquidate, Bundle/Open scroll, Bag Open,
+// LootHoldingCard's Claim/Store/Sell — with no per-action "kind" field to
+// switch on). `tone: 'warning'` (a destination-is-full signal) always wins
+// and maps to danger regardless of label. Prefixes are chosen short enough to
+// still match each action's own busy-state label (e.g. "Selling…" still
+// starts with "Sell", "Storing…" still starts with "Stor") — see each
+// caller's dynamic label strings.
+function actionVariant(action: TooltipActionPopoverAction): 'primary' | 'secondary' | 'danger' {
+  if (action.tone === 'warning') {
+    return 'danger'
+  }
+  const label = action.label
+  if (label.startsWith('Sell')) {
+    return 'danger'
+  }
+  if (label.startsWith('Claim') || label.startsWith('Open')) {
+    return 'primary'
+  }
+  if (label.startsWith('Deposit') || label.startsWith('Bank') || label.startsWith('Stor') || label.startsWith('Bundl')) {
+    return 'secondary'
+  }
+  return 'primary'
 }
 
 export default function TooltipActionPopover({ anchorRect, tooltip, actions, onClose }: TooltipActionPopoverProps) {
@@ -73,21 +100,11 @@ export default function TooltipActionPopover({ anchorRect, tooltip, actions, onC
       onPointerDown={(event) => event.stopPropagation()}
     >
       <ItemTooltip {...tooltip} />
-      <div className="mt-1.5 flex gap-1.5 rounded-lg border border-slate-700 bg-slate-950/95 p-1.5 shadow-xl shadow-black/50">
+      <div className="mt-1.5 flex flex-wrap gap-1.5 rounded-lg border border-slate-700 bg-slate-950/95 p-1.5 shadow-xl shadow-black/50">
         {actions.map((action) => (
-          <button
-            key={action.label}
-            type="button"
-            disabled={action.disabled}
-            onClick={action.onClick}
-            className={`flex-1 rounded-md border px-2 py-1 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
-              action.tone === 'warning'
-                ? 'border-red-600 bg-red-500/10 text-red-400 hover:bg-red-500/20'
-                : 'border-sky-500 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'
-            }`}
-          >
+          <Button key={action.label} variant={actionVariant(action)} disabled={action.disabled} onClick={action.onClick} className="flex-1">
             {action.label}
-          </button>
+          </Button>
         ))}
       </div>
     </div>,

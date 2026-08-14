@@ -6,6 +6,8 @@ import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 import HoverTooltip from './HoverTooltip'
 import ItemTooltip from './ItemTooltip'
 import { SLOT_SIZE_CLASS } from './InventorySlot'
+import { AscensionCard } from './ui/AscensionCard'
+import { Button } from './ui/Button'
 import {
   ACHIEVEMENT_TIERS,
   ACCOUNT_TIER_THRESHOLDS,
@@ -236,15 +238,9 @@ function CharacterMonsterCard({ characterId, monsterId, displayName }: { charact
         {maxed ? (
           <span className="text-[11px] font-medium text-emerald-400">All tiers claimed</span>
         ) : (
-          <button
-            type="button"
-            disabled={busy || !claimable}
-            onClick={() => void handleClaim()}
-            title={!claimable ? `Reach ${nextThreshold.toLocaleString()} kills` : undefined}
-            className="rounded-lg border border-amber-500 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-transparent disabled:text-slate-500"
-          >
+          <Button variant="primary" disabled={busy || !claimable} onClick={() => void handleClaim()} title={!claimable ? `Reach ${nextThreshold.toLocaleString()} kills` : undefined}>
             {claimable ? `Claim Tier ${claimedTierIndex + 1}` : `Tier ${claimedTierIndex + 1} at ${nextThreshold.toLocaleString()}`}
-          </button>
+          </Button>
         )}
       </div>
       {!maxed && <p className="mt-1 text-[11px] text-slate-500">Next: {describeCharacterTierReward(nextReward)}</p>}
@@ -299,15 +295,14 @@ function AccountMonsterCard({ accountId, monsterId, displayName }: { accountId: 
         {maxed ? (
           <span className="text-[11px] font-medium text-emerald-400">All tiers claimed</span>
         ) : (
-          <button
-            type="button"
+          <Button
+            variant="primary"
             disabled={busy || !claimable || !accountId}
             onClick={() => void handleClaim()}
             title={!claimable ? `Reach ${nextThreshold.toLocaleString()} kills` : undefined}
-            className="rounded-lg border border-amber-500 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-transparent disabled:text-slate-500"
           >
             {claimable ? `Claim Tier ${claimedTierIndex + 1}` : `Tier ${claimedTierIndex + 1} at ${nextThreshold.toLocaleString()}`}
-          </button>
+          </Button>
         )}
       </div>
       {!maxed && (
@@ -462,17 +457,16 @@ function ZoneTierClaimSection({ characterId, zoneId }: { characterId: string; zo
 
   return (
     <div className="mt-1.5" onClick={(event) => event.stopPropagation()}>
-      <button
-        type="button"
+      <Button
+        variant="primary"
         disabled={busy || !claimable}
         onClick={() => void handleClaim()}
         title={!claimable ? `Reach ${nextThreshold} zone-tier completions` : undefined}
-        className="rounded-lg border border-amber-500 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-transparent disabled:text-slate-500"
       >
         {claimable
           ? `Claim Zone Tier ${claimedZoneTier + 1} (+${nextReward} Comet Scroll${nextReward === 1 ? '' : 's'})`
           : `Zone Tier ${claimedZoneTier + 1} at ${nextThreshold} completions`}
-      </button>
+      </Button>
       {error && <p className="mt-1.5 text-[11px] text-amber-400">{error}</p>}
     </div>
   )
@@ -531,7 +525,7 @@ function CollapsibleZoneGroups({
         const zoneBadgeCount = claimableByZone?.[zoneId] ?? 0
 
         return (
-          <div key={zoneId} className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/80">
+          <AscensionCard key={zoneId} className="overflow-hidden" contentClassName="p-0">
             <div
               role="button"
               tabIndex={0}
@@ -566,7 +560,7 @@ function CollapsibleZoneGroups({
                 ))}
               </div>
             )}
-          </div>
+          </AscensionCard>
         )
       })}
     </>
@@ -594,14 +588,13 @@ function PetZoneGroups({ renderMonster }: { renderMonster: (monsterId: EnemyType
         }
 
         return (
-          <div key={zoneId} className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-            <p className="text-sm font-medium text-slate-200">{zone.displayName}</p>
-            <div className="mt-3 grid grid-cols-4 gap-3 sm:grid-cols-6 lg:grid-cols-8">
+          <AscensionCard key={zoneId} title={zone.displayName}>
+            <div className="grid grid-cols-4 gap-3 sm:grid-cols-6 lg:grid-cols-8">
               {rows.map((entry) => (
                 <div key={entry.monsterId}>{entry.node}</div>
               ))}
             </div>
-          </div>
+          </AscensionCard>
         )
       })}
     </>
@@ -708,12 +701,9 @@ export default function AchievementsPanel({ characterId, accountId }: { characte
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900/80 to-slate-950/80 p-4">
+      <AscensionCard title="Achievements">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-slate-200">Achievements</p>
-            <p className="mt-0.5 text-xs text-slate-500">Track progress and claim one-time rewards for grinding a monster.</p>
-          </div>
+          <p className="text-xs text-slate-500">Track progress and claim one-time rewards for grinding a monster.</p>
           <div className="flex gap-4 text-xs text-slate-400">
             <span>
               Pets: <span className="font-semibold text-amber-300">{pets.size}</span> / 40
@@ -723,7 +713,7 @@ export default function AchievementsPanel({ characterId, accountId }: { characte
             </span>
           </div>
         </div>
-      </div>
+      </AscensionCard>
 
       <p className="text-xs text-slate-500">{TAB_DESCRIPTIONS[tab]}</p>
 

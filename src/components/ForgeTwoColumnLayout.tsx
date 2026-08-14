@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Button } from './ui/Button'
 
 interface ForgeTwoColumnLayoutProps {
   title: string
@@ -26,14 +27,10 @@ export default function ForgeTwoColumnLayout({ title, onBack, inventory, childre
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onBack}
-          className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 hover:border-slate-500"
-        >
+        <Button variant="secondary" onClick={onBack}>
           ← Forge
-        </button>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">{title}</h2>
+        </Button>
+        <h2 className="font-heading text-gradient-steel text-sm font-black uppercase tracking-[0.15em]">{title}</h2>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

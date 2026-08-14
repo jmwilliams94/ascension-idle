@@ -1,6 +1,7 @@
 import EquipmentPanel from './EquipmentPanel'
 import StatsPanel from './StatsPanel'
 import InventoryPanel from './InventoryPanel'
+import { AscensionCard } from './ui/AscensionCard'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 
 // Combines what used to be split across the Equipment overlay (the paper-doll)
@@ -41,9 +42,9 @@ export default function EquipmentTabPage() {
           <EquipmentPanel />
           <StatsPanel />
         </div>
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+        <AscensionCard>
           <InventoryPanel columns={5} equipPopoverEnabled enableCompareToggle />
-        </div>
+        </AscensionCard>
       </div>
     </div>
   )

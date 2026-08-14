@@ -3,6 +3,8 @@ import InventoryPanel from './InventoryPanel'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import MarketplaceListingSlot, { type ListingDraftTarget } from './MarketplaceListingSlot'
 import { DragDropProvider } from './dragDrop'
+import { AscensionCard } from './ui/AscensionCard'
+import { Button } from './ui/Button'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemTemplatesStore'
@@ -241,13 +243,9 @@ function BrowseTab({ characterId, templates }: { characterId: string; templates:
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-xs text-slate-500">{browseListings.length} listing{browseListings.length === 1 ? '' : 's'} for sale</p>
-        <button
-          type="button"
-          onClick={() => void loadBrowseListings()}
-          className="rounded-lg border border-slate-700 px-3 py-1 text-xs text-slate-300 hover:border-slate-500"
-        >
+        <Button variant="secondary" onClick={() => void loadBrowseListings()}>
           Refresh
-        </button>
+        </Button>
       </div>
 
       {error && <p className="text-xs text-amber-400">{error}</p>}
@@ -269,33 +267,23 @@ function BrowseTab({ characterId, templates }: { characterId: string; templates:
                   <span className="rounded-lg border border-slate-700 px-3 py-1 text-xs text-slate-500">Your listing</span>
                 ) : confirmingId === listing.id ? (
                   <div className="flex gap-2">
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void handleBuy(listing.id)}
-                      className="rounded-lg border border-emerald-600 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
+                    <Button variant="primary" disabled={busy} onClick={() => void handleBuy(listing.id)}>
                       {busy ? 'Working…' : 'Confirm'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingId(null)}
-                      className="rounded-lg border border-slate-700 px-3 py-1 text-xs text-slate-300 hover:border-slate-500"
-                    >
+                    </Button>
+                    <Button variant="secondary" onClick={() => setConfirmingId(null)}>
                       Cancel
-                    </button>
+                    </Button>
                   </div>
                 ) : (
-                  <button
-                    type="button"
+                  <Button
+                    variant="primary"
                     onClick={() => {
                       setError(null)
                       setConfirmingId(listing.id)
                     }}
-                    className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20"
                   >
                     Buy
-                  </button>
+                  </Button>
                 )
               }
             />
@@ -398,9 +386,7 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
 
   return (
     <DragDropProvider>
-      <div className="space-y-3 rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900/80 to-slate-950/80 p-4">
-        <p className="text-sm font-semibold text-slate-200">List an Item</p>
-
+      <AscensionCard title="List an Item" contentClassName="space-y-3 p-4">
         <div className="flex flex-col items-start gap-4 sm:flex-row">
           <MarketplaceListingSlot target={listingTarget} onRemove={() => setDraft(null)} />
 
@@ -468,14 +454,9 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
               </p>
             )}
 
-            <button
-              type="button"
-              disabled={busy || !draft || !priceValid || !canAffordFee}
-              onClick={() => void handleList()}
-              className="rounded-lg border border-emerald-600 bg-emerald-500/10 px-4 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
+            <Button variant="primary" disabled={busy || !draft || !priceValid || !canAffordFee} onClick={() => void handleList()}>
               {busy ? 'Listing…' : 'List Item'}
-            </button>
+            </Button>
             {error && <p className="text-xs text-amber-400">{error}</p>}
           </div>
         </div>
@@ -485,7 +466,7 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
           reservedItemIds={draft ? [draft.kind === 'item' ? draft.itemId : draft.dragId] : []}
           onTileDrop={handleTileDrop}
         />
-      </div>
+      </AscensionCard>
     </DragDropProvider>
   )
 }
@@ -524,14 +505,9 @@ function MyListingsTab({ characterId, templates }: { characterId: string; templa
                 listing={listing}
                 templates={templates}
                 action={
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void handleEnd(listing.id)}
-                    className="rounded-lg border border-red-800 bg-red-500/10 px-3 py-1 text-xs font-medium text-red-300 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
+                  <Button variant="danger" disabled={busy} onClick={() => void handleEnd(listing.id)}>
                     Cancel
-                  </button>
+                  </Button>
                 }
               />
             ))}
@@ -733,14 +709,9 @@ function MailDetailModal({
         )}
 
         {canClaim ? (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onClaim}
-            className="w-full rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-          >
+          <Button variant="primary" disabled={busy} onClick={onClaim} className="w-full">
             {busy ? 'Claiming…' : rewardEntries.length > 0 ? 'Claim' : 'Mark as Read'}
-          </button>
+          </Button>
         ) : (
           <p className="text-center text-[11px] text-slate-600">{rewardEntries.length > 0 ? 'Claimed' : 'Read'}</p>
         )}
@@ -802,22 +773,12 @@ function MailTab({ characterId, templates }: { characterId: string; templates: I
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          disabled={claimAllBusy || unclaimedEntries.length === 0}
-          onClick={() => void handleClaimAll()}
-          className="rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-        >
+        <Button variant="primary" disabled={claimAllBusy || unclaimedEntries.length === 0} onClick={() => void handleClaimAll()}>
           {claimAllBusy ? 'Claiming…' : `Claim All (${unclaimedEntries.length})`}
-        </button>
-        <button
-          type="button"
-          disabled={clearBusy || claimedCount === 0}
-          onClick={() => void handleClear()}
-          className="rounded-lg border border-slate-700 px-3 py-1 text-xs font-medium text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
-        >
+        </Button>
+        <Button variant="secondary" disabled={clearBusy || claimedCount === 0} onClick={() => void handleClear()}>
           {clearBusy ? 'Clearing…' : `Clear History (${claimedCount})`}
-        </button>
+        </Button>
       </div>
 
       <div className="mx-auto w-full max-w-sm space-y-2">

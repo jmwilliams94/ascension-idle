@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 import BankActionModal from './BankActionModal'
+import { AscensionCard } from './ui/AscensionCard'
+import { Button } from './ui/Button'
+import { Select } from './ui/Select'
 import {
   COMPOSITION_STONE_TIERS,
   GEAR_SLOT_TYPES,
@@ -126,9 +129,7 @@ export default function BankSquares({
   const closeModal = () => setSelected(null)
 
   return (
-    <div className="h-fit space-y-3 rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-      <p className="text-xs uppercase tracking-wide text-slate-500">Account Bank</p>
-
+    <AscensionCard title="Account Bank" className="h-fit" contentClassName="space-y-3 p-4">
       <div className="grid grid-cols-3 gap-2">
         {CURRENCIES.map((currency) => (
           <Square
@@ -234,7 +235,7 @@ export default function BankSquares({
           />
         </BankActionModal>
       )}
-    </div>
+    </AscensionCard>
   )
 }
 
@@ -411,14 +412,9 @@ function CurrencyPanel({
 
       </div>
 
-      <button
-        type="button"
-        disabled={busy || !validAmount}
-        onClick={() => void handleConfirm()}
-        className="w-full rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-2 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-      >
+      <Button variant="primary" disabled={busy || !validAmount} onClick={() => void handleConfirm()} className="w-full">
         {busy ? 'Working…' : `Confirm ${mode === 'deposit' ? 'Deposit' : 'Withdraw'}`}
-      </button>
+      </Button>
       {error && <p className="text-xs text-amber-400">{error}</p>}
     </div>
   )
@@ -566,14 +562,9 @@ function CometFallenStarPanel({
         )}
       </div>
 
-      <button
-        type="button"
-        disabled={busy || !validAmount}
-        onClick={() => void handleConfirm()}
-        className="w-full rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-2 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-      >
+      <Button variant="primary" disabled={busy || !validAmount} onClick={() => void handleConfirm()} className="w-full">
         {busy ? 'Working…' : 'Withdraw'}
-      </button>
+      </Button>
       {error && <p className="text-xs text-amber-400">{error}</p>}
     </div>
   )
@@ -650,14 +641,9 @@ function CompositionPointsPanel({
         {points.toLocaleString()} points available — gain more by Banking a stone from Inventory.
       </p>
       <TierSlider tier={tier} setTier={setTier} />
-      <button
-        type="button"
-        disabled={busy || !canAfford}
-        onClick={() => void handleWithdraw()}
-        className="w-full rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-2 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-      >
+      <Button variant="primary" disabled={busy || !canAfford} onClick={() => void handleWithdraw()} className="w-full">
         {busy ? 'Working…' : `Withdraw 1 (${cost} pts)`}
-      </button>
+      </Button>
       {error && <p className="text-xs text-amber-400">{error}</p>}
     </div>
   )
@@ -783,29 +769,25 @@ function GearSlotWithdrawPanel({
         <p className="mt-2 text-xs text-slate-500">No {formatGearSlotLabel(slotType).toLowerCase()} items available for your class.</p>
       ) : (
         <>
-          <select
-            value={templateId}
-            onChange={(event) => setTemplateId(event.target.value)}
-            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200"
-          >
+          <Select value={templateId} onChange={(event) => setTemplateId(event.target.value)} className="mt-2">
             <option value="">Choose an item…</option>
             {eligibleTemplates.map((template) => (
               <option key={template.id} value={template.id}>
                 {template.name} (Lv {template.required_level})
               </option>
             ))}
-          </select>
+          </Select>
 
           <TierSlider tier={tier} setTier={setTier} minTier={0} />
 
-          <button
-            type="button"
+          <Button
+            variant="primary"
             disabled={busy || !templateId || points < cost}
             onClick={() => void handleWithdraw()}
-            className="mt-2 w-full rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-2 w-full"
           >
             Withdraw{cost > 0 ? ` (${cost} pts)` : ''}
-          </button>
+          </Button>
         </>
       )}
 
@@ -899,14 +881,9 @@ function GemsPanel({
         })}
       </div>
 
-      <button
-        type="button"
-        disabled={busy || owned <= 0}
-        onClick={() => void handleWithdraw()}
-        className="w-full rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-2 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-      >
+      <Button variant="primary" disabled={busy || owned <= 0} onClick={() => void handleWithdraw()} className="w-full">
         {busy ? 'Working…' : 'Withdraw 1'}
-      </button>
+      </Button>
       {error && <p className="text-xs text-amber-400">{error}</p>}
     </div>
   )

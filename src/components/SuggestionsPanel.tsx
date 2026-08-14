@@ -9,6 +9,8 @@ import { mailCurrencyLabel } from '../game/marketplace/listableCurrency'
 import type { MailCurrencyType } from '../game/marketplace/useMailStore'
 import { useIsAdmin } from '../lib/adminConfig'
 import ReportReplyThread from './ReportReplyThread'
+import { Button } from './ui/Button'
+import { Select } from './ui/Select'
 
 const DESCRIPTION_MAX_LENGTH = 2000
 const COMMENT_MAX_LENGTH = 1000
@@ -147,14 +149,9 @@ function MySuggestionsSection({ characterId }: { characterId: string }) {
           <p className="text-[10px] text-slate-600">
             {description.length}/{DESCRIPTION_MAX_LENGTH}
           </p>
-          <button
-            type="button"
-            disabled={!description.trim() || busy}
-            onClick={() => void handleSubmit()}
-            className="rounded-lg border border-sky-500 bg-sky-500/10 px-4 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-          >
+          <Button variant="primary" disabled={!description.trim() || busy} onClick={() => void handleSubmit()}>
             {busy ? 'Submitting…' : 'Submit'}
-          </button>
+          </Button>
         </div>
         {result && <p className={`text-xs ${result.ok ? 'text-emerald-400' : 'text-amber-400'}`}>{result.text}</p>}
       </div>
@@ -360,17 +357,13 @@ function AdminSuggestionRow({ suggestion }: { suggestion: Suggestion }) {
           <div className="space-y-2 rounded-lg border border-slate-800 bg-slate-950/40 p-3">
             <p className="text-xs uppercase tracking-wide text-slate-500">Add Currency Reward (optional)</p>
             <div className="flex items-center gap-2">
-              <select
-                value={currencyType}
-                onChange={(event) => setCurrencyType(event.target.value as MailCurrencyType)}
-                className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-slate-200"
-              >
+              <Select value={currencyType} onChange={(event) => setCurrencyType(event.target.value as MailCurrencyType)} className="flex-1">
                 {MAIL_CURRENCY_TYPES.map((type) => (
                   <option key={type} value={type}>
                     {mailCurrencyLabel(type)}
                   </option>
                 ))}
-              </select>
+              </Select>
               <input
                 type="number"
                 min={1}
@@ -406,22 +399,12 @@ function AdminSuggestionRow({ suggestion }: { suggestion: Suggestion }) {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void handleResolve('implemented')}
-              className="rounded-lg border border-emerald-600 bg-emerald-500/10 px-4 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-            >
+            <Button variant="primary" disabled={busy} onClick={() => void handleResolve('implemented')}>
               Mark Implemented
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void handleResolve('rejected')}
-              className="rounded-lg border border-rose-500 bg-rose-500/10 px-4 py-1.5 text-xs font-medium text-rose-300 hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-            >
+            </Button>
+            <Button variant="danger" disabled={busy} onClick={() => void handleResolve('rejected')}>
               Mark Rejected
-            </button>
+            </Button>
           </div>
 
           {result && <p className="text-xs text-amber-400">{result.text}</p>}

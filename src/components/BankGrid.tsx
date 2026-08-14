@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import TooltipActionPopover from './TooltipActionPopover'
+import { AscensionCard } from './ui/AscensionCard'
 import { buildGearTooltip, getGearIconSrc, getItemIcon, getQualityColor, itemHasDurability } from '../game/items/equipmentBonus'
 import {
   FALLEN_STAR_COLOR,
@@ -157,12 +158,7 @@ export default function BankGrid({ characterId }: BankGridProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <p className="text-xs uppercase tracking-wide text-slate-500">
-          Storage ({occupiedCount}/{BANK_SLOT_CAP})
-        </p>
-
+    <AscensionCard title={`Storage (${occupiedCount}/${BANK_SLOT_CAP})`}>
         {/* Responsive tracks matching InventoryPanel's own fix (3.5rem below
             `lg`, unchanged 4rem at `lg`+). overflow-x-auto is the same
             defensive backstop. flex justify-center matches InventoryPanel's
@@ -261,7 +257,6 @@ export default function BankGrid({ characterId }: BankGridProps) {
           </div>
         )}
         {bankedActionError && <p className="mt-2 text-xs text-amber-400">{bankedActionError}</p>}
-      </div>
 
       {selectedBankedItem && bankedPopoverAnchorRect && (
         <TooltipActionPopover
@@ -302,6 +297,6 @@ export default function BankGrid({ characterId }: BankGridProps) {
           onClose={closeBankedPopover}
         />
       )}
-    </div>
+    </AscensionCard>
   )
 }

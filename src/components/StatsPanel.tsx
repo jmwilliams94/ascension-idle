@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AscensionCard } from './ui/AscensionCard'
 import { CLASS_DEFINITIONS } from '../game/stats/classes'
 import { computeDerivedStats } from '../game/stats/derivedStats'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
@@ -34,7 +35,7 @@ export default function StatsPanel() {
   const derived = computeDerivedStats(attributes, equipmentBonus)
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+    <AscensionCard>
       <button
         type="button"
         onClick={() => setExpanded((value) => !value)}
@@ -122,6 +123,6 @@ export default function StatsPanel() {
           </div>
         </div>
       )}
-    </div>
+    </AscensionCard>
   )
 }

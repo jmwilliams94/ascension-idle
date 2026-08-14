@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import InventoryPanel from './InventoryPanel'
+import { AscensionCard } from './ui/AscensionCard'
+import { Button } from './ui/Button'
+import { Select } from './ui/Select'
 import { ENEMY_TYPES, ZONES, ZONE_ORDER, type EnemyTypeId, type ZoneId } from '../game/zones/zoneData'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useCombatStore, type CombatLogEntry } from '../game/combat/useCombatStore'
@@ -294,20 +297,16 @@ export default function CombatPage() {
 
             <MultiTargetSlots />
 
-            <button
-              type="button"
-              onClick={handleToggle}
-              className="mt-4 w-full rounded-lg border border-slate-700 py-2.5 text-sm font-medium text-slate-200 hover:border-slate-500"
-            >
+            <Button variant="secondary" onClick={handleToggle} className="mt-4 w-full">
               {isFighting ? 'Stop' : 'Resume'}
-            </button>
+            </Button>
             </div>
           </div>
         )}
 
         {activeType && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-            <p className="text-xs font-medium text-slate-400">{characterName}</p>
+          <AscensionCard>
+            <p className="text-heading-label">{characterName}</p>
             <div className="relative mt-1">
               <p className="text-xs text-slate-500">
                 {currentPlayerHp} / {maxPlayerHp} HP
@@ -355,19 +354,17 @@ export default function CombatPage() {
                 <span className="text-slate-600">No HP potions — visit the Shop</span>
               )}
             </div>
-          </div>
+          </AscensionCard>
         )}
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-          <p className="text-sm font-medium text-slate-200">Zone &amp; Monster</p>
-
+        <AscensionCard title="Zone & Monster">
           <div className="mt-2 flex flex-wrap gap-3">
-            <label className="min-w-[140px] flex-1 text-xs text-slate-400">
+            <label className="text-heading-label min-w-[140px] flex-1">
               Zone
-              <select
+              <Select
                 value={currentZoneId}
                 onChange={(event) => handleSelectZone(event.target.value as ZoneId)}
-                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-2 text-sm text-slate-200"
+                className="mt-1"
               >
                 {ZONE_ORDER.map((zoneId) => {
                   const zone = ZONES[zoneId]
@@ -385,16 +382,16 @@ export default function CombatPage() {
                     </option>
                   )
                 })}
-              </select>
+              </Select>
             </label>
 
-            <label className="min-w-[140px] flex-1 text-xs text-slate-400">
+            <label className="text-heading-label min-w-[140px] flex-1">
               Monster
-              <select
+              <Select
                 value={dropdownMonsterId ?? ''}
                 disabled={currentZone.monsterOrder.length === 0}
                 onChange={(event) => setSelectedMonsterId(event.target.value as EnemyTypeId)}
-                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-2 text-sm text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+                className="mt-1"
               >
                 {currentZone.monsterOrder.length === 0 ? (
                   <option value="">Coming soon</option>
@@ -408,21 +405,21 @@ export default function CombatPage() {
                     )
                   })
                 )}
-              </select>
+              </Select>
             </label>
           </div>
 
-          <button
-            type="button"
+          <Button
+            variant="primary"
             disabled={!dropdownMonsterId || (isFighting && monsterTypeId === dropdownMonsterId)}
             onClick={() => dropdownMonsterId && handleFight(dropdownMonsterId)}
-            className="mt-3 w-full rounded-lg border border-emerald-700 py-2.5 text-sm font-medium text-emerald-300 hover:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-3 w-full"
           >
             {isFighting && monsterTypeId === dropdownMonsterId ? 'Fighting' : 'Fight'}
-          </button>
-        </div>
+          </Button>
+        </AscensionCard>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+        <AscensionCard>
           <button
             type="button"
             onClick={() => setInventoryExpanded((value) => !value)}
@@ -437,9 +434,9 @@ export default function CombatPage() {
               <InventoryPanel columns={5} equipPopoverEnabled />
             </div>
           )}
-        </div>
+        </AscensionCard>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+        <AscensionCard>
           <button
             type="button"
             onClick={() => setLogExpanded((value) => !value)}
@@ -471,22 +468,20 @@ export default function CombatPage() {
               </AnimatePresence>
             </div>
           )}
-        </div>
+        </AscensionCard>
       </div>
 
       {/* Desktop layout (`lg` and up) — unchanged from before this step. */}
       <div className="hidden gap-4 lg:grid lg:grid-cols-2">
       <div className="space-y-4">
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-          <p className="text-sm font-medium text-slate-200">Zone &amp; Monster</p>
-
+        <AscensionCard title="Zone & Monster">
           <div className="mt-2 flex flex-wrap gap-3">
-            <label className="flex-1 min-w-[160px] text-xs text-slate-400">
+            <label className="text-heading-label min-w-[160px] flex-1">
               Zone
-              <select
+              <Select
                 value={currentZoneId}
                 onChange={(event) => handleSelectZone(event.target.value as ZoneId)}
-                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-200"
+                className="mt-1"
               >
                 {ZONE_ORDER.map((zoneId) => {
                   const zone = ZONES[zoneId]
@@ -504,16 +499,16 @@ export default function CombatPage() {
                     </option>
                   )
                 })}
-              </select>
+              </Select>
             </label>
 
-            <label className="flex-1 min-w-[160px] text-xs text-slate-400">
+            <label className="text-heading-label min-w-[160px] flex-1">
               Monster
-              <select
+              <Select
                 value={dropdownMonsterId ?? ''}
                 disabled={currentZone.monsterOrder.length === 0}
                 onChange={(event) => setSelectedMonsterId(event.target.value as EnemyTypeId)}
-                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+                className="mt-1"
               >
                 {currentZone.monsterOrder.length === 0 ? (
                   <option value="">Coming soon</option>
@@ -527,23 +522,23 @@ export default function CombatPage() {
                     )
                   })
                 )}
-              </select>
+              </Select>
             </label>
           </div>
 
-          <button
-            type="button"
+          <Button
+            variant="primary"
             disabled={!dropdownMonsterId || (isFighting && monsterTypeId === dropdownMonsterId)}
             onClick={() => dropdownMonsterId && handleFight(dropdownMonsterId)}
-            className="mt-3 w-full rounded-lg border border-emerald-700 px-3 py-1.5 text-sm font-medium text-emerald-300 hover:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-3 w-full"
           >
             {isFighting && monsterTypeId === dropdownMonsterId ? 'Fighting' : 'Fight'}
-          </button>
-        </div>
+          </Button>
+        </AscensionCard>
 
         {activeType && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-            <p className="text-xs font-medium text-slate-400">{characterName}</p>
+          <AscensionCard>
+            <p className="text-heading-label">{characterName}</p>
             <div className="relative mt-1">
               <p className="text-xs text-slate-500">
                 {currentPlayerHp} / {maxPlayerHp} HP
@@ -594,7 +589,7 @@ export default function CombatPage() {
                 <span className="text-slate-600">No HP potions — visit the Shop</span>
               )}
             </div>
-          </div>
+          </AscensionCard>
         )}
 
         {activeType && (
@@ -656,13 +651,9 @@ export default function CombatPage() {
               <MultiTargetSlots />
             </div>
 
-            <button
-              type="button"
-              onClick={handleToggle}
-              className="mt-4 rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:border-slate-500"
-            >
+            <Button variant="secondary" onClick={handleToggle} className="mt-4">
               {isFighting ? 'Stop' : 'Resume'}
-            </button>
+            </Button>
             </div>
           </div>
         )}
@@ -670,7 +661,7 @@ export default function CombatPage() {
         {/* Collapsed by default — the roster/fight panel above is the primary
             view; the log is a detail view for players who want to see individual
             hits, matching StatsPanel's collapse convention elsewhere. */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+        <AscensionCard>
           <button
             type="button"
             onClick={() => setLogExpanded((value) => !value)}
@@ -702,16 +693,16 @@ export default function CombatPage() {
               </AnimatePresence>
             </div>
           )}
-        </div>
+        </AscensionCard>
       </div>
 
       <div className="space-y-4">
         {/* Gold/EXP row removed (2026-08-14, requested by the user) —
             redundant with ExpBar in GameShell's persistent top strip, same
             reasoning the mobile layout above already used to skip it. */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+        <AscensionCard>
           <InventoryPanel columns={5} equipPopoverEnabled />
-        </div>
+        </AscensionCard>
       </div>
       </div>
     </>

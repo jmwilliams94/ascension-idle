@@ -1,4 +1,5 @@
 import type { MaterialEntry } from './ForgeMaterialSlot'
+import { Button } from './ui/Button'
 import { compositionPointValue, compositionPointsRequired, formatCompositionTier, isCompositionMaxed, simulateCompositionFeed } from '../game/items/forgeCosts'
 import type { ItemInstance } from '../game/items/useInventoryStore'
 
@@ -75,14 +76,9 @@ export default function ForgeCompositionPanel({ item, entries, busy, onFeed, fee
       {maxed && <p className="text-center text-[10px] text-slate-500">Already at maximum composition (+{item.composition_level}).</p>}
       {feedError && <p className="text-center text-[10px] text-red-400">{feedError}</p>}
 
-      <button
-        type="button"
-        disabled={busy || maxed || addedPoints <= 0}
-        onClick={onFeed}
-        className="w-full rounded-lg border border-emerald-600 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-      >
+      <Button variant="primary" disabled={busy || maxed || addedPoints <= 0} onClick={onFeed} className="w-full">
         {busy ? 'Feeding…' : 'Feed'}
-      </button>
+      </Button>
     </div>
   )
 }

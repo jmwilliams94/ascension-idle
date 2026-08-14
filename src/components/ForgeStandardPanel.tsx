@@ -6,6 +6,7 @@ import ForgeTwoColumnLayout from './ForgeTwoColumnLayout'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import { DragDropProvider } from './dragDrop'
 import InventoryPanel from './InventoryPanel'
+import { Button } from './ui/Button'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { nextQualityTier } from '../game/items/equipmentBonus'
@@ -319,22 +320,12 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
 
               {previewItem && !blockedByEquipLevel ? (
                 <div className="flex justify-center gap-2">
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void handleConfirm()}
-                    className="rounded-lg border border-emerald-600 bg-emerald-500/10 px-4 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
+                  <Button variant="primary" disabled={busy} onClick={() => void handleConfirm()}>
                     {busy ? 'Working…' : 'Confirm'}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => setMaterialEntries([])}
-                    className="rounded-lg border border-slate-700 px-4 py-1.5 text-xs font-medium text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
+                  </Button>
+                  <Button variant="secondary" disabled={busy} onClick={() => setMaterialEntries([])}>
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 <p className="rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-3 text-center text-[11px] text-slate-600">

@@ -309,16 +309,20 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur">
         {/* Single row at every viewport size — no flex-wrap. "Idle Combat"
             removed entirely (it was redundant with the tab the player is
-            already on). Revised (2026-08-02, per the user's direct feedback
-            that a gradient badge + gradient-text wordmark read as "cheap"):
-            no badge, no multi-stop gradient — just the same uppercase-
-            tracking eyebrow style the old two-line header already used,
-            scaled up into the sole heading, with the game's one established
-            accent color (the amber already used for Gold/the PWA icon)
-            restrained to "IDLE" rather than painted across the whole thing. */}
+            already on). Revised again 2026-08-14: the 2026-08-02 "no
+            gradients" call above is deliberately superseded — the user
+            explicitly asked for a full pivot to a gold/steel gradient
+            wordmark + glowing star accents (see the gold/steel "Ascension"
+            chrome block in src/index.css), confirmed app-wide, not a one-off.
+            Steel gradient on "ASCENSION", gold gradient on "IDLE" (keeps
+            the established amber-for-IDLE anchor from the old version),
+            pulsing gold stars either side. */}
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
-          <h1 className="text-xl font-bold tracking-[0.15em] text-slate-100 sm:text-2xl">
-            ASCENSION <span className="text-amber-400">IDLE</span>
+          <h1 className="font-heading flex items-center gap-2.5 text-xl font-black tracking-[0.15em] uppercase sm:text-2xl">
+            <span className="ascension-glow-pulse text-sm text-amber-400 sm:text-base">✦</span>
+            <span className="text-gradient-steel">ASCENSION</span>
+            <span className="text-gradient-gold">IDLE</span>
+            <span className="ascension-glow-pulse text-sm text-amber-400 sm:text-base">✦</span>
           </h1>
 
           {/* Icon-only below `lg` (labels hidden via `hidden lg:inline`,

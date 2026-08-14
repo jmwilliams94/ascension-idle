@@ -2,6 +2,7 @@ import { useState } from 'react'
 import InventoryPanel from './InventoryPanel'
 import BankGrid from './BankGrid'
 import BankSquares from './BankSquares'
+import { AscensionCard } from './ui/AscensionCard'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 
 type BankView = 'inventory' | 'storage'
@@ -51,7 +52,13 @@ export default function BankPanel({ characterId }: { characterId: string }) {
           wider than the viewport instead of actually wrapping. */}
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
         <div className="min-w-0">
-          {view === 'inventory' ? <InventoryPanel columns={5} enableBankDeposit /> : <BankGrid characterId={characterId} />}
+          {view === 'inventory' ? (
+            <AscensionCard>
+              <InventoryPanel columns={5} enableBankDeposit />
+            </AscensionCard>
+          ) : (
+            <BankGrid characterId={characterId} />
+          )}
         </div>
 
         <div className="min-w-0">

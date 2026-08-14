@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import TooltipActionPopover from './TooltipActionPopover'
+import { AscensionCard } from './ui/AscensionCard'
+import { Button } from './ui/Button'
 import { LOOT_HOLDING_CAP, useLootHoldingStore, type LootHoldingEntry } from '../game/items/useLootHoldingStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { useInventoryStore, occupiedSlotCount, INVENTORY_SLOT_CAP } from '../game/items/useInventoryStore'
@@ -258,16 +260,10 @@ export default function LootHoldingCard() {
     popoverEntry && popoverTemplate ? previewSellPrice(popoverTemplate.price, popoverEntry.quality_tier ?? 'normal') : 0
 
   return (
-    <div className="space-y-3 rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900/80 to-slate-950/80 p-4">
-      <div className="flex items-center gap-2">
-        <span className="text-lg">🎁</span>
-        <div>
-          <p className="text-sm font-semibold text-slate-200">Loot Holding</p>
-          <p className="text-[11px] text-slate-500">
-            {entries.length}/{LOOT_HOLDING_CAP} pending
-          </p>
-        </div>
-      </div>
+    <AscensionCard title="Loot Holding" contentClassName="space-y-3 p-4">
+      <p className="text-[11px] text-slate-500">
+        {entries.length}/{LOOT_HOLDING_CAP} pending
+      </p>
 
       {stage === 'currency' && (
         <div className="space-y-3">
@@ -289,27 +285,18 @@ export default function LootHoldingCard() {
             </div>
           </div>
           <div className="flex gap-2">
-            <button
-              type="button"
+            <Button
+              variant={inventoryFull ? 'danger' : 'primary'}
               disabled={busy || bulkBusy || inventoryFull}
               title={inventoryFull ? 'Inventory is full' : undefined}
               onClick={() => void handleClaimAllCurrency()}
-              className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed ${
-                inventoryFull
-                  ? 'border-red-600 bg-red-500/10 text-red-400 disabled:opacity-70'
-                  : 'border-sky-500 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20 disabled:opacity-50'
-              }`}
+              className="flex-1"
             >
               {bulkBusy ? 'Claiming…' : 'Claim All'}
-            </button>
-            <button
-              type="button"
-              disabled={busy || bulkBusy}
-              onClick={() => void handleStoreAllCurrency()}
-              className="flex-1 rounded-lg border border-emerald-500 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
+            </Button>
+            <Button variant="secondary" disabled={busy || bulkBusy} onClick={() => void handleStoreAllCurrency()} className="flex-1">
               Store All
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -317,28 +304,19 @@ export default function LootHoldingCard() {
       {stage === 'gear' && (
         <div className="space-y-3">
           <p className="text-[11px] text-slate-500">Tap an item below to Claim, Store, or Sell it.</p>
-          <button
-            type="button"
+          <Button
+            variant={inventoryFull ? 'danger' : 'primary'}
             disabled={busy || bulkBusy || inventoryFull}
             title={inventoryFull ? 'Inventory is full' : 'Claims as many items below as currently fit in your Inventory'}
             onClick={() => void handleClaimAllGear()}
-            className={`w-full rounded-lg border px-3 py-2 text-sm font-medium disabled:cursor-not-allowed ${
-              inventoryFull
-                ? 'border-red-600 bg-red-500/10 text-red-400 disabled:opacity-70'
-                : 'border-sky-500 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20 disabled:opacity-50'
-            }`}
+            className="w-full"
           >
             {bulkBusy ? 'Claiming…' : 'Claim All'}
-          </button>
+          </Button>
           {normalGearEntries.length > 0 && (
-            <button
-              type="button"
-              disabled={busy || bulkBusy}
-              onClick={() => void handleSellAllNormal()}
-              className="w-full rounded-lg border border-amber-600 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
+            <Button variant="primary" disabled={busy || bulkBusy} onClick={() => void handleSellAllNormal()} className="w-full">
               {busy ? 'Selling…' : `Sell All Normal (${normalSellTotal.toLocaleString()} gold)`}
-            </button>
+            </Button>
           )}
           <div className="flex justify-center overflow-x-auto">
             <div className="grid grid-cols-[repeat(5,3.5rem)] gap-1.5 lg:grid-cols-[repeat(5,4rem)]">
@@ -417,6 +395,6 @@ export default function LootHoldingCard() {
           onClose={closePopover}
         />
       )}
-    </div>
+    </AscensionCard>
   )
 }

@@ -209,3 +209,148 @@ img {
 *::-webkit-scrollbar-thumb:hover {
   background-color: rgba(245, 158, 11, 0.55);
 }
+
+/* ============================================================
+   Gold/Steel "Ascension" chrome (2026-08-14 visual overhaul)
+   ------------------------------------------------------------
+   A deliberate reversal of the earlier "no gradients" preference
+   documented at GameShell.tsx's header comment — confirmed by the
+   user as a full app-wide pivot, modeled on two hand-drafted mockups
+   (a gradient wordmark + a gradient-bordered "ribbon" card). Scoped
+   to UI *chrome* only (cards, headings, buttons, dropdown frames) —
+   gameplay-data color coding (item quality tiers, level-diff colors,
+   HP bars, rarity glows) is a separate, untouched system.
+   ============================================================ */
+
+:root {
+  --ascension-ink: #0b0e14;
+  --ascension-ink-soft: #131a24;
+  --ascension-gold-bright: #fff3a1;
+  --ascension-gold: #d4af37;
+  --ascension-gold-dark: #997a15;
+  --ascension-steel-bright: #ffffff;
+  --ascension-steel: #c0d1e3;
+  --ascension-steel-dark: #7a8b9e;
+}
+
+.font-heading {
+  font-family: 'Cinzel', serif;
+}
+
+.text-gradient-gold {
+  background: linear-gradient(180deg, var(--ascension-gold-bright) 0%, var(--ascension-gold) 60%, var(--ascension-gold-dark) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.text-gradient-steel {
+  background: linear-gradient(180deg, var(--ascension-steel-bright) 25%, var(--ascension-steel) 65%, var(--ascension-steel-dark) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.2));
+}
+
+.text-heading-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ascension-steel-dark);
+}
+
+/* Breathing glow for gold accents (ribbon stars, header stars, the primary
+   CTA button's idle-state halo) — box-shadow + currentColor, same reuse
+   pattern as .accent-glow above, just a wider/slower pulse suited to gold
+   filigree rather than a status indicator. */
+@keyframes ascension-glow-pulse {
+  0% {
+    filter: drop-shadow(0 0 4px rgba(212, 175, 55, 0.4));
+  }
+  100% {
+    filter: drop-shadow(0 0 16px rgba(255, 215, 0, 0.9));
+  }
+}
+
+.ascension-glow-pulse {
+  animation: ascension-glow-pulse 3s infinite alternate ease-in-out;
+}
+
+/* Thin metallic gold-to-steel gradient frame + inset dark panel — the
+   "ribbon card" chrome from the second mockup. .ascension-card-frame is the
+   1px gradient border (padding trick, no border-image quirks);
+   .ascension-card-inner is the actual dark content panel sized to it. */
+.ascension-card-frame {
+  position: relative;
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.7) 0%, rgba(122, 139, 158, 0.3) 50%, rgba(212, 175, 55, 0.5) 100%);
+  padding: 1px;
+  border-radius: 1rem;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.8),
+    0 0 16px rgba(212, 175, 55, 0.12);
+}
+
+.ascension-card-inner {
+  background: linear-gradient(180deg, var(--ascension-ink-soft) 0%, var(--ascension-ink) 100%);
+  border-radius: calc(1rem - 1px);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+
+/* Floating ribbon title, pinned to the top border line of the card frame. */
+.ascension-card-ribbon {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ascension-ink);
+  border: 1px solid rgba(212, 175, 55, 0.6);
+  border-radius: 4px;
+  padding: 3px 14px;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.9),
+    0 0 10px rgba(212, 175, 55, 0.2);
+  white-space: nowrap;
+  z-index: 1;
+}
+
+/* Gold CTA button — dark-gold idle state, full gradient + glow on hover.
+   Layout/sizing (padding, rounding, tracking) stays as Tailwind utility
+   classes on the consuming <button>; this class only owns the color
+   treatment, same split-of-concerns as .accent-glow. */
+.btn-gold {
+  background: linear-gradient(180deg, #2a220a 0%, #141004 100%);
+  border: 1px solid var(--ascension-gold);
+  color: var(--ascension-gold-bright);
+  transition: all 0.25s ease;
+}
+
+.btn-gold:hover:not(:disabled) {
+  background: linear-gradient(180deg, var(--ascension-gold-bright) 0%, var(--ascension-gold) 60%, var(--ascension-gold-dark) 100%);
+  color: var(--ascension-ink);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.7);
+}
+
+.btn-gold:disabled {
+  opacity: 0.4;
+}
+
+/* Dark inset frame for the custom <select> wrapper (Select.tsx) — border
+   brightens gold on hover/focus, matching .select-box from the mockup. */
+.select-frame {
+  background: #07090e;
+  border: 1px solid rgba(122, 139, 158, 0.3);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8);
+  transition: border-color 0.2s ease;
+}
+
+.select-frame:hover,
+.select-frame:focus-within {
+  border-color: rgba(212, 175, 55, 0.5);
+}

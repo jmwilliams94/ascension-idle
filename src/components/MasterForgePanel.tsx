@@ -5,6 +5,7 @@ import ForgePreviewSlot from './ForgePreviewSlot'
 import ForgeTwoColumnLayout from './ForgeTwoColumnLayout'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import InventoryPanel from './InventoryPanel'
+import { Button } from './ui/Button'
 import { nextQualityTier } from '../game/items/equipmentBonus'
 import {
   computeUpgradeSuccessChancePct,
@@ -233,22 +234,12 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
                       {upgradeType === 'quality' ? `Fallen Star${cost === 1 ? '' : 's'}` : `Comet${cost === 1 ? '' : 's'}`}
                     </p>
                     <div className="flex gap-2">
-                      <button
-                        type="button"
-                        disabled={busy || !canConfirm}
-                        onClick={() => void handleConfirm()}
-                        className="rounded-lg border border-emerald-600 bg-emerald-500/10 px-4 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
+                      <Button variant="primary" disabled={busy || !canConfirm} onClick={() => void handleConfirm()}>
                         {busy ? 'Working…' : 'Confirm Master Upgrade'}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={handleRemove}
-                        className="rounded-lg border border-slate-700 px-4 py-1.5 text-xs font-medium text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
+                      </Button>
+                      <Button variant="secondary" disabled={busy} onClick={handleRemove}>
                         Cancel
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )

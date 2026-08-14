@@ -4,6 +4,7 @@ import { DraggableInventorySlot } from './dragDrop'
 import { useIsDropTarget } from './dragDropContext'
 import GearEquipPopover from './GearEquipPopover'
 import TooltipActionPopover from './TooltipActionPopover'
+import { Button } from './ui/Button'
 import {
   buildGearTooltip,
   formatBaseStats,
@@ -1596,8 +1597,8 @@ export default function InventoryPanel({
             </div>
           </div>
 
-          <button
-            type="button"
+          <Button
+            variant="primary"
             disabled={isEquipped(selectedItem.id) || !isEquippableSlot || !meetsLevelRequirement}
             title={
               !isEquippableSlot
@@ -1609,11 +1610,7 @@ export default function InventoryPanel({
             onClick={() =>
               selectedTemplate && meetsLevelRequirement && setEquippedItem(selectedTemplate.slot_type as EquipSlot, selectedItem.id)
             }
-            className={`mt-3 w-full rounded-lg border px-3 py-1.5 text-xs font-medium ${
-              isEquipped(selectedItem.id) || !isEquippableSlot || !meetsLevelRequirement
-                ? 'cursor-not-allowed border-slate-800 text-slate-600'
-                : 'border-sky-500 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'
-            }`}
+            className="mt-3 w-full"
           >
             {isEquipped(selectedItem.id)
               ? 'Equipped'
@@ -1622,19 +1619,14 @@ export default function InventoryPanel({
                 : !meetsLevelRequirement
                   ? `Requires level ${selectedTemplate?.required_level}`
                   : 'Equip'}
-          </button>
+          </Button>
 
           {enableSelling && (
-            <button
-              type="button"
-              disabled={isEquipped(selectedItem.id) || sellBusy}
-              onClick={() => void handleSell(selectedItem)}
-              className="mt-2 w-full rounded-lg border border-amber-600 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-            >
+            <Button variant="primary" disabled={isEquipped(selectedItem.id) || sellBusy} onClick={() => void handleSell(selectedItem)} className="mt-2 w-full">
               {sellBusy
                 ? 'Selling…'
                 : `Sell (${previewSellPrice(selectedTemplate?.price ?? 0, selectedItem.quality_tier)} gold)`}
-            </button>
+            </Button>
           )}
           {sellError && <p className="mt-2 text-xs text-amber-400">{sellError}</p>}
         </div>

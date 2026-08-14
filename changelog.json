@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.91.0",
+    "date": "2026-08-14",
+    "changes": [
+      "Gave the UI a new gold-and-silver look — new title, glowing card frames, and gold action buttons across the game"
+    ]
+  },
+  {
     "version": "1.90.5",
     "date": "2026-08-14",
     "changes": [

@@ -5,6 +5,7 @@ import InventoryPanel from './InventoryPanel'
 import InventorySlot, { SLOT_LABEL_HEIGHT_CLASS, SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
 import { DragDropProvider } from './dragDrop'
 import { useDraggableTile, useIsDropTarget } from './dragDropContext'
+import { AscensionCard } from './ui/AscensionCard'
 import { buildGearTooltip, formatItemDisplayName, formatItemLevel, getGearIconSrc, getItemIcon, getQualityColor, previewSalvageApValue } from '../game/items/equipmentBonus'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
 import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
@@ -291,10 +292,10 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
         onBack={onBack}
         inventory={<InventoryPanel columns={5} reservedItemIds={selectedItemId ? [selectedItemId] : []} onTileDrop={handleTileDrop} />}
       >
-        <div className="w-full max-w-xs rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-center text-xs text-slate-400">
+        <AscensionCard className="w-full max-w-xs" contentClassName="p-3 text-center text-xs text-slate-400">
           <p>Drag in unwanted gear to salvage it for Ascension Points — no gold, but works on any quality tier.</p>
           <p className="mt-1 text-purple-300">Ascension Points: {ascensionPoints}</p>
-        </div>
+        </AscensionCard>
 
         <div className="w-full max-w-xs space-y-2">
           <p className="text-center text-[11px] uppercase tracking-wide text-slate-500">Bulk Salvage</p>

@@ -1,3 +1,5 @@
+import { AscensionCard } from './ui/AscensionCard'
+
 export type ForgeMode = 'standard' | 'master' | 'composition' | 'salvage' | 'sockets' | 'enchant'
 
 interface ForgeHubTile {
@@ -76,11 +78,16 @@ export default function ForgeHub({ onSelect }: ForgeHubProps) {
           key={tile.mode}
           type="button"
           onClick={() => onSelect(tile.mode)}
-          className="flex min-h-40 flex-col items-center gap-2 rounded-xl border border-slate-800 bg-slate-950/60 p-5 text-center transition-colors hover:border-amber-600/60 hover:bg-slate-900"
+          className="group text-left transition hover:-translate-y-0.5"
         >
-          <img src={tile.iconSrc} alt="" className={`${tile.iconClassName ?? 'h-14 w-14'} object-contain`} />
-          <span className="text-sm font-semibold text-slate-200">{tile.title}</span>
-          <span className="text-[11px] leading-snug text-slate-500">{tile.description}</span>
+          <AscensionCard
+            className="h-full transition group-hover:shadow-[0_0_18px_rgba(212,175,55,0.25)]"
+            contentClassName="flex min-h-40 flex-col items-center gap-2 p-5 text-center"
+          >
+            <img src={tile.iconSrc} alt="" className={`${tile.iconClassName ?? 'h-14 w-14'} object-contain`} />
+            <span className="font-heading text-sm font-semibold text-slate-200">{tile.title}</span>
+            <span className="text-[11px] leading-snug text-slate-500">{tile.description}</span>
+          </AscensionCard>
         </button>
       ))}
     </div>

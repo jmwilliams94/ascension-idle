@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import InventoryPanel from './InventoryPanel'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
+import { AscensionCard } from './ui/AscensionCard'
+import { Button } from './ui/Button'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { usePotionStore } from '../game/items/usePotionStore'
@@ -118,15 +120,15 @@ function GearRow({ template }: { template: ItemTemplate }) {
         </div>
       </div>
 
-      <button
-        type="button"
+      <Button
+        variant="secondary"
         disabled={!canBuy}
         title={!meetsLevel ? `Requires level ${template.required_level}` : !canAfford ? 'Not enough gold' : undefined}
         onClick={() => void handleBuy()}
-        className="shrink-0 rounded border border-slate-700 px-2 py-1 text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+        className="shrink-0"
       >
         Buy
-      </button>
+      </Button>
     </div>
   )
 }
@@ -244,6 +246,7 @@ export default function ShopPanel() {
 
         <p className="text-xs text-slate-500">Gold: {gold}</p>
 
+        <AscensionCard>
         {tab === 'weapons' && (
           <div className="max-h-96 space-y-2 overflow-y-auto">
             {weaponTemplates.length === 0 ? (
@@ -278,7 +281,7 @@ export default function ShopPanel() {
         {tab === 'potions' && (
           <div className="max-h-96 space-y-3 overflow-y-auto">
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-wide text-slate-500">HP Potions</p>
+              <p className="text-heading-label">HP Potions</p>
               {HP_POTION_ORDER.map((typeId) => {
                 const type = POTION_TYPES[typeId]
                 const owned = potionStacks
@@ -316,22 +319,22 @@ export default function ShopPanel() {
                       </div>
                     </div>
 
-                    <button
-                      type="button"
+                    <Button
+                      variant="secondary"
                       disabled={!canBuy}
                       title={!meetsLevel ? `Requires level ${type.requiredLevel}` : undefined}
                       onClick={() => buyPotionStack(typeId)}
-                      className="shrink-0 rounded border border-slate-700 px-2 py-1 text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="shrink-0"
                     >
                       Buy
-                    </button>
+                    </Button>
                   </div>
                 )
               })}
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Mana Potions</p>
+              <p className="text-heading-label">Mana Potions</p>
               {MP_POTION_ORDER.map((typeId) => {
                 const type = POTION_TYPES[typeId]
                 const owned = potionStacks
@@ -369,15 +372,15 @@ export default function ShopPanel() {
                       </div>
                     </div>
 
-                    <button
-                      type="button"
+                    <Button
+                      variant="secondary"
                       disabled={!canBuy}
                       title={!meetsLevel ? `Requires level ${type.requiredLevel}` : undefined}
                       onClick={() => buyPotionStack(typeId)}
-                      className="shrink-0 rounded border border-slate-700 px-2 py-1 text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="shrink-0"
                     >
                       Buy
-                    </button>
+                    </Button>
                   </div>
                 )
               })}
@@ -424,20 +427,23 @@ export default function ShopPanel() {
               <p className={`text-xs ${repairResult.success ? 'text-emerald-400' : 'text-amber-400'}`}>{repairResult.message}</p>
             )}
 
-            <button
-              type="button"
+            <Button
+              variant="primary"
               disabled={damagedItems.length === 0 || !canAffordRepair || repairBusy}
               title={damagedItems.length === 0 ? undefined : !canAffordRepair ? `Need ${repairTotalCost} gold (have ${gold}).` : undefined}
               onClick={() => void handleRepairAll()}
-              className="w-full rounded-lg border border-emerald-600 bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full"
             >
               {repairBusy ? 'Repairing…' : `Repair All (${repairTotalCost.toLocaleString()} gold)`}
-            </button>
+            </Button>
           </div>
         )}
+        </AscensionCard>
       </div>
 
-      <InventoryPanel columns={5} enableSelling />
+      <AscensionCard>
+        <InventoryPanel columns={5} enableSelling />
+      </AscensionCard>
     </div>
   )
 }

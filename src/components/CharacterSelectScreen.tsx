@@ -8,6 +8,8 @@ import {
 } from '../lib/useCharacterRosterStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { CLASS_DEFINITIONS, CLASS_ORDER, type ClassId } from '../game/stats/classes'
+import { AscensionCard } from './ui/AscensionCard'
+import { Button } from './ui/Button'
 
 // PLACEHOLDER unlock threshold — real max level is unresolved per CLAUDE.md.
 const CLASS_UNLOCK_LEVEL_PLACEHOLDER = 100
@@ -126,28 +128,19 @@ export default function CharacterSelectScreen() {
                 const isDeleting = deletingSlot === slotIndex
 
                 return (
-                  <div key={slotIndex} className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
-                    <p className="text-sm font-medium text-slate-200">{slot.name}</p>
+                  <AscensionCard key={slotIndex} title={slot.name}>
                     <p className="text-xs text-slate-500">
                       {classDef?.displayName ?? slot.classId ?? 'Unknown class'} · Level {slot.level}
                     </p>
 
                     {!isDeleting ? (
                       <div className="mt-3 flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setActiveCharacterId(slot.id)}
-                          className="flex-1 rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-2 text-sm font-medium text-sky-300 hover:bg-sky-500/20"
-                        >
+                        <Button variant="primary" onClick={() => setActiveCharacterId(slot.id)} className="flex-1">
                           Play
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => startDeleting(slotIndex)}
-                          className="rounded-lg border border-red-900 px-3 py-2 text-sm font-medium text-red-400 hover:bg-red-500/10"
-                        >
+                        </Button>
+                        <Button variant="danger" onClick={() => startDeleting(slotIndex)}>
                           Delete
-                        </button>
+                        </Button>
                       </div>
                     ) : (
                       <div className="mt-3 space-y-2">
@@ -163,25 +156,21 @@ export default function CharacterSelectScreen() {
                           placeholder={slot.name}
                         />
                         <div className="flex gap-2">
-                          <button
-                            type="button"
+                          <Button
+                            variant="danger"
                             disabled={deleteConfirmText !== slot.name || deleting}
                             onClick={() => handleDelete(slot.id, slotIndex)}
-                            className="flex-1 rounded-lg border border-red-600 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-300 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                            className="flex-1"
                           >
                             Delete Character
-                          </button>
-                          <button
-                            type="button"
-                            onClick={cancelDeleting}
-                            className="rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-500 hover:border-slate-600"
-                          >
+                          </Button>
+                          <Button variant="secondary" onClick={cancelDeleting}>
                             Cancel
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     )}
-                  </div>
+                  </AscensionCard>
                 )
               }
 
@@ -192,13 +181,9 @@ export default function CharacterSelectScreen() {
                   <p className="text-sm font-medium text-slate-500">Empty slot</p>
 
                   {!isExpanded ? (
-                    <button
-                      type="button"
-                      onClick={() => startCreating(slotIndex)}
-                      className="mt-3 w-full rounded-lg border border-slate-700 px-3 py-2 text-sm font-medium text-slate-300 hover:border-slate-500"
-                    >
+                    <Button variant="secondary" onClick={() => startCreating(slotIndex)} className="mt-3 w-full">
                       Create Character
-                    </button>
+                    </Button>
                   ) : (
                     <div className="mt-3 space-y-2">
                       <input
@@ -243,13 +228,9 @@ export default function CharacterSelectScreen() {
 
                       {createError && <p className="text-xs text-red-400">{createError}</p>}
 
-                      <button
-                        type="button"
-                        onClick={cancelCreating}
-                        className="w-full rounded-lg border border-slate-800 px-3 py-1.5 text-xs text-slate-500 hover:border-slate-600"
-                      >
+                      <Button variant="secondary" onClick={cancelCreating} className="w-full">
                         Cancel
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </div>

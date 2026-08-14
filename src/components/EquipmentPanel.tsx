@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import EquipmentSlot from './EquipmentSlot'
+import { AscensionCard } from './ui/AscensionCard'
+import { Button } from './ui/Button'
 import {
   buildGearTooltip,
   formatBaseStats,
@@ -155,7 +157,7 @@ export default function EquipmentPanel() {
       </div>
 
       {selected && selectedSlot && (
-        <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
+        <AscensionCard contentClassName="p-3">
           <div className="flex items-center gap-3">
             <div
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-lg"
@@ -176,17 +178,17 @@ export default function EquipmentPanel() {
             </div>
           </div>
 
-          <button
-            type="button"
+          <Button
+            variant="secondary"
             onClick={() => {
               setEquippedItem(selectedSlot, null)
               setSelectedSlot(null)
             }}
-            className="mt-3 w-full rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 hover:border-slate-500"
+            className="mt-3 w-full"
           >
             Unequip
-          </button>
-        </div>
+          </Button>
+        </AscensionCard>
       )}
 
       {!selected && <p className="text-center text-xs text-slate-500">Equip gear from your Inventory to fill these slots.</p>}
