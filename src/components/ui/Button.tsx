@@ -15,7 +15,7 @@ const BASE_CLASSES = 'rounded-lg px-4 py-2.5 text-sm transition disabled:cursor-
 // See src/index.css's .btn-gold for the gradient/glow treatment.
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: 'btn-gold font-heading font-bold uppercase tracking-[0.12em]',
-  secondary: 'border border-slate-700 bg-transparent font-medium text-slate-300 hover:border-slate-500',
+  secondary: 'border border-slate-700 bg-transparent font-medium text-slate-300 hover:border-amber-500/60 hover:text-slate-100',
   danger: 'border border-rose-700 bg-transparent font-medium text-rose-300 hover:border-rose-500',
 }
 

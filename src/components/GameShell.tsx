@@ -337,7 +337,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
               onClick={() => setActiveCharacterId(null)}
               aria-label="Switch Character"
               title="Switch Character"
-              className="flex items-center gap-1.5 rounded-lg border border-slate-700 p-2 text-slate-300 hover:border-slate-500 lg:px-3 lg:py-1.5"
+              className="flex items-center gap-1.5 rounded-lg border border-slate-700 p-2 text-slate-300 hover:border-amber-500/60 hover:text-slate-100 lg:px-3 lg:py-1.5"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -361,7 +361,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
               onClick={() => setSettingsOpen(true)}
               aria-label="Settings"
               title="Settings"
-              className="rounded-lg border border-slate-700 p-2 text-slate-300 hover:border-slate-500"
+              className="rounded-lg border border-slate-700 p-2 text-slate-300 hover:border-amber-500/60 hover:text-slate-100"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -382,7 +382,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
               onClick={() => signOut()}
               aria-label="Sign out"
               title="Sign out"
-              className="flex items-center gap-1.5 rounded-lg border border-slate-700 p-2 text-slate-300 hover:border-slate-500 lg:px-3 lg:py-1.5"
+              className="flex items-center gap-1.5 rounded-lg border border-slate-700 p-2 text-slate-300 hover:border-amber-500/60 hover:text-slate-100 lg:px-3 lg:py-1.5"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -441,15 +441,17 @@ export default function GameShell({ characterId }: { characterId: string }) {
 
         <TabNav />
 
-        <section className="rounded-3xl border border-slate-800/80 bg-slate-900/70 p-4 shadow-xl shadow-slate-950/30">
-          {activeTab === 'combat' && <CombatPage />}
-          {activeTab === 'equipment' && <EquipmentTabPage />}
-          {activeTab === 'forge' && <ForgePanel />}
-          {activeTab === 'marketplace' && <MarketplacePanel />}
-          {activeTab === 'shop' && <ShopPanel />}
-          {activeTab === 'bank' && <BankPanel characterId={characterId} />}
-          {activeTab === 'achievements' && <AchievementsPanel characterId={characterId} accountId={accountId} />}
-          {activeTab === 'lucky' && <LuckyPanel characterId={characterId} />}
+        <section className="ascension-card-frame">
+          <div className="ascension-card-inner p-4">
+            {activeTab === 'combat' && <CombatPage />}
+            {activeTab === 'equipment' && <EquipmentTabPage />}
+            {activeTab === 'forge' && <ForgePanel />}
+            {activeTab === 'marketplace' && <MarketplacePanel />}
+            {activeTab === 'shop' && <ShopPanel />}
+            {activeTab === 'bank' && <BankPanel characterId={characterId} />}
+            {activeTab === 'achievements' && <AchievementsPanel characterId={characterId} accountId={accountId} />}
+            {activeTab === 'lucky' && <LuckyPanel characterId={characterId} />}
+          </div>
         </section>
       </main>
 

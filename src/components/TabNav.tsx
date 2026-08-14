@@ -36,14 +36,14 @@ function CombatTabButton() {
     <button
       type="button"
       onClick={() => setActiveTab('combat')}
-      className={`${TAB_BUTTON_CLASS} ${active ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'}`}
+      className={`${TAB_BUTTON_CLASS} ${active ? 'border-amber-400 bg-amber-500/10 text-amber-300' : 'border-slate-700 text-slate-300 hover:border-amber-500/50'}`}
     >
       <span
         className={`flex h-9 w-9 items-center justify-center rounded-full border-2 text-base shadow-lg ${
           isFighting
             ? 'border-emerald-400 bg-emerald-500/20 text-emerald-300 shadow-emerald-500/20'
             : active
-              ? 'border-sky-400 bg-sky-500/20 text-sky-300 shadow-sky-500/20'
+              ? 'border-amber-400 bg-amber-500/20 text-amber-300 shadow-amber-500/20'
               : 'border-slate-600 bg-slate-800 text-slate-300 shadow-black/30'
         }`}
       >
@@ -69,7 +69,7 @@ function TabButton({ id, label, badge }: { id: TabId; label: string; badge?: num
     <button
       type="button"
       onClick={() => setActiveTab(id)}
-      className={`relative ${TAB_BUTTON_CLASS} ${active ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'}`}
+      className={`relative ${TAB_BUTTON_CLASS} ${active ? 'border-amber-400 bg-amber-500/10 text-amber-300' : 'border-slate-700 text-slate-300 hover:border-amber-500/50'}`}
     >
       {icon && <NavIconGlyph icon={icon} sizeClassName="h-8 w-8" />}
       <span>{label}</span>

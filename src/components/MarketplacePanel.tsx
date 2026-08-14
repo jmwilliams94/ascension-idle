@@ -396,7 +396,7 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
                 type="button"
                 onClick={() => setPriceCurrency('gold')}
                 className={`rounded-lg border px-3 py-1 text-xs font-medium ${
-                  priceCurrency === 'gold' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
+                  priceCurrency === 'gold' ? 'border-amber-400 bg-amber-500/10 text-amber-300' : 'border-slate-700 text-slate-300 hover:border-amber-500/50'
                 }`}
               >
                 Gold
@@ -406,8 +406,8 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
                 onClick={() => setPriceCurrency('ascension_points')}
                 className={`rounded-lg border px-3 py-1 text-xs font-medium ${
                   priceCurrency === 'ascension_points'
-                    ? 'border-sky-500 bg-sky-500/10 text-sky-300'
-                    : 'border-slate-700 text-slate-300 hover:border-slate-500'
+                    ? 'border-amber-400 bg-amber-500/10 text-amber-300'
+                    : 'border-slate-700 text-slate-300 hover:border-amber-500/50'
                 }`}
               >
                 Ascension Points
@@ -431,8 +431,8 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
                   onClick={() => setDurationHours(option.hours)}
                   className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium ${
                     durationHours === option.hours
-                      ? 'border-sky-500 bg-sky-500/10 text-sky-300'
-                      : 'border-slate-700 text-slate-300 hover:border-slate-500'
+                      ? 'border-amber-400 bg-amber-500/10 text-amber-300'
+                      : 'border-slate-700 text-slate-300 hover:border-amber-500/50'
                   }`}
                 >
                   {option.label}
@@ -824,7 +824,7 @@ export default function MarketplacePanel() {
           type="button"
           onClick={() => setTab('browse')}
           className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
-            tab === 'browse' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
+            tab === 'browse' ? 'border-amber-400 bg-amber-500/10 text-amber-300' : 'border-slate-700 text-slate-300 hover:border-amber-500/50'
           }`}
         >
           Browse
@@ -833,7 +833,7 @@ export default function MarketplacePanel() {
           type="button"
           onClick={() => setTab('my-listings')}
           className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
-            tab === 'my-listings' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
+            tab === 'my-listings' ? 'border-amber-400 bg-amber-500/10 text-amber-300' : 'border-slate-700 text-slate-300 hover:border-amber-500/50'
           }`}
         >
           My Listings
@@ -842,7 +842,7 @@ export default function MarketplacePanel() {
           type="button"
           onClick={() => setTab('mail')}
           className={`relative rounded-lg border px-3 py-1.5 text-xs font-medium ${
-            tab === 'mail' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
+            tab === 'mail' ? 'border-amber-400 bg-amber-500/10 text-amber-300' : 'border-slate-700 text-slate-300 hover:border-amber-500/50'
           }`}
         >
           Mail

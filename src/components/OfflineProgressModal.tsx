@@ -1,5 +1,6 @@
 import CountUp from './CountUpNumber'
 import LootHoldingCard from './LootHoldingCard'
+import { Button } from './ui/Button'
 import { useOfflineProgressStore } from '../game/combat/useOfflineProgressStore'
 import { useLootHoldingStore } from '../game/items/useLootHoldingStore'
 import { useLootHoldingModalStore } from '../game/items/useLootHoldingModalStore'
@@ -81,7 +82,8 @@ export default function OfflineProgressModal() {
           scroll the card just overflows past the screen edge on a phone with
           no way to reach whatever's below the fold (Loot Holding's grid,
           bulk-action bar, detail card, even the "Got it" button itself). */}
-      <div className="max-h-[90vh] w-full max-w-md space-y-4 overflow-y-auto rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900 to-slate-950 p-5 shadow-2xl shadow-black/60">
+      <div className="ascension-card-frame w-full max-w-md">
+      <div className="ascension-card-inner max-h-[90vh] space-y-4 overflow-y-auto p-5">
         {isCalculating ? (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <span className="text-3xl animate-pulse">⏳</span>
@@ -164,15 +166,12 @@ export default function OfflineProgressModal() {
 
             {lootHoldingCount > 0 && <LootHoldingCard />}
 
-            <button
-              type="button"
-              onClick={handleClose}
-              className="w-full rounded-lg border border-sky-500 bg-sky-500/10 py-2 text-sm font-medium text-sky-300 hover:bg-sky-500/20"
-            >
+            <Button variant="primary" onClick={handleClose} className="w-full">
               Got it
-            </button>
+            </Button>
           </>
         )}
+      </div>
       </div>
     </div>
   )

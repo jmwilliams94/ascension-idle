@@ -724,7 +724,7 @@ export default function AchievementsPanel({ characterId, accountId }: { characte
             type="button"
             onClick={() => setTab(item.id)}
             className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium ${
-              tab === item.id ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
+              tab === item.id ? 'border-amber-400 bg-amber-500/10 text-amber-300' : 'border-slate-700 text-slate-300 hover:border-amber-500/50'
             }`}
           >
             {item.label}

@@ -59,7 +59,7 @@ function NavButton({ id, label, badge }: { id: TabId; label: string; badge?: num
       type="button"
       onClick={() => setActiveTab(id)}
       className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-medium leading-tight ${
-        active ? 'text-sky-300' : 'text-slate-400'
+        active ? 'text-amber-300' : 'text-slate-400'
       }`}
     >
       {icon && <NavIconGlyph icon={icon} />}
@@ -91,7 +91,7 @@ function FightNavButton() {
           isFighting
             ? 'border-emerald-400 bg-emerald-500/20 text-emerald-300 shadow-emerald-500/20'
             : active
-              ? 'border-sky-400 bg-sky-500/20 text-sky-300 shadow-sky-500/20'
+              ? 'border-amber-400 bg-amber-500/20 text-amber-300 shadow-amber-500/20'
               : 'border-slate-600 bg-slate-800 text-slate-300 shadow-black/30'
         }`}
       >
@@ -158,7 +158,7 @@ function TownNavButton({ badges }: { badges: Partial<Record<TabId, number>> }) {
                     setExpanded(false)
                   }}
                   className={`relative flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-left text-xs font-medium ${
-                    activeTab === item.id ? 'bg-sky-500/10 text-sky-300' : 'text-slate-300 hover:bg-slate-800'
+                    activeTab === item.id ? 'bg-amber-500/10 text-amber-300' : 'text-slate-300 hover:bg-slate-800'
                   }`}
                 >
                   {icon && <NavIconGlyph icon={icon} />}
@@ -179,7 +179,7 @@ function TownNavButton({ badges }: { badges: Partial<Record<TabId, number>> }) {
         type="button"
         onClick={() => setExpanded((current) => !current)}
         className={`relative flex flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-medium leading-tight ${
-          active || expanded ? 'text-sky-300' : 'text-slate-400'
+          active || expanded ? 'text-amber-300' : 'text-slate-400'
         }`}
       >
         <span className="text-lg">🏘️</span>

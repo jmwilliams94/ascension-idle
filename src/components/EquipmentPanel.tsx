@@ -88,6 +88,7 @@ export default function EquipmentPanel() {
 
   return (
     <div className="space-y-4">
+      <AscensionCard>
       <div
         className="mx-auto grid max-w-sm gap-x-2 gap-y-3 lg:gap-x-3 lg:gap-y-4"
         style={{
@@ -155,6 +156,7 @@ export default function EquipmentPanel() {
           </div>
         )}
       </div>
+      </AscensionCard>
 
       {selected && selectedSlot && (
         <AscensionCard contentClassName="p-3">

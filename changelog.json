@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.91.1",
+    "date": "2026-08-14",
+    "changes": [
+      "Extended the new gold-and-silver look to the navigation bar, main page frame, Equipment screen, Lucky Lad, Marketplace, Achievements, and the welcome-back screen; Shop's category buttons now sit in one row"
+    ]
+  },
+  {
     "version": "1.91.0",
     "date": "2026-08-14",
     "changes": [

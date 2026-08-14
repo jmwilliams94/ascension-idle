@@ -221,22 +221,22 @@ export default function ShopPanel() {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="space-y-3">
-        {/* Capped + centered at lg+ only (reported too large on desktop) —
-            below lg the grid stays full-width, unchanged, since only the
-            desktop sizing was flagged. */}
-        <div className="grid grid-cols-3 gap-3 lg:mx-auto lg:max-w-[380px]">
+        {/* One row of 5 (2026-08-14, requested by the user) — was grid-cols-3,
+            which wrapped the 5 tabs onto two uneven rows. Capped + centered at
+            lg+ only (reported too large on desktop), unchanged below lg. */}
+        <div className="grid grid-cols-5 gap-2 lg:mx-auto lg:max-w-[520px] lg:gap-3">
           {SHOP_TABS.map((entry) => (
             <button
               key={entry.id}
               type="button"
               onClick={() => setTab(entry.id)}
-              className={`flex aspect-square flex-col items-center justify-center gap-1.5 rounded-xl border text-sm font-medium transition-colors ${
+              className={`flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border text-[11px] font-medium transition-colors lg:gap-1.5 lg:text-sm ${
                 tab === entry.id
-                  ? 'border-amber-500/70 bg-amber-500/10 text-amber-300'
-                  : 'border-slate-700 bg-slate-900/60 text-slate-300 hover:border-slate-500 hover:bg-slate-900'
+                  ? 'border-amber-400 bg-amber-500/10 text-amber-300'
+                  : 'border-slate-700 bg-slate-900/60 text-slate-300 hover:border-amber-500/50 hover:bg-slate-900'
               }`}
             >
-              <span className="text-2xl" aria-hidden="true">
+              <span className="text-lg lg:text-2xl" aria-hidden="true">
                 {entry.icon}
               </span>
               {entry.label}

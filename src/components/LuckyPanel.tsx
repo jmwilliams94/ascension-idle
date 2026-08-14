@@ -232,7 +232,7 @@ function LuckyCard({
       ? 'border-amber-400 bg-amber-500/10 shadow-lg shadow-amber-500/20'
       : reward
         ? 'border-slate-700 bg-slate-900/60'
-        : 'border-slate-700 bg-slate-800 hover:border-slate-500'
+        : 'border-slate-700 bg-slate-800 hover:border-amber-500/60'
   } disabled:cursor-not-allowed`
 
   // Once revealed, this is no longer the pick button — it's an inert
@@ -366,12 +366,10 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   }
 
   return (
-    <div className="space-y-4">
-      <AscensionCard title="LuckyLad">
-        <div className="flex items-center justify-center">
-          <img src={LUCKYLAD_ICON_SRC} alt="" className="h-8 w-8 object-contain" />
-        </div>
-      </AscensionCard>
+    <AscensionCard title="LuckyLad" contentClassName="space-y-4 p-4">
+      <div className="flex items-center justify-center">
+        <img src={LUCKYLAD_ICON_SRC} alt="" className="h-8 w-8 object-contain" />
+      </div>
 
       {/* max-w-sm caps how wide each card can stretch on desktop — without
           it, grid-cols-3's fluid columns fill the whole (much wider) page
@@ -401,14 +399,12 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
         <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
           <p className="text-xs text-slate-400">Choose how to pay for a draw:</p>
           <div className="mt-2 flex gap-2">
-            <button
-              type="button"
-              disabled={busy || !canAffordTicket}
-              onClick={() => setPaymentChoice('lottery_ticket')}
-              className="flex-1 rounded-lg border border-sky-500 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
+            <Button variant="primary" disabled={busy || !canAffordTicket} onClick={() => setPaymentChoice('lottery_ticket')} className="flex-1">
               {`Lottery Ticket (${lotteryTickets} owned)`}
-            </button>
+            </Button>
+            {/* Kept its own purple — Ascension Points' established, project-wide
+                currency color (see CLAUDE.md) — rather than converted to gold,
+                same reasoning Salvage's AP-earning buttons kept it too. */}
             <button
               type="button"
               disabled={busy || !canAffordPoints}
@@ -458,6 +454,6 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
       )}
 
       {error && <p className="text-xs text-amber-400">{error}</p>}
-    </div>
+    </AscensionCard>
   )
 }
