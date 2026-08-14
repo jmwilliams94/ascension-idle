@@ -283,13 +283,19 @@ export function isFallenStarDragId(id: string): boolean {
 // priority over its emoji icon prop.
 export const COMET_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/comet.png`
 export const FALLEN_STAR_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/fallen-star.png`
-// Comet Box (2026-08-14) — the Lucky Lad "+N Comets" reward kind gets its
-// own dedicated chest-and-scroll icon rather than reusing the plain Comet
-// icon above, everywhere it's shown (LuckyPanel board tile/tooltip,
-// MoneyBagRevealModal's instant-grant reveal, GlobalAnnouncementTicker).
-// `?v=${APP_VERSION}` cache-busts it (see navIcons.ts's `iconUrl` doc
-// comment) — added after the art at this same filename had to be corrected
-// once already the same day (wrong source image swapped in initially).
+// Comet Box (2026-08-14) — the Lucky Lad reward kind gets its own dedicated
+// chest-and-scroll icon rather than reusing the plain Comet icon above,
+// everywhere it's shown (LuckyPanel board tile/tooltip, InventoryPanel's
+// tile, GlobalAnnouncementTicker). `?v=${APP_VERSION}` cache-busts it (see
+// navIcons.ts's `iconUrl` doc comment) — added after the art at this same
+// filename had to be corrected once already the same day (wrong source
+// image swapped in initially).
+//
+// Redesigned 2026-08-25 (requested by the user) from an instant +100 Comets
+// grant into a real inventory item, same virtual-tile pattern as Comet
+// Scroll below (characters.comet_box_count) — see buildCometBoxTooltip
+// further down for its own drag-id/tooltip helpers, placed alongside Comet
+// Scroll's since they share the exact same mechanic shape.
 export const COMET_BOX_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/comet-box.png?v=${APP_VERSION}`
 
 // Own distinct border/glow colors (2026-08-02), same InventorySlot
@@ -397,6 +403,37 @@ export function buildFallenStarScrollTooltip(): ItemTooltipData {
     iconColor: FALLEN_STAR_COLOR,
     lines: ['Compact storage'],
     stats: ['Holds 10 Fallen Stars — Open to unbundle'],
+  }
+}
+
+// Comet Box (redesigned 2026-08-25, requested by the user, from an instant
+// +100 Comets grant into a real inventory item) — same virtual-tile pattern
+// as Comet Scroll above: no per-unit id in the backend, just a running count
+// (characters.comet_box_count), so each rendered tile gets a synthetic id
+// combining the currency with a render-time index, purely for a stable React
+// key. Distinct from Comet Scroll's own "Open" (unbundles into 10 loose
+// Comets on the character itself) — opening a Comet Box instead grants a
+// flat 100 Comets straight into the account-wide Bank balance
+// (players.bank_comets, see open_comet_box), never the character's own loose
+// comet_count.
+export const COMET_BOX_REWARD_AMOUNT = 100
+const COMET_BOX_DRAG_ID_PREFIX = 'comet-box:'
+
+export function cometBoxDragId(index: number): string {
+  return `${COMET_BOX_DRAG_ID_PREFIX}${index}`
+}
+
+export function isCometBoxDragId(id: string): boolean {
+  return id.startsWith(COMET_BOX_DRAG_ID_PREFIX)
+}
+
+export function buildCometBoxTooltip(): ItemTooltipData {
+  return {
+    title: 'Comet Box',
+    iconSrc: COMET_BOX_ICON_SRC,
+    iconColor: MATERIAL_COLOR,
+    lines: ['Lucky Lad reward'],
+    stats: [`Open for ${COMET_BOX_REWARD_AMOUNT} Account Bank Comets`],
   }
 }
 

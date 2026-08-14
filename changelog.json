@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.92.22",
+    "date": "2026-08-14",
+    "changes": [
+      "Comet Box is now an inventory item you open yourself (like a Comet Scroll) instead of an instant reward — opening one adds 100 Comets to your Account Bank"
+    ]
+  },
+  {
     "version": "1.92.21",
     "date": "2026-08-14",
     "changes": [

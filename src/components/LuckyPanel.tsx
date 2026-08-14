@@ -26,6 +26,7 @@ import {
   buildFallenStarTooltip,
   buildCometScrollTooltip,
   buildFallenStarScrollTooltip,
+  buildCometBoxTooltip,
   buildStoneTooltip,
   buildMoneyBagTooltip,
   buildGemBagTooltip,
@@ -37,7 +38,6 @@ import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
 import { AscensionCard } from './ui/AscensionCard'
 import { Button } from './ui/Button'
-import { useMoneyBagRevealStore } from '../game/items/useMoneyBagRevealStore'
 
 // Parses the gem type/tier back out of a gem_tempered_<id>/gem_ascended_<id>
 // reward kind (see useLuckyStore.ts's LuckyRewardKind for why the gem
@@ -68,7 +68,7 @@ function rewardLabel(reward: LuckyReward): string {
     case 'comet':
       return 'Comet'
     case 'comet_box':
-      return `Comet Box (+${reward.amount.toLocaleString()})`
+      return 'Comet Box'
     case 'fallen_star':
       return 'Fallen Star'
     case 'comet_scroll':
@@ -156,13 +156,7 @@ function buildLuckyRewardTooltip(reward: LuckyReward): ItemTooltipData {
     case 'comet':
       return buildCometTooltip()
     case 'comet_box':
-      return {
-        title: 'Comet Box',
-        iconSrc: COMET_BOX_ICON_SRC,
-        iconColor: MATERIAL_COLOR,
-        lines: ['Lucky Lad reward'],
-        stats: [`Grants ${reward.amount.toLocaleString()} Comets instantly`],
-      }
+      return buildCometBoxTooltip()
     case 'fallen_star':
       return buildFallenStarTooltip()
     case 'comet_scroll':
@@ -335,7 +329,6 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   const drawBulk = useLuckyStore((state) => state.drawBulk)
   const ascensionPoints = usePlayerRecordStore((state) => state.ascensionPoints)
   const lotteryTickets = useCurrencyStore((state) => state.lotteryTickets)
-  const showMoneyBagReveal = useMoneyBagRevealStore((state) => state.show)
 
   const [paymentChoice, setPaymentChoice] = useState<'lottery_ticket' | 'ascension_points' | null>(null)
   const [board, setBoard] = useState<LuckyReward[] | null>(null)
@@ -390,15 +383,6 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
     setBoard(result.board)
     setWonIndex(result.won_index)
     setPaymentUsed(result.payment ?? null)
-
-    // comet_box grants instantly (no separate "open" step, unlike Money
-    // Bag/Gem Bag), so its own MoneyBagRevealModal fires straight off the
-    // draw result — same reveal card InventoryPanel.handleOpenBag shows for
-    // a gold/gem bag, styled the same way (see useMoneyBagRevealStore.ts).
-    const won = result.board[result.won_index]
-    if (won.kind === 'comet_box') {
-      showMoneyBagReveal({ kind: 'comet_box', amount: won.amount })
-    }
   }
 
   // Bulk draw: payment happens the moment this fires (no card pick needed —
@@ -430,11 +414,6 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   const handleRevealBulkCard = (index: number) => {
     if (!board || busy || revealedIndices.has(index)) return
     setRevealedIndices((prev) => new Set(prev).add(index))
-
-    const reward = board[index]
-    if (reward.kind === 'comet_box') {
-      showMoneyBagReveal({ kind: 'comet_box', amount: reward.amount })
-    }
   }
 
   const handleReset = () => {

@@ -74,6 +74,18 @@ interface TransferGemResult {
   max_withdrawable?: number
 }
 
+// open_comet_box (2026-08-25) — consumes 1 Comet Box (characters.comet_box_count)
+// and grants a flat 100 Comets straight into the account's Bank balance
+// (players.bank_comets), a cross-store mutation (character count + account
+// balance) same shape as withdrawCurrencyItem below, so it lives here rather
+// than on useCurrencyStore alongside the count itself.
+interface OpenCometBoxResult {
+  ok: boolean
+  error?: 'not_owner' | 'not_enough_boxes'
+  comet_box_count?: number
+  bank_comets?: number
+}
+
 interface TransferCurrencyResult {
   ok: boolean
   // 'not_enough_room' (2026-08-07) — withdrawing comets/fallen_stars is
@@ -168,6 +180,8 @@ interface BankState {
   // was retired 2026-08-07 (confirmed with the user) — Withdraw stays so any
   // already-banked physical units are still reachable from BankGrid.
   withdrawCurrencyItem: (characterId: string, currencyType: BankCurrencyType, amount: number) => Promise<BankItemResult>
+  // Comet Box "Open" (2026-08-25) — see OpenCometBoxResult above.
+  openCometBox: (characterId: string) => Promise<OpenCometBoxResult>
 }
 
 export const useBankStore = create<BankState>((set, get) => ({
@@ -461,6 +475,26 @@ export const useBankStore = create<BankState>((set, get) => ({
     }
 
     return applyBankCurrencyItemResult(currencyType, data as BankItemResult)
+  },
+
+  openCometBox: async (characterId) => {
+    set({ busy: true })
+    const { data, error } = await supabase.rpc('open_comet_box', { p_character_id: characterId })
+    set({ busy: false })
+
+    if (error) {
+      console.error('Open comet box call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as OpenCometBoxResult
+
+    if (result.ok && typeof result.comet_box_count === 'number' && typeof result.bank_comets === 'number') {
+      useCurrencyStore.getState().setCometBoxes(result.comet_box_count)
+      usePlayerRecordStore.getState().setBankBalances({ bankComets: result.bank_comets })
+    }
+
+    return result
   },
 
 }))

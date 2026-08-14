@@ -35,6 +35,14 @@ interface CurrencyState {
   fallenStars: number
   cometScrolls: number
   fallenStarScrolls: number
+  // Comet Box (2026-08-25, redesigned from an instant grant into a real
+  // inventory item) — same virtual-tile counter shape as cometScrolls above
+  // (characters.comet_box_count). Opening one is a cross-store mutation
+  // (character comet_box_count + account bank_comets), so its RPC wrapper
+  // lives in useBankStore.openCometBox rather than here — this store only
+  // ever reflects the count itself, same trust model as everything else on
+  // this interface.
+  cometBoxes: number
   // Lottery Ticket (2026-08-06, Achievements rework) — a per-character count,
   // same server-authoritative trust model as comets/fallen stars: granted by
   // claim_kill_count_reward, spent by draw_lucky_ticket(p_use_ticket=true).
@@ -56,12 +64,14 @@ interface CurrencyState {
     fallenStars: number
     cometScrolls: number
     fallenStarScrolls: number
+    cometBoxes: number
     lotteryTickets: number
   }) => void
   setComets: (value: number) => void
   setFallenStars: (value: number) => void
   setCometScrolls: (value: number) => void
   setFallenStarScrolls: (value: number) => void
+  setCometBoxes: (value: number) => void
   setLotteryTickets: (value: number) => void
   // Bundles 10 loose units into 1 Scroll — one fixed-size transaction per
   // call (mirrors buyArrows/buyPotions always purchasing one full stack),
@@ -78,6 +88,7 @@ export const useCurrencyStore = create<CurrencyState>((set) => ({
   fallenStars: 0,
   cometScrolls: 0,
   fallenStarScrolls: 0,
+  cometBoxes: 0,
   lotteryTickets: 0,
 
   hydrate: (saved) =>
@@ -86,12 +97,14 @@ export const useCurrencyStore = create<CurrencyState>((set) => ({
       fallenStars: saved.fallenStars,
       cometScrolls: saved.cometScrolls,
       fallenStarScrolls: saved.fallenStarScrolls,
+      cometBoxes: saved.cometBoxes,
       lotteryTickets: saved.lotteryTickets,
     }),
   setComets: (value) => set({ comets: value }),
   setFallenStars: (value) => set({ fallenStars: value }),
   setCometScrolls: (value) => set({ cometScrolls: value }),
   setFallenStarScrolls: (value) => set({ fallenStarScrolls: value }),
+  setCometBoxes: (value) => set({ cometBoxes: value }),
   setLotteryTickets: (value) => set({ lotteryTickets: value }),
 
   bundleScroll: async (characterId, currencyType) => {

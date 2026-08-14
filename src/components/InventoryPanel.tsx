@@ -26,10 +26,13 @@ import {
   MATERIAL_COLOR,
   COMET_ICON_SRC,
   COMET_SCROLL_ICON_SRC,
+  COMET_BOX_ICON_SRC,
+  COMET_BOX_REWARD_AMOUNT,
   buildFallenStarScrollTooltip,
   buildFallenStarTooltip,
   buildCometScrollTooltip,
   buildCometTooltip,
+  buildCometBoxTooltip,
   buildStoneTooltip,
   buildMoneyBagTooltip,
   buildGemBagTooltip,
@@ -38,6 +41,7 @@ import {
   fallenStarScrollDragId,
   cometDragId,
   cometScrollDragId,
+  cometBoxDragId,
   getStoneIconSrc,
   stoneDragId,
 } from '../game/items/forgeCosts'
@@ -85,6 +89,7 @@ type SelectedSlot =
   | { kind: 'potion'; id: string }
   | { kind: 'currency'; dragId: string; currencyType: 'comet' | 'fallen_star' }
   | { kind: 'scroll'; dragId: string; currencyType: 'comet' | 'fallen_star' }
+  | { kind: 'comet_box'; dragId: string }
   | null
 
 interface InventoryPanelProps {
@@ -185,8 +190,10 @@ export default function InventoryPanel({
   const fallenStars = useCurrencyStore((state) => state.fallenStars)
   const cometScrolls = useCurrencyStore((state) => state.cometScrolls)
   const fallenStarScrolls = useCurrencyStore((state) => state.fallenStarScrolls)
+  const cometBoxes = useCurrencyStore((state) => state.cometBoxes)
   const bundleScroll = useCurrencyStore((state) => state.bundleScroll)
   const unbundleScroll = useCurrencyStore((state) => state.unbundleScroll)
+  const openCometBox = useBankStore((state) => state.openCometBox)
   const characterId = useActiveCharacterStore((state) => state.characterId)
   const potionStacks = usePotionStore((state) => state.stacks)
   const handlePotionUse = usePotionStore((state) => state.usePotion)
@@ -240,6 +247,15 @@ export default function InventoryPanel({
   // always-below-the-grid Unbundle card (2026-08-07, per the user: move it
   // into the tooltip like Bundle already is).
   const [scrollPopoverAnchorRect, setScrollPopoverAnchorRect] = useState<DOMRect | null>(null)
+  // Comet Box "Open" popover (2026-08-25, redesigned from an instant grant
+  // into a real inventory item) — same click-opened TooltipActionPopover
+  // shell as the Scroll popover above, but its own state since Comet Box has
+  // only one action (Open, no Bank/Bank All — opening already deposits
+  // straight into the account's Bank balance, see forgeCosts.ts's
+  // buildCometBoxTooltip) regardless of enableBankDeposit.
+  const [cometBoxPopoverAnchorRect, setCometBoxPopoverAnchorRect] = useState<DOMRect | null>(null)
+  const [cometBoxBusy, setCometBoxBusy] = useState(false)
+  const [cometBoxError, setCometBoxError] = useState<string | null>(null)
   // Money Bag / Gem Bag "Open" popover (Lucky Lad rewards expansion,
   // 2026-08-09) — same click-opened TooltipActionPopover shell as the Scroll
   // popover above, but takes precedence over equipPopoverEnabled/
@@ -283,6 +299,7 @@ export default function InventoryPanel({
       (enableBankDeposit && bankPopoverAnchorRect !== null) ||
       (!enableBankDeposit && bundlePopoverAnchorRect !== null) ||
       scrollPopoverAnchorRect !== null ||
+      cometBoxPopoverAnchorRect !== null ||
       bagPopoverAnchorRect !== null)
 
   const visiblePotionStacks = potionStacks.filter((stack) => stack.count > 0)
@@ -360,6 +377,12 @@ export default function InventoryPanel({
     dragId: fallenStarScrollDragId(index),
   }))
 
+  // Comet Box (2026-08-25) is the same virtual-tile shape as the Scrolls
+  // above — allocated last in the same greedy budget chain.
+  const remainingAfterFallenStarScrolls = Math.max(0, remainingAfterCometScrolls - fallenStarScrollTiles.length)
+  const cometBoxShown = Math.min(cometBoxes, remainingAfterFallenStarScrolls)
+  const cometBoxTiles = Array.from({ length: cometBoxShown }, (_, index) => ({ index, dragId: cometBoxDragId(index) }))
+
   const occupiedCount =
     stoneTiles.length +
     gemTiles.length +
@@ -367,6 +390,7 @@ export default function InventoryPanel({
     fallenStarTiles.length +
     cometScrollTiles.length +
     fallenStarScrollTiles.length +
+    cometBoxTiles.length +
     visiblePotionStacks.length +
     visibleItems.length
   const emptySlotCount = Math.max(0, INVENTORY_SLOT_CAP - occupiedCount)
@@ -410,7 +434,7 @@ export default function InventoryPanel({
   const selectedScrollType = selectedSlot?.kind === 'scroll' ? selectedSlot.currencyType : undefined
 
   const slotKey = (slot: NonNullable<SelectedSlot>): string =>
-    slot.kind === 'stone' || slot.kind === 'gem' || slot.kind === 'currency' || slot.kind === 'scroll'
+    slot.kind === 'stone' || slot.kind === 'gem' || slot.kind === 'currency' || slot.kind === 'scroll' || slot.kind === 'comet_box'
       ? slot.dragId
       : `${slot.kind}:${slot.id}`
 
@@ -456,6 +480,13 @@ export default function InventoryPanel({
   const closeScrollPopover = () => {
     setSelectedSlot(null)
     setScrollPopoverAnchorRect(null)
+  }
+
+  // Comet Box popover-only — dismiss action, also used after a successful
+  // Open from inside the popover.
+  const closeCometBoxPopover = () => {
+    setSelectedSlot(null)
+    setCometBoxPopoverAnchorRect(null)
   }
 
   // Bag popover-only — dismiss action, also used after a successful Open
@@ -840,6 +871,22 @@ export default function InventoryPanel({
     closeScrollPopover()
   }
 
+  const handleOpenCometBox = async () => {
+    if (!characterId) {
+      return
+    }
+    setCometBoxError(null)
+    setCometBoxBusy(true)
+    const result = await openCometBox(characterId)
+    setCometBoxBusy(false)
+
+    if (!result.ok) {
+      setCometBoxError(result.error === 'not_enough_boxes' ? 'No Comet Boxes to open.' : "Couldn't open.")
+      return
+    }
+
+    closeCometBoxPopover()
+  }
 
   const toggleSaleSelection = (itemId: string) => {
     setSelectedForSale((current) => {
@@ -948,6 +995,7 @@ export default function InventoryPanel({
           )}
 
           {scrollError && <span className="text-xs text-amber-400">{scrollError}</span>}
+          {cometBoxError && <span className="text-xs text-amber-400">{cometBoxError}</span>}
         </div>
 
         {/* overflow-x-auto is a defensive backstop, not the primary fix — the
@@ -1288,6 +1336,48 @@ export default function InventoryPanel({
             )
           })}
 
+          {cometBoxTiles.map(({ dragId }) => {
+            if (reservedItemIds.includes(dragId)) {
+              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+            }
+
+            const isSelected = selectedSlot?.kind === 'comet_box' && selectedSlot.dragId === dragId
+
+            const commonProps = {
+              slotId: dragId,
+              filled: true as const,
+              sizeClassName: SLOT_SIZE_CLASS,
+              iconSrc: COMET_BOX_ICON_SRC,
+              qualityColor: MATERIAL_COLOR,
+              label: 'Comet Box',
+              tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildCometBoxTooltip(),
+              selected: isSelected,
+            }
+
+            const cometBoxSlot = onTileDrop ? (
+              <DraggableInventorySlot
+                key={dragId}
+                {...commonProps}
+                dragEnabled
+                dragPayload={{ id: dragId, icon: '🎁', iconSrc: COMET_BOX_ICON_SRC, qualityColor: MATERIAL_COLOR }}
+                onDrop={handleTileDrop}
+                onClick={() => toggleSlot({ kind: 'comet_box', dragId })}
+              />
+            ) : (
+              <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'comet_box', dragId })} />
+            )
+
+            return (
+              <div
+                key={dragId}
+                data-tooltip-action-anchor
+                onClick={(event) => setCometBoxPopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
+              >
+                {cometBoxSlot}
+              </div>
+            )
+          })}
+
           {visibleItems.map((item) => {
             if (reservedItemIds.includes(item.id)) {
               return <InventorySlot key={item.id} slotId={item.id} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
@@ -1531,6 +1621,21 @@ export default function InventoryPanel({
               : []),
           ]}
           onClose={closeScrollPopover}
+        />
+      )}
+
+      {selectedSlot?.kind === 'comet_box' && cometBoxPopoverAnchorRect && (
+        <TooltipActionPopover
+          anchorRect={cometBoxPopoverAnchorRect}
+          tooltip={buildCometBoxTooltip()}
+          actions={[
+            {
+              label: cometBoxBusy ? 'Opening…' : `Open (+${COMET_BOX_REWARD_AMOUNT} Bank Comets)`,
+              onClick: () => void handleOpenCometBox(),
+              disabled: cometBoxBusy,
+            },
+          ]}
+          onClose={closeCometBoxPopover}
         />
       )}
 

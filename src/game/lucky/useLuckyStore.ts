@@ -57,14 +57,17 @@ export const CHEST_OPEN_ICON_SRC = `${BASE_URL}lucky-icons/chest-open.png`
 // "Tempered Gem"/"Ascended Gem" label. The original two weights were split
 // evenly 4 ways across drake/ember/bastion/iris in pick_lucky_reward.
 //
-// comet_box (2026-08-21, requested by the user) — a flat, instant +100
-// Comets, distinct from the plain 'comet' kind (+1 loose Comet). `amount` on
-// this kind carries the literal grant amount (100), unlike most other kinds
-// where `amount` means a tier/class index — weight matches Fallen Star's own
+// comet_box (2026-08-21, requested by the user; redesigned 2026-08-25, also
+// requested by the user) — a real inventory item (characters.comet_box_count),
+// same virtual-tile mechanic as 'comet_scroll' below, distinct from the plain
+// 'comet' kind (+1 loose Comet). `amount` on this kind carries the fixed
+// grant open_comet_box applies once opened (100 Comets, into the account's
+// Bank balance — see forgeCosts.ts's COMET_BOX_REWARD_AMOUNT), not a
+// tier/class index like most other kinds — weight matches Fallen Star's own
 // (4.0, requested by the user 2026-08-23, see pick_lucky_reward's own
-// comment). Reveals via the same center-screen MoneyBagRevealModal a Money
-// Bag's gold/gem reveal uses (see LuckyPanel.tsx's handleOpen), not the
-// inline board tile alone.
+// comment). Was an instant +100 loose-Comets grant with its own center-screen
+// MoneyBagRevealModal reveal until 2026-08-25 — now just lands on the board
+// like comet_scroll, no separate reveal step.
 export type LuckyRewardKind =
   | 'gold'
   | 'comet'
@@ -98,6 +101,7 @@ interface LuckyCharacterTotals {
   fallen_star_count: number
   comet_scroll_count: number
   fallen_star_scroll_count: number
+  comet_box_count: number
   lottery_ticket_count: number
 }
 
@@ -184,6 +188,7 @@ export const useLuckyStore = create<LuckyState>((set, get) => ({
       useCurrencyStore.getState().setFallenStars(result.character.fallen_star_count)
       useCurrencyStore.getState().setCometScrolls(result.character.comet_scroll_count)
       useCurrencyStore.getState().setFallenStarScrolls(result.character.fallen_star_scroll_count)
+      useCurrencyStore.getState().setCometBoxes(result.character.comet_box_count)
       useCurrencyStore.getState().setLotteryTickets(result.character.lottery_ticket_count)
     }
 
@@ -235,6 +240,7 @@ export const useLuckyStore = create<LuckyState>((set, get) => ({
       useCurrencyStore.getState().setFallenStars(result.character.fallen_star_count)
       useCurrencyStore.getState().setCometScrolls(result.character.comet_scroll_count)
       useCurrencyStore.getState().setFallenStarScrolls(result.character.fallen_star_scroll_count)
+      useCurrencyStore.getState().setCometBoxes(result.character.comet_box_count)
       useCurrencyStore.getState().setLotteryTickets(result.character.lottery_ticket_count)
     }
 
