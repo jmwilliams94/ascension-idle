@@ -340,6 +340,47 @@ img {
   opacity: 0.4;
 }
 
+/* Horizontal gold/steel/gold edge line (2026-08-14) — same three-stop
+   palette as .ascension-card-frame's vertical gradient, rotated 90° for a
+   straight top/bottom rule rather than a boxed panel. Used where a card-
+   matching border is wanted but the element isn't itself a rounded box
+   (GameShell's header, MobileBottomNav's top edge). border-image ignores
+   border-radius, which is fine here since neither consumer is rounded. */
+.ascension-edge-b {
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg, rgba(212, 175, 55, 0.6) 0%, rgba(122, 139, 158, 0.35) 50%, rgba(212, 175, 55, 0.6) 100%) 1;
+}
+
+.ascension-edge-t {
+  border-top: 1px solid transparent;
+  border-image: linear-gradient(90deg, rgba(212, 175, 55, 0.6) 0%, rgba(122, 139, 158, 0.35) 50%, rgba(212, 175, 55, 0.6) 100%) 1;
+}
+
+/* Compact "chip" variant of the card frame (2026-08-14) — same gradient-
+   border-via-padding trick and ink-gradient interior as
+   .ascension-card-frame/.ascension-card-inner, sized for small HUD pills
+   (ExpBar, Players Online, Chat button, header icon buttons) instead of a
+   full panel: smaller radius, no drop shadow/glow. `.is-interactive` adds a
+   brighter hover gradient for the ones that are actual buttons — plain
+   info pills (ExpBar, Players Online) skip that class so they don't read as
+   clickable. */
+.ascension-chip-frame {
+  position: relative;
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.65) 0%, rgba(122, 139, 158, 0.3) 50%, rgba(212, 175, 55, 0.5) 100%);
+  padding: 1px;
+  border-radius: 0.5rem;
+}
+
+.ascension-chip-inner {
+  display: block;
+  background: linear-gradient(180deg, var(--ascension-ink-soft) 0%, var(--ascension-ink) 100%);
+  border-radius: calc(0.5rem - 1px);
+}
+
+.ascension-chip-frame.is-interactive:hover {
+  background: linear-gradient(180deg, rgba(255, 215, 0, 0.85) 0%, rgba(192, 209, 227, 0.45) 50%, rgba(255, 215, 0, 0.7) 100%);
+}
+
 /* Dark inset frame for the custom <select> wrapper (Select.tsx) — border
    brightens gold on hover/focus, matching .select-box from the mockup. */
 .select-frame {

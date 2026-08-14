@@ -27,19 +27,21 @@ export default function ChatButton() {
   )
 
   return (
-    <button
-      type="button"
-      onClick={openOverlay}
-      aria-label="Open global chat"
-      title="Global Chat"
-      className="relative shrink-0 rounded-lg border border-slate-700 bg-slate-900/60 px-2.5 py-1.5 text-xs font-medium text-slate-300 backdrop-blur hover:border-slate-500 hover:text-slate-100"
-    >
-      <span aria-hidden="true">💬</span>
+    <div className="ascension-chip-frame is-interactive relative shrink-0">
+      <button
+        type="button"
+        onClick={openOverlay}
+        aria-label="Open global chat"
+        title="Global Chat"
+        className="ascension-chip-inner px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100"
+      >
+        <span aria-hidden="true">💬</span>
+      </button>
       {Boolean(unreadCount) && (
         <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border border-slate-900 bg-amber-500 px-1 text-[10px] font-bold text-slate-950">
           {unreadCount > 99 ? '99+' : unreadCount}
         </span>
       )}
-    </button>
+    </div>
   )
 }

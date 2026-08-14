@@ -209,15 +209,14 @@ export default function MobileBottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-800/80 bg-slate-950/95 backdrop-blur lg:hidden"
+      className="ascension-edge-t fixed inset-x-0 bottom-0 z-40 bg-[linear-gradient(180deg,_var(--ascension-ink-soft)_0%,_var(--ascension-ink)_100%)] lg:hidden"
       // translateZ(0) (2026-08-19, reported by the user: nav bar drifting
       // upward with the page mid-scroll on mobile) forces this onto its own
-      // GPU compositing layer up front. iOS Safari has a long-standing bug
-      // where a `position: fixed` element combined with `backdrop-filter`
-      // (this bar's own `backdrop-blur`) can visually detach and scroll with
-      // the page during a gesture, only snapping back to the true fixed
-      // position once scrolling settles -- promoting it to its own layer
-      // ahead of time avoids the mid-scroll re-promotion that triggers it.
+      // GPU compositing layer up front -- kept even after the 2026-08-14
+      // gold/steel pass dropped this bar's `backdrop-blur` (the original
+      // trigger for the iOS Safari `position: fixed` detach bug this
+      // guarded against), since it's a harmless no-cost defensive measure
+      // for a fixed-position bar either way.
       style={{ paddingBottom: 'env(safe-area-inset-bottom)', transform: 'translateZ(0)' }}
     >
       <div className="mx-auto flex max-w-md items-stretch px-1">

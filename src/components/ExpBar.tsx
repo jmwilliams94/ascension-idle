@@ -69,21 +69,23 @@ export default function ExpBar() {
   const percent = isMaxLevel ? 100 : required > 0 ? Math.min(100, (predictedExp / required) * 100) : 100
 
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950/80 px-2 py-1 text-[10px] text-slate-300 backdrop-blur lg:gap-3 lg:px-3 lg:py-2 lg:text-sm">
-      {/* Larger than its siblings even at desktop — this is the number the
-          user specifically flagged as too small to read at a glance. */}
-      <span className="shrink-0 text-xs font-semibold lg:text-lg">Lv {predictedLevel}</span>
-      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800 lg:h-2">
-        <div className={`h-full rounded-full ${isMaxLevel ? 'bg-amber-400' : 'bg-emerald-500'}`} style={{ width: `${percent}%` }} />
+    <div className="ascension-chip-frame min-w-[240px] flex-1">
+      <div className="ascension-chip-inner flex items-center gap-2 px-2 py-1 text-[10px] text-slate-300 lg:gap-3 lg:px-3 lg:py-2 lg:text-sm">
+        {/* Larger than its siblings even at desktop — this is the number the
+            user specifically flagged as too small to read at a glance. */}
+        <span className="shrink-0 text-xs font-semibold lg:text-lg">Lv {predictedLevel}</span>
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800 lg:h-2">
+          <div className={`h-full rounded-full ${isMaxLevel ? 'bg-amber-400' : 'bg-emerald-500'}`} style={{ width: `${percent}%` }} />
+        </div>
+        <span className="shrink-0 text-slate-500">{isMaxLevel ? 'MAX' : `${percent.toFixed(2)}%`}</span>
+        <span className={`shrink-0 border-l border-slate-700 pl-2 font-semibold lg:pl-3 ${goldColorClass(displayedGold)}`}>
+          {formatGoldAmount(displayedGold)}
+        </span>
+        <span className="flex shrink-0 items-center gap-1 border-l border-slate-700 pl-2 font-semibold text-purple-300 lg:pl-3">
+          <img src={AP_ICON_SRC} alt="" className="h-3.5 w-3.5 object-contain lg:h-4 lg:w-4" />
+          {ascensionPoints.toLocaleString()}
+        </span>
       </div>
-      <span className="shrink-0 text-slate-500">{isMaxLevel ? 'MAX' : `${percent.toFixed(2)}%`}</span>
-      <span className={`shrink-0 border-l border-slate-700 pl-2 font-semibold lg:pl-3 ${goldColorClass(displayedGold)}`}>
-        {formatGoldAmount(displayedGold)}
-      </span>
-      <span className="flex shrink-0 items-center gap-1 border-l border-slate-700 pl-2 font-semibold text-purple-300 lg:pl-3">
-        <img src={AP_ICON_SRC} alt="" className="h-3.5 w-3.5 object-contain lg:h-4 lg:w-4" />
-        {ascensionPoints.toLocaleString()}
-      </span>
     </div>
   )
 }

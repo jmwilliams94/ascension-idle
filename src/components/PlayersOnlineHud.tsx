@@ -14,12 +14,11 @@ export default function PlayersOnlineHud() {
   const onlineCount = useGlobalActivityStore((state) => state.onlineCount)
 
   return (
-    <div
-      className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/60 px-2.5 py-1.5 text-xs font-medium text-slate-300 backdrop-blur"
-      title="Players Online"
-    >
-      <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
-      {onlineCount}
+    <div className="ascension-chip-frame shrink-0" title="Players Online">
+      <div className="ascension-chip-inner flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-300">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
+        {onlineCount}
+      </div>
     </div>
   )
 }

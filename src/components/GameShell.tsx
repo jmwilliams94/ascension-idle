@@ -305,8 +305,8 @@ export default function GameShell({ characterId }: { characterId: string }) {
   usePersistGameState(characterId, loaded)
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#1e293b,_#020617_70%)] text-slate-100">
-      <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_var(--ascension-ink-soft),_var(--ascension-ink)_70%)] text-slate-100">
+      <header className="ascension-edge-b bg-[linear-gradient(180deg,_var(--ascension-ink-soft)_0%,_var(--ascension-ink)_100%)]">
         {/* Single row at every viewport size — no flex-wrap. "Idle Combat"
             removed entirely (it was redundant with the tab the player is
             already on). Revised again 2026-08-14: the 2026-08-02 "no
@@ -332,74 +332,80 @@ export default function GameShell({ characterId }: { characterId: string }) {
               aligned via the parent's justify-between. */}
           <div className="flex items-center gap-1.5 sm:gap-2">
             {session?.user.email && <span className="hidden text-sm text-slate-400 lg:inline">{session.user.email}</span>}
-            <button
-              type="button"
-              onClick={() => setActiveCharacterId(null)}
-              aria-label="Switch Character"
-              title="Switch Character"
-              className="flex items-center gap-1.5 rounded-lg border border-slate-700 p-2 text-slate-300 hover:border-amber-500/60 hover:text-slate-100 lg:px-3 lg:py-1.5"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-4 w-4 shrink-0"
+            <div className="ascension-chip-frame is-interactive">
+              <button
+                type="button"
+                onClick={() => setActiveCharacterId(null)}
+                aria-label="Switch Character"
+                title="Switch Character"
+                className="ascension-chip-inner flex items-center gap-1.5 p-2 text-slate-300 hover:text-amber-100 lg:px-3 lg:py-1.5"
               >
-                <path d="m17 2 4 4-4 4" />
-                <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
-                <path d="m7 22-4-4 4-4" />
-                <path d="M21 13v1a4 4 0 0 1-4 4H3" />
-              </svg>
-              <span className="hidden text-sm lg:inline">Switch Character</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setSettingsOpen(true)}
-              aria-label="Settings"
-              title="Settings"
-              className="rounded-lg border border-slate-700 p-2 text-slate-300 hover:border-amber-500/60 hover:text-slate-100"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-4 w-4"
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-4 w-4 shrink-0"
+                >
+                  <path d="m17 2 4 4-4 4" />
+                  <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+                  <path d="m7 22-4-4 4-4" />
+                  <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+                </svg>
+                <span className="hidden text-sm lg:inline">Switch Character</span>
+              </button>
+            </div>
+            <div className="ascension-chip-frame is-interactive">
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(true)}
+                aria-label="Settings"
+                title="Settings"
+                className="ascension-chip-inner p-2 text-slate-300 hover:text-amber-100"
               >
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={() => signOut()}
-              aria-label="Sign out"
-              title="Sign out"
-              className="flex items-center gap-1.5 rounded-lg border border-slate-700 p-2 text-slate-300 hover:border-amber-500/60 hover:text-slate-100 lg:px-3 lg:py-1.5"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-4 w-4 shrink-0"
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-4 w-4"
+                >
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+              </button>
+            </div>
+            <div className="ascension-chip-frame is-interactive">
+              <button
+                type="button"
+                onClick={() => signOut()}
+                aria-label="Sign out"
+                title="Sign out"
+                className="ascension-chip-inner flex items-center gap-1.5 p-2 text-slate-300 hover:text-amber-100 lg:px-3 lg:py-1.5"
               >
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-              <span className="hidden text-sm lg:inline">Sign out</span>
-            </button>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-4 w-4 shrink-0"
+                >
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                <span className="hidden text-sm lg:inline">Sign out</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -425,9 +431,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
           where the bottom nav doesn't render at all. */}
       <main className="mx-auto max-w-7xl space-y-4 px-6 pb-24 pt-6 lg:pb-6">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="min-w-[240px] flex-1">
-            <ExpBar />
-          </div>
+          <ExpBar />
           <QuiverWarningHud />
           <InventoryFullWarningHud />
           <KnockoutHud />

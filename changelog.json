@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.91.7",
+    "date": "2026-08-14",
+    "changes": [
+      "Extended the gold/steel card styling to the page background, top header, level/EXP bar, Players Online, Chat, and bottom nav bar so the whole screen matches"
+    ]
+  },
+  {
     "version": "1.91.6",
     "date": "2026-08-14",
     "changes": [
