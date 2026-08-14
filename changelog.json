@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.92.12",
+    "date": "2026-08-14",
+    "changes": [
+      "Fixed the \"Calculating your rewards\" indicator popping up (and then showing nothing) when switching back to the desktop app's window without actually having been away"
+    ]
+  },
+  {
     "version": "1.92.11",
     "date": "2026-08-14",
     "changes": [

@@ -218,17 +218,32 @@ export default function GameShell({ characterId }: { characterId: string }) {
     // transition itself is the reliable half of visibilitychange even on
     // WebKit (it's specifically the *resume* direction that's flaky there,
     // which is why the heartbeat fallback below exists at all). Null means
-    // "never observed a clean hidden event" — treated as an unknown/possibly
-    // real gap, not a known-short one, so the spinner still shows rather than
-    // risk hiding a genuine wait.
+    // "never observed a clean hidden event" — falls back to lastAliveAt
+    // below rather than assuming a real gap (see its own comment for why).
     let hiddenAt: number | null = null
+
+    // Last moment JS was confirmedly still running (updated every heartbeat
+    // tick below, while visible). Used as the awayMs baseline whenever
+    // hiddenAt is null — i.e. a `focus` event fired without a preceding
+    // `visibilitychange`→hidden, which happens on a plain desktop OS-level
+    // window switch (alt-tab away and back): the tab itself never leaves
+    // `visible` (Page Visibility only tracks tab visibility, not OS window
+    // focus), so this interval kept ticking the whole time and lastAliveAt
+    // stayed fresh. Previously this case fell back to treating the away-time
+    // as Infinity, which always cleared OFFLINE_SUMMARY_THRESHOLD_MS and
+    // showed the "Calculating…" spinner even though nothing was missed —
+    // reported by the user as the spinner flashing then no popup at all
+    // (runOfflineProgressCheck correctly found nothing worth showing, but
+    // only after the spinner had already appeared).
+    let lastAliveAt = Date.now()
 
     const checkOfflineProgressOnResume = async () => {
       if (checkInFlight || useOfflineProgressStore.getState().result !== null) {
         return
       }
       checkInFlight = true
-      const awayMs = hiddenAt === null ? Infinity : Date.now() - hiddenAt
+      const now = Date.now()
+      const awayMs = hiddenAt !== null ? now - hiddenAt : now - lastAliveAt
       hiddenAt = null
       if (awayMs >= OFFLINE_SUMMARY_THRESHOLD_MS) {
         useOfflineProgressStore.getState().setChecking(true)
@@ -288,6 +303,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       const now = Date.now()
       const gap = now - lastHeartbeatAt
       lastHeartbeatAt = now
+      lastAliveAt = now
       if (gap > RESUME_GAP_THRESHOLD_MS && document.visibilityState === 'visible') {
         void checkOfflineProgressOnResume()
       }
