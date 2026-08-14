@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.92.5",
+    "date": "2026-08-14",
+    "changes": [
+      "Players Online, the Chat button, and the announcement bar now scale up on desktop to match the level bar's size, instead of staying mobile-sized"
+    ]
+  },
+  {
     "version": "1.92.4",
     "date": "2026-08-14",
     "changes": [

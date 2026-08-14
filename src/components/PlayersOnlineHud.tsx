@@ -15,8 +15,8 @@ export default function PlayersOnlineHud() {
 
   return (
     <div className="ascension-chip-frame shrink-0" title="Players Online">
-      <div className="ascension-chip-inner flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-300">
-        <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
+      <div className="ascension-chip-inner flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-300 lg:gap-2 lg:px-3 lg:py-2 lg:text-sm">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 lg:h-2 lg:w-2" aria-hidden="true" />
         {onlineCount}
       </div>
     </div>
