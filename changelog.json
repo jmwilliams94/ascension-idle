@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.91.6",
+    "date": "2026-08-14",
+    "changes": [
+      "The \"What's New\" popup after a long absence now shows a short recap instead of a huge scrolling list"
+    ]
+  },
+  {
     "version": "1.91.5",
     "date": "2026-08-14",
     "changes": [
