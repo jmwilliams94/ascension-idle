@@ -537,14 +537,17 @@ const DAMAGE_EXP_SHARE = 0.5
 // — a meaningfully slower, harder-to-snowball basis for a reward this
 // large, closer to the original "significant investment" intent.
 const BASE_AFK_CAP_MS = 2 * 60 * 60 * 1000
+// Top tiers compressed 2026-08-14 (requested by the user) so the max cap is
+// 12h instead of 20h — tiers 0-3 left as-is (not near the cap), 4-6 rescaled
+// to stay strictly increasing under the new ceiling.
 const AFK_CAP_MS_BY_ACCOUNT_TIER: Record<number, number> = {
   0: 2 * 60 * 60 * 1000,
   1: 3 * 60 * 60 * 1000,
   2: 4 * 60 * 60 * 1000,
   3: 6 * 60 * 60 * 1000,
-  4: 9 * 60 * 60 * 1000,
-  5: 14 * 60 * 60 * 1000,
-  6: 20 * 60 * 60 * 1000,
+  4: 8 * 60 * 60 * 1000,
+  5: 10 * 60 * 60 * 1000,
+  6: 12 * 60 * 60 * 1000,
 }
 
 // Mirrors useInventoryStore.ts's INVENTORY_SLOT_CAP / occupiedSlotCount.

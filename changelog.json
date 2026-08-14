@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.92.13",
+    "date": "2026-08-14",
+    "changes": [
+      "Lowered the maximum idle/AFK reward window from 20 hours to 12 hours at the top Achievements tier"
+    ]
+  },
+  {
     "version": "1.92.12",
     "date": "2026-08-14",
     "changes": [
