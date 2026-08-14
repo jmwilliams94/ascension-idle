@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.92.23",
+    "date": "2026-08-15",
+    "changes": [
+      "Fixed the mobile Tavern pop-out stretching the bottom nav bar apart instead of floating above it"
+    ]
+  },
+  {
     "version": "1.92.22",
     "date": "2026-08-14",
     "changes": [

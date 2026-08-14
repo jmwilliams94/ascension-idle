@@ -144,34 +144,45 @@ function TavernNavButton({ badges }: { badges: Partial<Record<TabId, number>> })
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 14 }}
             transition={{ duration: 0.18, ease: 'easeOut' }}
-            className="ascension-chip-frame absolute bottom-full mb-2 shadow-xl shadow-black/60"
+            // `absolute` lives on this wrapper, not the .ascension-chip-frame
+            // div below — that class sets its own `position: relative` in
+            // index.css, and since @import 'tailwindcss' sits at the top of
+            // that file, its rule wins the cascade over Tailwind's `.absolute`
+            // utility when both land on one element (same specificity, later
+            // source order wins). Putting them on separate elements avoids
+            // the conflict entirely (bit once, 2026-08-15 — silently dropped
+            // this popout back into normal document flow, stretching the
+            // bottom nav bar instead of floating above it).
+            className="absolute bottom-full mb-2 shadow-xl shadow-black/60"
           >
-            <div className="ascension-chip-inner flex flex-col items-stretch gap-0.5 p-1">
-              {TAVERN_ITEMS.map((item) => {
-                const icon = TAB_ICONS[item.id]
-                const badge = badges[item.id]
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveTab(item.id)
-                      setExpanded(false)
-                    }}
-                    className={`relative flex items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-left text-xs font-medium ${
-                      activeTab === item.id ? 'bg-amber-500/10 text-amber-300' : 'text-slate-300 hover:bg-slate-800/80'
-                    }`}
-                  >
-                    {icon && <NavIconGlyph icon={icon} sizeClassName="h-5 w-5" />}
-                    {item.label}
-                    {Boolean(badge) && (
-                      <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-bold text-slate-950">
-                        {badge! > 99 ? '99+' : badge}
-                      </span>
-                    )}
-                  </button>
-                )
-              })}
+            <div className="ascension-chip-frame">
+              <div className="ascension-chip-inner flex flex-col items-stretch gap-0.5 p-1">
+                {TAVERN_ITEMS.map((item) => {
+                  const icon = TAB_ICONS[item.id]
+                  const badge = badges[item.id]
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab(item.id)
+                        setExpanded(false)
+                      }}
+                      className={`relative flex items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-left text-xs font-medium ${
+                        activeTab === item.id ? 'bg-amber-500/10 text-amber-300' : 'text-slate-300 hover:bg-slate-800/80'
+                      }`}
+                    >
+                      {icon && <NavIconGlyph icon={icon} sizeClassName="h-5 w-5" />}
+                      {item.label}
+                      {Boolean(badge) && (
+                        <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-bold text-slate-950">
+                          {badge! > 99 ? '99+' : badge}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </motion.div>
         )}
