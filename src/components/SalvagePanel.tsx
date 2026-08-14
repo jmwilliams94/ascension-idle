@@ -320,7 +320,7 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
           <p className="mt-1 text-purple-300">Ascension Points: {ascensionPoints}</p>
         </AscensionCard>
 
-        <div className="w-full max-w-xs space-y-2">
+        <div className="w-full max-w-sm space-y-2">
           <p className="text-center text-[11px] uppercase tracking-wide text-slate-500">Bulk Salvage</p>
           {bulkGroups.map((group) => (
             <button
@@ -335,16 +335,16 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
                   '--glow-dark': BULK_TIER_GLOW[group.tier].dark,
                 } as CSSProperties
               }
-              className="btn-glow font-heading flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left disabled:cursor-not-allowed"
+              className="btn-glow font-heading flex w-full items-center justify-between gap-2 rounded-lg px-4 py-2.5 text-left disabled:cursor-not-allowed"
             >
               <span
-                className="text-xs font-medium"
+                className="text-sm font-medium"
                 style={group.items.length === 0 ? { color: '#475569' } : undefined}
               >
                 Salvage {BULK_TIER_LABEL[group.tier]} ({group.items.length})
               </span>
               <span
-                className="shrink-0 text-[10px]"
+                className="shrink-0 text-xs"
                 style={group.items.length === 0 ? { color: '#475569' } : undefined}
               >
                 {group.items.length > 0 ? `${group.apEstimate} AP · ${formatDurationEstimate(group.timeEstimateMs)}` : 'None owned'}
