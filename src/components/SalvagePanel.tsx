@@ -335,15 +335,18 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
                   '--glow-dark': BULK_TIER_GLOW[group.tier].dark,
                 } as CSSProperties
               }
-              className="btn-glow flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left disabled:cursor-not-allowed"
+              className="btn-glow font-heading flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left disabled:cursor-not-allowed"
             >
               <span
                 className="text-xs font-medium"
                 style={group.items.length === 0 ? { color: '#475569' } : undefined}
               >
-                Salvage All {BULK_TIER_LABEL[group.tier]} ({group.items.length})
+                Salvage {BULK_TIER_LABEL[group.tier]} ({group.items.length})
               </span>
-              <span className="shrink-0 text-[10px] text-slate-500">
+              <span
+                className="shrink-0 text-[10px]"
+                style={group.items.length === 0 ? { color: '#475569' } : undefined}
+              >
                 {group.items.length > 0 ? `${group.apEstimate} AP · ${formatDurationEstimate(group.timeEstimateMs)}` : 'None owned'}
               </span>
             </button>

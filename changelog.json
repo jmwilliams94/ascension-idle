@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.92.9",
+    "date": "2026-08-14",
+    "changes": [
+      "Salvage's bulk buttons now use the same heading font as the Lottery Ticket button, the AP/time text also flips to black on click, and the labels are shorter (\"Salvage Tempered (X)\" instead of \"Salvage All Tempered (X)\")"
+    ]
+  },
+  {
     "version": "1.92.8",
     "date": "2026-08-14",
     "changes": [
