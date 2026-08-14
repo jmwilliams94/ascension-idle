@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.92.17",
+    "date": "2026-08-14",
+    "changes": [
+      "Fixed nav/Shop icon art sometimes not refreshing after an update (browser was still caching the old image at the same file name)"
+    ]
+  },
+  {
     "version": "1.92.16",
     "date": "2026-08-14",
     "changes": [

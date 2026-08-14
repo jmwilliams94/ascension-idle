@@ -5,8 +5,12 @@ import { TAB_ICONS } from '../game/hud/navIcons'
 import NavIconGlyph from './NavIconGlyph'
 import { useAchievementsStore, totalClaimableCount } from '../game/achievements/useAchievementsStore'
 import { useMailStore, countUnreadMail } from '../game/marketplace/useMailStore'
+import { APP_VERSION } from '../version'
 
 const BASE_URL = import.meta.env.BASE_URL
+// Cache-busts public/ art with a fixed filename — see navIcons.ts's own
+// iconUrl doc comment for why this is needed on GitHub Pages/Cloudflare.
+const TAVERN_ICON_SRC = `${BASE_URL}nav-icons/tavern.png?v=${APP_VERSION}`
 
 // Fixed bottom nav bar, mobile-only (`lg:hidden` — desktop keeps TabNav.tsx
 // unchanged, now `hidden lg:grid`). Combat is centered, labeled "Idling" —
@@ -180,7 +184,7 @@ function TavernNavButton({ badges }: { badges: Partial<Record<TabId, number>> })
           active || expanded ? 'text-amber-300' : 'text-slate-400'
         }`}
       >
-        <img src={`${BASE_URL}nav-icons/tavern.png`} alt="Tavern" className="h-6 w-6 object-contain" />
+        <img src={TAVERN_ICON_SRC} alt="Tavern" className="h-6 w-6 object-contain" />
         <span className="truncate">Tavern</span>
         {totalBadge > 0 && (
           <span className="absolute right-2 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-slate-900 bg-amber-500 px-1 text-[9px] font-bold text-slate-950">

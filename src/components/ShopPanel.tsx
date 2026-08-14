@@ -22,6 +22,7 @@ import {
 } from '../game/items/equipmentBonus'
 import { CONSUMABLE_COLOR } from '../game/items/forgeCosts'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
+import { APP_VERSION } from '../version'
 
 // A Shop template isn't an owned ItemInstance yet, but buildGearTooltip (the
 // same universal tooltip builder Inventory/Equipment/Forge all use) needs one
@@ -59,16 +60,24 @@ const JEWELLER_SLOTS = ['ring', 'necklace']
 // user).
 const SHOP_MAX_LEVEL = 120
 
+// `?v=${APP_VERSION}` cache-busts these — public/ assets keep a fixed
+// filename across builds (unlike hashed src/assets imports), and GitHub
+// Pages/Cloudflare serves them with a 4h Cache-Control, so overwriting one
+// in place otherwise leaves already-cached players stuck on the old art
+// until that expires. See navIcons.ts's matching `iconUrl` doc comment.
 const SHOP_TAB_ICON_BASE = `${import.meta.env.BASE_URL}shop-tab-icons/`
+function shopTabIconUrl(file: string): string {
+  return `${SHOP_TAB_ICON_BASE}${file}?v=${APP_VERSION}`
+}
 
 // Real art (2026-08-14) replacing the old emoji placeholders, same
 // 320x320 sharp resize-cover pipeline as public/nav-icons/.
 const SHOP_TABS: { id: ShopTab; label: string; icon: string }[] = [
-  { id: 'weapons', label: 'Weapons', icon: `${SHOP_TAB_ICON_BASE}weapons.png` },
-  { id: 'armor', label: 'Armor', icon: `${SHOP_TAB_ICON_BASE}armor.png` },
-  { id: 'jeweller', label: 'Jeweller', icon: `${SHOP_TAB_ICON_BASE}jeweller.png` },
-  { id: 'potions', label: 'Potions', icon: `${SHOP_TAB_ICON_BASE}potions.png` },
-  { id: 'repair', label: 'Repair', icon: `${SHOP_TAB_ICON_BASE}repair.png` },
+  { id: 'weapons', label: 'Weapons', icon: shopTabIconUrl('weapons.png') },
+  { id: 'armor', label: 'Armor', icon: shopTabIconUrl('armor.png') },
+  { id: 'jeweller', label: 'Jeweller', icon: shopTabIconUrl('jeweller.png') },
+  { id: 'potions', label: 'Potions', icon: shopTabIconUrl('potions.png') },
+  { id: 'repair', label: 'Repair', icon: shopTabIconUrl('repair.png') },
 ]
 
 // A template is available to the current class if it has no class restriction
