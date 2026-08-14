@@ -24,6 +24,15 @@ export const LUCKY_TICKET_AP_COST = 20
 export const LUCKY_FREE_TICKET_COOLDOWN_MS = 4 * 60 * 60 * 1000
 export const LUCKY_CARD_COUNT = 9
 
+// Bulk draw (2026-08-22, requested by the user) — a third payment path
+// alongside the free/1-ticket/20-AP single-card draw above: pay 160 AP
+// (8x the single-card cost — "9 chests for the price of 8") and every one of
+// the 9 cards grants a real, independent reward, all resolved and granted in
+// one draw_lucky_ticket_bulk RPC call. See that migration's own header for
+// why revealing them one at a time client-side afterward is still safe (all
+// 9 are already decided and paid for by the time the board comes back).
+export const LUCKY_BULK_AP_COST = 160
+
 // Real art (2026-08-03), user-supplied, same trim/pad/resize-to-160
 // convention as every other icon this session — all three already had real
 // transparency, so no flood-fill background removal was needed this time.
@@ -106,6 +115,10 @@ export interface DrawLuckyTicketResult {
   // `returning *`. Present alongside the scalar `character` totals, not
   // instead of them.
   granted_item?: ItemInstance
+  // Bulk draw only (draw_lucky_ticket_bulk) — 0-9 freshly-inserted
+  // item_instances rows, one per item-producing card among the 9. Mutually
+  // exclusive with granted_item, which only the single-card draw returns.
+  granted_items?: ItemInstance[]
   // Present only for the composition_stone/gem_tempered/gem_ascended kinds —
   // the character's full updated jsonb column, ready to hand straight to
   // useCompositionStore/useGemStore.
@@ -124,6 +137,9 @@ interface LuckyState {
   // consumes 1 Lottery Ticket instead, bypassing both the cooldown and AP
   // entirely. See draw_lucky_ticket's own p_use_ticket parameter.
   draw: (characterId: string, cardIndex: number, useTicket?: boolean) => Promise<DrawLuckyTicketResult>
+  // Bulk draw (draw_lucky_ticket_bulk) — no card index, since every one of
+  // the 9 cards is granted at once.
+  drawBulk: (characterId: string) => Promise<DrawLuckyTicketResult>
 }
 
 export const useLuckyStore = create<LuckyState>((set, get) => ({
@@ -184,6 +200,53 @@ export const useLuckyStore = create<LuckyState>((set, get) => ({
 
     // composition_stone / gem_tempered / gem_ascended — both jsonb columns
     // are server-authoritative, same trust model as comets/fallen stars.
+    if (result.ok && result.composition_stones) {
+      useCompositionStore.getState().setStones(result.composition_stones)
+    }
+    if (result.ok && result.gems) {
+      useGemStore.getState().setGems(result.gems)
+    }
+
+    return result
+  },
+
+  drawBulk: async (characterId) => {
+    if (get().busy) {
+      return { ok: false, error: 'rpc_failed' }
+    }
+
+    set({ busy: true })
+    const { data, error } = await supabase.rpc('draw_lucky_ticket_bulk', {
+      p_character_id: characterId,
+    })
+    set({ busy: false })
+
+    if (error) {
+      console.error('draw_lucky_ticket_bulk call failed', error)
+      return { ok: false, error: 'rpc_failed' }
+    }
+
+    const result = data as DrawLuckyTicketResult
+
+    if (result.ok && result.character) {
+      useProgressionStore.getState().setGold(result.character.gold)
+      useCurrencyStore.getState().setComets(result.character.comet_count)
+      useCurrencyStore.getState().setFallenStars(result.character.fallen_star_count)
+      useCurrencyStore.getState().setCometScrolls(result.character.comet_scroll_count)
+      useCurrencyStore.getState().setFallenStarScrolls(result.character.fallen_star_scroll_count)
+      useCurrencyStore.getState().setLotteryTickets(result.character.lottery_ticket_count)
+    }
+
+    if (result.ok && typeof result.ascension_points === 'number') {
+      usePlayerRecordStore.getState().setAscensionPoints(result.ascension_points)
+    }
+
+    if (result.ok && result.granted_items) {
+      for (const item of result.granted_items) {
+        useInventoryStore.getState().addItem(item)
+      }
+    }
+
     if (result.ok && result.composition_stones) {
       useCompositionStore.getState().setStones(result.composition_stones)
     }

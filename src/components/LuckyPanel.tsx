@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import {
   useLuckyStore,
   LUCKY_TICKET_AP_COST,
+  LUCKY_BULK_AP_COST,
   LUCKY_CARD_COUNT,
   LUCKYLAD_ICON_SRC,
   CHEST_CLOSED_ICON_SRC,
@@ -224,12 +225,20 @@ function LuckyCard({
   index,
   reward,
   won,
+  revealDelay = 0,
   onClick,
   disabled,
 }: {
   index: number
   reward: LuckyReward | null
   won: boolean
+  // Seconds to hold before this card's flip animation starts. The single
+  // draw stages this (0 for the won card, a small stagger for the other 8
+  // "would have been" reveals); the bulk draw always passes 0 — each card
+  // flips the instant its own click reveals it, no batching. Defaulted
+  // rather than derived from `won`/`index` inside this component so both
+  // callers can express their own timing.
+  revealDelay?: number
   onClick?: () => void
   disabled: boolean
 }) {
@@ -261,12 +270,7 @@ function LuckyCard({
         <motion.div
           initial={{ rotateY: 90, opacity: 0 }}
           animate={{ rotateY: 0, opacity: 1 }}
-          // The won card flips immediately (delay 0); the other 8 wait for it
-          // to land, then flip together as one batch (a small 0.02s/card
-          // stagger for a bit of visual life, not the old cascading reveal)
-          // — requested by the user 2026-08-10: "flip over just one of the
-          // cards initially and then a short delay and then the rest".
-          transition={{ duration: 0.25, delay: won ? 0 : REVEAL_BATCH_DELAY_S + index * 0.02 }}
+          transition={{ duration: 0.25, delay: revealDelay }}
           className="relative flex h-full w-full items-center justify-center"
         >
           {/* Opened chest (real art, 2026-08-03) fills the card at the same
@@ -321,6 +325,7 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   const nextFreeTicketAt = useLuckyStore((state) => state.nextFreeTicketAt)
   const busy = useLuckyStore((state) => state.busy)
   const draw = useLuckyStore((state) => state.draw)
+  const drawBulk = useLuckyStore((state) => state.drawBulk)
   const ascensionPoints = usePlayerRecordStore((state) => state.ascensionPoints)
   const lotteryTickets = useCurrencyStore((state) => state.lotteryTickets)
   const showMoneyBagReveal = useMoneyBagRevealStore((state) => state.show)
@@ -329,6 +334,13 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   const [board, setBoard] = useState<LuckyReward[] | null>(null)
   const [wonIndex, setWonIndex] = useState<number | null>(null)
   const [paymentUsed, setPaymentUsed] = useState<'free' | 'ascension_points' | 'lottery_ticket' | null>(null)
+  // Bulk draw ("Open All 9" for LUCKY_BULK_AP_COST AP) — every one of the 9
+  // cards on `board` is a real reward once this is true, granted all at once
+  // by drawBulk before any card is clicked. revealedIndices tracks which
+  // ones the player has actually tapped open so far; the reveal itself is
+  // purely a local animation gate, not another server round-trip.
+  const [isBulk, setIsBulk] = useState(false)
+  const [revealedIndices, setRevealedIndices] = useState<Set<number>>(new Set())
   const [error, setError] = useState<string | null>(null)
   // Free-ticket countdown only needs to be roughly live, not to-the-second —
   // a 30s re-render is enough to keep the displayed "Xh Ym" honest. Reading
@@ -346,6 +358,7 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   const pointsCost = freeAvailable ? 0 : LUCKY_TICKET_AP_COST
   const canAffordTicket = lotteryTickets >= 1
   const canAffordPoints = freeAvailable || ascensionPoints >= LUCKY_TICKET_AP_COST
+  const canAffordBulk = ascensionPoints >= LUCKY_BULK_AP_COST
 
   const handleOpen = async (index: number) => {
     if (board || busy || !paymentChoice) return
@@ -381,12 +394,50 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
     }
   }
 
+  // Bulk draw: payment happens the moment this fires (no card pick needed —
+  // every card gets a real reward), then the board sits fully-granted but
+  // face-down until handleRevealBulkCard flips each one open on tap.
+  const handleBulkDraw = async () => {
+    if (board || busy) return
+    setError(null)
+    const result = await drawBulk(characterId)
+
+    if (!result.ok || !result.board) {
+      setError(
+        result.error === 'not_enough_ap'
+          ? `Not enough Ascension Points (need ${LUCKY_BULK_AP_COST}).`
+          : result.error === 'not_owner'
+            ? "Couldn't verify this character owns that — try reloading the page."
+            : result.error === 'not_enough_room'
+              ? 'Your Inventory needs at least 9 free slots — free some up and try again.'
+              : "Couldn't draw — try again.",
+      )
+      return
+    }
+
+    setBoard(result.board)
+    setIsBulk(true)
+    setRevealedIndices(new Set())
+  }
+
+  const handleRevealBulkCard = (index: number) => {
+    if (!board || busy || revealedIndices.has(index)) return
+    setRevealedIndices((prev) => new Set(prev).add(index))
+
+    const reward = board[index]
+    if (reward.kind === 'comet_box') {
+      showMoneyBagReveal({ kind: 'comet_box', amount: reward.amount })
+    }
+  }
+
   const handleReset = () => {
     setBoard(null)
     setWonIndex(null)
     setPaymentUsed(null)
     setError(null)
     setPaymentChoice(null)
+    setIsBulk(false)
+    setRevealedIndices(new Set())
   }
 
   return (
@@ -411,10 +462,19 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
           <LuckyCard
             key={index}
             index={index}
-            reward={board ? board[index] : null}
-            won={wonIndex === index}
-            disabled={busy || Boolean(board) || !paymentChoice}
-            onClick={board || !paymentChoice ? undefined : () => void handleOpen(index)}
+            reward={board && (!isBulk || revealedIndices.has(index)) ? board[index] : null}
+            won={!isBulk && wonIndex === index}
+            revealDelay={isBulk ? 0 : wonIndex === index ? 0 : REVEAL_BATCH_DELAY_S + index * 0.02}
+            disabled={busy || (isBulk ? !board || revealedIndices.has(index) : Boolean(board) || !paymentChoice)}
+            onClick={
+              isBulk
+                ? board
+                  ? () => handleRevealBulkCard(index)
+                  : undefined
+                : board || !paymentChoice
+                  ? undefined
+                  : () => void handleOpen(index)
+            }
           />
         ))}
       </div>
@@ -438,6 +498,19 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
               {pointsCost === 0 ? 'Free Ticket' : `${pointsCost} AP`}
             </button>
           </div>
+          {/* Bulk draw — pay LUCKY_BULK_AP_COST AP (8x the single-card AP
+              cost) up front and every one of the 9 chests holds a real
+              reward, opened one at a time afterward. Its own row, separate
+              from the two single-draw payment buttons above, since it skips
+              the "pick a chest" step entirely. */}
+          <button
+            type="button"
+            disabled={busy || !canAffordBulk}
+            onClick={() => void handleBulkDraw()}
+            className="mt-2 w-full rounded-lg border border-amber-500 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {`Open All 9 — ${LUCKY_BULK_AP_COST} AP`}
+          </button>
           <p className="mt-2 text-[10px] text-slate-500">
             {freeAvailable ? 'Free ticket ready' : `Next free ticket in ${formatCountdown(nextFreeTicketAt! - now)}`}
           </p>
@@ -461,7 +534,13 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
         </div>
       )}
 
-      {board && wonIndex !== null && (
+      {isBulk && board && revealedIndices.size < LUCKY_CARD_COUNT && (
+        <p className="text-center text-xs text-slate-400">
+          Tap a chest to open it — {revealedIndices.size}/{LUCKY_CARD_COUNT} opened.
+        </p>
+      )}
+
+      {board && !isBulk && wonIndex !== null && (
         <div className="rounded-xl border border-amber-600 bg-amber-500/10 p-3 text-center">
           <p className="text-xs text-slate-300">
             You won <span className="font-semibold text-amber-300">{rewardLabel(board[wonIndex])}</span>
@@ -470,6 +549,17 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
               : paymentUsed === 'lottery_ticket'
                 ? ' (paid 1 Lottery Ticket)'
                 : ' (free ticket)'}
+          </p>
+          <Button variant="secondary" onClick={handleReset} className="mt-2">
+            Draw Again
+          </Button>
+        </div>
+      )}
+
+      {board && isBulk && revealedIndices.size === LUCKY_CARD_COUNT && (
+        <div className="rounded-xl border border-amber-600 bg-amber-500/10 p-3 text-center">
+          <p className="text-xs text-slate-300">
+            All 9 opened <span className="font-semibold text-amber-300">(paid {LUCKY_BULK_AP_COST} AP)</span>
           </p>
           <Button variant="secondary" onClick={handleReset} className="mt-2">
             Draw Again
