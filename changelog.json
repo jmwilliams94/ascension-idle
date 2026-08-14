@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.92.16",
+    "date": "2026-08-14",
+    "changes": [
+      "New icon art for the Shop's Weapons, Armor, Jeweller, Potions, and Repair tabs, replacing the placeholder emoji"
+    ]
+  },
+  {
     "version": "1.92.15",
     "date": "2026-08-14",
     "changes": [

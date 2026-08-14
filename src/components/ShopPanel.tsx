@@ -59,12 +59,16 @@ const JEWELLER_SLOTS = ['ring', 'necklace']
 // user).
 const SHOP_MAX_LEVEL = 120
 
+const SHOP_TAB_ICON_BASE = `${import.meta.env.BASE_URL}shop-tab-icons/`
+
+// Real art (2026-08-14) replacing the old emoji placeholders, same
+// 320x320 sharp resize-cover pipeline as public/nav-icons/.
 const SHOP_TABS: { id: ShopTab; label: string; icon: string }[] = [
-  { id: 'weapons', label: 'Weapons', icon: '🗡️' },
-  { id: 'armor', label: 'Armor', icon: '🛡️' },
-  { id: 'jeweller', label: 'Jeweller', icon: '💍' },
-  { id: 'potions', label: 'Potions', icon: '🧪' },
-  { id: 'repair', label: 'Repair', icon: '🔨' },
+  { id: 'weapons', label: 'Weapons', icon: `${SHOP_TAB_ICON_BASE}weapons.png` },
+  { id: 'armor', label: 'Armor', icon: `${SHOP_TAB_ICON_BASE}armor.png` },
+  { id: 'jeweller', label: 'Jeweller', icon: `${SHOP_TAB_ICON_BASE}jeweller.png` },
+  { id: 'potions', label: 'Potions', icon: `${SHOP_TAB_ICON_BASE}potions.png` },
+  { id: 'repair', label: 'Repair', icon: `${SHOP_TAB_ICON_BASE}repair.png` },
 ]
 
 // A template is available to the current class if it has no class restriction
@@ -234,9 +238,7 @@ export default function ShopPanel() {
                 type="button"
                 className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border border-amber-400 bg-amber-500/10 text-[11px] font-medium text-amber-300 lg:gap-1.5 lg:text-sm"
               >
-                <span className="text-lg lg:text-2xl" aria-hidden="true">
-                  {entry.icon}
-                </span>
+                <img src={entry.icon} alt="" className="h-7 w-7 object-contain lg:h-10 lg:w-10" />
                 {entry.label}
               </button>
             ) : (
@@ -246,9 +248,7 @@ export default function ShopPanel() {
                   onClick={() => setTab(entry.id)}
                   className="ascension-chip-inner flex h-full w-full flex-col items-center justify-center gap-1 text-[11px] font-medium text-slate-300 hover:text-amber-100 lg:gap-1.5 lg:text-sm"
                 >
-                  <span className="text-lg lg:text-2xl" aria-hidden="true">
-                    {entry.icon}
-                  </span>
+                  <img src={entry.icon} alt="" className="h-7 w-7 object-contain lg:h-10 lg:w-10" />
                   {entry.label}
                 </button>
               </div>
