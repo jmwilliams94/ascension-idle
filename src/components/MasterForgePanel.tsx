@@ -178,24 +178,36 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
         </p>
 
         <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={() => handlePickType('quality')}
-            className={`rounded-lg border px-4 py-2 text-sm font-medium ${
-              upgradeType === 'quality' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-            }`}
-          >
-            Quality
-          </button>
-          <button
-            type="button"
-            onClick={() => handlePickType('level')}
-            className={`rounded-lg border px-4 py-2 text-sm font-medium ${
-              upgradeType === 'level' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-            }`}
-          >
-            Level
-          </button>
+          {upgradeType === 'quality' ? (
+            <button type="button" className="rounded-lg border border-amber-400 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-300">
+              Quality
+            </button>
+          ) : (
+            <div className="ascension-chip-frame is-interactive">
+              <button
+                type="button"
+                onClick={() => handlePickType('quality')}
+                className="ascension-chip-inner px-4 py-2 text-sm font-medium text-slate-300 hover:text-amber-100"
+              >
+                Quality
+              </button>
+            </div>
+          )}
+          {upgradeType === 'level' ? (
+            <button type="button" className="rounded-lg border border-amber-400 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-300">
+              Level
+            </button>
+          ) : (
+            <div className="ascension-chip-frame is-interactive">
+              <button
+                type="button"
+                onClick={() => handlePickType('level')}
+                className="ascension-chip-inner px-4 py-2 text-sm font-medium text-slate-300 hover:text-amber-100"
+              >
+                Level
+              </button>
+            </div>
+          )}
         </div>
 
         {upgradeType && (

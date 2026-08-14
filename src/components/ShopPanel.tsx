@@ -99,36 +99,38 @@ function GearRow({ template }: { template: ItemTemplate }) {
   }
 
   return (
-    <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs">
-      <div className="flex min-w-0 items-center gap-2">
-        <InventorySlot
-          slotId={template.id}
-          filled
-          sizeClassName={SLOT_SIZE_CLASS}
-          icon={getItemIcon(template.slot_type)}
-          iconSrc={getGearIconSrc(template.name)}
-          qualityColor={getQualityColor('normal')}
-          label={template.name}
-          tooltip={buildGearTooltip(previewInstance(template), template)}
-        />
-        <div className="min-w-0">
-          <p className="truncate font-medium text-slate-200">{template.name}</p>
-          <p className="text-slate-500">{template.price}g</p>
-          {template.required_level > 1 && (
-            <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {template.required_level}</p>
-          )}
+    <div className="ascension-chip-frame">
+      <div className="ascension-chip-inner flex items-center justify-between gap-2 p-2 text-xs">
+        <div className="flex min-w-0 items-center gap-2">
+          <InventorySlot
+            slotId={template.id}
+            filled
+            sizeClassName={SLOT_SIZE_CLASS}
+            icon={getItemIcon(template.slot_type)}
+            iconSrc={getGearIconSrc(template.name)}
+            qualityColor={getQualityColor('normal')}
+            label={template.name}
+            tooltip={buildGearTooltip(previewInstance(template), template)}
+          />
+          <div className="min-w-0">
+            <p className="truncate font-medium text-slate-200">{template.name}</p>
+            <p className="text-slate-500">{template.price}g</p>
+            {template.required_level > 1 && (
+              <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {template.required_level}</p>
+            )}
+          </div>
         </div>
-      </div>
 
-      <Button
-        variant="secondary"
-        disabled={!canBuy}
-        title={!meetsLevel ? `Requires level ${template.required_level}` : !canAfford ? 'Not enough gold' : undefined}
-        onClick={() => void handleBuy()}
-        className="shrink-0"
-      >
-        Buy
-      </Button>
+        <Button
+          variant="primary"
+          disabled={!canBuy}
+          title={!meetsLevel ? `Requires level ${template.required_level}` : !canAfford ? 'Not enough gold' : undefined}
+          onClick={() => void handleBuy()}
+          className="shrink-0"
+        >
+          Buy
+        </Button>
+      </div>
     </div>
   )
 }
@@ -225,23 +227,33 @@ export default function ShopPanel() {
             which wrapped the 5 tabs onto two uneven rows. Capped + centered at
             lg+ only (reported too large on desktop), unchanged below lg. */}
         <div className="grid grid-cols-5 gap-2 lg:mx-auto lg:max-w-[520px] lg:gap-3">
-          {SHOP_TABS.map((entry) => (
-            <button
-              key={entry.id}
-              type="button"
-              onClick={() => setTab(entry.id)}
-              className={`flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border text-[11px] font-medium transition-colors lg:gap-1.5 lg:text-sm ${
-                tab === entry.id
-                  ? 'border-amber-400 bg-amber-500/10 text-amber-300'
-                  : 'border-slate-700 bg-slate-900/60 text-slate-300 hover:border-amber-500/50 hover:bg-slate-900'
-              }`}
-            >
-              <span className="text-lg lg:text-2xl" aria-hidden="true">
-                {entry.icon}
-              </span>
-              {entry.label}
-            </button>
-          ))}
+          {SHOP_TABS.map((entry) =>
+            tab === entry.id ? (
+              <button
+                key={entry.id}
+                type="button"
+                className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border border-amber-400 bg-amber-500/10 text-[11px] font-medium text-amber-300 lg:gap-1.5 lg:text-sm"
+              >
+                <span className="text-lg lg:text-2xl" aria-hidden="true">
+                  {entry.icon}
+                </span>
+                {entry.label}
+              </button>
+            ) : (
+              <div key={entry.id} className="ascension-chip-frame is-interactive aspect-square">
+                <button
+                  type="button"
+                  onClick={() => setTab(entry.id)}
+                  className="ascension-chip-inner flex h-full w-full flex-col items-center justify-center gap-1 text-[11px] font-medium text-slate-300 hover:text-amber-100 lg:gap-1.5 lg:text-sm"
+                >
+                  <span className="text-lg lg:text-2xl" aria-hidden="true">
+                    {entry.icon}
+                  </span>
+                  {entry.label}
+                </button>
+              </div>
+            ),
+          )}
         </div>
 
         <p className="text-xs text-slate-500">Gold: {gold}</p>
@@ -301,33 +313,32 @@ export default function ShopPanel() {
                 }
 
                 return (
-                  <div
-                    key={typeId}
-                    className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs"
-                  >
-                    <div className="flex min-w-0 items-center gap-2">
-                      <InventorySlot slotId={typeId} filled sizeClassName={SLOT_SIZE_CLASS} icon="🧪" label={type.displayName} tooltip={potionTooltip} />
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-slate-200">{type.displayName}</p>
-                        <p className="text-slate-500">{type.description}</p>
-                        <p className="text-slate-500">
-                          Owned: {owned} · stack of {type.stackSize} for {stackCost}g
-                        </p>
-                        {type.requiredLevel > 1 && (
-                          <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {type.requiredLevel}</p>
-                        )}
+                  <div key={typeId} className="ascension-chip-frame">
+                    <div className="ascension-chip-inner flex items-center justify-between gap-2 p-2 text-xs">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <InventorySlot slotId={typeId} filled sizeClassName={SLOT_SIZE_CLASS} icon="🧪" label={type.displayName} tooltip={potionTooltip} />
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-slate-200">{type.displayName}</p>
+                          <p className="text-slate-500">{type.description}</p>
+                          <p className="text-slate-500">
+                            Owned: {owned} · stack of {type.stackSize} for {stackCost}g
+                          </p>
+                          {type.requiredLevel > 1 && (
+                            <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {type.requiredLevel}</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    <Button
-                      variant="secondary"
-                      disabled={!canBuy}
-                      title={!meetsLevel ? `Requires level ${type.requiredLevel}` : undefined}
-                      onClick={() => buyPotionStack(typeId)}
-                      className="shrink-0"
-                    >
-                      Buy
-                    </Button>
+                      <Button
+                        variant="primary"
+                        disabled={!canBuy}
+                        title={!meetsLevel ? `Requires level ${type.requiredLevel}` : undefined}
+                        onClick={() => buyPotionStack(typeId)}
+                        className="shrink-0"
+                      >
+                        Buy
+                      </Button>
+                    </div>
                   </div>
                 )
               })}
@@ -354,33 +365,32 @@ export default function ShopPanel() {
                 }
 
                 return (
-                  <div
-                    key={typeId}
-                    className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs"
-                  >
-                    <div className="flex min-w-0 items-center gap-2">
-                      <InventorySlot slotId={typeId} filled sizeClassName={SLOT_SIZE_CLASS} icon="💧" label={type.displayName} tooltip={potionTooltip} />
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-slate-200">{type.displayName}</p>
-                        <p className="text-slate-500">{type.description}</p>
-                        <p className="text-slate-500">
-                          Owned: {owned} · stack of {type.stackSize} for {stackCost}g
-                        </p>
-                        {type.requiredLevel > 1 && (
-                          <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {type.requiredLevel}</p>
-                        )}
+                  <div key={typeId} className="ascension-chip-frame">
+                    <div className="ascension-chip-inner flex items-center justify-between gap-2 p-2 text-xs">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <InventorySlot slotId={typeId} filled sizeClassName={SLOT_SIZE_CLASS} icon="💧" label={type.displayName} tooltip={potionTooltip} />
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-slate-200">{type.displayName}</p>
+                          <p className="text-slate-500">{type.description}</p>
+                          <p className="text-slate-500">
+                            Owned: {owned} · stack of {type.stackSize} for {stackCost}g
+                          </p>
+                          {type.requiredLevel > 1 && (
+                            <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {type.requiredLevel}</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    <Button
-                      variant="secondary"
-                      disabled={!canBuy}
-                      title={!meetsLevel ? `Requires level ${type.requiredLevel}` : undefined}
-                      onClick={() => buyPotionStack(typeId)}
-                      className="shrink-0"
-                    >
-                      Buy
-                    </Button>
+                      <Button
+                        variant="primary"
+                        disabled={!canBuy}
+                        title={!meetsLevel ? `Requires level ${type.requiredLevel}` : undefined}
+                        onClick={() => buyPotionStack(typeId)}
+                        className="shrink-0"
+                      >
+                        Buy
+                      </Button>
+                    </div>
                   </div>
                 )
               })}
@@ -402,22 +412,24 @@ export default function ShopPanel() {
             ) : (
               <div className="max-h-64 space-y-2 overflow-y-auto">
                 {damagedItems.map(({ item, template, cost }) => (
-                  <div key={item.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <InventorySlot
-                        slotId={item.id}
-                        filled
-                        sizeClassName={SLOT_SIZE_CLASS}
-                        icon={getItemIcon(template.slot_type)}
-                        iconSrc={getGearIconSrc(template.name)}
-                        qualityColor={getQualityColor(item.quality_tier)}
-                        broken={item.durability <= 0}
-                        label={template.name}
-                        tooltip={buildGearTooltip(item, template)}
-                      />
-                      <p className="truncate font-medium text-slate-200">{template.name}</p>
+                  <div key={item.id} className="ascension-chip-frame">
+                    <div className="ascension-chip-inner flex items-center justify-between gap-2 p-2 text-xs">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <InventorySlot
+                          slotId={item.id}
+                          filled
+                          sizeClassName={SLOT_SIZE_CLASS}
+                          icon={getItemIcon(template.slot_type)}
+                          iconSrc={getGearIconSrc(template.name)}
+                          qualityColor={getQualityColor(item.quality_tier)}
+                          broken={item.durability <= 0}
+                          label={template.name}
+                          tooltip={buildGearTooltip(item, template)}
+                        />
+                        <p className="truncate font-medium text-slate-200">{template.name}</p>
+                      </div>
+                      <p className="shrink-0 text-slate-500">{cost}g</p>
                     </div>
-                    <p className="shrink-0 text-slate-500">{cost}g</p>
                   </div>
                 ))}
               </div>

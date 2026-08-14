@@ -23,7 +23,7 @@ export function ProgressBar({ level, points, required }: { level: number; points
         </span>
       </div>
       <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-800">
-        <div className="h-full rounded-full bg-sky-500" style={{ width: `${percent}%` }} />
+        <div className="h-full rounded-full bg-amber-400" style={{ width: `${percent}%` }} />
       </div>
     </div>
   )

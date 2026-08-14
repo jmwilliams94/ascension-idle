@@ -420,7 +420,7 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
       </div>
 
       {!paymentChoice && !board && (
-        <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
+        <AscensionCard contentClassName="p-3">
           <p className="text-xs text-slate-400">Choose how to pay for a draw:</p>
           <div className="mt-2 flex gap-2">
             <Button variant="primary" disabled={busy || !canAffordTicket} onClick={() => setPaymentChoice('lottery_ticket')} className="flex-1">
@@ -441,7 +441,7 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
           <p className="mt-2 text-[10px] text-slate-500">
             {freeAvailable ? 'Free ticket ready' : `Next free ticket in ${formatCountdown(nextFreeTicketAt! - now)}`}
           </p>
-        </div>
+        </AscensionCard>
       )}
 
       {paymentChoice && !board && (

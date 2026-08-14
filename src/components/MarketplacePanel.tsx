@@ -243,9 +243,15 @@ function BrowseTab({ characterId, templates }: { characterId: string; templates:
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-xs text-slate-500">{browseListings.length} listing{browseListings.length === 1 ? '' : 's'} for sale</p>
-        <Button variant="secondary" onClick={() => void loadBrowseListings()}>
-          Refresh
-        </Button>
+        <div className="ascension-chip-frame is-interactive">
+          <button
+            type="button"
+            onClick={() => void loadBrowseListings()}
+            className="ascension-chip-inner px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
       {error && <p className="text-xs text-amber-400">{error}</p>}
@@ -392,26 +398,36 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
 
           <div className="flex-1 space-y-2">
             <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setPriceCurrency('gold')}
-                className={`rounded-lg border px-3 py-1 text-xs font-medium ${
-                  priceCurrency === 'gold' ? 'border-amber-400 bg-amber-500/10 text-amber-300' : 'border-slate-700 text-slate-300 hover:border-amber-500/50'
-                }`}
-              >
-                Gold
-              </button>
-              <button
-                type="button"
-                onClick={() => setPriceCurrency('ascension_points')}
-                className={`rounded-lg border px-3 py-1 text-xs font-medium ${
-                  priceCurrency === 'ascension_points'
-                    ? 'border-amber-400 bg-amber-500/10 text-amber-300'
-                    : 'border-slate-700 text-slate-300 hover:border-amber-500/50'
-                }`}
-              >
-                Ascension Points
-              </button>
+              {priceCurrency === 'gold' ? (
+                <button type="button" onClick={() => setPriceCurrency('gold')} className="rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300">
+                  Gold
+                </button>
+              ) : (
+                <div className="ascension-chip-frame is-interactive">
+                  <button type="button" onClick={() => setPriceCurrency('gold')} className="ascension-chip-inner px-3 py-1 text-xs font-medium text-slate-300 hover:text-amber-100">
+                    Gold
+                  </button>
+                </div>
+              )}
+              {priceCurrency === 'ascension_points' ? (
+                <button
+                  type="button"
+                  onClick={() => setPriceCurrency('ascension_points')}
+                  className="rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300"
+                >
+                  Ascension Points
+                </button>
+              ) : (
+                <div className="ascension-chip-frame is-interactive">
+                  <button
+                    type="button"
+                    onClick={() => setPriceCurrency('ascension_points')}
+                    className="ascension-chip-inner px-3 py-1 text-xs font-medium text-slate-300 hover:text-amber-100"
+                  >
+                    Ascension Points
+                  </button>
+                </div>
+              )}
             </div>
 
             <input
@@ -424,20 +440,28 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
             />
 
             <div className="flex flex-wrap gap-1.5">
-              {LISTING_DURATION_OPTIONS.map((option) => (
-                <button
-                  key={option.hours}
-                  type="button"
-                  onClick={() => setDurationHours(option.hours)}
-                  className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium ${
-                    durationHours === option.hours
-                      ? 'border-amber-400 bg-amber-500/10 text-amber-300'
-                      : 'border-slate-700 text-slate-300 hover:border-amber-500/50'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
+              {LISTING_DURATION_OPTIONS.map((option) =>
+                durationHours === option.hours ? (
+                  <button
+                    key={option.hours}
+                    type="button"
+                    onClick={() => setDurationHours(option.hours)}
+                    className="rounded-lg border border-amber-400 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-300"
+                  >
+                    {option.label}
+                  </button>
+                ) : (
+                  <div key={option.hours} className="ascension-chip-frame is-interactive">
+                    <button
+                      type="button"
+                      onClick={() => setDurationHours(option.hours)}
+                      className="ascension-chip-inner px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:text-amber-100"
+                    >
+                      {option.label}
+                    </button>
+                  </div>
+                ),
+              )}
             </div>
 
             {priceValid && (
@@ -820,38 +844,49 @@ export default function MarketplacePanel() {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-3 gap-2">
-        <button
-          type="button"
-          onClick={() => setTab('browse')}
-          className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
-            tab === 'browse' ? 'border-amber-400 bg-amber-500/10 text-amber-300' : 'border-slate-700 text-slate-300 hover:border-amber-500/50'
-          }`}
-        >
-          Browse
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('my-listings')}
-          className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
-            tab === 'my-listings' ? 'border-amber-400 bg-amber-500/10 text-amber-300' : 'border-slate-700 text-slate-300 hover:border-amber-500/50'
-          }`}
-        >
-          My Listings
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('mail')}
-          className={`relative rounded-lg border px-3 py-1.5 text-xs font-medium ${
-            tab === 'mail' ? 'border-amber-400 bg-amber-500/10 text-amber-300' : 'border-slate-700 text-slate-300 hover:border-amber-500/50'
-          }`}
-        >
-          Mail
-          {mailCount > 0 && (
-            <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-slate-950">
-              {mailCount}
-            </span>
-          )}
-        </button>
+        {tab === 'browse' ? (
+          <button type="button" onClick={() => setTab('browse')} className="rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300">
+            Browse
+          </button>
+        ) : (
+          <div className="ascension-chip-frame is-interactive">
+            <button type="button" onClick={() => setTab('browse')} className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100">
+              Browse
+            </button>
+          </div>
+        )}
+        {tab === 'my-listings' ? (
+          <button type="button" onClick={() => setTab('my-listings')} className="rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300">
+            My Listings
+          </button>
+        ) : (
+          <div className="ascension-chip-frame is-interactive">
+            <button type="button" onClick={() => setTab('my-listings')} className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100">
+              My Listings
+            </button>
+          </div>
+        )}
+        {tab === 'mail' ? (
+          <button type="button" onClick={() => setTab('mail')} className="relative rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300">
+            Mail
+            {mailCount > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-slate-950">
+                {mailCount}
+              </span>
+            )}
+          </button>
+        ) : (
+          <div className="ascension-chip-frame is-interactive relative">
+            <button type="button" onClick={() => setTab('mail')} className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100">
+              Mail
+            </button>
+            {mailCount > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-slate-950">
+                {mailCount}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {tab === 'browse' && <BrowseTab characterId={characterId} templates={templates} />}

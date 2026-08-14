@@ -30,9 +30,9 @@ export default function CompositionLoadBar({
         {addedPoints > 0 && <span>+{addedPoints} pts staged</span>}
       </div>
       <div className="relative mt-1 h-2.5 overflow-hidden rounded-full bg-slate-800">
-        <div className="absolute inset-y-0 left-0 rounded-full bg-sky-500/40" style={{ width: `${currentPercent}%` }} />
+        <div className="absolute inset-y-0 left-0 rounded-full bg-amber-500/40" style={{ width: `${currentPercent}%` }} />
         <motion.div
-          className="absolute inset-y-0 left-0 rounded-full bg-sky-400"
+          className="absolute inset-y-0 left-0 rounded-full bg-amber-400"
           initial={false}
           animate={{ width: `${afterPercent}%` }}
           transition={{ duration: 0.3 }}

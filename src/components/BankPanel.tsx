@@ -26,24 +26,44 @@ export default function BankPanel({ characterId }: { characterId: string }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-2 lg:max-w-xs">
-        <button
-          type="button"
-          onClick={() => setView('inventory')}
-          className={`rounded-xl border px-4 py-2 text-sm font-medium ${
-            view === 'inventory' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-          }`}
-        >
-          {characterName || 'Character'}
-        </button>
-        <button
-          type="button"
-          onClick={() => setView('storage')}
-          className={`rounded-xl border px-4 py-2 text-sm font-medium ${
-            view === 'storage' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-          }`}
-        >
-          Account
-        </button>
+        {view === 'inventory' ? (
+          <button
+            type="button"
+            onClick={() => setView('inventory')}
+            className="rounded-xl border border-amber-400 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-300"
+          >
+            {characterName || 'Character'}
+          </button>
+        ) : (
+          <div className="ascension-chip-frame is-interactive">
+            <button
+              type="button"
+              onClick={() => setView('inventory')}
+              className="ascension-chip-inner w-full px-4 py-2 text-sm font-medium text-slate-300 hover:text-amber-100"
+            >
+              {characterName || 'Character'}
+            </button>
+          </div>
+        )}
+        {view === 'storage' ? (
+          <button
+            type="button"
+            onClick={() => setView('storage')}
+            className="rounded-xl border border-amber-400 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-300"
+          >
+            Account
+          </button>
+        ) : (
+          <div className="ascension-chip-frame is-interactive">
+            <button
+              type="button"
+              onClick={() => setView('storage')}
+              className="ascension-chip-inner w-full px-4 py-2 text-sm font-medium text-slate-300 hover:text-amber-100"
+            >
+              Account
+            </button>
+          </div>
+        )}
       </div>
 
       {/* min-w-0 on both columns: grid items default to min-width:auto

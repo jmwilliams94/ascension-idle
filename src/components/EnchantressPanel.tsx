@@ -277,24 +277,36 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
         }
       >
         <div className="grid w-full max-w-xs grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => handleSetSubMode('enchant')}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
-              subMode === 'enchant' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-            }`}
-          >
-            Enchant
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSetSubMode('bless')}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
-              subMode === 'bless' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-            }`}
-          >
-            Bless
-          </button>
+          {subMode === 'enchant' ? (
+            <button type="button" className="rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300">
+              Enchant
+            </button>
+          ) : (
+            <div className="ascension-chip-frame is-interactive">
+              <button
+                type="button"
+                onClick={() => handleSetSubMode('enchant')}
+                className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100"
+              >
+                Enchant
+              </button>
+            </div>
+          )}
+          {subMode === 'bless' ? (
+            <button type="button" className="rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300">
+              Bless
+            </button>
+          ) : (
+            <div className="ascension-chip-frame is-interactive">
+              <button
+                type="button"
+                onClick={() => handleSetSubMode('bless')}
+                className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100"
+              >
+                Bless
+              </button>
+            </div>
+          )}
         </div>
 
         {subMode === 'enchant' ? (
@@ -334,7 +346,7 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
                 className={`w-full max-w-xs rounded-xl border p-2.5 text-center text-xs ${
                   resultMessage.applied
                     ? 'forge-success-flash border-emerald-600 bg-emerald-500/10 text-emerald-300'
-                    : 'border-slate-700 bg-slate-900/60 text-slate-400'
+                    : 'border-amber-800/60 bg-amber-500/5 text-slate-400'
                 }`}
               >
                 {resultMessage.applied
@@ -380,7 +392,7 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
             )}
 
             {blessResult && (
-              <div className="forge-success-flash w-full max-w-xs rounded-xl border border-sky-600 bg-sky-500/10 p-2.5 text-center text-xs text-sky-300">
+              <div className="forge-success-flash w-full max-w-xs rounded-xl border border-emerald-600 bg-emerald-500/10 p-2.5 text-center text-xs text-emerald-300">
                 {`Blessed! Damage Reduction now +${blessResult.pct}%.`}
               </div>
             )}

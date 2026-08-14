@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.91.8",
+    "date": "2026-08-14",
+    "changes": [
+      "Extended the gold/steel card styling to Lucky Lad's payment card, the Marketplace/Bank/Shop tab and toggle buttons, Bank's popups and sliders, Shop's item rows and Buy buttons, and several Forge tool controls"
+    ]
+  },
+  {
     "version": "1.91.7",
     "date": "2026-08-14",
     "changes": [

@@ -36,26 +36,27 @@ export default function BankActionModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4"
       onClick={onClose}
     >
-      <div
-        className="w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-base font-semibold text-white">{title}</h2>
-            {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
+      <div className="ascension-card-frame w-full max-w-sm" onClick={(event) => event.stopPropagation()}>
+        <div className="ascension-card-inner p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-white">{title}</h2>
+              {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
+            </div>
+            <div className="ascension-chip-frame is-interactive shrink-0">
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close"
+                className="ascension-chip-inner px-2 py-1 text-xs text-slate-400 hover:text-amber-100"
+              >
+                ✕
+              </button>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="shrink-0 rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-400 hover:border-slate-500 hover:text-slate-200"
-          >
-            ✕
-          </button>
-        </div>
 
-        <div className="mt-4">{children}</div>
+          <div className="mt-4">{children}</div>
+        </div>
       </div>
     </div>,
     document.body,

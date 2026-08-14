@@ -271,20 +271,8 @@ function Square({
   const borderColor = selected ? undefined : accentColor
   const backgroundColor = selected ? undefined : accentColor ? `${accentColor}14` : undefined
 
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={hasIcon ? label : undefined}
-      style={hasIcon ? { borderColor, backgroundColor } : undefined}
-      className={`relative flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border p-2 text-center ${
-        selected
-          ? 'border-sky-500 bg-sky-500/10'
-          : hasIcon
-            ? 'hover:brightness-125'
-            : 'border-slate-800 bg-slate-950/60 hover:border-slate-600'
-      }`}
-    >
+  const content = (
+    <>
       {cornerLabel && (
         <span className="absolute left-1 top-1 rounded bg-slate-950/70 px-1 text-[9px] font-semibold text-slate-300">{cornerLabel}</span>
       )}
@@ -299,7 +287,42 @@ function Square({
           {value !== undefined && <span className="text-lg font-semibold text-slate-100">{value.toLocaleString()}</span>}
         </>
       )}
-    </button>
+    </>
+  )
+
+  if (selected) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        title={hasIcon ? label : undefined}
+        className="relative flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border border-amber-400 bg-amber-500/10 p-2 text-center"
+      >
+        {content}
+      </button>
+    )
+  }
+
+  if (hasIcon) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        title={label}
+        style={{ borderColor, backgroundColor }}
+        className="relative flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border p-2 text-center hover:brightness-125"
+      >
+        {content}
+      </button>
+    )
+  }
+
+  return (
+    <div className="ascension-chip-frame is-interactive relative aspect-square">
+      <button type="button" onClick={onClick} className="ascension-chip-inner flex h-full w-full flex-col items-center justify-center gap-1 p-2 text-center">
+        {content}
+      </button>
+    </div>
   )
 }
 
@@ -358,32 +381,44 @@ function CurrencyPanel({
   return (
     <div className="space-y-3">
       <div className="flex gap-1.5">
-        <button
-          type="button"
-          onClick={() => {
-            setMode('deposit')
-            setAmount(0)
-            setError(null)
-          }}
-          className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium ${
-            mode === 'deposit' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-          }`}
-        >
-          Deposit
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setMode('withdraw')
-            setAmount(0)
-            setError(null)
-          }}
-          className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium ${
-            mode === 'withdraw' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-          }`}
-        >
-          Withdraw
-        </button>
+        {mode === 'deposit' ? (
+          <button type="button" className="flex-1 rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300">
+            Deposit
+          </button>
+        ) : (
+          <div className="ascension-chip-frame is-interactive flex-1">
+            <button
+              type="button"
+              onClick={() => {
+                setMode('deposit')
+                setAmount(0)
+                setError(null)
+              }}
+              className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100"
+            >
+              Deposit
+            </button>
+          </div>
+        )}
+        {mode === 'withdraw' ? (
+          <button type="button" className="flex-1 rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300">
+            Withdraw
+          </button>
+        ) : (
+          <div className="ascension-chip-frame is-interactive flex-1">
+            <button
+              type="button"
+              onClick={() => {
+                setMode('withdraw')
+                setAmount(0)
+                setError(null)
+              }}
+              className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100"
+            >
+              Withdraw
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between text-[11px] text-slate-500">
@@ -391,7 +426,8 @@ function CurrencyPanel({
         <span>Bank: {bank.toLocaleString()}</span>
       </div>
 
-      <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+      <div className="ascension-chip-frame">
+        <div className="ascension-chip-inner p-3">
         <div className="flex items-center justify-between">
           <span className="text-xs text-slate-500">Amount</span>
           <span className="text-lg font-semibold text-slate-100">{amount.toLocaleString()}</span>
@@ -403,13 +439,13 @@ function CurrencyPanel({
           value={Math.min(amount, sliderMax)}
           disabled={sliderMax === 0}
           onChange={(event) => setAmount(Number(event.target.value))}
-          className="mt-2 w-full accent-sky-500 disabled:opacity-40"
+          className="mt-2 w-full accent-amber-400 disabled:opacity-40"
         />
         <div className="mt-1 flex justify-between text-[10px] text-slate-600">
           <span>0</span>
           <span>{sliderMax.toLocaleString()}</span>
         </div>
-
+        </div>
       </div>
 
       <Button variant="primary" disabled={busy || !validAmount} onClick={() => void handleConfirm()} className="w-full">
@@ -509,29 +545,42 @@ function CometFallenStarPanel({
   return (
     <div className="space-y-3">
       <div className="flex gap-1.5">
-        <button
-          type="button"
-          onClick={() => setModeAndReset('individual')}
-          className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium ${
-            mode === 'individual' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-          }`}
-        >
-          Individual
-        </button>
-        <button
-          type="button"
-          onClick={() => setModeAndReset('scroll')}
-          className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium ${
-            mode === 'scroll' ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-          }`}
-        >
-          Scroll
-        </button>
+        {mode === 'individual' ? (
+          <button type="button" className="flex-1 rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300">
+            Individual
+          </button>
+        ) : (
+          <div className="ascension-chip-frame is-interactive flex-1">
+            <button
+              type="button"
+              onClick={() => setModeAndReset('individual')}
+              className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100"
+            >
+              Individual
+            </button>
+          </div>
+        )}
+        {mode === 'scroll' ? (
+          <button type="button" className="flex-1 rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300">
+            Scroll
+          </button>
+        ) : (
+          <div className="ascension-chip-frame is-interactive flex-1">
+            <button
+              type="button"
+              onClick={() => setModeAndReset('scroll')}
+              className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100"
+            >
+              Scroll
+            </button>
+          </div>
+        )}
       </div>
 
       <p className="text-[11px] text-slate-500">Bank: {bank.toLocaleString()}</p>
 
-      <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+      <div className="ascension-chip-frame">
+        <div className="ascension-chip-inner p-3">
         <div className="flex items-center justify-between">
           <span className="text-xs text-slate-500">{mode === 'scroll' ? 'Scrolls' : 'Amount'}</span>
           <span className="text-lg font-semibold text-slate-100">{amount.toLocaleString()}</span>
@@ -543,7 +592,7 @@ function CometFallenStarPanel({
           value={Math.min(amount, sliderMax)}
           disabled={sliderMax === 0}
           onChange={(event) => setAmount(Number(event.target.value))}
-          className="mt-2 w-full accent-sky-500 disabled:opacity-40"
+          className="mt-2 w-full accent-amber-400 disabled:opacity-40"
         />
         <div className="mt-1 flex justify-between text-[10px] text-slate-600">
           <span>0</span>
@@ -560,6 +609,7 @@ function CometFallenStarPanel({
             → lands in your Character Inventory as {amount} Scroll{amount === 1 ? '' : 's'} ({(amount * 10).toLocaleString()} {label.toLowerCase()}).
           </p>
         )}
+        </div>
       </div>
 
       <Button variant="primary" disabled={busy || !validAmount} onClick={() => void handleConfirm()} className="w-full">
@@ -580,24 +630,26 @@ function TierSlider({ tier, setTier, minTier = 1 }: { tier: number; setTier: (ti
   const cost = compositionPointValue(tier)
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-slate-500">Tier</span>
-        <span className="text-lg font-semibold text-slate-100">{tier <= 0 ? 'Normal' : `+${tier}`}</span>
+    <div className="ascension-chip-frame">
+      <div className="ascension-chip-inner p-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-slate-500">Tier</span>
+          <span className="text-lg font-semibold text-slate-100">{tier <= 0 ? 'Normal' : `+${tier}`}</span>
+        </div>
+        <input
+          type="range"
+          min={minTier}
+          max={maxTier}
+          value={tier}
+          onChange={(event) => setTier(Number(event.target.value))}
+          className="mt-2 w-full accent-amber-400"
+        />
+        <div className="mt-1 flex justify-between text-[10px] text-slate-600">
+          <span>{minTier <= 0 ? 'Normal' : `+${minTier}`}</span>
+          <span>+{maxTier}</span>
+        </div>
+        <p className="mt-2 text-[11px] text-slate-500">{cost > 0 ? `${cost.toLocaleString()} pts` : 'Free'}</p>
       </div>
-      <input
-        type="range"
-        min={minTier}
-        max={maxTier}
-        value={tier}
-        onChange={(event) => setTier(Number(event.target.value))}
-        className="mt-2 w-full accent-sky-500"
-      />
-      <div className="mt-1 flex justify-between text-[10px] text-slate-600">
-        <span>{minTier <= 0 ? 'Normal' : `+${minTier}`}</span>
-        <span>+{maxTier}</span>
-      </div>
-      <p className="mt-2 text-[11px] text-slate-500">{cost > 0 ? `${cost.toLocaleString()} pts` : 'Free'}</p>
     </div>
   )
 }
@@ -674,15 +726,16 @@ function GearPointsPanel({
         <p className="text-xs text-slate-500">Choose a gear type to spend its points pool.</p>
         <div className="grid grid-cols-2 gap-1.5">
           {GEAR_SLOT_TYPES.map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setSlotType(type)}
-              className="rounded-lg border border-slate-700 px-2.5 py-2 text-left text-xs font-medium text-slate-300 hover:border-slate-500"
-            >
-              <span className="block">{formatGearSlotLabel(type)}</span>
-              <span className="block text-[10px] font-normal text-slate-500">{gearCompositionPoints[type].toLocaleString()} pts</span>
-            </button>
+            <div key={type} className="ascension-chip-frame is-interactive">
+              <button
+                type="button"
+                onClick={() => setSlotType(type)}
+                className="ascension-chip-inner w-full px-2.5 py-2 text-left text-xs font-medium text-slate-300 hover:text-amber-100"
+              >
+                <span className="block">{formatGearSlotLabel(type)}</span>
+                <span className="block text-[10px] font-normal text-slate-500">{gearCompositionPoints[type].toLocaleString()} pts</span>
+              </button>
+            </div>
           ))}
         </div>
       </div>
@@ -835,18 +888,27 @@ function GemsPanel({
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-4 gap-1.5">
-        {GEM_TYPE_ORDER.map((id) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setGemId(id)}
-            className={`rounded-lg border px-2 py-1.5 text-[11px] font-medium ${
-              gemId === id ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-slate-700 text-slate-300 hover:border-slate-500'
-            }`}
-          >
-            {GEM_TYPES[id].displayName.replace(' Gem', '')}
-          </button>
-        ))}
+        {GEM_TYPE_ORDER.map((id) =>
+          gemId === id ? (
+            <button
+              key={id}
+              type="button"
+              className="rounded-lg border border-amber-400 bg-amber-500/10 px-2 py-1.5 text-[11px] font-medium text-amber-300"
+            >
+              {GEM_TYPES[id].displayName.replace(' Gem', '')}
+            </button>
+          ) : (
+            <div key={id} className="ascension-chip-frame is-interactive">
+              <button
+                type="button"
+                onClick={() => setGemId(id)}
+                className="ascension-chip-inner w-full px-2 py-1.5 text-[11px] font-medium text-slate-300 hover:text-amber-100"
+              >
+                {GEM_TYPES[id].displayName.replace(' Gem', '')}
+              </button>
+            </div>
+          ),
+        )}
       </div>
 
       {/* One tile per tier, quantity shown underneath each (2026-08-14,
@@ -859,15 +921,8 @@ function GemsPanel({
         {GEM_TIERS.map((t) => {
           const tierColor = getGemTierColor(t)
           const tierOwned = gemsBanked[gemStorageKey(gemId, t)] ?? 0
-          return (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTier(t)}
-              className={`flex flex-col items-center gap-1 rounded-xl border p-2 ${
-                tier === t ? 'border-sky-500 bg-sky-500/10' : 'border-slate-800 bg-slate-950/60 hover:border-slate-600'
-              }`}
-            >
+          const iconBlock = (
+            <>
               <div
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 p-1"
                 style={{ borderColor: tierColor, backgroundColor: `${tierColor}22` }}
@@ -876,7 +931,19 @@ function GemsPanel({
               </div>
               <span className="text-[10px] font-medium text-slate-400">{formatGemTierLabel(t)}</span>
               <span className="text-sm font-semibold text-slate-100">{tierOwned.toLocaleString()}</span>
+            </>
+          )
+
+          return tier === t ? (
+            <button key={t} type="button" className="flex flex-col items-center gap-1 rounded-xl border border-amber-400 bg-amber-500/10 p-2">
+              {iconBlock}
             </button>
+          ) : (
+            <div key={t} className="ascension-chip-frame is-interactive">
+              <button type="button" onClick={() => setTier(t)} className="ascension-chip-inner flex w-full flex-col items-center gap-1 p-2">
+                {iconBlock}
+              </button>
+            </div>
           )
         })}
       </div>
