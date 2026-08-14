@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.92.26",
+    "date": "2026-08-15",
+    "changes": [
+      "Fixed a bug where a character could get permanently stuck a few thousand EXP short of level 130 — crossing the level cap was silently failing and rolling back every single attempt, including the EXP gain, due to a missing database permission"
+    ]
+  },
+  {
     "version": "1.92.25",
     "date": "2026-08-15",
     "changes": [
