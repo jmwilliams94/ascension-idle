@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.91.5",
+    "date": "2026-08-14",
+    "changes": [
+      "Fixed a mismatched broken-image icon on mobile when gear art fails to load"
+    ]
+  },
+  {
     "version": "1.91.4",
     "date": "2026-08-14",
     "changes": [
