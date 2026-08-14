@@ -13,6 +13,14 @@ export function changelogNewestFirst(): ChangelogEntry[] {
   return [...CHANGELOG].sort((a, b) => compareVersions(b.version, a.version))
 }
 
-export function changelogEntriesAfter(version: string): ChangelogEntry[] {
-  return changelogNewestFirst().filter((entry) => compareVersions(entry.version, version) > 0)
+// The "What's New" modal shows a fixed-size recap, not literally everything missed —
+// a player returning after a long absence could otherwise be shown hundreds of
+// version entries in one long scroll (changelog.json bumps almost every commit),
+// which reads like a chain of popups even though it's technically one modal.
+// Capped at the most recent N entries, newest first, regardless of how far behind
+// last_seen_version actually is.
+export const WHATS_NEW_MAX_ENTRIES = 5
+
+export function changelogEntriesForWhatsNew(): ChangelogEntry[] {
+  return changelogNewestFirst().slice(0, WHATS_NEW_MAX_ENTRIES)
 }

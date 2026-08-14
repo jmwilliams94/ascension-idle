@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { changelogEntriesAfter, type ChangelogEntry } from './changelog'
+import { changelogEntriesForWhatsNew, type ChangelogEntry } from './changelog'
 import { compareVersions } from './semver'
 import { supabase } from './supabaseClient'
 import { APP_VERSION } from '../version'
@@ -191,8 +191,10 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
       return
     }
 
+    // Capped to a fixed-size recap (changelogEntriesForWhatsNew), not every entry
+    // missed since last_seen_version — see that function's own comment for why.
     const whatsNewEntries =
-      compareVersions(data.last_seen_version, APP_VERSION) < 0 ? changelogEntriesAfter(data.last_seen_version) : null
+      compareVersions(data.last_seen_version, APP_VERSION) < 0 ? changelogEntriesForWhatsNew() : null
 
     set({ loaded: true, whatsNewEntries })
   },
