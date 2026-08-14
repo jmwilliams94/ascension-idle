@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.92.2",
+    "date": "2026-08-14",
+    "changes": [
+      "Fixed the top HUD bar's layout shifting oddly when your Inventory is full",
+      "Restyled LuckyLad's three payment buttons to match — same size, same look, just recolored by currency"
+    ]
+  },
+  {
     "version": "1.92.1",
     "date": "2026-08-14",
     "changes": [

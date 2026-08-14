@@ -430,13 +430,25 @@ export default function GameShell({ characterId }: { characterId: string }) {
           whatever's at the bottom of the page's content. Unchanged at `lg`+,
           where the bottom nav doesn't render at all. */}
       <main className="mx-auto max-w-7xl space-y-4 px-6 pb-24 pt-6 lg:pb-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <ExpBar />
-          <QuiverWarningHud />
-          <InventoryFullWarningHud />
-          <KnockoutHud />
-          <PlayersOnlineHud />
-          <ChatAndAnnouncements />
+        {/* Two independent flex-wrap rows, not one — ExpBar/the warning
+            badges and PlayersOnlineHud/ChatAndAnnouncements used to share a
+            single row, so InventoryFullWarningHud appearing (its width
+            competing with ExpBar's own flex-grow) could shove the
+            PlayersOnlineHud+ChatAndAnnouncements pair apart onto separate
+            wrapped lines (reported by the user — "the layout breaks
+            slightly" when Inventory is full). Splitting them means a warning
+            badge showing up can only ever affect its own row's wrapping. */}
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <ExpBar />
+            <QuiverWarningHud />
+            <InventoryFullWarningHud />
+            <KnockoutHud />
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <PlayersOnlineHud />
+            <ChatAndAnnouncements />
+          </div>
         </div>
 
         {/* Renders nothing when there's no pet to celebrate — safe to mount

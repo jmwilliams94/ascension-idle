@@ -489,35 +489,39 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
       {!paymentChoice && !board && (
         <AscensionCard contentClassName="p-3">
           <p className="text-xs text-slate-400">Choose how to pay for a draw:</p>
+          {/* Three equal-size buttons, all sharing the primary Button's own
+              shape/typography (rounded-lg, font-heading font-bold uppercase
+              tracking) so they read as one button family — only the color
+              differs, and only because it's semantic (purple = Ascension
+              Points, emerald = the app's existing "extra value" accent),
+              per CLAUDE.visual-design.md's guardrail against repainting
+              established currency/state colors gold. */}
           <div className="mt-2 flex gap-2">
             <Button variant="primary" disabled={busy || !canAffordTicket} onClick={() => setPaymentChoice('lottery_ticket')} className="flex-1">
-              {`Lottery Ticket (${lotteryTickets} owned)`}
+              {`Lottery Ticket (${lotteryTickets})`}
             </Button>
-            {/* Kept its own purple — Ascension Points' established, project-wide
-                currency color (see CLAUDE.md) — rather than converted to gold,
-                same reasoning Salvage's AP-earning buttons kept it too. */}
             <button
               type="button"
               disabled={busy || !canAffordPoints}
               onClick={() => setPaymentChoice('ascension_points')}
-              className="flex-1 rounded-lg border border-purple-500 bg-purple-500/10 px-3 py-1.5 text-xs font-medium text-purple-300 hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex-1 rounded-lg border border-purple-500 bg-purple-500/10 px-4 py-2.5 font-heading text-sm font-bold uppercase tracking-[0.12em] text-purple-300 transition hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {pointsCost === 0 ? 'Free Ticket' : `${pointsCost} AP`}
             </button>
+            {/* Bulk draw — pay LUCKY_BULK_AP_COST AP (8x the single-card AP
+                cost) up front and every one of the 9 chests holds a real
+                reward, opened one at a time afterward. Fires immediately on
+                click rather than going through paymentChoice, since it skips
+                the "pick a chest" step entirely. */}
+            <button
+              type="button"
+              disabled={busy || !canAffordBulk}
+              onClick={() => void handleBulkDraw()}
+              className="flex-1 rounded-lg border border-emerald-500 bg-emerald-500/10 px-4 py-2.5 font-heading text-sm font-bold uppercase tracking-[0.12em] text-emerald-300 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {`Open 9 (${LUCKY_BULK_AP_COST} AP)`}
+            </button>
           </div>
-          {/* Bulk draw — pay LUCKY_BULK_AP_COST AP (8x the single-card AP
-              cost) up front and every one of the 9 chests holds a real
-              reward, opened one at a time afterward. Its own row, separate
-              from the two single-draw payment buttons above, since it skips
-              the "pick a chest" step entirely. */}
-          <button
-            type="button"
-            disabled={busy || !canAffordBulk}
-            onClick={() => void handleBulkDraw()}
-            className="mt-2 w-full rounded-lg border border-amber-500 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {`Open All 9 — ${LUCKY_BULK_AP_COST} AP`}
-          </button>
           <p className="mt-2 text-[10px] text-slate-500">
             {freeAvailable ? 'Free ticket ready' : `Next free ticket in ${formatCountdown(nextFreeTicketAt! - now)}`}
           </p>
