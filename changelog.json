@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.91.3",
+    "date": "2026-08-14",
+    "changes": [
+      "Removed the Combat Log panel from the Combat screen"
+    ]
+  },
+  {
     "version": "1.91.2",
     "date": "2026-08-14",
     "changes": [
