@@ -1,6 +1,7 @@
 import type { ItemTooltipData } from './itemTooltip'
 import type { ItemTemplate } from './useItemTemplatesStore'
 import { getGearIconSrc } from './equipmentBonus'
+import { APP_VERSION } from '../../version'
 
 // Mirrors the flat cost in supabase/migrations/20260731070000_forge_flat_currency_cost.sql
 // (stage 3 of the Bank/Warehouse redesign — supersedes the earlier scaling
@@ -286,7 +287,10 @@ export const FALLEN_STAR_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/falle
 // own dedicated chest-and-scroll icon rather than reusing the plain Comet
 // icon above, everywhere it's shown (LuckyPanel board tile/tooltip,
 // MoneyBagRevealModal's instant-grant reveal, GlobalAnnouncementTicker).
-export const COMET_BOX_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/comet-box.png`
+// `?v=${APP_VERSION}` cache-busts it (see navIcons.ts's `iconUrl` doc
+// comment) — added after the art at this same filename had to be corrected
+// once already the same day (wrong source image swapped in initially).
+export const COMET_BOX_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/comet-box.png?v=${APP_VERSION}`
 
 // Own distinct border/glow colors (2026-08-02), same InventorySlot
 // qualityColor mechanism gear uses for its tier tint — materials previously

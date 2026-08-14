@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.92.19",
+    "date": "2026-08-14",
+    "changes": [
+      "Fixed the Market nav icon and Comet Box icon being swapped with each other"
+    ]
+  },
+  {
     "version": "1.92.18",
     "date": "2026-08-14",
     "changes": [
