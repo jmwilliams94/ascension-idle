@@ -5,7 +5,7 @@
   line-height: 1.5;
   font-weight: 400;
   color: #e2e8f0;
-  background-color: var(--ascension-ink);
+  background-color: var(--ascension-ink-soft);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -25,7 +25,7 @@ body,
 
 body {
   min-width: 320px;
-  background: var(--ascension-ink);
+  background: var(--ascension-ink-soft);
 }
 
 /* Every gear/currency icon in the game now renders as a real <img> (see

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.91.9",
+    "date": "2026-08-14",
+    "changes": [
+      "Fixed the true background color behind the app to match the top of the header's gradient instead of showing a darker band above it"
+    ]
+  },
+  {
     "version": "1.91.8",
     "date": "2026-08-14",
     "changes": [
