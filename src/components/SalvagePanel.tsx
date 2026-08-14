@@ -339,7 +339,7 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
             >
               <span
                 className="text-xs font-medium"
-                style={{ color: group.items.length === 0 ? '#475569' : BULK_TIER_GLOW[group.tier].base }}
+                style={group.items.length === 0 ? { color: '#475569' } : undefined}
               >
                 Salvage All {BULK_TIER_LABEL[group.tier]} ({group.items.length})
               </span>
@@ -359,10 +359,19 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
               {formatDurationEstimate((bulkProgress.total - bulkProgress.completed) * SALVAGE_ANIMATION_MS)} left
             </p>
             <div className="h-2.5 overflow-hidden rounded-full bg-slate-800">
+              {/* One continuous left-to-right fill for the whole run (fixed
+                  2026-08-14, reported by the user — re-targeting `animate`
+                  on every completed item made the bar restart its transition
+                  from wherever it currently sat, one item late each time, so
+                  it looked like it was counting down then always fell short
+                  of the end). `total` is fixed for the life of a run, so the
+                  width/duration are set once here and never re-triggered by
+                  the `completed` ticks that only drive the label text above. */}
               <motion.div
                 className="h-full rounded-full bg-purple-500"
-                animate={{ width: `${(bulkProgress.completed / bulkProgress.total) * 100}%` }}
-                transition={{ duration: SALVAGE_ANIMATION_MS / 1000, ease: 'linear' }}
+                initial={{ width: '0%' }}
+                animate={{ width: '100%' }}
+                transition={{ duration: (bulkProgress.total * SALVAGE_ANIMATION_MS) / 1000, ease: 'linear' }}
               />
             </div>
           </div>

@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.92.8",
+    "date": "2026-08-14",
+    "changes": [
+      "Salvage's bulk buttons now flip their text color on click/tap the same way the Lottery Ticket button does",
+      "Fixed the Salvage-all progress bar restarting its fill after every item instead of running as one smooth bar for the whole batch"
+    ]
+  },
+  {
     "version": "1.92.7",
     "date": "2026-08-14",
     "changes": [
