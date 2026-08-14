@@ -1,28 +1,27 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useCombatStore } from '../game/combat/useCombatStore'
 import { useTabStore, type TabId } from '../game/hud/useTabStore'
-import { TAB_ICONS, useEquippedWeaponIcon } from '../game/hud/navIcons'
+import { TAB_ICONS } from '../game/hud/navIcons'
 import NavIconGlyph from './NavIconGlyph'
 import { useAchievementsStore, totalClaimableCount } from '../game/achievements/useAchievementsStore'
 import { useMailStore, countUnreadMail } from '../game/marketplace/useMailStore'
 
+const BASE_URL = import.meta.env.BASE_URL
+
 // Fixed bottom nav bar, mobile-only (`lg:hidden` — desktop keeps TabNav.tsx
-// unchanged, now `hidden lg:grid`). Combat is centered as "Fight"/"Idle" —
+// unchanged, now `hidden lg:grid`). Combat is centered, labeled "Idling" —
 // confirmed navigation-only, same as every other button here; it does NOT
 // itself start/stop combat (that's still Combat's own Fight/Stop button,
-// already built for mobile — see CombatPage.tsx). The label just reflects
-// `isFighting` so the bar itself hints at your current state without
-// requiring a trip to the Combat page to check.
+// already built for mobile — see CombatPage.tsx).
 //
 // Restructured (2026-08-03, confirmed with the user) — supersedes the
 // original flat 7-button layout (Equipment/Forge/Market | Fight | Shop/Bank/
 // Achievements). Now 5 always-visible slots — Equip, Lucky (new tab, see
-// LuckyPanel), Fighting, Town, Achieve — with Market/Bank/Shop/Forge moved
-// off the bar entirely into a "Town" rollup (TownNavButton below) rather
+// LuckyPanel), Idling, Tavern, Achieve — with Market/Bank/Shop/Forge moved
+// off the bar entirely into a "Tavern" rollup (TavernNavButton below) rather
 // than each getting its own permanent slot. Desktop's TabNav.tsx is
 // unaffected by this — it just shows all 8 tabs flat (room isn't scarce
-// there the way it is on a phone-width bottom bar), Town is a mobile-only
+// there the way it is on a phone-width bottom bar), Tavern is a mobile-only
 // grouping concept, not a real tab of its own.
 const LEFT_ITEMS: { id: TabId; label: string }[] = [
   { id: 'equipment', label: 'Equip' },
@@ -32,12 +31,12 @@ const LEFT_ITEMS: { id: TabId; label: string }[] = [
   { id: 'lucky', label: 'LuckyLad' },
 ]
 
-// TownNavButton's own rollup contents — everything that used to have its own
-// permanent bottom-nav slot except Equipment/Achievements (which stayed put)
-// and Combat (always centered). No art exists for Market yet, same
+// TavernNavButton's own rollup contents — everything that used to have its
+// own permanent bottom-nav slot except Equipment/Achievements (which stayed
+// put) and Combat (always centered). No art exists for Market yet, same
 // established "mixed icon language until more art arrives" precedent as
 // before this restructure.
-const TOWN_ITEMS: { id: TabId; label: string }[] = [
+const TAVERN_ITEMS: { id: TabId; label: string }[] = [
   { id: 'marketplace', label: 'Market' },
   { id: 'bank', label: 'Bank' },
   { id: 'shop', label: 'Shop' },
@@ -73,12 +72,14 @@ function NavButton({ id, label, badge }: { id: TabId; label: string; badge?: num
   )
 }
 
-function FightNavButton() {
+// Static hourglass icon (2026-08-14) — replaced the old dynamic
+// equipped-weapon icon + live "Fighting"/"Idle" status text; label always
+// reads "Idling" now, matching GameShell's page-heading rename.
+function IdlingNavButton() {
   const activeTab = useTabStore((state) => state.activeTab)
   const setActiveTab = useTabStore((state) => state.setActiveTab)
-  const isFighting = useCombatStore((state) => state.isFighting)
   const active = activeTab === 'combat'
-  const weaponIcon = useEquippedWeaponIcon()
+  const icon = TAB_ICONS.combat
 
   return (
     <button
@@ -87,47 +88,44 @@ function FightNavButton() {
       className="flex flex-1 flex-col items-center justify-center gap-0.5"
     >
       <span
-        className={`flex h-11 w-11 items-center justify-center rounded-full border-2 text-lg shadow-lg ${
-          isFighting
-            ? 'border-emerald-400 bg-emerald-500/20 text-emerald-300 shadow-emerald-500/20'
-            : active
-              ? 'border-amber-400 bg-amber-500/20 text-amber-300 shadow-amber-500/20'
-              : 'border-slate-600 bg-slate-800 text-slate-300 shadow-black/30'
+        className={`flex h-11 w-11 items-center justify-center rounded-full border-2 shadow-lg ${
+          active
+            ? 'border-amber-400 bg-amber-500/20 text-amber-300 shadow-amber-500/20'
+            : 'border-slate-600 bg-slate-800 text-slate-300 shadow-black/30'
         }`}
       >
-        {weaponIcon}
+        {icon && <NavIconGlyph icon={icon} sizeClassName="h-7 w-7" />}
       </span>
-      <span className={`text-[10px] font-semibold leading-tight ${isFighting ? 'text-emerald-300' : 'text-slate-400'}`}>
-        {isFighting ? 'Fighting' : 'Idle'}
-      </span>
+      <span className={`text-[10px] font-semibold leading-tight ${active ? 'text-amber-300' : 'text-slate-400'}`}>Idling</span>
     </button>
   )
 }
 
-// Speed-dial style: tapping Town toggles a small stack of buttons rising up
-// from directly above it (Market/Bank/Shop/Forge, see TOWN_ITEMS) rather than
-// navigating anywhere itself — "rolls the buttons upward," per the user's own
-// framing. Picking one of the rolled-out items navigates and collapses the
-// stack in one motion; tapping Town again while open collapses it without
-// navigating; tapping anywhere else on the page also collapses it (the same
-// outside-pointerdown-dismiss pattern GearEquipPopover already established in
-// this codebase), so it doesn't linger open over an unrelated tab.
+// Speed-dial style: tapping Tavern toggles a small stack of buttons rising
+// up from directly above it (Market/Bank/Shop/Forge, see TAVERN_ITEMS)
+// rather than navigating anywhere itself — "rolls the buttons upward," per
+// the user's own framing. Picking one of the rolled-out items navigates and
+// collapses the stack in one motion; tapping Tavern again while open
+// collapses it without navigating; tapping anywhere else on the page also
+// collapses it (the same outside-pointerdown-dismiss pattern
+// GearEquipPopover already established in this codebase), so it doesn't
+// linger open over an unrelated tab.
 // badges (2026-08-13, requested by the user) — keyed by TabId, currently only
 // Market (unclaimed Mail count) uses this; shown both on the individual
-// rolled-out item and, summed, on the collapsed Town button itself so a
+// rolled-out item and, summed, on the collapsed Tavern button itself so a
 // pending item is visible without opening the rollup first.
-function TownNavButton({ badges }: { badges: Partial<Record<TabId, number>> }) {
+function TavernNavButton({ badges }: { badges: Partial<Record<TabId, number>> }) {
   const activeTab = useTabStore((state) => state.activeTab)
   const setActiveTab = useTabStore((state) => state.setActiveTab)
   const [expanded, setExpanded] = useState(false)
-  const active = TOWN_ITEMS.some((item) => item.id === activeTab)
+  const active = TAVERN_ITEMS.some((item) => item.id === activeTab)
   const totalBadge = Object.values(badges).reduce<number>((sum, value) => sum + (value ?? 0), 0)
 
   useEffect(() => {
     if (!expanded) return undefined
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as HTMLElement
-      if (!target.closest('[data-town-rollup]')) {
+      if (!target.closest('[data-tavern-rollup]')) {
         setExpanded(false)
       }
     }
@@ -136,7 +134,7 @@ function TownNavButton({ badges }: { badges: Partial<Record<TabId, number>> }) {
   }, [expanded])
 
   return (
-    <div data-town-rollup className="relative flex flex-1 flex-col items-center justify-center">
+    <div data-tavern-rollup className="relative flex flex-1 flex-col items-center justify-center">
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -146,7 +144,7 @@ function TownNavButton({ badges }: { badges: Partial<Record<TabId, number>> }) {
             transition={{ duration: 0.18, ease: 'easeOut' }}
             className="absolute bottom-full mb-2 flex flex-col items-stretch gap-1 rounded-xl border border-slate-800 bg-slate-950/95 p-1.5 shadow-xl shadow-black/60"
           >
-            {TOWN_ITEMS.map((item) => {
+            {TAVERN_ITEMS.map((item) => {
               const icon = TAB_ICONS[item.id]
               const badge = badges[item.id]
               return (
@@ -182,8 +180,8 @@ function TownNavButton({ badges }: { badges: Partial<Record<TabId, number>> }) {
           active || expanded ? 'text-amber-300' : 'text-slate-400'
         }`}
       >
-        <span className="text-lg">🏘️</span>
-        <span className="truncate">Town</span>
+        <img src={`${BASE_URL}nav-icons/tavern.png`} alt="Tavern" className="h-6 w-6 object-contain" />
+        <span className="truncate">Tavern</span>
         {totalBadge > 0 && (
           <span className="absolute right-2 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-slate-900 bg-amber-500 px-1 text-[9px] font-bold text-slate-950">
             {totalBadge > 99 ? '99+' : totalBadge}
@@ -200,8 +198,8 @@ export default function MobileBottomNav() {
   const zoneClaims = useAchievementsStore((state) => state.zoneClaims)
   const achievementsBadge = totalClaimableCount(characterKills, accountKills, zoneClaims)
   // Unclaimed Mail count (2026-08-13, requested by the user) — see
-  // TownNavButton's own doc comment for how this surfaces on mobile, where
-  // Market lives inside the Town rollup rather than its own top-level slot.
+  // TavernNavButton's own doc comment for how this surfaces on mobile, where
+  // Market lives inside the Tavern rollup rather than its own top-level slot.
   // Counts distinct unread mail (countUnreadMail), not raw rows — see
   // TabNav.tsx's matching fix for why.
   const mailEntries = useMailStore((state) => state.entries)
@@ -223,8 +221,8 @@ export default function MobileBottomNav() {
         {LEFT_ITEMS.map((item) => (
           <NavButton key={item.id} {...item} />
         ))}
-        <FightNavButton />
-        <TownNavButton badges={{ marketplace: mailBadge }} />
+        <IdlingNavButton />
+        <TavernNavButton badges={{ marketplace: mailBadge }} />
         {RIGHT_ITEMS.map((item) => (
           <NavButton key={item.id} {...item} badge={item.id === 'achievements' ? achievementsBadge : undefined} />
         ))}
