@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.92.20",
+    "date": "2026-08-14",
+    "changes": [
+      "Fixed the top of the LuckyLad clover icon getting cropped off"
+    ]
+  },
+  {
     "version": "1.92.19",
     "date": "2026-08-14",
     "changes": [
