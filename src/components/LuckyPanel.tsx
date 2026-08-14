@@ -19,6 +19,7 @@ import {
   FALLEN_STAR_SCROLL_ICON_SRC,
   MATERIAL_COLOR,
   COMET_ICON_SRC,
+  COMET_BOX_ICON_SRC,
   COMET_SCROLL_ICON_SRC,
   getStoneIconSrc,
   buildCometTooltip,
@@ -107,7 +108,7 @@ function rewardVisual(reward: LuckyReward): { icon?: string; iconSrc?: string; c
     case 'comet':
       return { iconSrc: COMET_ICON_SRC, color: MATERIAL_COLOR }
     case 'comet_box':
-      return { iconSrc: COMET_ICON_SRC, color: MATERIAL_COLOR }
+      return { iconSrc: COMET_BOX_ICON_SRC, color: MATERIAL_COLOR }
     case 'fallen_star':
       return { iconSrc: FALLEN_STAR_ICON_SRC, color: FALLEN_STAR_COLOR }
     case 'comet_scroll':
@@ -157,7 +158,7 @@ function buildLuckyRewardTooltip(reward: LuckyReward): ItemTooltipData {
     case 'comet_box':
       return {
         title: 'Comet Box',
-        iconSrc: COMET_ICON_SRC,
+        iconSrc: COMET_BOX_ICON_SRC,
         iconColor: MATERIAL_COLOR,
         lines: ['Lucky Lad reward'],
         stats: [`Grants ${reward.amount.toLocaleString()} Comets instantly`],

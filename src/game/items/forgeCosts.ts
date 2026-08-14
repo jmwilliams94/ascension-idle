@@ -282,6 +282,11 @@ export function isFallenStarDragId(id: string): boolean {
 // priority over its emoji icon prop.
 export const COMET_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/comet.png`
 export const FALLEN_STAR_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/fallen-star.png`
+// Comet Box (2026-08-14) — the Lucky Lad "+N Comets" reward kind gets its
+// own dedicated chest-and-scroll icon rather than reusing the plain Comet
+// icon above, everywhere it's shown (LuckyPanel board tile/tooltip,
+// MoneyBagRevealModal's instant-grant reveal, GlobalAnnouncementTicker).
+export const COMET_BOX_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/comet-box.png`
 
 // Own distinct border/glow colors (2026-08-02), same InventorySlot
 // qualityColor mechanism gear uses for its tier tint — materials previously

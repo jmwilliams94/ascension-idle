@@ -3,7 +3,7 @@ import { useGlobalActivityStore } from '../game/social/useGlobalActivityStore'
 import { useAnnouncementHistoryStore } from '../game/social/useAnnouncementHistoryStore'
 import { getGearIconSrc } from '../game/items/equipmentBonus'
 import { getGemIconSrc, type GemTier, type GemTypeId } from '../game/items/gemCatalog'
-import { COMET_SCROLL_ICON_SRC, FALLEN_STAR_SCROLL_ICON_SRC, FALLEN_STAR_ICON_SRC, COMET_ICON_SRC } from '../game/items/forgeCosts'
+import { COMET_SCROLL_ICON_SRC, FALLEN_STAR_SCROLL_ICON_SRC, FALLEN_STAR_ICON_SRC, COMET_BOX_ICON_SRC } from '../game/items/forgeCosts'
 
 // Emoji fallback, kept for any kind resolveAnnouncementIconSrc can't turn
 // into a real icon (an unrecognized future kind, or a gear name that isn't
@@ -20,6 +20,7 @@ export const ANNOUNCEMENT_ICONS: Record<string, string> = {
   lucky_gear_radiant_bow: '🏹',
   lucky_gear_radiant_coat: '🥋',
   lucky_gear_ascended_random: '🗡️',
+  level_130: '🏆',
 }
 
 const GEM_IDS: GemTypeId[] = ['drake', 'ember', 'bastion', 'iris']
@@ -46,7 +47,7 @@ function resolveAnnouncementIconSrc(kind: string, message: string): string | und
       return match ? getGearIconSrc(match[1]) : undefined
     }
     case 'lucky_comet_box':
-      return COMET_ICON_SRC
+      return COMET_BOX_ICON_SRC
     case 'lucky_comet_scroll':
       return COMET_SCROLL_ICON_SRC
     case 'lucky_fallen_star_scroll':

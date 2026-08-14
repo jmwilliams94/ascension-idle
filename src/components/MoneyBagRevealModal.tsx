@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useMoneyBagRevealStore } from '../game/items/useMoneyBagRevealStore'
 import { GEM_TYPES, getGemIconSrc, getGemTierColor, formatGemTierLabel } from '../game/items/gemTypes'
 import { buildConfettiEmbers, seedFromId } from '../game/items/tierEffectsData'
-import { COMET_ICON_SRC, MATERIAL_COLOR } from '../game/items/forgeCosts'
+import { COMET_BOX_ICON_SRC, MATERIAL_COLOR } from '../game/items/forgeCosts'
 
 // The "what did I just open" reveal for a Money Bag/Gem Bag's Open action
 // (Lucky Lad rewards expansion, 2026-08-09) — see useMoneyBagRevealStore.
@@ -119,7 +119,7 @@ export default function MoneyBagRevealModal() {
               {isGem && reveal.kind === 'gem' ? (
                 <img src={getGemIconSrc(reveal.gemId, reveal.tier)} alt="" className="h-4/5 w-4/5 object-contain" />
               ) : isCometBox ? (
-                <img src={COMET_ICON_SRC} alt="" className="h-4/5 w-4/5 object-contain" />
+                <img src={COMET_BOX_ICON_SRC} alt="" className="h-4/5 w-4/5 object-contain" />
               ) : reveal?.kind === 'gold' && reveal.iconSrc ? (
                 <img src={reveal.iconSrc} alt="" className="h-4/5 w-4/5 object-contain" />
               ) : (

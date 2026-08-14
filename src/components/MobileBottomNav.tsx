@@ -37,9 +37,7 @@ const LEFT_ITEMS: { id: TabId; label: string }[] = [
 
 // TavernNavButton's own rollup contents — everything that used to have its
 // own permanent bottom-nav slot except Equipment/Achievements (which stayed
-// put) and Combat (always centered). No art exists for Market yet, same
-// established "mixed icon language until more art arrives" precedent as
-// before this restructure.
+// put) and Combat (always centered).
 const TAVERN_ITEMS: { id: TabId; label: string }[] = [
   { id: 'marketplace', label: 'Market' },
   { id: 'bank', label: 'Bank' },

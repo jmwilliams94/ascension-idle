@@ -33,10 +33,9 @@ export const TAB_ICONS: Partial<Record<TabId, NavIcon>> = {
   equipment: { kind: 'image', src: iconUrl('nav-icons/equipment.png'), alt: 'Equipment' },
   lucky: { kind: 'image', src: iconUrl('lucky-icons/luckylad.png'), alt: 'LuckyLad' },
   forge: { kind: 'image', src: iconUrl('nav-icons/forge.png'), alt: 'Forge' },
-  // No real art exists for Market yet — a deliberately mixed icon language
-  // until more art arrives, not an inconsistency to "fix" by reverting the
-  // ones that already have real art.
-  marketplace: { kind: 'emoji', value: '🤝' },
+  // Real art (2026-08-14, scale weighing gold vs. a comet shard) replacing
+  // the old 🤝 emoji placeholder.
+  marketplace: { kind: 'image', src: iconUrl('nav-icons/marketplace.png'), alt: 'Market' },
   shop: { kind: 'image', src: iconUrl('nav-icons/shop.png'), alt: 'Shop' },
   bank: { kind: 'image', src: iconUrl('nav-icons/bank.png'), alt: 'Bank' },
   achievements: { kind: 'image', src: iconUrl('nav-icons/achievements.png'), alt: 'Achievements' },

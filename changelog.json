@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.92.18",
+    "date": "2026-08-14",
+    "changes": [
+      "New icon art for the Market nav button and the Lucky Lad Comet Box reward",
+      "Trimmed the Comet Box announcement's wording",
+      "Added a global announcement for reaching level 130"
+    ]
+  },
+  {
     "version": "1.92.17",
     "date": "2026-08-14",
     "changes": [
