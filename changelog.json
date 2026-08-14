@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.91.12",
+    "date": "2026-08-14",
+    "changes": [
+      "Fixed the background fade near the top of the screen being too short on some phones — now scales to half the screen height instead of a fixed distance, so it stays light near the top and dark near the bottom on any device"
+    ]
+  },
+  {
     "version": "1.91.11",
     "date": "2026-08-14",
     "changes": [
