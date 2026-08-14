@@ -372,7 +372,6 @@ img {
 }
 
 .ascension-chip-inner {
-  display: block;
   background: linear-gradient(180deg, var(--ascension-ink-soft) 0%, var(--ascension-ink) 100%);
   border-radius: calc(0.5rem - 1px);
 }
