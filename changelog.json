@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.92.4",
+    "date": "2026-08-14",
+    "changes": [
+      "Reverted the top HUD bar back to one row on desktop — the 2-row fix now only applies on mobile, where it was actually needed"
+    ]
+  },
+  {
     "version": "1.92.3",
     "date": "2026-08-14",
     "changes": [

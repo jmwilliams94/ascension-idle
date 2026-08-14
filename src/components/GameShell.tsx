@@ -430,26 +430,25 @@ export default function GameShell({ characterId }: { characterId: string }) {
           whatever's at the bottom of the page's content. Unchanged at `lg`+,
           where the bottom nav doesn't render at all. */}
       <main className="mx-auto max-w-7xl space-y-4 px-6 pb-24 pt-6 lg:pb-6">
-        {/* Two fixed rows, not one shared flex-wrap row — the warning badges
-            (Quiver/Inventory-full) and PlayersOnlineHud used to compete with
-            ChatAndAnnouncements for the same line, so their combined width
-            could shove things onto a 3rd wrapped line even with nothing
-            actually wrong (reported by the user). Row 1 is ExpBar (flex-1,
-            so it eats all the leftover space) plus every small chip pushed
-            to its right edge as a cluster, PlayersOnlineHud last; row 2 is
-            Chat + the announcement ticker alone, so it never has to share
-            room with anything else. */}
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-3">
-            <ExpBar />
-            <QuiverWarningHud />
-            <InventoryFullWarningHud />
-            <KnockoutHud />
-            <PlayersOnlineHud />
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <ChatAndAnnouncements />
-          </div>
+        {/* Single flex-wrap row, same as it always was on desktop (lg+) —
+            everything fits on one line there and that layout was never
+            broken, so it's left untouched at that breakpoint. Below `lg`,
+            the warning badges (Quiver/Inventory-full) plus PlayersOnlineHud
+            could previously end up competing with ChatAndAnnouncements for
+            the same line, shoving things onto a 3rd wrapped line even with
+            nothing actually wrong (reported by the user, mobile only). The
+            `basis-full lg:hidden` spacer below is a forced line-break that
+            only exists below `lg` — it makes ChatAndAnnouncements start a
+            fresh line of its own there, without duplicating any component
+            or touching the lg+ single-row layout at all. */}
+        <div className="flex flex-wrap items-center gap-3">
+          <ExpBar />
+          <QuiverWarningHud />
+          <InventoryFullWarningHud />
+          <KnockoutHud />
+          <PlayersOnlineHud />
+          <div className="h-0 basis-full lg:hidden" aria-hidden="true" />
+          <ChatAndAnnouncements />
         </div>
 
         {/* Renders nothing when there's no pet to celebrate — safe to mount
