@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.91.14",
+    "date": "2026-08-14",
+    "changes": [
+      "Switched the flat true background from dark to the lighter tone, since a clean light/dark split wasn't reliably achievable on mobile"
+    ]
+  },
+  {
     "version": "1.91.13",
     "date": "2026-08-14",
     "changes": [

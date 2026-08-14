@@ -5,7 +5,7 @@
   line-height: 1.5;
   font-weight: 400;
   color: #e2e8f0;
-  background-color: var(--ascension-ink);
+  background-color: var(--ascension-ink-soft);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -25,15 +25,17 @@ body,
 
 /* Only ever visible as the rubber-band overscroll color at the very top/
    bottom edges of the screen (the app's own GameShell div covers
-   everything else). Tried a light-top/dark-bottom gradient here (both a
-   fixed-px and a 50vh fade, 2026-08-14) — both fought mobile browsers'
-   dynamic viewport-chrome resizing (`vh` shrinks/grows as the URL bar
-   shows/hides) and produced a visible seam in the wrong place rather than
-   a clean split. Flat --ascension-ink is the reliable choice: no seam is
-   possible since there's nothing to mis-time. */
+   everything else). Tried a light-top/dark-bottom gradient here (fixed-px,
+   then 50vh, 2026-08-14) — both fought mobile browsers' dynamic
+   viewport-chrome resizing (`vh` shrinks/grows as the URL bar shows/hides)
+   and produced a visible seam in the wrong place rather than a clean
+   split. Flat --ascension-ink-soft (not the darker --ascension-ink) per
+   the user's explicit preference once a true half/half split turned out
+   not to be reliably achievable on mobile — no seam is possible since
+   there's nothing to mis-time. */
 body {
   min-width: 320px;
-  background: var(--ascension-ink);
+  background: var(--ascension-ink-soft);
 }
 
 /* Every gear/currency icon in the game now renders as a real <img> (see
@@ -291,12 +293,11 @@ img {
    a fixed px distance, then to 50vh, 2026-08-14) — every version either
    left a lingering lighter blend far down a long stacked-card page, or hit
    mobile browsers' dynamic viewport-chrome resizing and put the seam in
-   the wrong place. Flat --ascension-ink is the reliable choice: the
-   header's own background already carries the "light" chrome at the top
-   of the screen, so the content area behind the cards doesn't need its
-   own separate fade to read correctly. */
+   the wrong place. Flat --ascension-ink-soft (not the darker
+   --ascension-ink) per the user's explicit preference once a true
+   half/half split turned out not to be reliably achievable on mobile. */
 .ascension-page-bg {
-  background: var(--ascension-ink);
+  background: var(--ascension-ink-soft);
 }
 
 /* Thin metallic gold-to-steel gradient frame + inset dark panel — the
