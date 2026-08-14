@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.91.15",
+    "date": "2026-08-14",
+    "changes": [
+      "Fixed the What's New popup: it now shows every update you missed instead of a fixed recent-5 cutoff, but collapses older entries so catching up doesn't mean a long scroll"
+    ]
+  },
+  {
     "version": "1.91.14",
     "date": "2026-08-14",
     "changes": [
