@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.92.1",
+    "date": "2026-08-14",
+    "changes": [
+      "Fixed LuckyLad chests sometimes staying shut instead of revealing their prize (a broken Tempered/Ascended Gem reward could get stuck, or in rare cases pay out nothing at all)",
+      "Comet Box now drops as often as a Fallen Star from LuckyLad"
+    ]
+  },
+  {
     "version": "1.92.0",
     "date": "2026-08-14",
     "changes": [

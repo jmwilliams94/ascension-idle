@@ -60,10 +60,11 @@ export const CHEST_OPEN_ICON_SRC = `${BASE_URL}lucky-icons/chest-open.png`
 // comet_box (2026-08-21, requested by the user) — a flat, instant +100
 // Comets, distinct from the plain 'comet' kind (+1 loose Comet). `amount` on
 // this kind carries the literal grant amount (100), unlike most other kinds
-// where `amount` means a tier/class index — see pick_lucky_reward's own
-// comment for the weight (1.0, PLACEHOLDER). Reveals via the same
-// center-screen MoneyBagRevealModal a Money Bag's gold/gem reveal uses (see
-// LuckyPanel.tsx's handleOpen), not the inline board tile alone.
+// where `amount` means a tier/class index — weight matches Fallen Star's own
+// (4.0, requested by the user 2026-08-23, see pick_lucky_reward's own
+// comment). Reveals via the same center-screen MoneyBagRevealModal a Money
+// Bag's gold/gem reveal uses (see LuckyPanel.tsx's handleOpen), not the
+// inline board tile alone.
 export type LuckyRewardKind =
   | 'gold'
   | 'comet'

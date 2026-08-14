@@ -225,6 +225,7 @@ function LuckyCard({
   index,
   reward,
   won,
+  dim = false,
   revealDelay = 0,
   onClick,
   disabled,
@@ -232,6 +233,11 @@ function LuckyCard({
   index: number
   reward: LuckyReward | null
   won: boolean
+  // Whether a revealed-but-not-won card should render its chest art dimmed
+  // — true for the single draw's 8 "informational only" cards (real prizes
+  // exist on every card in a bulk draw, so its reveals always pass false;
+  // see LuckyPanel's per-mode dim calc below).
+  dim?: boolean
   // Seconds to hold before this card's flip animation starts. The single
   // draw stages this (0 for the won card, a small stagger for the other 8
   // "would have been" reveals); the bulk draw always passes 0 — each card
@@ -283,7 +289,7 @@ function LuckyCard({
           <img
             src={CHEST_OPEN_ICON_SRC}
             alt=""
-            className={`absolute inset-0 h-full w-full object-contain ${won ? '' : 'opacity-60'}`}
+            className={`absolute inset-0 h-full w-full object-contain ${dim ? 'opacity-60' : ''}`}
           />
           {/* InventorySlot's own background is a light, deliberately-translucent
               qualityColor tint (see InventorySlot.tsx) — fine over the app's
@@ -464,6 +470,7 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
             index={index}
             reward={board && (!isBulk || revealedIndices.has(index)) ? board[index] : null}
             won={!isBulk && wonIndex === index}
+            dim={!isBulk && wonIndex !== index}
             revealDelay={isBulk ? 0 : wonIndex === index ? 0 : REVEAL_BATCH_DELAY_S + index * 0.02}
             disabled={busy || (isBulk ? !board || revealedIndices.has(index) : Boolean(board) || !paymentChoice)}
             onClick={
