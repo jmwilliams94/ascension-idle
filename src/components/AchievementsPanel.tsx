@@ -701,7 +701,7 @@ export default function AchievementsPanel({ characterId, accountId }: { characte
 
   return (
     <div className="space-y-4">
-      <AscensionCard title="Achievements">
+      <AscensionCard>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-slate-500">Track progress and claim one-time rewards for grinding a monster.</p>
           <div className="flex gap-4 text-xs text-slate-400">

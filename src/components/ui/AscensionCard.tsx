@@ -9,11 +9,14 @@ interface AscensionCardProps {
   /** Overrides the inner panel's own padding (default `p-4`). */
   contentClassName?: string
   /**
-   * 'large' (2026-08-14, requested by the user) roughly doubles the ribbon
-   * title's size and re-spaces the ribbon/content padding to match — for
-   * one-per-tab page-identity headers (LuckyLad, Forge, Market, Shop, Bank)
-   * rather than the smaller in-page section titles (Zone & Monster, Storage,
-   * Achievements, ...), which stay 'default'.
+   * 'large' (2026-08-14, requested by the user) is GameShell's single
+   * page-identity ribbon (one per active tab — Idling/Equipment/Forge/
+   * Market/Shop/Bank/Achievements/LuckyLad) — roughly doubled on desktop
+   * (`lg`+) only; below that it renders at the exact same size as
+   * 'default', per the user's explicit ask that every main-container title
+   * match on mobile (Equipment's old 'default' mobile size was the
+   * reference: "a great size for all the other mobile headings"). In-page
+   * section titles (Zone & Monster, Storage, ...) always use 'default'.
    */
   titleSize?: 'default' | 'large'
 }
@@ -29,18 +32,18 @@ export function AscensionCard({ title, children, className = '', contentClassNam
 
   return (
     <div className={`ascension-card-frame ${className}`}>
-      <div className={`ascension-card-inner ${title ? (isLarge ? 'pt-9' : 'pt-6') : ''} ${contentClassName}`}>
+      <div className={`ascension-card-inner ${title ? (isLarge ? 'pt-6 lg:pt-9' : 'pt-6') : ''} ${contentClassName}`}>
         {title && (
           <div className={`ascension-card-ribbon ${isLarge ? 'ascension-card-ribbon-lg' : ''}`}>
-            <span className={`ascension-glow-pulse text-amber-400 ${isLarge ? 'text-base' : 'text-xs'}`}>✦</span>
+            <span className={`ascension-glow-pulse text-amber-400 ${isLarge ? 'text-xs lg:text-base' : 'text-xs'}`}>✦</span>
             <h3
               className={`font-heading text-gradient-steel whitespace-nowrap font-black uppercase tracking-[0.15em] ${
-                isLarge ? 'text-2xl' : 'text-sm'
+                isLarge ? 'text-sm lg:text-2xl' : 'text-sm'
               }`}
             >
               {title}
             </h3>
-            <span className={`ascension-glow-pulse text-amber-400 ${isLarge ? 'text-base' : 'text-xs'}`}>✦</span>
+            <span className={`ascension-glow-pulse text-amber-400 ${isLarge ? 'text-xs lg:text-base' : 'text-xs'}`}>✦</span>
           </div>
         )}
         {children}

@@ -447,7 +447,7 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   }
 
   return (
-    <AscensionCard title="LuckyLad" titleSize="large" contentClassName="space-y-4 p-4">
+    <div className="space-y-4">
       <div className="flex items-center justify-center">
         <img src={LUCKYLAD_ICON_SRC} alt="" className="h-8 w-8 object-contain" />
       </div>
@@ -593,6 +593,6 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
       )}
 
       {error && <p className="text-xs text-amber-400">{error}</p>}
-    </AscensionCard>
+    </div>
   )
 }

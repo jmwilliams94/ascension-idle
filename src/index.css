@@ -341,18 +341,23 @@ img {
   z-index: 1;
 }
 
-/* Large ribbon variant (2026-08-14, requested by the user — LuckyLad's own
-   heading "increased by about double," then Forge/Market/Shop/Bank given a
-   "large one like Lucky Lad") — same floating-ribbon shape, just sized (and
-   re-centered via a bigger negative `top`) for the roughly-2x h3 font size
-   AscensionCard's titleSize="large" pairs this with. Page-identity headers
-   only (one per top-level tab); in-page section titles (Zone & Monster,
-   Storage, Achievements, ...) stay on the plain .ascension-card-ribbon size. */
-.ascension-card-ribbon-lg {
-  top: -22px;
-  gap: 10px;
-  padding: 6px 20px;
-  border-radius: 6px;
+/* Large ribbon variant (2026-08-14, requested by the user — the single
+   page-identity heading GameShell puts above whichever tab is active,
+   "increased by about double" on desktop). Only kicks in at `lg`+ (matching
+   Tailwind's own `lg:` breakpoint, 1024px, which is what AscensionCard.tsx
+   uses for the paired h3/star `lg:text-*` bump) — below that, this class
+   has no rules of its own, so it falls back to the plain .ascension-card-
+   ribbon geometry every tab already used on mobile (confirmed by the user:
+   Equipment's mobile ribbon, back when it was still 'default'-sized, was
+   "a great size for all the other mobile headings" — so 'large' now matches
+   it exactly below `lg`, not a separate mobile size of its own). */
+@media (min-width: 1024px) {
+  .ascension-card-ribbon-lg {
+    top: -22px;
+    gap: 10px;
+    padding: 6px 20px;
+    border-radius: 6px;
+  }
 }
 
 /* Gold CTA button — dark-gold idle state, full gradient + glow on hover.

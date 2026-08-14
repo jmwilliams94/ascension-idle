@@ -44,7 +44,8 @@ import { useLootHoldingStore } from '../game/items/useLootHoldingStore'
 import { useAchievementsStore } from '../game/achievements/useAchievementsStore'
 import { useMarketplaceStore } from '../game/marketplace/useMarketplaceStore'
 import { useMailStore } from '../game/marketplace/useMailStore'
-import { useTabStore } from '../game/hud/useTabStore'
+import { useTabStore, type TabId } from '../game/hud/useTabStore'
+import { AscensionCard } from './ui/AscensionCard'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
 import { runOfflineProgressCheck, OFFLINE_SUMMARY_THRESHOLD_MS } from '../game/combat/offlineProgress'
@@ -57,6 +58,25 @@ import { useOfflineProgressStore } from '../game/combat/useOfflineProgressStore'
 //
 // Full tabbed-page layout (Combat/Equipment/Forge/Market/Shop), replacing the old
 // isometric-canvas + overlay-on-canvas pattern — see the Melvor-idle pivot plan.
+
+// One page-identity ribbon per tab, owned here (2026-08-14, requested by the
+// user) rather than each tab component wrapping its own content in a second
+// AscensionCard — this <section> already provides the one outer
+// .ascension-card-frame every tab renders inside (see the return below), so
+// a per-page title card was always a redundant second frame nested directly
+// inside the first with barely any visible gap. "Idling" for `combat`
+// specifically (not "Combat" — TabNav's own nav-button label) since this is
+// describing the page's own content, not repeating the nav.
+const TAB_TITLES: Record<TabId, string> = {
+  combat: 'Idling',
+  equipment: 'Equipment',
+  forge: 'Forge',
+  marketplace: 'Market',
+  shop: 'Shop',
+  bank: 'Bank',
+  achievements: 'Achievements',
+  lucky: 'LuckyLad',
+}
 export default function GameShell({ characterId }: { characterId: string }) {
   const session = useAuthStore((state) => state.session)
   const signOut = useAuthStore((state) => state.signOut)
@@ -473,18 +493,16 @@ export default function GameShell({ characterId }: { characterId: string }) {
 
         <TabNav />
 
-        <section className="ascension-card-frame">
-          <div className="ascension-card-inner p-4">
-            {activeTab === 'combat' && <CombatPage />}
-            {activeTab === 'equipment' && <EquipmentTabPage />}
-            {activeTab === 'forge' && <ForgePanel />}
-            {activeTab === 'marketplace' && <MarketplacePanel />}
-            {activeTab === 'shop' && <ShopPanel />}
-            {activeTab === 'bank' && <BankPanel characterId={characterId} />}
-            {activeTab === 'achievements' && <AchievementsPanel characterId={characterId} accountId={accountId} />}
-            {activeTab === 'lucky' && <LuckyPanel characterId={characterId} />}
-          </div>
-        </section>
+        <AscensionCard title={TAB_TITLES[activeTab]} titleSize="large">
+          {activeTab === 'combat' && <CombatPage />}
+          {activeTab === 'equipment' && <EquipmentTabPage />}
+          {activeTab === 'forge' && <ForgePanel />}
+          {activeTab === 'marketplace' && <MarketplacePanel />}
+          {activeTab === 'shop' && <ShopPanel />}
+          {activeTab === 'bank' && <BankPanel characterId={characterId} />}
+          {activeTab === 'achievements' && <AchievementsPanel characterId={characterId} accountId={accountId} />}
+          {activeTab === 'lucky' && <LuckyPanel characterId={characterId} />}
+        </AscensionCard>
       </main>
 
       <MobileBottomNav />

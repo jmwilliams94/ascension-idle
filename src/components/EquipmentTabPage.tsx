@@ -32,16 +32,14 @@ import { AscensionCard } from './ui/AscensionCard'
 // design — CombatPage's own Inventory copies don't pass this.
 export default function EquipmentTabPage() {
   return (
-    <AscensionCard title="Equipment">
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-4">
-          <EquipmentPanel />
-          <StatsPanel />
-        </div>
-        <AscensionCard>
-          <InventoryPanel columns={5} equipPopoverEnabled enableCompareToggle />
-        </AscensionCard>
+    <div className="grid gap-6 lg:grid-cols-2">
+      <div className="space-y-4">
+        <EquipmentPanel />
+        <StatsPanel />
       </div>
-    </AscensionCard>
+      <AscensionCard>
+        <InventoryPanel columns={5} equipPopoverEnabled enableCompareToggle />
+      </AscensionCard>
+    </div>
   )
 }

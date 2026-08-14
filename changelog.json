@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.92.14",
+    "date": "2026-08-14",
+    "changes": [
+      "Each tab's main title (Idling/Equipment/Forge/Market/Shop/Bank/Achievements/LuckyLad) now lives in one shared box instead of a redundant second box nested inside it",
+      "All main tab titles are now the same size on mobile, matching Equipment's previous size; they still scale up bigger on desktop"
+    ]
+  },
+  {
     "version": "1.92.13",
     "date": "2026-08-14",
     "changes": [

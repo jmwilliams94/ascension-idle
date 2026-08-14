@@ -202,7 +202,7 @@ export default function CombatPage() {
   }
 
   return (
-    <AscensionCard title="Idling">
+    <>
       {/* Mobile-only layout (below `lg`) — action area (monster/player HP,
           Fight/Stop, Consumable) prioritized at the top since that's what's
           looked at moment-to-moment; Zone/Monster picker below it (still
@@ -621,6 +621,6 @@ export default function CombatPage() {
         </AscensionCard>
       </div>
       </div>
-    </AscensionCard>
+    </>
   )
 }
