@@ -496,17 +496,28 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
               Points, emerald = the app's existing "extra value" accent),
               per CLAUDE.visual-design.md's guardrail against repainting
               established currency/state colors gold. */}
-          <div className="mt-2 flex gap-2">
-            <Button variant="primary" disabled={busy || !canAffordTicket} onClick={() => setPaymentChoice('lottery_ticket')} className="flex-1">
-              {`Lottery Ticket (${lotteryTickets})`}
+          <div className="mt-2 flex items-stretch gap-2">
+            <Button
+              variant="primary"
+              disabled={busy || !canAffordTicket}
+              onClick={() => setPaymentChoice('lottery_ticket')}
+              className="flex flex-1 flex-col items-center justify-center gap-0.5 text-center leading-tight"
+            >
+              <span>Lottery</span>
+              <span>Ticket</span>
+              <span className="text-[10px] font-normal normal-case tracking-normal text-amber-200/70">{lotteryTickets} owned</span>
             </Button>
             <button
               type="button"
               disabled={busy || !canAffordPoints}
               onClick={() => setPaymentChoice('ascension_points')}
-              className="flex-1 rounded-lg border border-purple-500 bg-purple-500/10 px-4 py-2.5 font-heading text-sm font-bold uppercase tracking-[0.12em] text-purple-300 transition hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex flex-1 flex-col items-center justify-center gap-0.5 rounded-lg border border-purple-500 bg-purple-500/10 px-4 py-2.5 text-center font-heading text-sm font-bold uppercase leading-tight tracking-[0.12em] text-purple-300 transition hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {pointsCost === 0 ? 'Free Ticket' : `${pointsCost} AP`}
+              <span>One</span>
+              <span>Entry</span>
+              <span className="text-[10px] font-normal normal-case tracking-normal text-purple-300/70">
+                {pointsCost === 0 ? 'Free' : `${pointsCost} AP`}
+              </span>
             </button>
             {/* Bulk draw — pay LUCKY_BULK_AP_COST AP (8x the single-card AP
                 cost) up front and every one of the 9 chests holds a real
@@ -517,9 +528,10 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
               type="button"
               disabled={busy || !canAffordBulk}
               onClick={() => void handleBulkDraw()}
-              className="flex-1 rounded-lg border border-emerald-500 bg-emerald-500/10 px-4 py-2.5 font-heading text-sm font-bold uppercase tracking-[0.12em] text-emerald-300 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex flex-1 flex-col items-center justify-center gap-0.5 rounded-lg border border-emerald-500 bg-emerald-500/10 px-4 py-2.5 text-center font-heading text-sm font-bold uppercase leading-tight tracking-[0.12em] text-emerald-300 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {`Open 9 (${LUCKY_BULK_AP_COST} AP)`}
+              <span>9 for 8</span>
+              <span className="text-[10px] font-normal normal-case tracking-normal text-emerald-300/70">{LUCKY_BULK_AP_COST} AP</span>
             </button>
           </div>
           <p className="mt-2 text-[10px] text-slate-500">

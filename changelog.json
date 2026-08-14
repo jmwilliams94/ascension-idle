@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.92.3",
+    "date": "2026-08-14",
+    "changes": [
+      "Top HUD bar is now a clean 2 rows, with the Players Online counter moved to the top row",
+      "LuckyLad's payment buttons now spell out what each one buys: One Entry / 20 AP, and 9 for 8 / 160 AP"
+    ]
+  },
+  {
     "version": "1.92.2",
     "date": "2026-08-14",
     "changes": [

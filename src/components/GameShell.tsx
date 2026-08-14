@@ -430,23 +430,24 @@ export default function GameShell({ characterId }: { characterId: string }) {
           whatever's at the bottom of the page's content. Unchanged at `lg`+,
           where the bottom nav doesn't render at all. */}
       <main className="mx-auto max-w-7xl space-y-4 px-6 pb-24 pt-6 lg:pb-6">
-        {/* Two independent flex-wrap rows, not one — ExpBar/the warning
-            badges and PlayersOnlineHud/ChatAndAnnouncements used to share a
-            single row, so InventoryFullWarningHud appearing (its width
-            competing with ExpBar's own flex-grow) could shove the
-            PlayersOnlineHud+ChatAndAnnouncements pair apart onto separate
-            wrapped lines (reported by the user — "the layout breaks
-            slightly" when Inventory is full). Splitting them means a warning
-            badge showing up can only ever affect its own row's wrapping. */}
+        {/* Two fixed rows, not one shared flex-wrap row — the warning badges
+            (Quiver/Inventory-full) and PlayersOnlineHud used to compete with
+            ChatAndAnnouncements for the same line, so their combined width
+            could shove things onto a 3rd wrapped line even with nothing
+            actually wrong (reported by the user). Row 1 is ExpBar (flex-1,
+            so it eats all the leftover space) plus every small chip pushed
+            to its right edge as a cluster, PlayersOnlineHud last; row 2 is
+            Chat + the announcement ticker alone, so it never has to share
+            room with anything else. */}
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-3">
             <ExpBar />
             <QuiverWarningHud />
             <InventoryFullWarningHud />
             <KnockoutHud />
+            <PlayersOnlineHud />
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <PlayersOnlineHud />
             <ChatAndAnnouncements />
           </div>
         </div>
