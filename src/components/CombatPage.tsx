@@ -10,8 +10,11 @@ import { useCombatStore } from '../game/combat/useCombatStore'
 import { getLevelDiffColor } from '../game/combat/combatResolver'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
+import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { usePotionStore } from '../game/items/usePotionStore'
 import { POTION_TYPES, HP_POTION_ORDER } from '../game/items/potionTypes'
+import WorldBossEventsCard from './WorldBossEventsCard'
+import WorldBossCard from './WorldBossCard'
 
 // Matches getLevelDiffColor's tiers — White is an even match, Green means the
 // character comfortably outlevels the monster (reduced EXP), Red/Black mean
@@ -62,7 +65,8 @@ function hexColor(value: number): string {
 // How long a floating damage number stays visible after its log entry lands.
 const FLOATING_NUMBER_LIFETIME_MS = 800
 
-function HpBar({ current, max, barColorClass = 'bg-emerald-500' }: { current: number; max: number; barColorClass?: string }) {
+// Exported — also reused by WorldBossCard.tsx for the boss's own HP bar.
+export function HpBar({ current, max, barColorClass = 'bg-emerald-500' }: { current: number; max: number; barColorClass?: string }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0
 
   return (
@@ -98,6 +102,71 @@ function MultiTargetSlots() {
   )
 }
 
+type CombatMode = 'hunting' | 'mining' | 'events'
+
+// In-page sub-mode switcher (2026-08-26) — same "sub-navigation inside one
+// top-level tab" convention MarketplacePanel's Browse/My Listings/Mail and
+// ShopPanel's Weapons/Armor/Potions already use (active pill: solid amber
+// border/fill; inactive: the shared ascension-chip-frame/ascension-chip-inner
+// wrapper). Mining is a coming-soon placeholder — always renders disabled,
+// no handler.
+function CombatModeSwitcher({ mode, onChange }: { mode: CombatMode; onChange: (mode: CombatMode) => void }) {
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {mode === 'hunting' ? (
+        <button
+          type="button"
+          onClick={() => onChange('hunting')}
+          className="rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300"
+        >
+          Hunting
+        </button>
+      ) : (
+        <div className="ascension-chip-frame is-interactive">
+          <button
+            type="button"
+            onClick={() => onChange('hunting')}
+            className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100"
+          >
+            Hunting
+          </button>
+        </div>
+      )}
+
+      <div className="ascension-chip-frame opacity-50">
+        <button
+          type="button"
+          disabled
+          title="Coming soon"
+          className="ascension-chip-inner w-full cursor-not-allowed px-3 py-1.5 text-xs font-medium text-slate-500"
+        >
+          Mining
+        </button>
+      </div>
+
+      {mode === 'events' ? (
+        <button
+          type="button"
+          onClick={() => onChange('events')}
+          className="rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300"
+        >
+          Events
+        </button>
+      ) : (
+        <div className="ascension-chip-frame is-interactive">
+          <button
+            type="button"
+            onClick={() => onChange('events')}
+            className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100"
+          >
+            Events
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function CombatPage() {
   const currentZoneId = useZoneStore((state) => state.currentZoneId)
   const setCurrentZoneId = useZoneStore((state) => state.setCurrentZoneId)
@@ -119,9 +188,15 @@ export default function CombatPage() {
 
   const characterLevel = useProgressionStore((state) => state.level)
   const characterName = useCharacterRecordStore((state) => state.characterName)
+  const characterId = useActiveCharacterStore((state) => state.characterId)
 
   const potionStacks = usePotionStore((state) => state.stacks)
   const handleUsePotion = usePotionStore((state) => state.usePotion)
+
+  // Hunting (today's existing view) / Mining (coming-soon placeholder) /
+  // Events (World Boss) — an in-page sub-mode, not a top-level TabId (see
+  // CombatModeSwitcher above).
+  const [mode, setMode] = useState<CombatMode>('hunting')
 
   // Mobile-only (see the lg:hidden layout below) — Inventory defaults collapsed
   // there so the action area (monster/player HP, Fight/Stop) is what's visible
@@ -215,7 +290,7 @@ export default function CombatPage() {
           separate markup, not a responsive reflow of the same JSX, so
           nothing here can regress the desktop view. */}
       <div className="space-y-3 lg:hidden">
-        {activeType && (
+        {mode === 'hunting' && activeType && (
           <div
             className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/80 bg-cover bg-center p-4"
             style={currentZone.backgroundUrl ? { backgroundImage: `url(${currentZone.backgroundUrl})` } : undefined}
@@ -279,7 +354,9 @@ export default function CombatPage() {
           </div>
         )}
 
-        {activeType && (
+        {mode === 'events' && characterId && <WorldBossCard characterId={characterId} />}
+
+        {mode === 'hunting' && activeType && (
           <AscensionCard>
             {/* Doubled from the shared .text-heading-label 0.7rem base
                 (2026-08-14, requested by the user) — inline style, not a
@@ -338,6 +415,11 @@ export default function CombatPage() {
           </AscensionCard>
         )}
 
+        <CombatModeSwitcher mode={mode} onChange={setMode} />
+
+        {mode === 'events' && <WorldBossEventsCard />}
+
+        {mode === 'hunting' && (
         <AscensionCard title="Zone & Monster">
           <div className="mt-2 flex flex-wrap gap-3">
             <label className="text-heading-label min-w-[140px] flex-1">
@@ -399,6 +481,7 @@ export default function CombatPage() {
             {isFighting && monsterTypeId === dropdownMonsterId ? 'Fighting' : 'Fight'}
           </Button>
         </AscensionCard>
+        )}
 
         <AscensionCard>
           <button
@@ -421,6 +504,7 @@ export default function CombatPage() {
       {/* Desktop layout (`lg` and up) — unchanged from before this step. */}
       <div className="hidden gap-4 lg:grid lg:grid-cols-2">
       <div className="space-y-4">
+        {mode === 'hunting' ? (
         <AscensionCard title="Zone & Monster">
           <div className="mt-2 flex flex-wrap gap-3">
             <label className="text-heading-label min-w-[160px] flex-1">
@@ -482,8 +566,11 @@ export default function CombatPage() {
             {isFighting && monsterTypeId === dropdownMonsterId ? 'Fighting' : 'Fight'}
           </Button>
         </AscensionCard>
+        ) : (
+          <WorldBossEventsCard />
+        )}
 
-        {activeType && (
+        {mode === 'hunting' && activeType && (
           <AscensionCard>
             {/* Doubled from the shared .text-heading-label 0.7rem base
                 (2026-08-14, requested by the user) — inline style, not a
@@ -545,7 +632,7 @@ export default function CombatPage() {
           </AscensionCard>
         )}
 
-        {activeType && (
+        {mode === 'hunting' && activeType && (
           <div
             className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/80 bg-cover bg-center p-4"
             style={currentZone.backgroundUrl ? { backgroundImage: `url(${currentZone.backgroundUrl})` } : undefined}
@@ -610,9 +697,13 @@ export default function CombatPage() {
             </div>
           </div>
         )}
+
+        {mode === 'events' && characterId && <WorldBossCard characterId={characterId} />}
       </div>
 
       <div className="space-y-4">
+        <CombatModeSwitcher mode={mode} onChange={setMode} />
+
         {/* Gold/EXP row removed (2026-08-14, requested by the user) —
             redundant with ExpBar in GameShell's persistent top strip, same
             reasoning the mobile layout above already used to skip it. */}

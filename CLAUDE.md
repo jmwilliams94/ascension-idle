@@ -55,6 +55,7 @@ Each file below is the confirmed design source of truth for its area. Anything m
 - [`CLAUDE.persistence.md`](CLAUDE.persistence.md) — DB schema split, save/autosave strategy, AFK/offline simulation, migration & deployment notes
 - [`CLAUDE.pwa-and-mobile.md`](CLAUDE.pwa-and-mobile.md) — PWA installability, resume detection, update flow, mobile layout/nav, touch drag-and-drop, Lucky Lad
 - [`CLAUDE.global-activity.md`](CLAUDE.global-activity.md) — Players Online presence, rare-event announcements, global chat, inspecting other players' gear
+- [`CLAUDE.server-events.md`](CLAUDE.server-events.md) — cross-player shared events (World Boss; a deferred gold-donation buff event), the Idling tab's Hunting/Mining/Events sub-mode switcher
 - [`CLAUDE.feedback-and-planning.md`](CLAUDE.feedback-and-planning.md) — Settings-menu Plans/Suggestions/Bug Reports, reply threads, admin gating
 
 ### Explicitly cut — do not implement

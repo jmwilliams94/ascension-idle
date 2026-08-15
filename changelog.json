@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.93.0",
+    "date": "2026-08-15",
+    "changes": [
+      "Added the World Boss — a shared server-wide boss fight. Find it under the new Events tab on the Idling page: everyone attacks the same boss, 10 free attempts plus 10 more for Ascension Points (with a 5-minute cooldown between attempts), a leaderboard shows where you rank, and rewards mail out to every participant (with bonus prizes for the top 3) once the fight's window ends"
+    ]
+  },
+  {
     "version": "1.92.30",
     "date": "2026-08-15",
     "changes": [

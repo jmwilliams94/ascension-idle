@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import CombatEngine from '../game/combat/CombatEngine'
 import GlobalActivityConnection from './GlobalActivityConnection'
 import MailRealtimeConnection from './MailRealtimeConnection'
+import WorldBossConnection from './WorldBossConnection'
 import QuiverWarningHud from './QuiverWarningHud'
 import InventoryFullWarningHud from './InventoryFullWarningHud'
 import KnockoutHud from './KnockoutHud'
@@ -468,6 +469,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <CombatEngine />
       <GlobalActivityConnection accountId={accountId} />
       <MailRealtimeConnection characterId={characterId} />
+      <WorldBossConnection />
       <ChatOverlay characterId={characterId} />
       <CharacterLoadoutModal />
 
