@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.93.5",
+    "date": "2026-08-15",
+    "changes": [
+      "Shop's Inventory sell tab now has a single \"Sell All Normal\" button styled like the Buy buttons, instead of a separate checkbox-select step plus a \"Sell Selected\" button"
+    ]
+  },
+  {
     "version": "1.93.4",
     "date": "2026-08-15",
     "changes": [

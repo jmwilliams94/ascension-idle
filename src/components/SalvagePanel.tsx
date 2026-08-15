@@ -193,7 +193,7 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
 
   const bulkGroups = BULK_SALVAGE_TIERS.map((tier) => {
     // Excludes anything with composition progress (+N) even within a bulk
-    // tier — same reasoning as ShopPanel's "Select All Normal" (see
+    // tier — same reasoning as ShopPanel's "Sell All Normal" (see
     // InventoryPanel.tsx): composition investment makes an item worth more
     // than its quality tier alone suggests, so a bulk sweep shouldn't touch
     // it. Single-item Salvage (drag-and-drop) is unaffected.

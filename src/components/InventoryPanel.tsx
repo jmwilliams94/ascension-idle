@@ -268,9 +268,6 @@ export default function InventoryPanel({
   const [bankDepositError, setBankDepositError] = useState<string | null>(null)
   const [sellBusy, setSellBusy] = useState(false)
   const [sellError, setSellError] = useState<string | null>(null)
-  // Bulk-sell checkbox selection (Shop only, see enableSelling) — independent
-  // of selectedSlot, which drives the single-item detail card.
-  const [selectedForSale, setSelectedForSale] = useState<Set<string>>(new Set())
   // Bundle/unbundle busy+error feedback (stage 2, 2026-07-31) — separate from
   // sellBusy/sellError since they're independent actions on different tiles.
   const [scrollBusy, setScrollBusy] = useState(false)
@@ -499,7 +496,7 @@ export default function InventoryPanel({
   // Every enableBankDeposit handler below follows the same shape: deposit,
   // clear the popover on success, surface an error and leave it open on
   // failure. "All" variants are sequential, not Promise.all (deliberately
-  // unlike sellSelected below) — deposit_item_to_storage/bank_stone_item/
+  // unlike sellAllNormal below) — deposit_item_to_storage/bank_stone_item/
   // bank_currency_item's client-side Storage-full pre-check reads Storage's
   // own occupied-slot count live; firing every deposit at once would read a
   // stale snapshot for each concurrent call.
@@ -888,42 +885,20 @@ export default function InventoryPanel({
     closeCometBoxPopover()
   }
 
-  const toggleSaleSelection = (itemId: string) => {
-    setSelectedForSale((current) => {
-      const next = new Set(current)
-      if (next.has(itemId)) {
-        next.delete(itemId)
-      } else {
-        next.add(itemId)
-      }
-      return next
-    })
-  }
-
-  // Convenience shortcut for the common case (dumping junk) — doesn't stop
-  // the player from also hand-picking higher-tier items via the checkboxes.
   // Excludes anything with composition progress (+N) even at Normal quality,
   // since that's no longer junk. Also excludes anything with an unlocked
   // socket (even an empty one) — sockets cost real Fallen Stars (weapons) or
   // a rare RNG proc (armor) to unlock, so that gear isn't junk either.
-  const selectAllNormal = () => {
-    setSelectedForSale(
-      new Set(
-        visibleItems
-          .filter((item) => item.quality_tier === 'normal' && item.composition_level === 0 && item.sockets.length === 0)
-          .map((item) => item.id)
-      )
-    )
-  }
+  const normalJunkItems = visibleItems.filter(
+    (item) => item.quality_tier === 'normal' && item.composition_level === 0 && item.sockets.length === 0
+  )
 
-  const saleTotal = visibleItems
-    .filter((item) => selectedForSale.has(item.id))
-    .reduce((sum, item) => {
-      const template = templates.find((entry) => entry.id === item.template_id)
-      return sum + previewSellPrice(template?.price ?? 0, item.quality_tier)
-    }, 0)
+  const normalJunkTotal = normalJunkItems.reduce((sum, item) => {
+    const template = templates.find((entry) => entry.id === item.template_id)
+    return sum + previewSellPrice(template?.price ?? 0, item.quality_tier)
+  }, 0)
 
-  const sellSelected = async () => {
+  const sellAllNormal = async () => {
     setSellError(null)
     setSellBusy(true)
     // Parallel, not sequential (2026-08-01, fixes a visible "sells one at a
@@ -931,10 +906,9 @@ export default function InventoryPanel({
     // shared state to race on (see sell_item's own ownership-scoped
     // transaction), so there's no correctness reason to wait for one before
     // firing the next.
-    const results = await Promise.all(Array.from(selectedForSale).map((itemId) => sellItem(itemId)))
+    const results = await Promise.all(normalJunkItems.map((item) => sellItem(item.id)))
     const failures = results.filter((result) => !result.ok).length
     setSellBusy(false)
-    setSelectedForSale(new Set())
     if (failures > 0) {
       setSellError(`Couldn't sell ${failures} item${failures === 1 ? '' : 's'}.`)
     }
@@ -972,21 +946,13 @@ export default function InventoryPanel({
           {enableSelling && (
             <div className="flex items-center gap-2 text-xs">
               {sellError && <span className="text-amber-400">{sellError}</span>}
-              <button
-                type="button"
-                onClick={selectAllNormal}
-                className="rounded border border-slate-700 px-2 py-1 text-slate-300 hover:border-slate-500"
+              <Button
+                variant="primary"
+                disabled={normalJunkItems.length === 0 || sellBusy}
+                onClick={() => void sellAllNormal()}
               >
-                Select All Normal
-              </button>
-              <button
-                type="button"
-                disabled={selectedForSale.size === 0 || sellBusy}
-                onClick={() => void sellSelected()}
-                className="rounded border border-amber-600 bg-amber-500/10 px-2 py-1 font-medium text-amber-300 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {sellBusy ? 'Selling…' : `Sell Selected (${saleTotal}g)`}
-              </button>
+                {sellBusy ? 'Selling…' : `Sell All Normal (${normalJunkTotal.toLocaleString()}g)`}
+              </Button>
             </div>
           )}
 
@@ -1501,26 +1467,6 @@ export default function InventoryPanel({
                   onClick={(event) => setBankPopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
                 >
                   {slot}
-                </div>
-              )
-            }
-
-            // Bulk-sell checkbox (Shop only, confirmed with the user, 2026-07-31) —
-            // an overlay on top of the tile rather than a change to InventorySlot
-            // itself, so every other embedding is unaffected. stopPropagation keeps
-            // checking a box from also opening the detail card underneath it.
-            if (enableSelling) {
-              return (
-                <div key={item.id} className="relative">
-                  {slot}
-                  <input
-                    type="checkbox"
-                    checked={selectedForSale.has(item.id)}
-                    onClick={(event) => event.stopPropagation()}
-                    onChange={() => toggleSaleSelection(item.id)}
-                    className="absolute left-1 top-1 h-3.5 w-3.5 cursor-pointer accent-amber-500"
-                    aria-label={`Select ${label} for bulk sale`}
-                  />
                 </div>
               )
             }
