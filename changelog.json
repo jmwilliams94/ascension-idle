@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.92.28",
+    "date": "2026-08-15",
+    "changes": [
+      "Level 130 announcements now also show normally in the regular announcement feed (aging out over time like any other announcement) in addition to staying permanently pinned in Global Chat"
+    ]
+  },
+  {
     "version": "1.92.27",
     "date": "2026-08-15",
     "changes": [
