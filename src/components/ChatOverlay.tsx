@@ -4,6 +4,7 @@ import { useChatStore } from '../game/social/useChatStore'
 import { useAnnouncementHistoryStore } from '../game/social/useAnnouncementHistoryStore'
 import { useCharacterLoadoutStore } from '../game/social/useCharacterLoadoutStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
+import { ANNOUNCEMENT_ICONS } from './GlobalAnnouncementTicker'
 
 interface FeedItem {
   id: string
@@ -11,6 +12,10 @@ interface FeedItem {
   characterName: string
   message: string
   kind: 'chat' | 'announcement'
+  // Raw global_announcements kind (e.g. 'level_130'), only set for
+  // kind: 'announcement' -- picks the right icon via ANNOUNCEMENT_ICONS
+  // instead of a flat 📣 for everything.
+  announcementKind?: string
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -43,11 +48,17 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
   const announcementEntries = useAnnouncementHistoryStore((state) => state.entries)
   const announcementLoaded = useAnnouncementHistoryStore((state) => state.loaded)
   const loadAnnouncementHistory = useAnnouncementHistoryStore((state) => state.loadHistory)
-  // Milestone announcements (level 130 and any future cap-style kind) are
-  // pinned above the scrolling feed instead of living inside it -- confirmed
-  // with the user, 2026-08-15: a level-cap achievement is significant enough
-  // that it shouldn't be able to scroll out of view just because chat/other
-  // announcements kept happening after it.
+  // Milestone announcements (level 130 and any future cap-style kind) render
+  // as a normal inline feed entry at the point in time they happened, same as
+  // any other announcement -- NOT a fixed banner (an earlier same-day pass
+  // pinned them to the top of the overlay, which the user corrected: "should
+  // be placing themselves in the chat and moving with the chat logs as they
+  // happen"). What makes them "persist" (per the user's original ask) is
+  // that milestoneEntries is sourced from an unbounded query (every level_130
+  // row ever, see useAnnouncementHistoryStore.ts), so merging it into feed
+  // below means a milestone stays reachable by scrolling up indefinitely,
+  // long after the routine 10-cap announcementEntries list would have
+  // rotated the same row out.
   const milestoneEntries = useAnnouncementHistoryStore((state) => state.milestoneEntries)
   const milestonesLoaded = useAnnouncementHistoryStore((state) => state.milestonesLoaded)
   const loadMilestones = useAnnouncementHistoryStore((state) => state.loadMilestones)
@@ -82,15 +93,22 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
       message: m.message,
       kind: 'chat',
     }))
-    const announcementItems: FeedItem[] = announcementEntries.map((a) => ({
+    // Deduped by id, not concatenated -- a recent milestone can legitimately
+    // be present in both announcementEntries (the routine last-10) and
+    // milestoneEntries (the permanent full history) at once.
+    const announcementById = new Map(
+      [...announcementEntries, ...milestoneEntries].map((a) => [a.id, a]),
+    )
+    const announcementItems: FeedItem[] = [...announcementById.values()].map((a) => ({
       id: `announcement-${a.id}`,
       createdAt: a.createdAt,
       characterName: a.characterName,
       message: a.message,
       kind: 'announcement',
+      announcementKind: a.kind,
     }))
     return [...chatItems, ...announcementItems].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-  }, [messages, announcementEntries])
+  }, [messages, announcementEntries, milestoneEntries])
 
   useEffect(() => {
     if (open) {
@@ -144,17 +162,6 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
           </button>
         </div>
 
-        {milestoneEntries.length > 0 && (
-          <div className="max-h-24 shrink-0 space-y-1 overflow-y-auto border-b border-amber-600/30 bg-amber-500/10 px-4 py-2">
-            {milestoneEntries.map((entry) => (
-              <div key={entry.id} className="flex items-start gap-2 text-xs font-medium text-amber-200">
-                <span aria-hidden="true">🏆</span>
-                <span className="min-w-0 flex-1 break-words">{entry.message}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
         <div ref={scrollRef} className="flex-1 space-y-1.5 overflow-y-auto px-4 py-3">
           {feed.length === 0 ? (
             <p className="text-sm text-slate-500">
@@ -167,7 +174,7 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
                   key={item.id}
                   className="flex items-start gap-2 rounded-md bg-amber-500/10 px-2 py-1 text-xs text-amber-200"
                 >
-                  <span aria-hidden="true">📣</span>
+                  <span aria-hidden="true">{ANNOUNCEMENT_ICONS[item.announcementKind ?? ''] ?? '📣'}</span>
                   <span className="min-w-0 flex-1 break-words">{item.message}</span>
                 </div>
               ) : (

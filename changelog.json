@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.92.30",
+    "date": "2026-08-15",
+    "changes": [
+      "Level 130 announcements in Global Chat now sit inline in the conversation at the moment they happened instead of floating in a fixed banner at the top"
+    ]
+  },
+  {
     "version": "1.92.29",
     "date": "2026-08-15",
     "changes": [
