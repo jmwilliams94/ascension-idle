@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.95.6",
+    "date": "2026-08-16",
+    "changes": [
+      "Fixed a deploy error that had blocked the previous update from going live"
+    ]
+  },
+  {
     "version": "1.95.5",
     "date": "2026-08-16",
     "changes": [

@@ -781,7 +781,7 @@ function GearSlotWithdrawPanel({
   const showGainToast = useGainToastStore((state) => state.show)
 
   const [templateId, setTemplateId] = useState('')
-  const [tier, setTier] = useState(COMPOSITION_STONE_TIERS[0])
+  const [tier, setTier] = useState<number>(COMPOSITION_STONE_TIERS[0])
   const [error, setError] = useState<string | null>(null)
 
   // One entry per item_family (2026-08-16, confirmed with the user) — a
