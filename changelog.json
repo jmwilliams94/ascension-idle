@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.92.27",
+    "date": "2026-08-15",
+    "changes": [
+      "Level 130 announcements now stay permanently pinned at the top of Global Chat instead of scrolling away with the regular last-10 announcement history"
+    ]
+  },
+  {
     "version": "1.92.26",
     "date": "2026-08-15",
     "changes": [

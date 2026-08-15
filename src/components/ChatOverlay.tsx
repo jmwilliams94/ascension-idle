@@ -43,6 +43,14 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
   const announcementEntries = useAnnouncementHistoryStore((state) => state.entries)
   const announcementLoaded = useAnnouncementHistoryStore((state) => state.loaded)
   const loadAnnouncementHistory = useAnnouncementHistoryStore((state) => state.loadHistory)
+  // Milestone announcements (level 130 and any future cap-style kind) are
+  // pinned above the scrolling feed instead of living inside it -- confirmed
+  // with the user, 2026-08-15: a level-cap achievement is significant enough
+  // that it shouldn't be able to scroll out of view just because chat/other
+  // announcements kept happening after it.
+  const milestoneEntries = useAnnouncementHistoryStore((state) => state.milestoneEntries)
+  const milestonesLoaded = useAnnouncementHistoryStore((state) => state.milestonesLoaded)
+  const loadMilestones = useAnnouncementHistoryStore((state) => state.loadMilestones)
 
   const activeCharacterName = useCharacterRecordStore((state) => state.characterName)
   const viewCharacter = useCharacterLoadoutStore((state) => state.viewCharacter)
@@ -61,7 +69,10 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
     if (!announcementLoaded) {
       void loadAnnouncementHistory()
     }
-  }, [open, chatLoaded, announcementLoaded, loadRecentMessages, loadAnnouncementHistory])
+    if (!milestonesLoaded) {
+      void loadMilestones()
+    }
+  }, [open, chatLoaded, announcementLoaded, milestonesLoaded, loadRecentMessages, loadAnnouncementHistory, loadMilestones])
 
   const feed = useMemo<FeedItem[]>(() => {
     const chatItems: FeedItem[] = messages.map((m) => ({
@@ -132,6 +143,17 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
             ✕
           </button>
         </div>
+
+        {milestoneEntries.length > 0 && (
+          <div className="max-h-24 shrink-0 space-y-1 overflow-y-auto border-b border-amber-600/30 bg-amber-500/10 px-4 py-2">
+            {milestoneEntries.map((entry) => (
+              <div key={entry.id} className="flex items-start gap-2 text-xs font-medium text-amber-200">
+                <span aria-hidden="true">🏆</span>
+                <span className="min-w-0 flex-1 break-words">{entry.message}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div ref={scrollRef} className="flex-1 space-y-1.5 overflow-y-auto px-4 py-3">
           {feed.length === 0 ? (

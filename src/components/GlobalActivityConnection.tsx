@@ -35,6 +35,7 @@ export default function GlobalActivityConnection({ accountId }: { accountId: str
   const setOnlineCount = useGlobalActivityStore((state) => state.setOnlineCount)
   const setLatestAnnouncement = useGlobalActivityStore((state) => state.setLatestAnnouncement)
   const addAnnouncementHistoryEntry = useAnnouncementHistoryStore((state) => state.addEntry)
+  const addMilestoneEntry = useAnnouncementHistoryStore((state) => state.addMilestoneEntry)
   const addChatMessage = useChatStore((state) => state.addMessage)
 
   useEffect(() => {
@@ -90,7 +91,11 @@ export default function GlobalActivityConnection({ accountId }: { accountId: str
         (payload) => {
           const announcement = toAnnouncement(payload.new as Record<string, unknown>)
           setLatestAnnouncement(announcement)
+          // Milestone kinds (level_130) are routed to the permanent pinned
+          // list instead of the rotating last-10 -- each store's own guard
+          // (MILESTONE_KINDS) makes exactly one of these two calls a no-op.
           addAnnouncementHistoryEntry(announcement)
+          addMilestoneEntry(announcement)
         },
       )
       .on(
@@ -113,7 +118,7 @@ export default function GlobalActivityConnection({ accountId }: { accountId: str
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       void supabase.removeChannel(channel)
     }
-  }, [accountId, setOnlineCount, setLatestAnnouncement, addAnnouncementHistoryEntry, addChatMessage])
+  }, [accountId, setOnlineCount, setLatestAnnouncement, addAnnouncementHistoryEntry, addMilestoneEntry, addChatMessage])
 
   return null
 }
