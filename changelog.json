@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.93.2",
+    "date": "2026-08-15",
+    "changes": [
+      "World Boss balance pass: boss health lowered to 50,000, attacks now have real damage variance instead of one fixed number every time, and the boss's defense is lower so more character levels can land meaningful hits"
+    ]
+  },
+  {
     "version": "1.93.1",
     "date": "2026-08-15",
     "changes": [

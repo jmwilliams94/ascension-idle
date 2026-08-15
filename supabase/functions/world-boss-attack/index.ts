@@ -179,11 +179,30 @@ function resolvePhysicalDamage(attack: number, defense: number): number {
   return Math.max(mitigated, floor, 1)
 }
 
+// Mirrors src/game/combat/combatResolver.ts's damageRangeFromMidpoint/
+// rollDamageInRange — the attack value itself is rolled in this range
+// *before* resolvePhysicalDamage subtracts defense (same composition order
+// as useCombatStore.runTick's `resolvePhysicalDamage(rollDamageInRange(attackMidpoint), defense)`),
+// so a boss attempt has real min/max variance instead of one fixed number.
+const DAMAGE_ROLL_MIN_RATIO = 0.9
+const DAMAGE_ROLL_MAX_RATIO = 1.1
+
+function rollDamageInRange(midpoint: number): number {
+  const min = Math.max(1, Math.round(midpoint * DAMAGE_ROLL_MIN_RATIO))
+  const max = Math.max(min, Math.round(midpoint * DAMAGE_ROLL_MAX_RATIO))
+  return min + Math.floor(Math.random() * (max - min + 1))
+}
+
 // PLACEHOLDER mitigation value, same disclosed-not-final status as every
-// other economy number in this game (see the migration's max_hp comment) —
-// picked to keep resolvePhysicalDamage's output sane across the level range,
-// not a tuned balance figure.
-const BOSS_DEFENSE = 500
+// other economy number in this game (see the migration's max_hp comment).
+// Lowered from 500 (requested by the user, first real balance pass) —
+// real item data shows even the toughest in-game monster only reaches
+// `defense = round(level * 1.5) ≈ 194` at level 130 (monsterDefense in
+// resolve-combat/index.ts), and a level-130 Normal-tier bow+ring alone is
+// only ~250 physical_attack before quality/composition bonuses — 500 was
+// over 2.5x the toughest real monster's defense, crushing anyone without
+// endgame gear down to the 10% damage floor regardless of level.
+const BOSS_DEFENSE = 200
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -337,7 +356,7 @@ async function handleWorldBossAttack(req: Request): Promise<Response> {
     return json({ ok: false, error: 'quiver_required' })
   }
 
-  const damage = resolvePhysicalDamage(attackMidpoint, BOSS_DEFENSE)
+  const damage = resolvePhysicalDamage(rollDamageInRange(attackMidpoint), BOSS_DEFENSE)
 
   const { data: applyData, error: applyError } = await db.rpc('apply_world_boss_attack', {
     p_character_id: characterId,
