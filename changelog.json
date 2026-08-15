@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.96.0",
+    "date": "2026-08-16",
+    "changes": [
+      "The Idling nav button now glows with embers when a server event is live: red for an active World Boss fight, gold while a Gold Donation Event is collecting, green once its buff has triggered",
+      "All navigation buttons (desktop and mobile) now use the same gold gradient styling as the Fight button"
+    ]
+  },
+  {
     "version": "1.95.6",
     "date": "2026-08-16",
     "changes": [

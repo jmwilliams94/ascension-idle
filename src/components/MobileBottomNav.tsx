@@ -5,6 +5,8 @@ import { TAB_ICONS } from '../game/hud/navIcons'
 import NavIconGlyph from './NavIconGlyph'
 import { useAchievementsStore, totalClaimableCount } from '../game/achievements/useAchievementsStore'
 import { useMailStore, countUnreadMail } from '../game/marketplace/useMailStore'
+import { useActiveEventEmberColor } from '../game/hud/useEventEmberColor'
+import { EventEmberBorder } from '../game/hud/eventEmberBorder'
 import { APP_VERSION } from '../version'
 
 const BASE_URL = import.meta.env.BASE_URL
@@ -49,6 +51,9 @@ const RIGHT_ITEMS: { id: TabId; label: string }[] = [{ id: 'achievements', label
 
 // badge (2026-08-06, Achievements rework) — a small count bubble, currently
 // only used for the Achievements button (claimable tier count).
+// Same .btn-gold/.btn-gold-active treatment as TabNav.tsx's desktop buttons
+// (2026-08-16, requested by the user — "same button styling we've been
+// going with"), scaled down to this bar's compact size.
 function NavButton({ id, label, badge }: { id: TabId; label: string; badge?: number }) {
   const activeTab = useTabStore((state) => state.activeTab)
   const setActiveTab = useTabStore((state) => state.setActiveTab)
@@ -59,8 +64,8 @@ function NavButton({ id, label, badge }: { id: TabId; label: string; badge?: num
     <button
       type="button"
       onClick={() => setActiveTab(id)}
-      className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-medium leading-tight ${
-        active ? 'text-amber-300' : 'text-slate-400'
+      className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[10px] font-medium leading-tight ${
+        active ? 'btn-gold-active' : 'btn-gold'
       }`}
     >
       {icon && <NavIconGlyph icon={icon} />}
@@ -77,11 +82,16 @@ function NavButton({ id, label, badge }: { id: TabId; label: string; badge?: num
 // Static hourglass icon (2026-08-14) — replaced the old dynamic
 // equipped-weapon icon + live "Fighting"/"Idle" status text; label always
 // reads "Idling" now, matching GameShell's page-heading rename.
+// Circle now uses the same .btn-gold/.btn-gold-active treatment as the rest
+// of the nav (2026-08-16) instead of its own bespoke amber/slate colors, and
+// carries the World Boss/Gold Donation Event border embers — see
+// useEventEmberColor.ts for the red/green/gold priority rule.
 function IdlingNavButton() {
   const activeTab = useTabStore((state) => state.activeTab)
   const setActiveTab = useTabStore((state) => state.setActiveTab)
   const active = activeTab === 'combat'
   const icon = TAB_ICONS.combat
+  const emberColor = useActiveEventEmberColor()
 
   return (
     <button
@@ -90,13 +100,12 @@ function IdlingNavButton() {
       className="flex flex-1 flex-col items-center justify-center gap-0.5"
     >
       <span
-        className={`flex h-11 w-11 items-center justify-center rounded-full border-2 shadow-lg ${
-          active
-            ? 'border-amber-400 bg-amber-500/20 text-amber-300 shadow-amber-500/20'
-            : 'border-slate-600 bg-slate-800 text-slate-300 shadow-black/30'
+        className={`relative flex h-11 w-11 items-center justify-center rounded-full shadow-lg ${
+          active ? 'btn-gold-active shadow-amber-500/20' : 'btn-gold shadow-black/30'
         }`}
       >
         {icon && <NavIconGlyph icon={icon} sizeClassName="h-7 w-7" />}
+        <EventEmberBorder color={emberColor} count={10} />
       </span>
       <span className={`text-[10px] font-semibold leading-tight ${active ? 'text-amber-300' : 'text-slate-400'}`}>Idling</span>
     </button>
@@ -191,8 +200,8 @@ function TavernNavButton({ badges }: { badges: Partial<Record<TabId, number>> })
       <button
         type="button"
         onClick={() => setExpanded((current) => !current)}
-        className={`relative flex flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-medium leading-tight ${
-          active || expanded ? 'text-amber-300' : 'text-slate-400'
+        className={`relative flex w-full flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[10px] font-medium leading-tight ${
+          active || expanded ? 'btn-gold-active' : 'btn-gold'
         }`}
       >
         <img src={TAVERN_ICON_SRC} alt="Tavern" className="h-6 w-6 object-contain" />
@@ -232,7 +241,7 @@ export default function MobileBottomNav() {
       // for a fixed-position bar either way.
       style={{ paddingBottom: 'env(safe-area-inset-bottom)', transform: 'translateZ(0)' }}
     >
-      <div className="mx-auto flex max-w-md items-stretch px-1">
+      <div className="mx-auto flex max-w-md items-stretch gap-1 px-1 py-1">
         {LEFT_ITEMS.map((item) => (
           <NavButton key={item.id} {...item} />
         ))}

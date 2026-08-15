@@ -381,6 +381,20 @@ img {
   opacity: 0.4;
 }
 
+/* Permanently-lit variant of .btn-gold's :hover gradient (2026-08-16) — for
+   nav buttons, where the "active tab" needs to sit in the same lit state
+   .btn-gold only reaches on hover, without fighting that rule's own
+   specificity (:hover:not(:disabled) already beats a second plain class).
+   Applied instead of .btn-gold, never alongside it, so there's nothing to
+   override. */
+.btn-gold-active {
+  background: linear-gradient(180deg, var(--ascension-gold-bright) 0%, var(--ascension-gold) 60%, var(--ascension-gold-dark) 100%);
+  border: 1px solid var(--ascension-gold);
+  color: var(--ascension-ink);
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.55);
+  transition: all 0.25s ease;
+}
+
 /* Colored variant of .btn-gold's idle-dark/hover-bright-gradient-plus-glow
    treatment (2026-08-14, requested by the user — LuckyLad's purple/emerald
    payment buttons and Salvage's per-tier Tempered/Infused/Radiant buttons

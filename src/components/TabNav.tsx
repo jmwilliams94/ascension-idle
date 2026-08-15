@@ -3,6 +3,8 @@ import { TAB_ICONS } from '../game/hud/navIcons'
 import NavIconGlyph from './NavIconGlyph'
 import { useAchievementsStore, totalClaimableCount } from '../game/achievements/useAchievementsStore'
 import { useMailStore, countUnreadMail } from '../game/marketplace/useMailStore'
+import { useActiveEventEmberColor } from '../game/hud/useEventEmberColor'
+import { EventEmberBorder } from '../game/hud/eventEmberBorder'
 
 const TAB_ITEMS: { id: TabId; label: string }[] = [
   { id: 'combat', label: 'Idling' },
@@ -15,8 +17,20 @@ const TAB_ITEMS: { id: TabId; label: string }[] = [
   { id: 'achievements', label: 'Achievements' },
 ]
 
-const TAB_BUTTON_CLASS =
-  'flex flex-col items-center justify-center gap-1.5 rounded-xl border px-3 py-3 text-sm font-medium transition-colors'
+// Same gold gradient/glow treatment as Fight/Buy/Confirm (.btn-gold in
+// index.css, 2026-08-16) rather than a bespoke steel/amber border — .btn-gold
+// for the idle state, .btn-gold-active in place of it (never alongside) for
+// whichever tab is currently open, since .btn-gold-active is the permanently-
+// lit variant of .btn-gold's own :hover state.
+const TAB_BUTTON_CLASS = 'flex flex-col items-center justify-center gap-1.5 rounded-xl px-3 py-3 text-sm font-medium'
+
+// Split out from TabButton so only the Idling tab subscribes to the World
+// Boss / Gold Donation stores — the other 7 tabs don't need to re-render
+// when those change.
+function IdlingEventEmbers() {
+  const emberColor = useActiveEventEmberColor()
+  return <EventEmberBorder color={emberColor} />
+}
 
 // badge (2026-08-06, Achievements rework) — a small count bubble in the
 // corner, currently only used for the Achievements tab (claimable tier
@@ -33,7 +47,7 @@ function TabButton({ id, label, badge }: { id: TabId; label: string; badge?: num
     <button
       type="button"
       onClick={() => setActiveTab(id)}
-      className={`relative ${TAB_BUTTON_CLASS} ${active ? 'border-amber-400 bg-amber-500/10 text-amber-300' : 'border-slate-700 text-slate-300 hover:border-amber-500/50'}`}
+      className={`relative ${TAB_BUTTON_CLASS} ${active ? 'btn-gold-active' : 'btn-gold'}`}
     >
       {icon && <NavIconGlyph icon={icon} sizeClassName="h-8 w-8" />}
       <span>{label}</span>
@@ -42,6 +56,7 @@ function TabButton({ id, label, badge }: { id: TabId; label: string; badge?: num
           {badge! > 99 ? '99+' : badge}
         </span>
       )}
+      {id === 'combat' && <IdlingEventEmbers />}
     </button>
   )
 }

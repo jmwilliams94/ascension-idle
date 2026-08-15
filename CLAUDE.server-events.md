@@ -33,3 +33,15 @@ Second server event, reached the same way as World Boss (Idling tab → Events s
 - **Dead gap after the event ends (deliberately deviates from World Boss's no-gap pattern)**: once the event ends, the pool closes and a **random 1–6 hour cooldown** starts before a new pool opens and starts accepting donations again — unlike World Boss, where the next cycle begins immediately. This gap is **not surfaced to players** — no countdown, no "next event in X" indicator. The Events UI should show nothing (or a neutral idle state) during the gap; the new pool and its threshold just silently appear when the cooldown elapses.
 - **Rewards**: leaderboard + payout, mirroring World Boss — top-donor tiers plus a participation reward for every character who donated, delivered via Mail when the event triggers, reusing the `world_boss_reward_for_tier`-style swappable reward table and the "one migration, `create or replace` later" tuning pattern.
 - **Not yet built**: needs its own migration (new pool/participant tables mirroring `world_boss_spawns`/`world_boss_participants`), the buff-application mirroring work in `resolve-combat` + `combatResolver.ts`, a new Realtime connection component, and the `WorldBossEventsCard.tsx` placeholder swapped for a real card.
+
+## Idling nav-button event embers (2026-08-16)
+
+Ambient indicator on the Idling nav button (both `TabNav.tsx` desktop and `MobileBottomNav.tsx`'s circular mobile button) for whether a server event is live, so a player doesn't have to open the Events sub-mode to notice one — `useActiveEventEmberColor()` (`src/game/hud/useEventEmberColor.ts`) reads `useWorldBossStore`/`useGoldDonationStore` (already mounted app-wide via `WorldBossConnection`/`GoldDonationConnection` in `GameShell.tsx`) and returns one of three colors, or `null`:
+
+- **Red (`boss`)**: a World Boss spawn is `status === 'active'` and its window hasn't ended.
+- **Green (`buffActive`)**: the Gold Donation pool's buff has triggered and is still live (`getActiveGoldDonationEvent`).
+- **Gold (`collecting`)**: the Gold Donation pool is open and accepting donations, buff not yet triggered.
+
+**Visual priority only, not true mutual exclusion** — World Boss and Gold Donation run on fully independent random timers, so both can genuinely be live at the same moment. Rather than coordinating the two systems server-side, the hook just picks one color to show (red beats green beats gold) so the button never shows more than one color's embers at once; the underlying events themselves can still overlap, this only affects what's displayed.
+
+Rendered via `EventEmberBorder` (`src/game/hud/eventEmberBorder.tsx`) — a sibling to `tierEffects.tsx`'s `TierEmberEffect` but anchored around the element's own border (embers placed on a 46%-radius ellipse inscribed just inside the box, so it fits a circle or a rounded-rect the same way) with a short 3-8px outward travel, rather than that effect's full-tile center-burst radius. Reuses the same `.effect-ember-radiate` CSS keyframe. Parent element must be `position: relative` with visible overflow.
