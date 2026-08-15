@@ -51,6 +51,7 @@ function formatDuration(ms: number): string {
 export default function OfflineProgressModal() {
   const result = useOfflineProgressStore((state) => state.result)
   const checking = useOfflineProgressStore((state) => state.checking)
+  const syncFailed = useOfflineProgressStore((state) => state.syncFailed)
   const dismissResult = useOfflineProgressStore((state) => state.dismiss)
   const selectedMonsterId = useZoneStore((state) => state.selectedMonsterId)
   const lootHoldingCount = useLootHoldingStore((state) => state.entries.length)
@@ -62,9 +63,9 @@ export default function OfflineProgressModal() {
   // real "Welcome back" content via `show()`, which is fine; but a check
   // starting *while* the player already has the manual view open shouldn't
   // yank it away, so it's excluded here.
-  const isCalculating = checking && !result && !manuallyOpened
+  const isCalculating = checking && !result && !syncFailed && !manuallyOpened
 
-  if (!result && !manuallyOpened && !isCalculating) {
+  if (!result && !manuallyOpened && !isCalculating && !syncFailed) {
     return null
   }
 
@@ -86,8 +87,21 @@ export default function OfflineProgressModal() {
       <div className="ascension-card-inner max-h-[90vh] space-y-4 overflow-y-auto p-5">
         {isCalculating ? (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
-            <span className="text-3xl animate-pulse">⏳</span>
-            <p className="text-sm font-medium text-slate-300">Calculating your rewards…</p>
+            <span className="text-2xl">👋</span>
+            <h2 className="text-lg font-semibold text-white">Welcome back</h2>
+            <p className="text-sm font-medium text-slate-400 animate-pulse">Checking what happened while you were away…</p>
+          </div>
+        ) : syncFailed ? (
+          <div className="flex flex-col items-center gap-3 py-6 text-center">
+            <span className="text-2xl">👋</span>
+            <h2 className="text-lg font-semibold text-white">Welcome back</h2>
+            <p className="text-sm text-slate-400">
+              We couldn&apos;t confirm what happened while you were away. Nothing is lost — it&apos;ll be caught up
+              automatically the next time you play.
+            </p>
+            <Button variant="primary" onClick={handleClose} className="w-full">
+              Got it
+            </Button>
           </div>
         ) : (
           <>

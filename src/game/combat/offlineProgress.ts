@@ -36,30 +36,51 @@ export interface OfflineProgressResult {
   petObtained: string | null
 }
 
+// Discriminated so a caller can tell "genuinely nothing happened" (no
+// monster ever selected, or the elapsed window was too small to matter --
+// expected, not an error) apart from "we don't actually know what happened"
+// (the resolve-combat call itself failed or came back ok:false) — the two
+// used to both collapse to a bare `null`, which is what let a real sync
+// failure look identical to a quiet no-op: GameShell would show the
+// "Calculating…" spinner because the away-gap looked large, then this
+// resolved to null and the whole modal vanished with nothing shown at all
+// (reported by the user, 2026-08-15 — "Calculating Rewards pop up and then
+// nothing"). GameShell now shows an explicit "couldn't sync" state for
+// 'error', and stays silent only for 'nothing'.
+export type OfflineProgressOutcome =
+  | { status: 'nothing' }
+  | { status: 'error' }
+  | { status: 'shown'; result: OfflineProgressResult }
+
 // Called once from GameShell's load effect, after character/inventory/arrow
-// loads resolve. Returns the result for the summary modal, or null if there's
-// nothing worth showing (no monster ever selected, the resolve call failed,
-// or the elapsed window was too small to matter).
-export async function runOfflineProgressCheck(characterId: string): Promise<OfflineProgressResult | null> {
+// loads resolve, and again from its resume-detection heartbeat.
+export async function runOfflineProgressCheck(characterId: string): Promise<OfflineProgressOutcome> {
   if (!useZoneStore.getState().selectedMonsterId) {
-    return null
+    return { status: 'nothing' }
   }
 
   const result = await resolveCombat(characterId, 'offline')
 
-  if (!result || !result.ok || !result.gained || (result.elapsedMs ?? 0) < OFFLINE_SUMMARY_THRESHOLD_MS) {
-    return null
+  if (!result || !result.ok) {
+    return { status: 'error' }
+  }
+
+  if (!result.gained || (result.elapsedMs ?? 0) < OFFLINE_SUMMARY_THRESHOLD_MS) {
+    return { status: 'nothing' }
   }
 
   return {
-    elapsedMs: result.elapsedMs ?? 0,
-    kills: result.gained.kills,
-    rareKills: result.gained.rareKills,
-    gold: result.gained.gold,
-    exp: result.gained.exp,
-    itemsFoundCount: (result.itemsGranted?.length ?? 0) + (result.itemsHeld?.length ?? 0),
-    comets: result.gained.comets,
-    fallenStars: result.gained.fallenStars,
-    petObtained: result.petObtained ? (ENEMY_TYPES[result.petObtained as EnemyTypeId]?.displayName ?? 'monster') : null,
+    status: 'shown',
+    result: {
+      elapsedMs: result.elapsedMs ?? 0,
+      kills: result.gained.kills,
+      rareKills: result.gained.rareKills,
+      gold: result.gained.gold,
+      exp: result.gained.exp,
+      itemsFoundCount: (result.itemsGranted?.length ?? 0) + (result.itemsHeld?.length ?? 0),
+      comets: result.gained.comets,
+      fallenStars: result.gained.fallenStars,
+      petObtained: result.petObtained ? (ENEMY_TYPES[result.petObtained as EnemyTypeId]?.displayName ?? 'monster') : null,
+    },
   }
 }

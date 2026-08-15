@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.92.29",
+    "date": "2026-08-15",
+    "changes": [
+      "Fixed the \"Welcome back\" idle-rewards popup sometimes showing a loading spinner and then nothing — if the sync fails it now says so instead of silently disappearing, so you always get a clear answer instead of wondering if anything happened"
+    ]
+  },
+  {
     "version": "1.92.28",
     "date": "2026-08-15",
     "changes": [

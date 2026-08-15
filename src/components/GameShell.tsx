@@ -132,14 +132,16 @@ export default function GameShell({ characterId }: { characterId: string }) {
       // reload can't double-count the same window.
       useOfflineProgressStore.getState().setChecking(true)
       try {
-        const offlineResult = await runOfflineProgressCheck(characterId)
+        const outcome = await runOfflineProgressCheck(characterId)
 
         if (cancelled) {
           return
         }
 
-        if (offlineResult) {
-          useOfflineProgressStore.getState().show(offlineResult)
+        if (outcome.status === 'shown') {
+          useOfflineProgressStore.getState().show(outcome.result)
+        } else if (outcome.status === 'error') {
+          useOfflineProgressStore.getState().showSyncFailed()
         }
       } finally {
         useOfflineProgressStore.getState().setChecking(false)
@@ -265,13 +267,21 @@ export default function GameShell({ characterId }: { characterId: string }) {
       const now = Date.now()
       const awayMs = hiddenAt !== null ? now - hiddenAt : now - lastAliveAt
       hiddenAt = null
-      if (awayMs >= OFFLINE_SUMMARY_THRESHOLD_MS) {
+      const worthShowing = awayMs >= OFFLINE_SUMMARY_THRESHOLD_MS
+      if (worthShowing) {
         useOfflineProgressStore.getState().setChecking(true)
       }
       try {
-        const offlineResult = await runOfflineProgressCheck(characterId)
-        if (offlineResult) {
-          useOfflineProgressStore.getState().show(offlineResult)
+        const outcome = await runOfflineProgressCheck(characterId)
+        if (outcome.status === 'shown') {
+          useOfflineProgressStore.getState().show(outcome.result)
+        } else if (outcome.status === 'error' && worthShowing) {
+          // Only surface the "couldn't sync" state for a gap that would have
+          // shown the spinner in the first place — a resolve blip on a
+          // trivial few-second tab switch isn't worth an error popup (see
+          // runOfflineProgressCheck's own comment on the two outcomes this
+          // distinguishes).
+          useOfflineProgressStore.getState().showSyncFailed()
         }
       } finally {
         checkInFlight = false
