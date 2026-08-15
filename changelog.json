@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.93.1",
+    "date": "2026-08-15",
+    "changes": [
+      "Fixed the World Boss's Attack button failing with a permission error"
+    ]
+  },
+  {
     "version": "1.93.0",
     "date": "2026-08-15",
     "changes": [

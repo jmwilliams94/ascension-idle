@@ -1,0 +1,13 @@
+-- Fix "permission denied for function ensure_world_boss_spawn" when
+-- attacking the boss. ensure_world_boss_spawn is SECURITY DEFINER (runs as
+-- its owner regardless of caller) and was granted execute only to
+-- `authenticated` (for WorldBossConnection.tsx's direct client call) — but
+-- apply_world_boss_attack also calls it internally (`perform
+-- public.ensure_world_boss_spawn()`), and apply_world_boss_attack is itself
+-- a plain (non-SECURITY DEFINER) function invoked via the world-boss-attack
+-- Edge Function's service-role client. SECURITY DEFINER only changes whose
+-- privileges apply *inside* a function body — the caller still needs its own
+-- EXECUTE grant just to invoke it, and service_role never had one here. Same
+-- family of gotcha as the global_announcements grant miss (CLAUDE.md), just
+-- on a function rather than a table.
+grant execute on function public.ensure_world_boss_spawn() to service_role;
