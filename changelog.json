@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.95.5",
+    "date": "2026-08-16",
+    "changes": [
+      "Withdrawing Weapon points from the Bank no longer offers the starter Wooden Sword as a choice, and skips the item picker entirely when there's only one real item to give you",
+      "Gear point withdrawals now start at +1 composition instead of a free Normal option"
+    ]
+  },
+  {
     "version": "1.95.4",
     "date": "2026-08-16",
     "changes": [

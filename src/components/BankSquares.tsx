@@ -21,6 +21,7 @@ import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useBankStore } from '../game/items/useBankStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
+import { NON_DROPPABLE_FAMILIES } from '../game/items/useInventoryStore'
 import { GEM_TYPE_ORDER, GEM_TIERS, GEM_TYPES, gemStorageKey, getGemIconSrc, getGemTierColor, formatGemTierLabel, type GemTier, type GemTypeId } from '../game/items/gemTypes'
 // The per-action floating "+gained" toast (2026-08-07, confirmed with the
 // user) — fired for every deliberate Bank deposit/withdraw here, mirroring
@@ -780,7 +781,7 @@ function GearSlotWithdrawPanel({
   const showGainToast = useGainToastStore((state) => state.show)
 
   const [templateId, setTemplateId] = useState('')
-  const [tier, setTier] = useState(0)
+  const [tier, setTier] = useState(COMPOSITION_STONE_TIERS[0])
   const [error, setError] = useState<string | null>(null)
 
   // One entry per item_family (2026-08-16, confirmed with the user) — a
@@ -789,9 +790,17 @@ function GearSlotWithdrawPanel({
   // item level" control. Instead each family auto-resolves to its highest
   // required_level at or below WITHDRAW_LEVEL_CAP (or its lowest tier if
   // every tier in the family is above the cap), so the picker is just
-  // "which item," never "which level of it."
+  // "which item," never "which level of it." Also excludes
+  // NON_DROPPABLE_FAMILIES (e.g. the legacy singleton 'sword' Wooden Sword
+  // freebie) — same list pickLevelAppropriateTemplate uses to keep those out
+  // of monster drops — since most slot types then resolve to exactly one real
+  // family and shouldn't force a choice at all (see the single-template case
+  // in the JSX below).
   const filteredTemplates = templates.filter(
-    (template) => template.slot_type === slotType && (template.required_class === null || template.required_class === classId),
+    (template) =>
+      template.slot_type === slotType &&
+      !NON_DROPPABLE_FAMILIES.includes(template.item_family ?? '') &&
+      (template.required_class === null || template.required_class === classId),
   )
 
   const templatesByFamily = new Map<string, typeof filteredTemplates>()
@@ -816,12 +825,20 @@ function GearSlotWithdrawPanel({
     })
     .sort((a, b) => a.required_level - b.required_level)
 
+  // Almost every slot type has exactly one real family left after the
+  // NON_DROPPABLE_FAMILIES filter above (e.g. weapon's only real chain is
+  // 'bow' now that 'sword' is excluded) — when that's true there's nothing
+  // left to choose, so skip the dropdown and use it directly rather than
+  // making the player click the one option.
+  const singleTemplate = eligibleTemplates.length === 1 ? eligibleTemplates[0] : null
+  const resolvedTemplateId = singleTemplate?.id ?? templateId
+
   const cost = compositionPointValue(tier)
 
   const handleWithdraw = async () => {
     setError(null)
-    if (!templateId) return
-    const result = await onWithdraw(templateId, tier)
+    if (!resolvedTemplateId) return
+    const result = await onWithdraw(resolvedTemplateId, tier)
     if (!result.ok) {
       setError(
         result.error === 'inventory_full'
@@ -833,7 +850,7 @@ function GearSlotWithdrawPanel({
       return
     }
 
-    const templateName = eligibleTemplates.find((template) => template.id === templateId)?.name ?? 'Item'
+    const templateName = eligibleTemplates.find((template) => template.id === resolvedTemplateId)?.name ?? 'Item'
     showGainToast({ label: templateName, amount: 1, icon: '🎁', color: '#a855f7' })
     onDone()
   }
@@ -853,20 +870,26 @@ function GearSlotWithdrawPanel({
         <p className="mt-2 text-xs text-slate-500">No {formatGearSlotLabel(slotType).toLowerCase()} items available for your class.</p>
       ) : (
         <>
-          <Select value={templateId} onChange={(event) => setTemplateId(event.target.value)} className="mt-2">
-            <option value="">Choose an item…</option>
-            {eligibleTemplates.map((template) => (
-              <option key={template.id} value={template.id}>
-                {template.name} (Lv {template.required_level})
-              </option>
-            ))}
-          </Select>
+          {singleTemplate ? (
+            <p className="mt-2 text-sm font-medium text-slate-100">
+              {singleTemplate.name} <span className="text-xs font-normal text-slate-500">(Lv {singleTemplate.required_level})</span>
+            </p>
+          ) : (
+            <Select value={templateId} onChange={(event) => setTemplateId(event.target.value)} className="mt-2">
+              <option value="">Choose an item…</option>
+              {eligibleTemplates.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.name} (Lv {template.required_level})
+                </option>
+              ))}
+            </Select>
+          )}
 
-          <TierSlider tier={tier} setTier={setTier} minTier={0} />
+          <TierSlider tier={tier} setTier={setTier} />
 
           <Button
             variant="primary"
-            disabled={busy || !templateId || points < cost}
+            disabled={busy || !resolvedTemplateId || points < cost}
             onClick={() => void handleWithdraw()}
             className="mt-2 w-full"
           >
