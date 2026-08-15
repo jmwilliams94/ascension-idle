@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.95.2",
+    "date": "2026-08-16",
+    "changes": [
+      "Lucky Lad, chest, and nav icons now load instantly from cache instead of popping in — other item icons cache the first time you see them too"
+    ]
+  },
+  {
     "version": "1.95.1",
     "date": "2026-08-15",
     "changes": [

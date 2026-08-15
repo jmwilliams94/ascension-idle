@@ -25,7 +25,46 @@ export default defineConfig({
       // available" banner (UpdateBanner.tsx) with a Refresh button instead of
       // silently taking over on the next natural reload.
       registerType: 'prompt',
-      includeAssets: ['favicon.svg'],
+      // lucky-icons/nav-icons (2026-08-16, reported by the user: visible
+      // pop-in loading Lucky Lad/chest art) are small (~560KB combined) and
+      // hit on every session (nav bar, Lucky tab), so they're precached
+      // outright — Workbox content-hashes them, so they load instantly from
+      // Cache Storage indefinitely and self-invalidate on the next build if
+      // the art actually changes (no more manual `?v=` cache-busting needed
+      // for precached paths, though navIcons.ts's iconUrl() still appends it
+      // as a fallback for the pre-SW/first-load window — see
+      // ignoreURLParametersMatching below for why that doesn't break the
+      // precache match). item-icons/ is NOT included here — 23MB across
+      // 140+ files, far too large to bundle into every SW install; see the
+      // runtimeCaching CacheFirst route below instead.
+      includeAssets: ['favicon.svg', 'lucky-icons/**/*.png', 'nav-icons/**/*.png'],
+      workbox: {
+        // Precached URLs have no `?v=` query string, but navIcons.ts's
+        // iconUrl() requests nav-icons/lucky-icons with one anyway (see
+        // above) — without this, Workbox's precache route wouldn't match
+        // those requests and would fall through to network on every load.
+        ignoreURLParametersMatching: [/^v$/],
+        runtimeCaching: [
+          {
+            // item-icons/ (gear/material art) is viewed piecemeal — cache
+            // each icon the first time it's actually seen rather than
+            // precaching all 23MB upfront. CacheFirst: once cached, never
+            // re-fetched until it falls out of the 90-day/300-entry window,
+            // since this art only ever changes via a deliberate in-place
+            // swap (rare) rather than routine builds.
+            urlPattern: ({ url }) => url.pathname.includes('/item-icons/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'item-icons',
+              expiration: {
+                maxEntries: 300,
+                maxAgeSeconds: 60 * 60 * 24 * 90,
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+      },
       manifest: {
         name: 'Ascension Idle',
         short_name: 'Ascension Idle',
