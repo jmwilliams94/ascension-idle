@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.95.0",
+    "date": "2026-08-15",
+    "changes": [
+      "The Gold Donation Event is live! Donate Gold from the Idling tab's Events screen toward a shared server-wide pool — once it fills up, everyone gets a random temporary buff (bonus EXP, socket-unlock chance, Comet/Fallen Star drop chance, or gear quality drop chance)"
+    ]
+  },
+  {
     "version": "1.94.2",
     "date": "2026-08-15",
     "changes": [

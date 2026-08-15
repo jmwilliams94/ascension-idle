@@ -417,7 +417,7 @@ export default function CombatPage() {
 
         <CombatModeSwitcher mode={mode} onChange={setMode} />
 
-        {mode === 'events' && <WorldBossEventsCard />}
+        {mode === 'events' && <WorldBossEventsCard characterId={characterId} />}
 
         {mode === 'hunting' && (
         <AscensionCard title="Zone & Monster">
@@ -567,7 +567,7 @@ export default function CombatPage() {
           </Button>
         </AscensionCard>
         ) : (
-          <WorldBossEventsCard />
+          <WorldBossEventsCard characterId={characterId} />
         )}
 
         {mode === 'hunting' && activeType && (
