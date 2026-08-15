@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.95.1",
+    "date": "2026-08-15",
+    "changes": [
+      "Added a leaderboard to the Gold Donation Event — see the top donors from the trophy button in the Donate Gold window"
+    ]
+  },
+  {
     "version": "1.95.0",
     "date": "2026-08-15",
     "changes": [

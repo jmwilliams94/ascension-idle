@@ -4,6 +4,7 @@ import { HpBar } from './CombatPage'
 import { useGoldDonationStore, type GoldDonationResult } from '../game/goldDonation/useGoldDonationStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { formatGoldAmount } from '../game/stats/formatGold'
+import GoldDonationLeaderboardModal from './GoldDonationLeaderboardModal'
 
 const ERROR_MESSAGES: Record<string, string> = {
   invalid_amount: 'Enter a valid amount.',
@@ -26,6 +27,7 @@ export default function GoldDonationModal({ characterId, onClose }: { characterI
 
   const [amount, setAmount] = useState('')
   const [lastResult, setLastResult] = useState<GoldDonationResult | null>(null)
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false)
 
   const parsedAmount = Math.floor(Number(amount))
   const canDonate = pool?.status === 'collecting' && !busy && Number.isFinite(parsedAmount) && parsedAmount > 0 && parsedAmount <= gold
@@ -47,9 +49,19 @@ export default function GoldDonationModal({ characterId, onClose }: { characterI
       >
         <div className="flex items-start justify-between gap-2">
           <p className="text-sm font-semibold text-slate-100">Donate Gold</p>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-slate-500 hover:text-slate-300">
-            ✕
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setLeaderboardOpen(true)}
+              title="Leaderboard"
+              className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-1.5 text-sm hover:bg-amber-500/20"
+            >
+              🏆
+            </button>
+            <button type="button" onClick={onClose} aria-label="Close" className="text-slate-500 hover:text-slate-300">
+              ✕
+            </button>
+          </div>
         </div>
 
         <p className="text-xs text-slate-500">Your Gold: {formatGoldAmount(gold)}</p>
@@ -94,6 +106,10 @@ export default function GoldDonationModal({ characterId, onClose }: { characterI
           <p className="text-center text-sm text-amber-300">Thanks for donating!</p>
         )}
       </div>
+
+      {leaderboardOpen && pool && (
+        <GoldDonationLeaderboardModal characterId={characterId} poolId={pool.id} onClose={() => setLeaderboardOpen(false)} />
+      )}
     </div>
   )
 }
