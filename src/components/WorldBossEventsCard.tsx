@@ -31,7 +31,7 @@ export default function WorldBossEventsCard() {
         <p className="text-heading-label">World Boss</p>
         {spawn ? (
           <p className="mt-1 text-sm text-slate-200">
-            {windowEnded ? 'Rewards processing…' : `Ends in ${formatDuration(windowEndsAtMs - now)}`}
+            {windowEnded ? 'The fight has ended.' : `Ends in ${formatDuration(windowEndsAtMs - now)}`}
           </p>
         ) : (
           <p className="mt-1 text-sm text-slate-500">Loading…</p>

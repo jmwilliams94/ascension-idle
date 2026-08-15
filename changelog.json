@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.93.7",
+    "date": "2026-08-15",
+    "changes": [
+      "The World Boss now takes a random 1-6 hour rest between fights instead of respawning instantly"
+    ]
+  },
+  {
     "version": "1.93.6",
     "date": "2026-08-15",
     "changes": [
