@@ -3,14 +3,18 @@ import { supabase } from '../../lib/supabaseClient'
 import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 import { useInventoryStore, type ItemInstance } from '../items/useInventoryStore'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
+import { useProgressionStore } from '../stats/useProgressionStore'
 import type { ListableCurrencyType } from './useMarketplaceStore'
 
 // Admin Mail (2026-08-13) adds two currency kinds that are mail-claimable but
 // deliberately NOT marketplace-listable (Lottery Tickets/Ascension Points
 // aren't tradeable items) — kept as a separate superset type so
 // ListableCurrencyType (which also governs what a player can list for sale)
-// stays untouched.
-export type MailCurrencyType = ListableCurrencyType | 'lottery_ticket' | 'ascension_points'
+// stays untouched. 'gold' (added for World Boss rewards, migration
+// 20260826000000_add_world_boss.sql) is the same story — Mail-claimable, never
+// marketplace-listable, since Marketplace/Shop gold proceeds always credit
+// characters.gold directly instead of routing through Mail.
+export type MailCurrencyType = ListableCurrencyType | 'lottery_ticket' | 'ascension_points' | 'gold'
 
 // Mail (see CLAUDE.md's Marketplace section and
 // supabase/migrations/20260802050000_add_marketplace.sql). Sale proceeds
@@ -202,6 +206,9 @@ export const useMailStore = create<MailState>((set, get) => ({
             break
           case 'ascension_points':
             usePlayerRecordStore.getState().setAscensionPoints(result.new_count)
+            break
+          case 'gold':
+            useProgressionStore.getState().setGold(result.new_count)
             break
         }
       } else if (entry?.item) {

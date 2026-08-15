@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.93.6",
+    "date": "2026-08-15",
+    "changes": [
+      "Fixed Gold rewards sent by Mail (e.g. from the World Boss) not showing an icon and not actually crediting your Gold when claimed"
+    ]
+  },
+  {
     "version": "1.93.5",
     "date": "2026-08-15",
     "changes": [

@@ -63,15 +63,20 @@ const ASCENSION_POINTS_COLOR = '#a855f7'
 // by the user: mail tiles were showing a 🎖️ medal emoji instead of this.
 const ASCENSION_POINTS_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/ascension-points.png`
 
+// Gold's own color, matching ExpBar.tsx's top-HUD gold readout convention.
+const GOLD_COLOR = '#F0B87A'
+
 export function mailCurrencyLabel(type: MailCurrencyType): string {
   if (type === 'lottery_ticket') return 'Lottery Ticket'
   if (type === 'ascension_points') return 'Ascension Points'
+  if (type === 'gold') return 'Gold'
   return listableCurrencyLabel(type)
 }
 
 export function mailCurrencyVisual(type: MailCurrencyType): ListableCurrencyVisual {
   if (type === 'lottery_ticket') return { icon: '🎫', qualityColor: MATERIAL_COLOR }
   if (type === 'ascension_points') return { iconSrc: ASCENSION_POINTS_ICON_SRC, qualityColor: ASCENSION_POINTS_COLOR }
+  if (type === 'gold') return { icon: '💰', qualityColor: GOLD_COLOR }
   return listableCurrencyVisual(type)
 }
 
@@ -103,13 +108,20 @@ export function mailCurrencyTooltip(type: MailCurrencyType, amount?: number | nu
             lines: ['Premium currency'],
             stats: ['Account-wide, not per-character'],
           }
-        : type === 'comet'
-          ? buildCometTooltip()
-          : type === 'fallen_star'
-            ? buildFallenStarTooltip()
-            : type === 'comet_scroll'
-              ? buildCometScrollTooltip()
-              : buildFallenStarScrollTooltip()
+        : type === 'gold'
+          ? {
+              title: 'Gold',
+              icon: '💰',
+              iconColor: GOLD_COLOR,
+              stats: ['Currency'],
+            }
+          : type === 'comet'
+            ? buildCometTooltip()
+            : type === 'fallen_star'
+              ? buildFallenStarTooltip()
+              : type === 'comet_scroll'
+                ? buildCometScrollTooltip()
+                : buildFallenStarScrollTooltip()
 
   if (amount && amount > 1) {
     return { ...base, stats: [...(base.stats ?? []), `Amount: ${amount}`] }
