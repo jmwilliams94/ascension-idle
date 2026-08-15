@@ -758,6 +758,8 @@ function GearPointsPanel({
 // per-template memory, so the player picks any eligible template of the
 // matching slot_type before choosing a tier (via the shared TierSlider) to
 // pay for.
+const WITHDRAW_LEVEL_CAP = 70
+
 function GearSlotWithdrawPanel({
   slotType,
   points,
@@ -781,8 +783,37 @@ function GearSlotWithdrawPanel({
   const [tier, setTier] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
-  const eligibleTemplates = templates
-    .filter((template) => template.slot_type === slotType && (template.required_class === null || template.required_class === classId))
+  // One entry per item_family (2026-08-16, confirmed with the user) — a
+  // family like 'bow' has ~25 Level Upgrade tiers, and letting the player
+  // pick any of them from this dropdown amounted to a de facto "choose an
+  // item level" control. Instead each family auto-resolves to its highest
+  // required_level at or below WITHDRAW_LEVEL_CAP (or its lowest tier if
+  // every tier in the family is above the cap), so the picker is just
+  // "which item," never "which level of it."
+  const filteredTemplates = templates.filter(
+    (template) => template.slot_type === slotType && (template.required_class === null || template.required_class === classId),
+  )
+
+  const templatesByFamily = new Map<string, typeof filteredTemplates>()
+  for (const template of filteredTemplates) {
+    const key = template.item_family ?? template.id
+    const group = templatesByFamily.get(key)
+    if (group) {
+      group.push(template)
+    } else {
+      templatesByFamily.set(key, [template])
+    }
+  }
+
+  const eligibleTemplates = Array.from(templatesByFamily.values())
+    .map((group) => {
+      const atOrBelowCap = group.filter((template) => template.required_level <= WITHDRAW_LEVEL_CAP)
+      // Below the cap: take the highest-level tier available. Otherwise (every
+      // tier in the family starts above the cap) take the lowest-level tier.
+      return atOrBelowCap.length > 0
+        ? atOrBelowCap.reduce((best, template) => (template.required_level > best.required_level ? template : best))
+        : group.reduce((best, template) => (template.required_level < best.required_level ? template : best))
+    })
     .sort((a, b) => a.required_level - b.required_level)
 
   const cost = compositionPointValue(tier)

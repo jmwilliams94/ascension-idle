@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.95.4",
+    "date": "2026-08-16",
+    "changes": [
+      "Withdrawing gear from the Bank with points no longer makes you pick a level — it now gives you the highest level available at or under 70 automatically"
+    ]
+  },
+  {
     "version": "1.95.3",
     "date": "2026-08-16",
     "changes": [
