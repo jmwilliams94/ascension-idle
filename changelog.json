@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.94.2",
+    "date": "2026-08-15",
+    "changes": [
+      "More groundwork for the Gold Donation server event (still not playable) — Forge socket-unlock rolls are now ready to be boosted by its buff once it goes live"
+    ]
+  },
+  {
     "version": "1.94.1",
     "date": "2026-08-15",
     "changes": [
