@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.93.4",
+    "date": "2026-08-15",
+    "changes": [
+      "Socketed Bastion (Damage Reduction) and Iris (Character EXP) gems now actually work too, finishing off all 4 coded gems"
+    ]
+  },
+  {
     "version": "1.93.3",
     "date": "2026-08-15",
     "changes": [

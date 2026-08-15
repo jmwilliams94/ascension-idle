@@ -141,6 +141,8 @@ export function computeEquipmentBonus(
     compositionMagicAttackBonus: 0,
     drakeBonusPct: 0,
     emberBonusPct: 0,
+    bastionBonusPct: 0,
+    irisBonusPct: 0,
     enchantHpBonus: 0,
     blessDamageReductionPct: 0,
   }
@@ -189,13 +191,20 @@ export function computeEquipmentBonus(
 
     // Socketed gem bonuses (2026-08-26, requested by the user — previously
     // wired into tooltips only, never any real combat math). Summed across
-    // every equipped item's own sockets, additively per gem type — see
-    // useCombatStore.runTick for where these actually multiply into
-    // attackMidpoint (after quality tier and composition, per the user's
-    // explicit ordering). Bastion (Damage Reduction) and Iris (EXP) aren't
-    // summed here — no code path consumes them yet, unlike Drake/Ember.
+    // every equipped item's own sockets, additively per gem type. Drake/
+    // Ember multiply into attackMidpoint (useCombatStore.runTick, after
+    // quality tier and composition, per the user's explicit ordering).
+    // Bastion is merged into damageReductionPct below (computeDerivedStats)
+    // — same effect as the Enchantress's Bless bonus, just a second source,
+    // so applyDamageReduction only ever needs one combined number. Iris is
+    // passed through as its own field and applied as the final multiplier on
+    // total EXP gained (see combatResolver.ts's expectedRewardPerAttack and
+    // resolve-combat/index.ts's mirror) — no other reward source stacks with
+    // it the way Bastion/Bless do for damage reduction.
     bonus.drakeBonusPct += sumSocketedGemBonusPct(item.sockets, 'drake')
     bonus.emberBonusPct += sumSocketedGemBonusPct(item.sockets, 'ember')
+    bonus.bastionBonusPct += sumSocketedGemBonusPct(item.sockets, 'bastion')
+    bonus.irisBonusPct += sumSocketedGemBonusPct(item.sockets, 'iris')
   }
 
   return bonus

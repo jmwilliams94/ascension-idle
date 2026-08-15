@@ -64,12 +64,23 @@ export interface DerivedStats {
   // already folded in — see useCombatStore.runTick's attackMidpoint calc.
   drakeBonusPct: number
   emberBonusPct: number
+  // Socketed Iris gem bonus % (Character EXP), same summing convention as
+  // Drake/Ember above (2026-08-26) — kept as its own field rather than
+  // merged into anything, since it's applied at the reward-computation site
+  // (combatResolver.ts's expectedRewardPerAttack / resolve-combat/index.ts's
+  // mirror) as the final multiplier on total EXP gained, not alongside
+  // attack. Not mirrored in world-boss-attack — attacking the boss grants no
+  // EXP at all, so there's nothing for this to multiply there.
+  irisBonusPct: number
   // Enchantress "Bless" tab (2026-08-13, see gemCatalog.ts's BLESS_PCT_STEPS)
-  // — flat % reduction applied to incoming monster damage, summed across
-  // every equipped item's own blessPct (each individually capped at
-  // BLESS_MAX_PCT). Consumed by useCombatStore.runTick via
+  // plus socketed Bastion Gems (2026-08-26, same effect, second source) —
+  // flat % reduction applied to incoming monster damage, summed across every
+  // equipped item's own blessPct AND socketed Bastion bonus into one
+  // combined number. Consumed by useCombatStore.runTick via
   // combatResolver.ts's applyDamageReduction — client-only, same boundary as
-  // the rest of incoming player damage (never simulated server-side).
+  // the rest of incoming player damage (never simulated server-side, and the
+  // World Boss never damages the player back at all, so neither source has
+  // any server mirror).
   damageReductionPct: number
 }
 
@@ -86,6 +97,8 @@ export interface EquipmentBonus {
   compositionMagicAttackBonus?: number
   drakeBonusPct?: number
   emberBonusPct?: number
+  bastionBonusPct?: number
+  irisBonusPct?: number
   // Enchantress HP bonus (see gemCatalog.ts's ENCHANT_HP_RANGE_BY_TIER,
   // item_instances.enchant) — summed flat across every equipped item, added
   // straight onto hp below same as the attribute-derived base, not scaled by
@@ -128,6 +141,7 @@ export function computeDerivedStats(attributes: Attributes, equipmentBonus: Equi
     compositionMagicAttackBonus: equipmentBonus.compositionMagicAttackBonus ?? 0,
     drakeBonusPct: equipmentBonus.drakeBonusPct ?? 0,
     emberBonusPct: equipmentBonus.emberBonusPct ?? 0,
-    damageReductionPct: equipmentBonus.blessDamageReductionPct ?? 0,
+    irisBonusPct: equipmentBonus.irisBonusPct ?? 0,
+    damageReductionPct: (equipmentBonus.blessDamageReductionPct ?? 0) + (equipmentBonus.bastionBonusPct ?? 0),
   }
 }

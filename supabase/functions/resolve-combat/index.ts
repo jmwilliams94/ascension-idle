@@ -217,18 +217,18 @@ function compositionBonusStat(
 
 // Socketed gem bonuses (2026-08-26, requested by the user) — mirrors
 // src/game/items/gemCatalog.ts's GEM_TYPES/parseGemStorageKey/
-// sumSocketedGemBonusPct. Only Drake (Physical Attack) and Ember (Magic
-// Attack) are read here — Bastion (Damage Reduction) has no incoming-damage
-// concept server-side (never simulated, see the file header) and Iris
-// (Character EXP) isn't summed either since no reward-math consumer exists
-// for it yet, same as the client. Multiple gems of the same type across
-// different gear pieces stack additively.
-const GEM_PERCENT_BY_TIER: Record<'drake' | 'ember', Record<string, number>> = {
+// sumSocketedGemBonusPct. Drake (Physical Attack), Ember (Magic Attack), and
+// Iris (Character EXP) are all read here — Bastion (Damage Reduction) isn't,
+// since it has no incoming-damage concept server-side at all (player HP has
+// never been simulated here, see the file header). Multiple gems of the
+// same type across different gear pieces stack additively.
+const GEM_PERCENT_BY_TIER: Record<'drake' | 'ember' | 'iris', Record<string, number>> = {
   drake: { normal: 5, tempered: 10, ascended: 15 },
   ember: { normal: 5, tempered: 10, ascended: 15 },
+  iris: { normal: 5, tempered: 10, ascended: 15 },
 }
 
-function sumSocketedGemBonusPct(sockets: (string | null)[] | undefined, gemId: 'drake' | 'ember'): number {
+function sumSocketedGemBonusPct(sockets: (string | null)[] | undefined, gemId: 'drake' | 'ember' | 'iris'): number {
   let total = 0
   for (const socket of sockets ?? []) {
     if (!socket) continue
@@ -926,6 +926,10 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   let compositionMagicAttackBonus = 0
   let drakeBonusPct = 0
   let emberBonusPct = 0
+  // Socketed Iris gem bonus % (Character EXP) — applied as the final
+  // multiplier on total EXP gained, see expGained below. Bastion isn't
+  // tracked here at all — see the gem-bonus comment above.
+  let irisBonusPct = 0
 
   // Durability decay results for this window (see computeMaxDurability above)
   // — collected here, applied via resolve_combat_apply_results' own
@@ -957,6 +961,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     compositionMagicAttackBonus += compositionBonusStat(item.base_stats, 'magic_attack', item.slot_type, item.composition_level)
     drakeBonusPct += sumSocketedGemBonusPct(item.sockets, 'drake')
     emberBonusPct += sumSocketedGemBonusPct(item.sockets, 'ember')
+    irisBonusPct += sumSocketedGemBonusPct(item.sockets, 'iris')
   }
 
   const derived = computeDerivedStats(attributes, equipmentBonus)
@@ -1222,7 +1227,9 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       ((expRewardForLevel(monster.level) * DAMAGE_EXP_SHARE) / monster.max_hp) *
       expMultiplier *
       RARE_BLENDED_DAMAGE_EXP_FACTOR
-    expGained += Math.round(killExp + damageExp)
+    // Iris gem bonus % applied last, after every other EXP multiplier —
+    // mirrors combatResolver.ts's expectedRewardPerAttack exactly.
+    expGained += Math.round((killExp + damageExp) * (1 + irisBonusPct / 100))
     // Feeds resolve_combat_apply_results as a fractional delta — see the
     // migration widening character_monster_kills/account_monster_kills.kills
     // to numeric, and this same value's use in the zone-tier layer below.

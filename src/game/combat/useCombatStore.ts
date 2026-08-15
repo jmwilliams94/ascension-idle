@@ -356,7 +356,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     // The visual layer below (rollAttackLands, the damage roll, "Miss" text,
     // kill events) is completely unchanged — purely cosmetic now.
     const expMultiplier = expMultiplierForLevelDiff(characterLevel, type.level)
-    const perAttack = expectedRewardPerAttack(attackMidpoint, derived.dexterity, type, characterLevel)
+    const perAttack = expectedRewardPerAttack(attackMidpoint, derived.dexterity, type, characterLevel, derived.irisBonusPct)
     useProgressionStore.getState().addPredictedRewards(perAttack.gold, perAttack.exp)
 
     // Outgoing hit-chance roll (2026-08-02, confirmed design) — the reverse of

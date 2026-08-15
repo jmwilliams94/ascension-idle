@@ -329,13 +329,20 @@ export interface ExpectedRewardPerAttack {
 }
 
 // attackMidpoint should already include every existing multiplier (quality
-// tier, composition bonus, the account-wide attack buff — i.e. exactly the
-// same value already passed to rollDamageInRange for the visual layer).
+// tier, composition bonus, the account-wide attack buff, Drake/Ember gem
+// bonus — i.e. exactly the same value already passed to rollDamageInRange
+// for the visual layer).
 export function expectedRewardPerAttack(
   attackMidpoint: number,
   playerDexterity: number,
   type: EnemyTypeDef,
   characterLevel: number,
+  // Socketed Iris gem bonus %, summed across every equipped item's sockets
+  // (2026-08-26, requested by the user — see gemCatalog.ts's
+  // sumSocketedGemBonusPct). Applied as the final multiplier on total EXP,
+  // after every other EXP multiplier (level-diff, rare-blend) — mirrors
+  // resolve-combat/index.ts's own copy exactly.
+  irisBonusPct = 0,
 ): ExpectedRewardPerAttack {
   const hitChance =
     1 - Math.min(Math.max(0, monsterDodge(type) - playerDexterity) * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
@@ -357,5 +364,5 @@ export function expectedRewardPerAttack(
   const damageExp =
     expectedDamage * ((expRewardForLevel(type.level) * DAMAGE_EXP_SHARE) / type.maxHp) * expMultiplier * RARE_BLENDED_DAMAGE_EXP_FACTOR
 
-  return { gold, exp: killExp + damageExp }
+  return { gold, exp: (killExp + damageExp) * (1 + irisBonusPct / 100) }
 }
