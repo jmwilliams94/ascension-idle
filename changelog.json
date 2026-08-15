@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.93.3",
+    "date": "2026-08-15",
+    "changes": [
+      "Socketed Drake (Physical Attack) and Ember (Magic Attack) gems now actually boost your damage in Zone combat and the World Boss, instead of only showing up in tooltips"
+    ]
+  },
+  {
     "version": "1.93.2",
     "date": "2026-08-15",
     "changes": [

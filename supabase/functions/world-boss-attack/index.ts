@@ -171,6 +171,30 @@ function compositionBonusStat(
   return Math.round(base * COMPOSITION_BONUS_PCT_PER_TIER * compositionLevel)
 }
 
+// Socketed gem bonuses (2026-08-26, requested by the user) — mirrors
+// src/game/items/gemCatalog.ts's GEM_TYPES/parseGemStorageKey/
+// sumSocketedGemBonusPct, same copy as resolve-combat/index.ts's own. Only
+// Drake (Physical Attack) and Ember (Magic Attack) are read — Bastion has no
+// incoming-damage concept in this boss mechanic (the boss never damages the
+// player back) and Iris (EXP) doesn't apply since attacking the boss grants
+// no EXP. Multiple gems of the same type across different gear pieces stack
+// additively.
+const GEM_PERCENT_BY_TIER: Record<'drake' | 'ember', Record<string, number>> = {
+  drake: { normal: 5, tempered: 10, ascended: 15 },
+  ember: { normal: 5, tempered: 10, ascended: 15 },
+}
+
+function sumSocketedGemBonusPct(sockets: (string | null)[] | undefined, gemId: 'drake' | 'ember'): number {
+  let total = 0
+  for (const socket of sockets ?? []) {
+    if (!socket) continue
+    const match = /^(drake|ember|bastion|iris)_(normal|tempered|ascended)$/.exec(socket)
+    if (!match || match[1] !== gemId) continue
+    total += GEM_PERCENT_BY_TIER[gemId][match[2]] ?? 0
+  }
+  return total
+}
+
 const MIN_DAMAGE_PERCENT_OF_ATTACK = 0.1
 
 function resolvePhysicalDamage(attack: number, defense: number): number {
@@ -247,6 +271,7 @@ interface EquippedItemRow {
   base_stats: Record<string, number>
   slot_type: string
   required_level: number
+  sockets: (string | null)[]
 }
 
 interface SpawnSnapshot {
@@ -335,7 +360,12 @@ async function handleWorldBossAttack(req: Request): Promise<Response> {
     magicAttack: 0,
     dexterity: 0,
   }
-  let compositionAttackBonus = 0
+  // Split by type (2026-08-26) so Drake/Ember's own socketed gem bonus % can
+  // apply to the right one, last — see the attackMidpoint calc below.
+  let compositionPhysicalAttackBonus = 0
+  let compositionMagicAttackBonus = 0
+  let drakeBonusPct = 0
+  let emberBonusPct = 0
 
   for (const item of gathered.equipped_items ?? []) {
     if ((item.durability ?? 0) <= 0) continue // broken item contributes nothing, same rule as resolve-combat
@@ -343,12 +373,19 @@ async function handleWorldBossAttack(req: Request): Promise<Response> {
     equipmentBonus.physicalAttack += scaledStat(item.base_stats, 'physical_attack', item.quality_tier) ?? 0
     equipmentBonus.magicAttack += scaledStat(item.base_stats, 'magic_attack', item.quality_tier) ?? 0
     equipmentBonus.dexterity += scaledStat(item.base_stats, 'dexterity', item.quality_tier) ?? 0
-    compositionAttackBonus += compositionBonusStat(item.base_stats, 'physical_attack', item.slot_type, item.composition_level)
-    compositionAttackBonus += compositionBonusStat(item.base_stats, 'magic_attack', item.slot_type, item.composition_level)
+    compositionPhysicalAttackBonus += compositionBonusStat(item.base_stats, 'physical_attack', item.slot_type, item.composition_level)
+    compositionMagicAttackBonus += compositionBonusStat(item.base_stats, 'magic_attack', item.slot_type, item.composition_level)
+    drakeBonusPct += sumSocketedGemBonusPct(item.sockets, 'drake')
+    emberBonusPct += sumSocketedGemBonusPct(item.sockets, 'ember')
   }
 
   const derived = computeDerivedStats(attributes, equipmentBonus)
-  const attackMidpoint = derived.physicalAttack + derived.magicAttack + compositionAttackBonus
+  // Composition folded in first (unscaled — no zone bonus exists here to
+  // compound with, unlike resolve-combat), then Drake/Ember's gem bonus %
+  // applied last, per the user's explicit ordering.
+  const physicalSubtotal = derived.physicalAttack + compositionPhysicalAttackBonus
+  const magicSubtotal = derived.magicAttack + compositionMagicAttackBonus
+  const attackMidpoint = physicalSubtotal * (1 + drakeBonusPct / 100) + magicSubtotal * (1 + emberBonusPct / 100)
 
   // Hunter must have the Quiver equipped to attack at all — same gate live
   // combat enforces.

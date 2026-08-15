@@ -181,3 +181,21 @@ export function describeSocketedGem(key: string): string | null {
   const effectLabel = gem.shortEffectLabel ?? gem.effectLabel
   return `${gem.displayName} — ${effectLabel} +${gem.percentByTier[parsed.tier]}%`
 }
+
+// Sums a gear item's own socketed-gem bonus % for one gem type across all of
+// its sockets (2026-08-26, requested by the user — previously percentByTier
+// was only ever read for tooltip/reveal text, never applied to any real
+// combat math anywhere in the game). Multiple gems of the same type stack
+// additively (two Tempered Drakes = +20%, not compounding). Non-matching or
+// empty sockets are silently skipped, same permissiveness parseGemStorageKey
+// already has.
+export function sumSocketedGemBonusPct(sockets: (string | null)[], gemId: GemTypeId): number {
+  let total = 0
+  for (const socket of sockets) {
+    if (!socket) continue
+    const parsed = parseGemStorageKey(socket)
+    if (!parsed || parsed.gemId !== gemId) continue
+    total += GEM_TYPES[parsed.gemId].percentByTier[parsed.tier]
+  }
+  return total
+}

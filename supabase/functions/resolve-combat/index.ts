@@ -215,6 +215,30 @@ function compositionBonusStat(
   return Math.round(base * COMPOSITION_BONUS_PCT_PER_TIER * compositionLevel)
 }
 
+// Socketed gem bonuses (2026-08-26, requested by the user) — mirrors
+// src/game/items/gemCatalog.ts's GEM_TYPES/parseGemStorageKey/
+// sumSocketedGemBonusPct. Only Drake (Physical Attack) and Ember (Magic
+// Attack) are read here — Bastion (Damage Reduction) has no incoming-damage
+// concept server-side (never simulated, see the file header) and Iris
+// (Character EXP) isn't summed either since no reward-math consumer exists
+// for it yet, same as the client. Multiple gems of the same type across
+// different gear pieces stack additively.
+const GEM_PERCENT_BY_TIER: Record<'drake' | 'ember', Record<string, number>> = {
+  drake: { normal: 5, tempered: 10, ascended: 15 },
+  ember: { normal: 5, tempered: 10, ascended: 15 },
+}
+
+function sumSocketedGemBonusPct(sockets: (string | null)[] | undefined, gemId: 'drake' | 'ember'): number {
+  let total = 0
+  for (const socket of sockets ?? []) {
+    if (!socket) continue
+    const match = /^(drake|ember|bastion|iris)_(normal|tempered|ascended)$/.exec(socket)
+    if (!match || match[1] !== gemId) continue
+    total += GEM_PERCENT_BY_TIER[gemId][match[2]] ?? 0
+  }
+  return total
+}
+
 // Gear Durability (2026-08-14, requested by the user — a gold sink, decay
 // tied to elapsed combat time rather than damage taken, since this game has
 // no server-authoritative damage-taken/death tracking to hook into). Mirrors
@@ -623,6 +647,7 @@ interface EquippedItemRow {
   base_stats: Record<string, number>
   slot_type: string
   required_level: number
+  sockets: (string | null)[]
 }
 
 interface GatherStateResult {
@@ -895,7 +920,12 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // attackMidpoint, which the account-wide attack bonus % multiplies below;
   // composition's attack bonus must not compound with that multiplier (see
   // compositionBonusStat's comment), so it's added back in unscaled after.
-  let compositionAttackBonus = 0
+  // Split by type (2026-08-26) rather than merged, so Drake/Ember's own
+  // socketed gem bonus % (below) can apply to the right one, last.
+  let compositionPhysicalAttackBonus = 0
+  let compositionMagicAttackBonus = 0
+  let drakeBonusPct = 0
+  let emberBonusPct = 0
 
   // Durability decay results for this window (see computeMaxDurability above)
   // — collected here, applied via resolve_combat_apply_results' own
@@ -923,16 +953,18 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     equipmentBonus.physicalAttack += scaledStat(item.base_stats, 'physical_attack', item.quality_tier) ?? 0
     equipmentBonus.magicAttack += scaledStat(item.base_stats, 'magic_attack', item.quality_tier) ?? 0
     equipmentBonus.dexterity += scaledStat(item.base_stats, 'dexterity', item.quality_tier) ?? 0
-    compositionAttackBonus += compositionBonusStat(item.base_stats, 'physical_attack', item.slot_type, item.composition_level)
-    compositionAttackBonus += compositionBonusStat(item.base_stats, 'magic_attack', item.slot_type, item.composition_level)
+    compositionPhysicalAttackBonus += compositionBonusStat(item.base_stats, 'physical_attack', item.slot_type, item.composition_level)
+    compositionMagicAttackBonus += compositionBonusStat(item.base_stats, 'magic_attack', item.slot_type, item.composition_level)
+    drakeBonusPct += sumSocketedGemBonusPct(item.sockets, 'drake')
+    emberBonusPct += sumSocketedGemBonusPct(item.sockets, 'ember')
   }
 
   const derived = computeDerivedStats(attributes, equipmentBonus)
   const attackIntervalMs = 1000 / derived.attackSpeed
-  // Account-wide attack buff (see accountAttackBonusPct below) is applied
-  // once that value is available further down (declared here since the
-  // rest of the function reads attackMidpoint from one place).
-  let attackMidpoint = derived.physicalAttack + derived.magicAttack
+  // attackMidpoint itself is computed further down, once accountAttackBonusPct
+  // is available (see the comment there) — declared as a mutable `let` here
+  // so the rest of the function can keep reading it from one place.
+  let attackMidpoint = 0
 
   // Hunter must have the Quiver equipped to attack at all (confirmed with the
   // user, 2026-07-31 — supersedes the earlier ammo-stack/consumption model
@@ -971,10 +1003,13 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const accountAttackBonusPct = gathered.player?.account_zone_attack_bonus_pct?.[zoneKey] ?? 0
   const zoneDropBonusPct = gathered.player?.account_zone_drop_bonus_pct?.[zoneKey] ?? 0
   const accountDropMultiplier = 1 + zoneDropBonusPct / 100
-  attackMidpoint *= 1 + accountAttackBonusPct / 100
-  // Added in unscaled, after the account-wide multiplier — see
-  // compositionAttackBonus's declaration above.
-  attackMidpoint += compositionAttackBonus
+  // Split by type, composition added in unscaled after the account-wide
+  // multiplier (see compositionPhysicalAttackBonus's declaration above), then
+  // Drake/Ember's own socketed gem bonus % applied last, per the user's
+  // explicit ordering (2026-08-26) — mirrors useCombatStore.runTick exactly.
+  const physicalSubtotal = derived.physicalAttack * (1 + accountAttackBonusPct / 100) + compositionPhysicalAttackBonus
+  const magicSubtotal = derived.magicAttack * (1 + accountAttackBonusPct / 100) + compositionMagicAttackBonus
+  attackMidpoint = physicalSubtotal * (1 + drakeBonusPct / 100) + magicSubtotal * (1 + emberBonusPct / 100)
   // Same White/Green/Red/Black level-diff EXP multiplier applied to both
   // kill EXP and damage-dealt EXP below (see EXP_MULTIPLIER_BY_COLOR/
   // getLevelDiffColor), precomputed once here.

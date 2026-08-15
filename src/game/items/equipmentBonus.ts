@@ -5,7 +5,7 @@ import type { ItemInstance } from './useInventoryStore'
 import type { ItemTemplate } from './useItemTemplatesStore'
 import { EQUIP_SLOTS, type EquipSlot } from './useEquipmentStore'
 import { damageRangeFromMidpoint } from '../combat/combatResolver'
-import { describeSocketedGem, SOCKETED_GEM_COLOR } from './gemCatalog'
+import { describeSocketedGem, SOCKETED_GEM_COLOR, sumSocketedGemBonusPct } from './gemCatalog'
 
 // Plain white, used for a handful of gear tooltip lines that should read as
 // neutral/informational rather than tinted (Lvl, Class, the "Sockets"
@@ -137,7 +137,10 @@ export function computeEquipmentBonus(
     magicDefense: 0,
     dodge: 0,
     dexterity: 0,
-    compositionAttackBonus: 0,
+    compositionPhysicalAttackBonus: 0,
+    compositionMagicAttackBonus: 0,
+    drakeBonusPct: 0,
+    emberBonusPct: 0,
     enchantHpBonus: 0,
     blessDamageReductionPct: 0,
   }
@@ -166,20 +169,33 @@ export function computeEquipmentBonus(
     bonus.dodge += scaledStat(template.base_stats, 'dodge', item.quality_tier) ?? 0
     bonus.dexterity += scaledStat(template.base_stats, 'dexterity', item.quality_tier) ?? 0
 
-    // Physical/magic attack composition bonus is tracked separately
-    // (compositionAttackBonus) rather than folded into bonus.physicalAttack/
-    // magicAttack — those two feed attackMidpoint, which the account-wide
-    // attack bonus % then multiplies (see useCombatStore.runTick); the
-    // composition bonus must not be swept into that multiplication (per the
-    // user's "not included in any other scaling"), so it's added back in
-    // unscaled afterward instead. physicalDefense/magicDefense/dodge have no
-    // equivalent account-wide multiplier, so their composition bonus is
-    // folded straight in.
+    // Physical/magic attack composition bonus is tracked separately per type
+    // (compositionPhysicalAttackBonus/compositionMagicAttackBonus) rather
+    // than folded into bonus.physicalAttack/magicAttack — those two feed
+    // attackMidpoint, which the account-wide attack bonus % then multiplies
+    // (see useCombatStore.runTick); the composition bonus must not be swept
+    // into that multiplication (per the user's "not included in any other
+    // scaling"), so it's added back in unscaled afterward instead. Kept
+    // split by type (not merged into one blob, 2026-08-26) so Drake/Ember's
+    // own gem bonus % below can apply to the right one — physicalDefense/
+    // magicDefense/dodge have no equivalent account-wide multiplier, so
+    // their composition bonus is folded straight in.
     const composition = computeCompositionBonusStats(template.base_stats, template.slot_type, item.composition_level)
-    bonus.compositionAttackBonus += (composition.physical_attack ?? 0) + (composition.magic_attack ?? 0)
+    bonus.compositionPhysicalAttackBonus += composition.physical_attack ?? 0
+    bonus.compositionMagicAttackBonus += composition.magic_attack ?? 0
     bonus.physicalDefense += composition.physical_defense ?? 0
     bonus.magicDefense += composition.magic_defense ?? 0
     bonus.dodge += composition.dodge ?? 0
+
+    // Socketed gem bonuses (2026-08-26, requested by the user — previously
+    // wired into tooltips only, never any real combat math). Summed across
+    // every equipped item's own sockets, additively per gem type — see
+    // useCombatStore.runTick for where these actually multiply into
+    // attackMidpoint (after quality tier and composition, per the user's
+    // explicit ordering). Bastion (Damage Reduction) and Iris (EXP) aren't
+    // summed here — no code path consumes them yet, unlike Drake/Ember.
+    bonus.drakeBonusPct += sumSocketedGemBonusPct(item.sockets, 'drake')
+    bonus.emberBonusPct += sumSocketedGemBonusPct(item.sockets, 'ember')
   }
 
   return bonus

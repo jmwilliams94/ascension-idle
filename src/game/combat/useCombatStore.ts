@@ -235,9 +235,15 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     const accountDropMultiplier = 1 + zoneDropBonusPct / 100
     // Composition attack bonus is added in unscaled, after the account-wide
     // attack bonus % — it must not compound with that multiplier (see
-    // derivedStats.ts's compositionAttackBonus comment).
+    // derivedStats.ts's compositionPhysicalAttackBonus/compositionMagicAttackBonus
+    // comment). Split by type (2026-08-26) so Drake/Ember's own socketed gem
+    // bonus % can apply last, to the right type, after quality tier and
+    // composition are both already folded in — per the user's explicit
+    // ordering request.
+    const physicalSubtotal = derived.physicalAttack * (1 + accountAttackBonusPct / 100) + derived.compositionPhysicalAttackBonus
+    const magicSubtotal = derived.magicAttack * (1 + accountAttackBonusPct / 100) + derived.compositionMagicAttackBonus
     const attackMidpoint =
-      (derived.physicalAttack + derived.magicAttack) * (1 + accountAttackBonusPct / 100) + derived.compositionAttackBonus
+      physicalSubtotal * (1 + derived.drakeBonusPct / 100) + magicSubtotal * (1 + derived.emberBonusPct / 100)
 
     // Lazy-init the player's HP the first time combat ever ticks (0/0 sentinel —
     // see the CombatState field comments) rather than resetting it on every

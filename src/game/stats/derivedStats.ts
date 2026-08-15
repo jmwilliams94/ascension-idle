@@ -46,14 +46,24 @@ export interface DerivedStats {
   // stat, both still fed by the same Agility attribute but gear-boosted
   // independently by different slot types. PLACEHOLDER weighting.
   dexterity: number
-  // Composition ("+N") bonus to physical+magic attack combined — deliberately
-  // kept out of `physicalAttack`/`magicAttack` above and surfaced separately
-  // so callers computing attackMidpoint can add it in *after* applying the
-  // account-wide attack bonus %, not before (see equipmentBonus.ts's
-  // computeEquipmentBonus and useCombatStore.runTick). Composition's
-  // defense/dodge bonus has no equivalent account-wide multiplier, so it's
-  // already folded into physicalDefense/magicDefense/dodge above.
-  compositionAttackBonus: number
+  // Composition ("+N") bonus to physical/magic attack, kept split by type
+  // (2026-08-26 — was one merged compositionAttackBonus field until Drake/
+  // Ember gem bonuses needed to apply to their own type specifically) and
+  // out of `physicalAttack`/`magicAttack` above, so callers computing
+  // attackMidpoint can add each in *after* applying the account-wide attack
+  // bonus %, not before (see equipmentBonus.ts's computeEquipmentBonus and
+  // useCombatStore.runTick). Composition's defense/dodge bonus has no
+  // equivalent account-wide multiplier, so it's already folded into
+  // physicalDefense/magicDefense/dodge above.
+  compositionPhysicalAttackBonus: number
+  compositionMagicAttackBonus: number
+  // Socketed Drake/Ember gem bonus %, summed across every equipped item's
+  // sockets (2026-08-26, requested by the user — see gemCatalog.ts's
+  // sumSocketedGemBonusPct). Applied as the final multiplier on physical/
+  // magic attack respectively, after quality tier and composition are both
+  // already folded in — see useCombatStore.runTick's attackMidpoint calc.
+  drakeBonusPct: number
+  emberBonusPct: number
   // Enchantress "Bless" tab (2026-08-13, see gemCatalog.ts's BLESS_PCT_STEPS)
   // — flat % reduction applied to incoming monster damage, summed across
   // every equipped item's own blessPct (each individually capped at
@@ -72,7 +82,10 @@ export interface EquipmentBonus {
   magicDefense?: number
   dodge?: number
   dexterity?: number
-  compositionAttackBonus?: number
+  compositionPhysicalAttackBonus?: number
+  compositionMagicAttackBonus?: number
+  drakeBonusPct?: number
+  emberBonusPct?: number
   // Enchantress HP bonus (see gemCatalog.ts's ENCHANT_HP_RANGE_BY_TIER,
   // item_instances.enchant) — summed flat across every equipped item, added
   // straight onto hp below same as the attribute-derived base, not scaled by
@@ -111,7 +124,10 @@ export function computeDerivedStats(attributes: Attributes, equipmentBonus: Equi
     magicDefense,
     dodge,
     dexterity,
-    compositionAttackBonus: equipmentBonus.compositionAttackBonus ?? 0,
+    compositionPhysicalAttackBonus: equipmentBonus.compositionPhysicalAttackBonus ?? 0,
+    compositionMagicAttackBonus: equipmentBonus.compositionMagicAttackBonus ?? 0,
+    drakeBonusPct: equipmentBonus.drakeBonusPct ?? 0,
+    emberBonusPct: equipmentBonus.emberBonusPct ?? 0,
     damageReductionPct: equipmentBonus.blessDamageReductionPct ?? 0,
   }
 }
