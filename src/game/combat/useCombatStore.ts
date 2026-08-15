@@ -8,6 +8,7 @@ import { useInventoryStore } from '../items/useInventoryStore'
 import { useItemTemplatesStore } from '../items/useItemTemplatesStore'
 import { useNoQuiverWarningStore } from '../items/useNoQuiverWarningStore'
 import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
+import { getActiveGoldDonationEvent, useGoldDonationStore } from '../goldDonation/useGoldDonationStore'
 import { ENEMY_TYPES, zoneIdForMonster, type EnemyTypeId } from '../zones/zoneData'
 import {
   MONSTER_ATTACK_INTERVAL_MS,
@@ -233,6 +234,18 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     const accountAttackBonusPct = currentZoneId ? (accountZoneAttackBonusPct[currentZoneId] ?? 0) : 0
     const zoneDropBonusPct = currentZoneId ? (accountZoneDropBonusPct[currentZoneId] ?? 0) : 0
     const accountDropMultiplier = 1 + zoneDropBonusPct / 100
+    // Gold Donation Event's active buff (2026-08-29, see
+    // CLAUDE.server-events.md) — PREDICTIVE ONLY like the rest of this
+    // block, mirrors resolve-combat/index.ts's own eventExpMultiplier/
+    // eventCometMultiplier/eventFallenStarMultiplier derivation exactly.
+    // 'quality_tier' has no client mirror (see combatResolver.ts's own
+    // note — this predictive path never rolls quality tier at all), so
+    // there's no equivalent multiplier to derive here for that category.
+    const activeGoldDonationEvent = getActiveGoldDonationEvent(useGoldDonationStore.getState().pool, nowMs)
+    const eventExpMultiplier = activeGoldDonationEvent?.category === 'exp' ? activeGoldDonationEvent.multiplier : 1
+    const eventCometMultiplier = activeGoldDonationEvent?.category === 'comet' ? activeGoldDonationEvent.multiplier : 1
+    const eventFallenStarMultiplier =
+      activeGoldDonationEvent?.category === 'fallen_star' ? activeGoldDonationEvent.multiplier : 1
     // Composition attack bonus is added in unscaled, after the account-wide
     // attack bonus % — it must not compound with that multiplier (see
     // derivedStats.ts's compositionPhysicalAttackBonus/compositionMagicAttackBonus
@@ -356,7 +369,14 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     // The visual layer below (rollAttackLands, the damage roll, "Miss" text,
     // kill events) is completely unchanged — purely cosmetic now.
     const expMultiplier = expMultiplierForLevelDiff(characterLevel, type.level)
-    const perAttack = expectedRewardPerAttack(attackMidpoint, derived.dexterity, type, characterLevel, derived.irisBonusPct)
+    const perAttack = expectedRewardPerAttack(
+      attackMidpoint,
+      derived.dexterity,
+      type,
+      characterLevel,
+      derived.irisBonusPct,
+      eventExpMultiplier,
+    )
     useProgressionStore.getState().addPredictedRewards(perAttack.gold, perAttack.exp)
 
     // Outgoing hit-chance roll (2026-08-02, confirmed design) — the reverse of
@@ -417,7 +437,10 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         }))
       }
 
-      const bonusCurrency = rollBonusCurrencyDrops(accountDropMultiplier)
+      const bonusCurrency = rollBonusCurrencyDrops(
+        accountDropMultiplier * eventCometMultiplier,
+        accountDropMultiplier * eventFallenStarMultiplier,
+      )
       if (bonusCurrency.comets > 0 || bonusCurrency.fallenStars > 0) {
         const parts = [
           bonusCurrency.comets > 0 ? `+${bonusCurrency.comets} Comet` : null,

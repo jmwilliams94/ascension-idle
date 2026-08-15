@@ -449,12 +449,15 @@ function resolvePhysicalDamage(attack: number, defense: number): number {
   return Math.max(mitigated, floor, 1)
 }
 
-// dropMultiplier — the account-wide claimed drop-bonus buff (see
-// accountDropMultiplier above), applied to both flat base chances alike.
-function rollBonusCurrencyDrops(dropMultiplier: number) {
+// cometMultiplier/fallenStarMultiplier — each combines the account-wide
+// claimed drop-bonus buff (accountDropMultiplier above) with the Gold
+// Donation Event's buff when it's active for that specific category (split
+// into two params, 2026-08-29, so the event can boost one of these two
+// independently instead of always moving both together).
+function rollBonusCurrencyDrops(cometMultiplier: number, fallenStarMultiplier: number) {
   return {
-    comets: Math.random() < COMET_DROP_CHANCE * dropMultiplier ? 1 : 0,
-    fallenStars: Math.random() < FALLEN_STAR_DROP_CHANCE * dropMultiplier ? 1 : 0,
+    comets: Math.random() < COMET_DROP_CHANCE * cometMultiplier ? 1 : 0,
+    fallenStars: Math.random() < FALLEN_STAR_DROP_CHANCE * fallenStarMultiplier ? 1 : 0,
   }
 }
 
@@ -673,6 +676,9 @@ interface GatherStateResult {
     account_zone_attack_bonus_pct: Record<string, number> | null
     account_zone_drop_bonus_pct: Record<string, number> | null
   } | null
+  // Gold Donation Event's active buff, if any (see CLAUDE.server-events.md)
+  // — 'socket_unlock' is handled separately, in the Forge RPCs, never here.
+  active_event?: { category: string; multiplier: number } | null
 }
 
 interface GrantedItemRow {
@@ -1008,6 +1014,14 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const accountAttackBonusPct = gathered.player?.account_zone_attack_bonus_pct?.[zoneKey] ?? 0
   const zoneDropBonusPct = gathered.player?.account_zone_drop_bonus_pct?.[zoneKey] ?? 0
   const accountDropMultiplier = 1 + zoneDropBonusPct / 100
+  // Gold Donation Event's active buff (see CLAUDE.server-events.md) — exactly
+  // one of these is > 1 at a time, matching whichever category the event
+  // rolled ('socket_unlock' is handled in the Forge RPCs, never applies here).
+  const activeEvent = gathered.active_event ?? null
+  const eventExpMultiplier = activeEvent?.category === 'exp' ? activeEvent.multiplier : 1
+  const eventCometMultiplier = activeEvent?.category === 'comet' ? activeEvent.multiplier : 1
+  const eventFallenStarMultiplier = activeEvent?.category === 'fallen_star' ? activeEvent.multiplier : 1
+  const eventQualityMultiplier = activeEvent?.category === 'quality_tier' ? activeEvent.multiplier : 1
   // Split by type, composition added in unscaled after the account-wide
   // multiplier (see compositionPhysicalAttackBonus's declaration above), then
   // Drake/Ember's own socketed gem bonus % applied last, per the user's
@@ -1155,8 +1169,8 @@ async function handleResolveCombat(req: Request): Promise<Response> {
             // receiving it below.
             const withQuality = {
               ...dropped,
-              qualityTier: rollDroppedQualityTier(accountDropMultiplier),
-              compositionLevel: rollDroppedCompositionLevel(accountDropMultiplier),
+              qualityTier: rollDroppedQualityTier(accountDropMultiplier * eventQualityMultiplier),
+              compositionLevel: rollDroppedCompositionLevel(accountDropMultiplier * eventQualityMultiplier),
             }
             if (mode === 'live') {
               if (projectedOccupied < INVENTORY_SLOT_CAP) {
@@ -1171,7 +1185,10 @@ async function handleResolveCombat(req: Request): Promise<Response> {
           }
         }
 
-        const bonusCurrency = rollBonusCurrencyDrops(accountDropMultiplier)
+        const bonusCurrency = rollBonusCurrencyDrops(
+          accountDropMultiplier * eventCometMultiplier,
+          accountDropMultiplier * eventFallenStarMultiplier,
+        )
         if (mode === 'live') {
           if (bonusCurrency.comets > 0) {
             if (projectedOccupied < INVENTORY_SLOT_CAP) {
@@ -1229,7 +1246,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       RARE_BLENDED_DAMAGE_EXP_FACTOR
     // Iris gem bonus % applied last, after every other EXP multiplier —
     // mirrors combatResolver.ts's expectedRewardPerAttack exactly.
-    expGained += Math.round((killExp + damageExp) * (1 + irisBonusPct / 100))
+    expGained += Math.round((killExp + damageExp) * (1 + irisBonusPct / 100) * eventExpMultiplier)
     // Feeds resolve_combat_apply_results as a fractional delta — see the
     // migration widening character_monster_kills/account_monster_kills.kills
     // to numeric, and this same value's use in the zone-tier layer below.

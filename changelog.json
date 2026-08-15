@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.94.1",
+    "date": "2026-08-15",
+    "changes": [
+      "More groundwork for the Gold Donation server event (still not playable) — combat rewards are now ready to be boosted by its buff once it goes live"
+    ]
+  },
+  {
     "version": "1.94.0",
     "date": "2026-08-15",
     "changes": [

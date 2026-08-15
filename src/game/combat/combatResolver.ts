@@ -126,16 +126,18 @@ export function killRewards(type: EnemyTypeDef, isRare: boolean, expMultiplier: 
 export const COMET_DROP_CHANCE = 1 / 500
 export const FALLEN_STAR_DROP_CHANCE = 1 / 20000
 
-// dropMultiplier (2026-08-06, Achievements rework; made per-zone 2026-08-07)
-// — the account-wide Achievements drop-bonus buff (players.
-// account_zone_drop_bonus_pct, scoped to whichever zone the fought monster
-// belongs to — see resolve-combat's own accountDropMultiplier), applied
-// identically to both flat base chances here. Defaults to 1 (no bonus) for
-// any caller that doesn't have it handy.
-export function rollBonusCurrencyDrops(dropMultiplier = 1): { comets: number; fallenStars: number } {
+// cometMultiplier/fallenStarMultiplier (2026-08-06, Achievements rework;
+// made per-zone 2026-08-07; split into two independent params 2026-08-29 for
+// the Gold Donation Event's buff, which can boost only one of these two —
+// see resolve-combat/index.ts's own copy) — each combines the account-wide
+// Achievements drop-bonus buff (players.account_zone_drop_bonus_pct, scoped
+// to whichever zone the fought monster belongs to) with the event's buff
+// when active for that category. Default to 1 (no bonus) for any caller that
+// doesn't have them handy.
+export function rollBonusCurrencyDrops(cometMultiplier = 1, fallenStarMultiplier = 1): { comets: number; fallenStars: number } {
   return {
-    comets: Math.random() < COMET_DROP_CHANCE * dropMultiplier ? 1 : 0,
-    fallenStars: Math.random() < FALLEN_STAR_DROP_CHANCE * dropMultiplier ? 1 : 0,
+    comets: Math.random() < COMET_DROP_CHANCE * cometMultiplier ? 1 : 0,
+    fallenStars: Math.random() < FALLEN_STAR_DROP_CHANCE * fallenStarMultiplier ? 1 : 0,
   }
 }
 
@@ -343,6 +345,10 @@ export function expectedRewardPerAttack(
   // after every other EXP multiplier (level-diff, rare-blend) — mirrors
   // resolve-combat/index.ts's own copy exactly.
   irisBonusPct = 0,
+  // Gold Donation Event's active buff multiplier, only when its category is
+  // 'exp' (2026-08-29) — 1 (no effect) otherwise. Mirrors resolve-combat/
+  // index.ts's own eventExpMultiplier.
+  eventExpMultiplier = 1,
 ): ExpectedRewardPerAttack {
   const hitChance =
     1 - Math.min(Math.max(0, monsterDodge(type) - playerDexterity) * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
@@ -364,5 +370,5 @@ export function expectedRewardPerAttack(
   const damageExp =
     expectedDamage * ((expRewardForLevel(type.level) * DAMAGE_EXP_SHARE) / type.maxHp) * expMultiplier * RARE_BLENDED_DAMAGE_EXP_FACTOR
 
-  return { gold, exp: (killExp + damageExp) * (1 + irisBonusPct / 100) }
+  return { gold, exp: (killExp + damageExp) * (1 + irisBonusPct / 100) * eventExpMultiplier }
 }
