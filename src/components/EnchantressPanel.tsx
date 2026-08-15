@@ -94,6 +94,7 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
   const [stagedGem, setStagedGem] = useState<StagedGem | null>(null)
   const [rolling, setRolling] = useState(false)
   const [rollDisplay, setRollDisplay] = useState<number | null>(null)
+  const [frozenCurrentEnchantHp, setFrozenCurrentEnchantHp] = useState<number | null>(null)
   const [resultMessage, setResultMessage] = useState<{ rolled: number; applied: boolean } | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const cycleIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -111,7 +112,10 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
 
   const selectedItem = items.find((item) => item.id === selectedItemId) ?? null
   const selectedTemplate = selectedItem ? (templates.find((t) => t.id === selectedItem.template_id) ?? null) : null
-  const currentEnchantHp = selectedItem?.enchant?.hp ?? 0
+  // While the roll animation is playing, the RPC may already have written the new
+  // value into the inventory store — freeze the displayed "current" HP at whatever
+  // it was when the roll started so it doesn't reveal the result early.
+  const currentEnchantHp = rolling && frozenCurrentEnchantHp !== null ? frozenCurrentEnchantHp : (selectedItem?.enchant?.hp ?? 0)
   const currentBlessPct = selectedItem?.enchant?.blessPct ?? 0
   const isBlessMaxed = currentBlessPct >= BLESS_MAX_PCT
 
@@ -239,6 +243,7 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
     setRolling(true)
     setResultMessage(null)
     setErrorMessage(null)
+    setFrozenCurrentEnchantHp(selectedItem.enchant?.hp ?? 0)
 
     const range = ENCHANT_HP_RANGE_BY_TIER[stagedGem.tier]
     cycleIntervalRef.current = setInterval(() => {

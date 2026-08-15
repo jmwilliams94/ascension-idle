@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.95.3",
+    "date": "2026-08-16",
+    "changes": [
+      "Fixed the Enchantress's Current Enchanted HP briefly showing the new roll before its cycling animation finished"
+    ]
+  },
+  {
     "version": "1.95.2",
     "date": "2026-08-16",
     "changes": [
