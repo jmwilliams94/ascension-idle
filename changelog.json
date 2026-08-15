@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.94.0",
+    "date": "2026-08-15",
+    "changes": [
+      "Laid the groundwork for a new Gold Donation server event (not yet playable) — a shared donation pool that will unlock a random temporary buff once enough Gold is pitched in"
+    ]
+  },
+  {
     "version": "1.93.7",
     "date": "2026-08-15",
     "changes": [
