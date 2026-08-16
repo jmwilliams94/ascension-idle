@@ -57,7 +57,7 @@ const RIGHT_ITEMS: { id: TabId; label: string }[] = [{ id: 'achievements', label
 // going with"), scaled down to this bar's compact size.
 // outerCorner (2026-08-16, requested by the user) — Equip/Achiev. are the
 // bar's two physical end buttons, so their one true outer-bottom corner gets
-// a radius matching the nav's own rounded-b-[2.5rem] (see MobileBottomNav's
+// a radius matching the nav's own rounded-b-[3rem] (see MobileBottomNav's
 // className comment below) instead of the shared rounded-lg. Written as four
 // explicit longhand corners rather than mixing the `rounded-lg` shorthand
 // with a longhand override — both compile to the same border-radius
@@ -87,9 +87,9 @@ function NavButton({
   const icon = TAB_ICONS[id]
   const cornerClass =
     outerCorner === 'bl'
-      ? 'rounded-tl-lg rounded-tr-lg rounded-br-lg rounded-bl-[2.5rem]'
+      ? 'rounded-tl-lg rounded-tr-lg rounded-br-lg rounded-bl-[3rem]'
       : outerCorner === 'br'
-        ? 'rounded-tl-lg rounded-tr-lg rounded-bl-lg rounded-br-[2.5rem]'
+        ? 'rounded-tl-lg rounded-tr-lg rounded-bl-lg rounded-br-[3rem]'
         : 'rounded-lg'
 
   return (
@@ -282,7 +282,7 @@ export default function MobileBottomNav() {
 
   return (
     <nav
-      className="ascension-edge-t fixed inset-x-0 bottom-0 z-40 rounded-b-[2.5rem] bg-[linear-gradient(180deg,_var(--ascension-ink-soft)_0%,_var(--ascension-ink)_100%)] lg:hidden"
+      className="ascension-edge-t fixed inset-x-0 bottom-0 z-40 rounded-b-[3rem] bg-[linear-gradient(180deg,_var(--ascension-ink-soft)_0%,_var(--ascension-ink)_100%)] lg:hidden"
       // translateZ(0) (2026-08-19, reported by the user: nav bar drifting
       // upward with the page mid-scroll on mobile) forces this onto its own
       // GPU compositing layer up front -- kept even after the 2026-08-14
@@ -295,7 +295,7 @@ export default function MobileBottomNav() {
       // bar should "contour" to the phone's rounded bottom corners) —
       // border-radius clips this element's own background on its own,
       // without needing overflow-hidden. Equip/Achiev. carry a matching
-      // rounded-b-[2.5rem] on their own one true outer corner (see
+      // rounded-b-[3rem] on their own one true outer corner (see
       // NavButton's `outerCorner` prop) so the curve reads as continuous.
       // overflow-hidden was here originally too, to clip those buttons
       // flush to this same mask before they got their own outerCorner

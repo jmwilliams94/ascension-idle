@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.96.15",
+    "date": "2026-08-16",
+    "changes": [
+      "Deepened the bottom-outer corner curve on Equip and Achiev. once more, from 2.5rem to 3rem"
+    ]
+  },
+  {
     "version": "1.96.14",
     "date": "2026-08-16",
     "changes": [
