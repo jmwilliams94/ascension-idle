@@ -274,6 +274,11 @@ function computeMaxDurability(slotType: string, requiredLevel: number): number |
 // affordability at low levels.
 const DURABILITY_TARGET_HOURS_TO_EMPTY_MS = 18 * 60 * 60 * 1000
 
+// Monster respawn gap (2026-08-17, requested by the user) — mirrors
+// useCombatStore.ts's own RESPAWN_GAP_MS, must stay in sync. PLACEHOLDER
+// duration, same disclosed-not-final status as the rest of this economy.
+const RESPAWN_GAP_MS = 2_000
+
 // Mirrors src/game/combat/combatResolver.ts
 const RARE_CHANCE = 0.05
 const RARE_HP_MULTIPLIER = 2
@@ -1076,33 +1081,51 @@ async function handleResolveCombat(req: Request): Promise<Response> {
 
   if (totalAttacks > 0) {
     // Deterministic expected-value reward math (2026-08-11 rewrite, see
-    // CLAUDE.md's Combat section) — replaces the old per-attack RNG
-    // simulation (roll hit/miss, roll damage-in-range, roll "is this kill
-    // rare" per spawn) with closed-form math computed once for the whole
-    // window. This is what makes the client's own prediction (see
-    // combatResolver.ts's mirrored functions) match this server-confirmed
-    // result almost exactly — two independent RNG simulations of the same
-    // window can disagree by a kill or two, but two evaluations of the same
-    // formula over the same elapsed time cannot.
+    // CLAUDE.md's Combat section) — closed-form math computed once for the
+    // whole window rather than per-attack RNG simulation. This is what
+    // makes the client's own prediction (see combatResolver.ts's mirrored
+    // functions) match this server-confirmed result almost exactly — two
+    // independent RNG simulations of the same window can disagree by a
+    // kill or two, but two evaluations of the same formula over the same
+    // elapsed time cannot.
+    //
+    // Cycle-time model (2026-08-17, requested by the user, replaces the old
+    // continuous-fighting formula) — a monster respawn gap (RESPAWN_GAP_MS,
+    // mirrored in useCombatStore.ts) now sits between a kill and the next
+    // monster appearing, which the old "totalAttacks * hitChance *
+    // expectedDamagePerHit, capped at one monster's worth of HP per attack"
+    // formula can't express (it implicitly assumes 100% of elapsed time is
+    // spent attacking). Rather than rewriting this into a discrete-event
+    // walk (like Row Combat's resolve-row-combat needed for its genuinely
+    // different per-attack targets), a single monster with a FIXED gap
+    // reduces to simple cycle-time math: time to whittle down one
+    // (blended-rare) effective HP pool at this character's DPS, plus the
+    // fixed gap, is one full "kill cycle" — how many of those fit in the
+    // elapsed window is the kill count. No per-attack overkill cap is
+    // needed anymore either (the old bug this fixed — a level-100+
+    // character idling a level-1 monster racking up 12,493 "kills" — can't
+    // recur here, since kills are now bounded by wall-clock cycle time, not
+    // by raw damage output divided by HP).
     const hitChance =
       1 - Math.min(Math.max(0, monsterDodge(monster) - derived.dexterity) * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
     const expectedDamagePerHit = resolvePhysicalDamage(attackMidpoint, monsterDefense(monster, character.level))
-    // Overkill cap (bug fixed 2026-08-09, reported by the user — a level-100+
-    // character idling a level-1 monster for 19 minutes came back to 12,493
-    // "kills"). One landed attack can only ever finish off the single monster
-    // in front of it — any damage past that monster's max_hp is wasted, not
-    // carried into the next spawn — but the uncapped formula divided total
-    // raw damage output by monster.max_hp, so overwhelming per-hit damage
-    // against a trivial monster inflated kills (and therefore gold/EXP/drop
-    // rolls) far past what totalAttacks could physically produce. Capping the
-    // *damage* input (rather than kills directly) keeps creditedDamage/
-    // damageExp below in the same proportion, instead of needing a second,
-    // separate cap. Mirrored in combatResolver.ts's expectedRewardPerAttack
-    // (its own per-single-attack version of the same cap) — keep in sync.
-    const rawExpectedDamage = totalAttacks * hitChance * expectedDamagePerHit
-    const maxUsefulDamage = totalAttacks * hitChance * monster.max_hp * RARE_BLENDED_HP_FACTOR
-    const totalExpectedDamage = Math.min(rawExpectedDamage, maxUsefulDamage)
-    const expectedKillsThisWindow = totalExpectedDamage / (monster.max_hp * RARE_BLENDED_HP_FACTOR)
+    const effectiveHp = monster.max_hp * RARE_BLENDED_HP_FACTOR
+    // Damage per millisecond, continuous rate — hitChance is always >= 0.5
+    // (MAX_DODGE_CHANCE caps dodge at 50%) and expectedDamagePerHit is
+    // always >= 1 (resolvePhysicalDamage's own floor), so this can never be
+    // zero/undefined.
+    const dps = (hitChance * expectedDamagePerHit) / attackIntervalMs
+    const timeToKillMs = effectiveHp / dps
+    const cycleTimeMs = timeToKillMs + RESPAWN_GAP_MS
+    const expectedKillsThisWindow = elapsedMs / cycleTimeMs
+    // Effective damage dealt this window, respecting the gap — feeds
+    // damageExp below (DAMAGE_EXP_SHARE credits partial progress toward a
+    // not-yet-dead monster, same as before, just no longer creditable
+    // while sitting in the post-kill gap with nothing to hit).
+    const wholeKillsThisWindowLocal = Math.floor(expectedKillsThisWindow)
+    const remainderMs = elapsedMs - wholeKillsThisWindowLocal * cycleTimeMs
+    const activeRemainderMs = Math.max(0, remainderMs - RESPAWN_GAP_MS)
+    const totalExpectedDamage = wholeKillsThisWindowLocal * effectiveHp + activeRemainderMs * dps
 
     // How many WHOLE kills this window actually crosses, combining the
     // fractional running total already on the row (characterKillsBefore,

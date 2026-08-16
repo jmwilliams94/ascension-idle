@@ -140,15 +140,22 @@ function MultiShotButton({ characterId }: { characterId: string }) {
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
   const multiShotReadyAt = useRowCombatStore((state) => state.multiShotReadyAt)
   const anyEnabled = useRowCombatStore((state) => state.slots.some((s) => s.enabled))
+  const row1Unlocked = useRowCombatStore((state) => state.row1Unlocked)
+  const row2Unlocked = useRowCombatStore((state) => state.row2Unlocked)
   const [now, setNow] = useState(() => Date.now())
 
-  if (selectedClassId !== 'hunter' || !anyEnabled) return null
+  // Shown (disabled, not hidden) as soon as a Hunter has unlocked either
+  // row — hiding it entirely whenever no slot happens to be active made it
+  // easy to miss the feature exists at all (reported by the user, 2026-08-17:
+  // toggled a slot on/off in quick succession and never spotted the button).
+  if (selectedClassId !== 'hunter' || (!row1Unlocked && !row2Unlocked)) return null
 
   const onCooldown = now < multiShotReadyAt
   const secondsLeft = Math.ceil((multiShotReadyAt - now) / 1000)
+  const disabled = onCooldown || !anyEnabled
 
   const handleFire = async () => {
-    if (onCooldown) return
+    if (disabled) return
     useRowCombatStore.getState().fireMultiShotOptimistic(Date.now())
     setNow(Date.now())
     await resolveRowCombat(characterId, { fireMultiShot: true })
@@ -157,7 +164,8 @@ function MultiShotButton({ characterId }: { characterId: string }) {
   return (
     <Button
       variant="primary"
-      disabled={onCooldown}
+      disabled={disabled}
+      title={!anyEnabled ? 'Enable a row slot first' : undefined}
       onClick={() => {
         void handleFire()
         // Keep the countdown label live while on cooldown.

@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.98.1",
+    "date": "2026-08-17",
+    "changes": [
+      "Added a short respawn pause after defeating a monster in normal combat, instead of the next one appearing instantly",
+      "Fixed the Multi-Shot button being hidden instead of just greyed out when no row slot is active"
+    ]
+  },
+  {
     "version": "1.98.0",
     "date": "2026-08-17",
     "changes": [

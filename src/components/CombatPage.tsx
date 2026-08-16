@@ -69,6 +69,20 @@ function hexColor(value: number): string {
 // How long a floating damage number stays visible after its log entry lands.
 const FLOATING_NUMBER_LIFETIME_MS = 800
 
+// Shown in place of the monster portrait/HP during useCombatStore's
+// respawn gap (see RESPAWN_GAP_MS) — same h-32 footprint as the portrait it
+// replaces, so the card doesn't visibly resize between states.
+function RespawnBanner({ seconds }: { seconds: number }) {
+  return (
+    <div className="flex h-32 items-center gap-4">
+      <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-2xl border-2 border-dashed border-slate-800 bg-slate-950/60 text-slate-600">
+        <span className="text-xs">Respawning</span>
+      </div>
+      <p className="text-sm text-slate-500">Next enemy in {seconds}s...</p>
+    </div>
+  )
+}
+
 // Exported — also reused by WorldBossCard.tsx for the boss's own HP bar.
 export function HpBar({ current, max, barColorClass = 'bg-emerald-500' }: { current: number; max: number; barColorClass?: string }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0
@@ -152,6 +166,7 @@ export default function CombatPage() {
   const currentPlayerHp = useCombatStore((state) => state.currentPlayerHp)
   const maxPlayerHp = useCombatStore((state) => state.maxPlayerHp)
   const isRareInstance = useCombatStore((state) => state.isRareInstance)
+  const respawnReadyAt = useCombatStore((state) => state.respawnReadyAt)
   const log = useCombatStore((state) => state.log)
   const start = useCombatStore((state) => state.start)
   const stop = useCombatStore((state) => state.stop)
@@ -210,6 +225,10 @@ export default function CombatPage() {
 
   const activeType = monsterTypeId ? ENEMY_TYPES[monsterTypeId] : null
   const currentZone = ZONES[currentZoneId]
+  // Respawn gap (see useCombatStore's RESPAWN_GAP_MS) — `now` already ticks
+  // every 200ms for the floating-number lifetime check above, reused here
+  // rather than a second timer.
+  const respawnSecondsLeft = respawnReadyAt > 0 ? Math.max(0, Math.ceil((respawnReadyAt - now) / 1000)) : 0
 
   // "Best available" HP potion (confirmed with the user, 2026-07-31) — the
   // highest-tier owned stack with any left, so the strongest potion is
@@ -268,7 +287,10 @@ export default function CombatPage() {
           >
             {currentZone.backgroundUrl && <div className="absolute inset-0 bg-slate-950/60" />}
             <div className="relative">
-            <div className="flex items-center gap-4">
+            {respawnSecondsLeft > 0 ? (
+              <RespawnBanner seconds={respawnSecondsLeft} />
+            ) : (
+              <div className="flex items-center gap-4">
               <div className="relative h-32 w-32 shrink-0">
                 {activeType.portraitUrl ? (
                   <img
@@ -314,7 +336,8 @@ export default function CombatPage() {
                   <HpBar current={currentHp} max={maxHp} />
                 </div>
               </div>
-            </div>
+              </div>
+            )}
 
             {characterId && <RowCombatPanel characterId={characterId} />}
 
@@ -610,7 +633,10 @@ export default function CombatPage() {
           >
             {currentZone.backgroundUrl && <div className="absolute inset-0 bg-slate-950/60" />}
             <div className="relative">
-            <div className="flex items-center gap-4">
+            {respawnSecondsLeft > 0 ? (
+              <RespawnBanner seconds={respawnSecondsLeft} />
+            ) : (
+              <div className="flex items-center gap-4">
               <div className="relative h-40 w-40 shrink-0">
                 {activeType.portraitUrl ? (
                   <img
@@ -656,7 +682,8 @@ export default function CombatPage() {
                   <HpBar current={currentHp} max={maxHp} />
                 </div>
               </div>
-            </div>
+              </div>
+            )}
 
             {characterId && (
               <div className="max-w-xs">

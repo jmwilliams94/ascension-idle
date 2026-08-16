@@ -66,6 +66,16 @@ const LOG_CAP = 40
 // the rest of this combat system.
 const KNOCKOUT_LOCKOUT_MS = 10_000
 
+// Monster respawn gap (2026-08-17, requested by the user) — replaces the
+// original instant-respawn-on-kill behavior ("Monster respawns immediately
+// (no respawn timer) — fight continuously until selection changes"). At a
+// 1-attack/sec weapon, instant respawn made it look like more than one kill
+// could land per attack-interval tick once a monster's remaining HP got low
+// relative to hit damage. PLACEHOLDER duration, same disclosed-not-final
+// status as the rest of this combat system — mirrored in resolve-combat/
+// index.ts's own RESPAWN_GAP_MS, must stay in sync.
+export const RESPAWN_GAP_MS = 2_000
+
 function appendLog(log: CombatLogEntry[], entry: Omit<CombatLogEntry, 'id' | 'timestamp'>): CombatLogEntry[] {
   const full: CombatLogEntry = {
     ...entry,
@@ -100,6 +110,12 @@ interface CombatState {
   // resumes exactly where it was once the player revives (to full HP)
   // rather than the monster respawning fresh. 0 means "not incapacitated."
   reviveAt: number
+  // Monster respawn gap (see RESPAWN_GAP_MS) — 0 means a monster is present
+  // (or the fight hasn't started). Nonzero is the nowMs timestamp the next
+  // monster will appear; while waiting, currentHp/maxHp are 0 (nothing to
+  // show/attack) and runTick skips both the player's own attack and the
+  // monster's attack-back, same "neither side acts" shape reviveAt uses.
+  respawnReadyAt: number
   log: CombatLogEntry[]
   lastAttackAt: number
   lastMonsterAttackAt: number
@@ -161,6 +177,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
   currentPlayerHp: 0,
   maxPlayerHp: 0,
   reviveAt: 0,
+  respawnReadyAt: 0,
   log: [],
   lastAttackAt: 0,
   lastMonsterAttackAt: 0,
@@ -182,6 +199,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       // Clears any stale death-timer lockout from before a manual Stop —
       // starting a fresh fight should never inherit an old incapacitation.
       reviveAt: 0,
+      respawnReadyAt: 0,
       log: appendLog(state.log, {
         kind: 'engage',
         message: isRare ? `A rare ${type.displayName} appears!` : `You engage a ${type.displayName}.`,
@@ -198,6 +216,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       currentHp: 0,
       maxHp: 0,
       isRareInstance: false,
+      respawnReadyAt: 0,
       // currentPlayerHp/maxPlayerHp deliberately NOT reset here — the player's own
       // HP is continuous across zone/monster switches, not tied to a specific
       // fight the way the monster's own HP is.
@@ -223,6 +242,34 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         reviveAt: 0,
         currentPlayerHp: s.maxPlayerHp,
         log: appendLog(s.log, { kind: 'knockout', message: 'You revive and rejoin the fight!' }),
+      }))
+      return
+    }
+
+    // Monster respawn gap (see RESPAWN_GAP_MS/respawnReadyAt) — while
+    // waiting, neither side acts, same "nothing to fight" shape the
+    // knockout gate above uses. Once the gap elapses, spawn a fresh
+    // instance and let the *next* tick resume actual combat (same
+    // one-tick-for-the-transition pattern the revive branch above uses).
+    if (state.respawnReadyAt > 0) {
+      if (nowMs < state.respawnReadyAt) {
+        return
+      }
+      const respawnType = ENEMY_TYPES[state.monsterTypeId]
+      const nextIsRare = rollIsRare()
+      const nextHpValue = spawnMonsterHp(respawnType, nextIsRare)
+      set((s) => ({
+        respawnReadyAt: 0,
+        monsterInstanceKey: s.monsterInstanceKey + 1,
+        currentHp: nextHpValue,
+        maxHp: nextHpValue,
+        isRareInstance: nextIsRare,
+        log: appendLog(
+          s.log,
+          nextIsRare
+            ? { kind: 'engage', message: `A rare ${respawnType.displayName} appears!` }
+            : { kind: 'engage', message: `A new ${respawnType.displayName} appears.` },
+        ),
       }))
       return
     }
@@ -475,23 +522,14 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         }))
       }
 
-      // Respawn immediately — no fixed respawn timer like the old isometric scene's
-      // killEnemy(), since there's no spatial spawn point to wait for anymore.
-      const nextIsRare = rollIsRare()
-      const nextHpValue = spawnMonsterHp(type, nextIsRare)
-
-      set((s) => ({
-        monsterInstanceKey: s.monsterInstanceKey + 1,
-        currentHp: nextHpValue,
-        maxHp: nextHpValue,
-        isRareInstance: nextIsRare,
-        log: appendLog(
-          s.log,
-          nextIsRare
-            ? { kind: 'engage', message: `A rare ${type.displayName} appears!` }
-            : { kind: 'engage', message: `A new ${type.displayName} appears.` },
-        ),
-      }))
+      // Respawn gap (see RESPAWN_GAP_MS) — clears the monster (0/0 HP,
+      // nothing to show/attack) and starts the countdown; the actual next
+      // spawn happens in the respawnReadyAt branch above once it elapses.
+      set({
+        currentHp: 0,
+        maxHp: 0,
+        respawnReadyAt: nowMs + RESPAWN_GAP_MS,
+      })
     }
   },
 
