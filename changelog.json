@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.96.13",
+    "date": "2026-08-16",
+    "changes": [
+      "LuckyLad and Tavern (the two buttons flanking Idling) are now slightly smaller on the mobile nav",
+      "Equip and Achiev. now sit with a small gap from the phone's physical edges instead of flush against them"
+    ]
+  },
+  {
     "version": "1.96.12",
     "date": "2026-08-16",
     "changes": [

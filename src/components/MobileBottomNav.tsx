@@ -68,11 +68,18 @@ function NavButton({
   label,
   badge,
   outerCorner,
+  compact,
 }: {
   id: TabId
   label: string
   badge?: number
   outerCorner?: 'bl' | 'br'
+  // compact (2026-08-16, requested by the user) — LuckyLad/Tavern, the two
+  // buttons flanking Idling, should read slightly smaller than the edge
+  // buttons (Equip/Achiev). flex-[0.85] vs flex-1 on otherwise-identical
+  // siblings; the leftover width isn't wasted, it flows to whichever
+  // siblings keep flex-1 since they all share flex-basis 0.
+  compact?: boolean
 }) {
   const activeTab = useTabStore((state) => state.activeTab)
   const setActiveTab = useTabStore((state) => state.setActiveTab)
@@ -89,7 +96,7 @@ function NavButton({
     <button
       type="button"
       onClick={() => setActiveTab(id)}
-      className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-medium leading-tight ${cornerClass} ${
+      className={`relative flex ${compact ? 'flex-[0.85]' : 'flex-1'} flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-medium leading-tight ${cornerClass} ${
         active ? 'btn-gold-active' : 'btn-gold'
       }`}
     >
@@ -186,7 +193,10 @@ function TavernNavButton({ badges }: { badges: Partial<Record<TabId, number>> })
   }, [expanded])
 
   return (
-    <div data-tavern-rollup className="relative flex flex-1 flex-col items-center justify-center">
+    // flex-[0.85], not flex-1 (2026-08-16, requested by the user) — Tavern
+    // flanks Idling the same way LuckyLad does, see NavButton's `compact`
+    // doc comment for why it's sized down to match.
+    <div data-tavern-rollup className="relative flex flex-[0.85] flex-col items-center justify-center">
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -282,16 +292,17 @@ export default function MobileBottomNav() {
       // for a fixed-position bar either way.
       //
       // rounded-b + overflow-hidden (2026-08-16, requested by the user: bar
-      // should "contour" to the phone's rounded bottom corners) — the outer
-      // Equip/Achiev. buttons sit flush against the row's edges (no px on
-      // the inner row below) so this mask clips straight through their own
-      // square corners into the same arc, rather than hand-matching a
-      // border-radius to a device corner radius CSS can't actually read.
+      // should "contour" to the phone's rounded bottom corners) — Equip/
+      // Achiev. carry a matching rounded-b-[1.75rem] on their own one true
+      // outer corner (see NavButton's `outerCorner` prop), so this mask
+      // still reads as one continuous curve even though those buttons no
+      // longer sit flush against the row's edges (px-2 below, 2026-08-16,
+      // requested by the user, moves them off the phone's physical edge).
       style={{ paddingBottom: 'env(safe-area-inset-bottom)', transform: 'translateZ(0)' }}
     >
-      <div className="mx-auto flex max-w-md items-stretch gap-1 py-1">
+      <div className="mx-auto flex max-w-md items-stretch gap-1 px-2 py-1">
         {LEFT_ITEMS.map((item, index) => (
-          <NavButton key={item.id} {...item} outerCorner={index === 0 ? 'bl' : undefined} />
+          <NavButton key={item.id} {...item} outerCorner={index === 0 ? 'bl' : undefined} compact={item.id === 'lucky'} />
         ))}
         <IdlingNavButton />
         <TavernNavButton badges={{ marketplace: mailBadge }} />
