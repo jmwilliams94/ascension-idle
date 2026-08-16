@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.96.9",
+    "date": "2026-08-16",
+    "changes": [
+      "Fixed the mobile bottom nav's Tavern button rendering shorter than the other four buttons"
+    ]
+  },
+  {
     "version": "1.96.8",
     "date": "2026-08-16",
     "changes": [

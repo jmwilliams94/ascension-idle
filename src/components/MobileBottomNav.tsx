@@ -207,7 +207,7 @@ function TavernNavButton({ badges }: { badges: Partial<Record<TabId, number>> })
       <button
         type="button"
         onClick={() => setExpanded((current) => !current)}
-        className={`relative flex w-full flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[10px] font-medium leading-tight ${
+        className={`relative flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[10px] font-medium leading-tight ${
           active || expanded ? 'btn-gold-active' : 'btn-gold'
         }`}
       >
