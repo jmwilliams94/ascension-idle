@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.96.16",
+    "date": "2026-08-16",
+    "changes": [
+      "Weapon Level Upgrades from level 120 to 130 now cost a Fallen Star instead of a Comet"
+    ]
+  },
+  {
     "version": "1.96.15",
     "date": "2026-08-16",
     "changes": [

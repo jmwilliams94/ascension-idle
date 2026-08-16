@@ -18,6 +18,20 @@ export function previewLevelUpgradeCost(): number {
   return 1
 }
 
+// Weapons cost 1 Fallen Star per Level Upgrade attempt once the item's own
+// required_level is 120+ (mirrors the same check in level_upgrade/
+// master_forge_upgrade's SQL, migration
+// 20260831000000_weapon_high_level_upgrade_fallen_star_cost.sql — keep in
+// sync). Every other Level Upgrade (non-weapon, or a weapon below 120) still
+// costs 1 Comet. level_upgrade_scroll is a deliberate exception NOT covered
+// by this rule — a Comet Scroll always buys its batch of rolls regardless of
+// the target item's level, unchanged.
+export type UpgradeCurrency = 'comet' | 'fallen_star'
+
+export function levelUpgradeCurrency(slotType: string | null | undefined, requiredLevel: number | null | undefined): UpgradeCurrency {
+  return slotType === 'weapon' && typeof requiredLevel === 'number' && requiredLevel >= 120 ? 'fallen_star' : 'comet'
+}
+
 // Dynamic success chance (2026-08-05, confirmed with the user — mirrors
 // compute_upgrade_success_chance_pct in migration
 // 20260805030000_dynamic_upgrade_chance_and_master_forge.sql, must stay in

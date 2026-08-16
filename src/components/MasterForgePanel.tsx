@@ -12,6 +12,7 @@ import {
   effectiveCurrencyAvailable,
   exceedsCharacterLevel,
   findNextTemplateInChain,
+  levelUpgradeCurrency,
   previewMasterForgeCost,
 } from '../game/items/forgeCosts'
 import { useForgeStore } from '../game/items/useForgeStore'
@@ -130,6 +131,12 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
       : null
   const cost = successChancePct !== null ? previewMasterForgeCost(successChancePct) : null
 
+  // Weapons at required_level 120+ pay their Level Upgrade in Fallen Stars
+  // instead of Comets (see forgeCosts.ts's levelUpgradeCurrency) — Quality
+  // Upgrade is always Fallen Star regardless, unchanged.
+  const masterCurrency =
+    upgradeType === 'quality' ? 'fallen_star' : levelUpgradeCurrency(selectedTemplate?.slot_type, selectedTemplate?.required_level)
+
   const resultExceedsCharacterLevel = upgradeType === 'level' && exceedsCharacterLevel(nextLevelTemplate, characterLevel)
 
   const blockedReason = (() => {
@@ -142,10 +149,10 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
       return `This would make the item level ${nextLevelTemplate.required_level}, above your own level ${characterLevel}.`
     }
     if (cost !== null) {
-      const owned = upgradeType === 'quality' ? fallenStars : comets
-      const scrolls = upgradeType === 'quality' ? fallenStarScrolls : cometScrolls
+      const owned = masterCurrency === 'fallen_star' ? fallenStars : comets
+      const scrolls = masterCurrency === 'fallen_star' ? fallenStarScrolls : cometScrolls
       if (effectiveCurrencyAvailable(owned, scrolls) < cost) {
-        const label = upgradeType === 'quality' ? 'Fallen Star' : 'Comet'
+        const label = masterCurrency === 'fallen_star' ? 'Fallen Star' : 'Comet'
         const haveDescription = scrolls > 0 ? `have ${owned} + ${scrolls} Scroll${scrolls === 1 ? '' : 's'}` : `have ${owned}`
         return `Need ${cost} ${label}${cost === 1 ? '' : 's'} (${haveDescription}).`
       }
@@ -243,7 +250,7 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
                   <div className="flex flex-col items-center gap-2">
                     <p className="text-center text-xs text-slate-400">
                       Guaranteed success — costs <span className="font-semibold text-slate-200">{cost}</span>{' '}
-                      {upgradeType === 'quality' ? `Fallen Star${cost === 1 ? '' : 's'}` : `Comet${cost === 1 ? '' : 's'}`}
+                      {masterCurrency === 'fallen_star' ? `Fallen Star${cost === 1 ? '' : 's'}` : `Comet${cost === 1 ? '' : 's'}`}
                     </p>
                     <div className="flex gap-2">
                       <Button variant="primary" disabled={busy || !canConfirm} onClick={() => void handleConfirm()}>

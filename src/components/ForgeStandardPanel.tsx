@@ -18,6 +18,7 @@ import {
   isCometDragId,
   isFallenStarScrollDragId,
   isCometScrollDragId,
+  levelUpgradeCurrency,
   previewLevelUpgradeCost,
   previewQualityUpgradeCost,
 } from '../game/items/forgeCosts'
@@ -201,6 +202,13 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
   const isSelectedEquipped = selectedItem ? isEquipped(selectedItem.id) : false
   const blockedByEquipLevel = materialMode === 'level' && isSelectedEquipped && exceedsCharacterLevel(nextLevelTemplate, characterLevel)
 
+  // Weapons at required_level 120+ pay in Fallen Stars instead of Comets
+  // (see forgeCosts.ts's levelUpgradeCurrency) — everything else unchanged.
+  const levelCurrency = selectedTemplate ? levelUpgradeCurrency(selectedTemplate.slot_type, selectedTemplate.required_level) : 'comet'
+  const levelCurrencyOwned = levelCurrency === 'fallen_star' ? fallenStars : comets
+  const levelCurrencyScrolls = levelCurrency === 'fallen_star' ? fallenStarScrolls : cometScrolls
+  const levelCurrencyLabel = levelCurrency === 'fallen_star' ? 'Fallen Star' : 'Comet'
+
   const qualityDisabledReason = !selectedItem
     ? null
     : isMaxQuality
@@ -218,9 +226,11 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
         : 'This item has no further upgrades.'
       : blockedByEquipLevel && nextLevelTemplate
         ? `This would make the item level ${nextLevelTemplate.required_level}, above your own level ${characterLevel}. Unequip it first if you want to upgrade past your level.`
-        : effectiveCurrencyAvailable(comets, cometScrolls) < levelCost
-          ? `Need ${levelCost} Comet${levelCost === 1 ? '' : 's'} (${
-              cometScrolls > 0 ? `have ${comets} + ${cometScrolls} Scroll${cometScrolls === 1 ? '' : 's'}` : `have ${comets}`
+        : effectiveCurrencyAvailable(levelCurrencyOwned, levelCurrencyScrolls) < levelCost
+          ? `Need ${levelCost} ${levelCurrencyLabel}${levelCost === 1 ? '' : 's'} (${
+              levelCurrencyScrolls > 0
+                ? `have ${levelCurrencyOwned} + ${levelCurrencyScrolls} Scroll${levelCurrencyScrolls === 1 ? '' : 's'}`
+                : `have ${levelCurrencyOwned}`
             }).`
           : null
 

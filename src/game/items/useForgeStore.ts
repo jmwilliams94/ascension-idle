@@ -43,6 +43,7 @@ interface LevelUpgradeResult {
     | 'not_owner'
     | 'already_max_level'
     | 'not_enough_comets'
+    | 'not_enough_fallen_stars'
     | 'no_upgrade_path'
     | 'not_enough_room_to_unbundle'
     // Equipped-item-only guard (2026-08-14, mirrors master_forge_upgrade's own
@@ -55,11 +56,19 @@ interface LevelUpgradeResult {
   // unchanged on failure.
   template_id?: string
   cost?: number
+  // 2026-08-31: which currency this particular attempt actually charged —
+  // 'fallen_star' for a weapon at required_level 120+, 'comet' otherwise (see
+  // levelUpgradeCurrency in forgeCosts.ts, the client mirror of this rule).
+  currency?: 'comet' | 'fallen_star'
   comets?: number
   comets_spent?: number
   comets_remaining?: number
   // Same post-unbundle-Scroll-count fix as Quality Upgrade above (Comet side).
   comet_scrolls_remaining?: number
+  // Only populated when currency = 'fallen_star' (see above).
+  fallen_stars_spent?: number
+  fallen_stars_remaining?: number
+  fallen_star_scrolls_remaining?: number
   // Same armor-only RNG socket side effect as Quality Upgrade above.
   sockets?: ItemInstance['sockets']
   socket_gained?: boolean
@@ -323,6 +332,12 @@ export const useForgeStore = create<ForgeState>((set) => ({
     }
     if (result.ok && typeof result.comet_scrolls_remaining === 'number') {
       useCurrencyStore.getState().setCometScrolls(result.comet_scrolls_remaining)
+    }
+    if (result.ok && typeof result.fallen_stars_remaining === 'number') {
+      useCurrencyStore.getState().setFallenStars(result.fallen_stars_remaining)
+    }
+    if (result.ok && typeof result.fallen_star_scrolls_remaining === 'number') {
+      useCurrencyStore.getState().setFallenStarScrolls(result.fallen_star_scrolls_remaining)
     }
 
     return result
