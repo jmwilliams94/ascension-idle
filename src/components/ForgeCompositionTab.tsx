@@ -7,7 +7,15 @@ import ForgeTwoColumnLayout from './ForgeTwoColumnLayout'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import { DragDropProvider } from './dragDrop'
 import InventoryPanel from './InventoryPanel'
-import { compositionPointValue, isFallenStarDragId, isCometDragId, parseStoneDragId, simulateCompositionFeed } from '../game/items/forgeCosts'
+import {
+  compositionPointValue,
+  estimateCompositionFeedAnimationMs,
+  isFallenStarDragId,
+  isCometDragId,
+  parseStoneDragId,
+  simulateCompositionFeed,
+  simulateCompositionFeedSteps,
+} from '../game/items/forgeCosts'
 import { useForgeStore } from '../game/items/useForgeStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
@@ -136,11 +144,16 @@ export default function ForgeCompositionTab({ onBack }: ForgeCompositionTabProps
       return
     }
 
-    // Minimum 1s so the white "staged" bar always gets a full second to ease
-    // into amber (CompositionLoadBar) before collapsing into committed
-    // progress, even if the RPC itself resolves faster than that.
+    // Hold at least as long as CompositionLoadBar's confirm animation takes
+    // (one second for a same-tier feed, longer if it cascades through
+    // multiple tiers) so the RPC resolving early never cuts the animation off.
+    const steps = simulateCompositionFeedSteps(selectedItem.composition_level, selectedItem.composition_points, compositionAddedPoints)
+    const minDelayMs = estimateCompositionFeedAnimationMs(steps.length)
     setConfirming(true)
-    const [result] = await Promise.all([compositionFeed(selectedItem.id, stoneAmounts, fuelItemIds), new Promise((resolve) => setTimeout(resolve, 1000))])
+    const [result] = await Promise.all([
+      compositionFeed(selectedItem.id, stoneAmounts, fuelItemIds),
+      new Promise((resolve) => setTimeout(resolve, minDelayMs)),
+    ])
     setConfirming(false)
 
     if (!result.ok) {

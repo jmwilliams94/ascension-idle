@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.96.6",
+    "date": "2026-08-16",
+    "changes": [
+      "Composition's tentative bar now shows full when your staged feed would complete the current tier, instead of a possibly-wrong partial amount",
+      "Confirming a Composition feed that completes multiple tiers now animates through each tier one at a time instead of jumping straight to the end result"
+    ]
+  },
+  {
     "version": "1.96.5",
     "date": "2026-08-16",
     "changes": [

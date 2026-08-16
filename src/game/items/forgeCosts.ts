@@ -188,6 +188,68 @@ export function simulateCompositionFeed(currentLevel: number, currentPoints: num
   return { level, points, required: compositionPointsRequired(level) }
 }
 
+export interface CompositionFeedStep {
+  // Tier this step fills — the step's own before/after points are always
+  // read against compositionPointsRequired(level) for THIS level, since
+  // each tier has its own points scale.
+  level: number
+  fromPoints: number
+  toPoints: number
+  required: number
+}
+
+// Same tier-up loop as simulateCompositionFeed, but returns every intermediate
+// tier crossed rather than just the final result — used by CompositionLoadBar's
+// confirm animation to play the fill through each tier one at a time instead of
+// jumping straight to the end state. A feed that stays within the current tier
+// (the common case) yields exactly one step; a feed large enough to complete N
+// tiers before landing on a final partial one yields N+1.
+export function simulateCompositionFeedSteps(currentLevel: number, currentPoints: number, addedPoints: number): CompositionFeedStep[] {
+  const steps: CompositionFeedStep[] = []
+  let level = currentLevel
+  let points = currentPoints
+  let remaining = addedPoints
+
+  while (remaining > 0 && !isCompositionMaxed(level)) {
+    const required = compositionPointsRequired(level)
+    const neededToComplete = required - points
+
+    if (remaining < neededToComplete) {
+      steps.push({ level, fromPoints: points, toPoints: points + remaining, required })
+      points += remaining
+      remaining = 0
+    } else {
+      steps.push({ level, fromPoints: points, toPoints: required, required })
+      remaining -= neededToComplete
+      points = 0
+      level += 1
+    }
+  }
+
+  return steps
+}
+
+// Confirm-animation pacing for CompositionLoadBar — the first tier's fill
+// (color transition from the tentative white bar to committed amber) always
+// gets a full second, matching the original single-tier confirm feel;
+// additional tiers cascade faster since they're just playing out an already-
+// decided result. ForgeCompositionTab's minimum feed delay is derived from
+// this so the network response never cuts the animation short.
+export const COMPOSITION_FEED_FIRST_STEP_SECONDS = 1
+export const COMPOSITION_FEED_STEP_SECONDS = 0.5
+export const COMPOSITION_FEED_STEP_RESET_MS = 150
+
+export function estimateCompositionFeedAnimationMs(stepCount: number): number {
+  if (stepCount <= 0) {
+    return 0
+  }
+  const extraSteps = stepCount - 1
+  return (
+    COMPOSITION_FEED_FIRST_STEP_SECONDS * 1000 +
+    extraSteps * (COMPOSITION_FEED_STEP_SECONDS * 1000 + COMPOSITION_FEED_STEP_RESET_MS)
+  )
+}
+
 // Stones are drag-and-drop inventory items now (see InventoryPanel/ForgeFuelZone),
 // not a typed-in quantity — and confirmed to NOT stack: each stone is its own
 // inventory tile/slot, not combined into one tile with a count badge. There's no
