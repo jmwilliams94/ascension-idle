@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.96.12",
+    "date": "2026-08-16",
+    "changes": [
+      "Shrunk the mobile nav's Idling button column to fit its circle, closing the large dead-space gap that was sitting between it and LuckyLad/Tavern"
+    ]
+  },
+  {
     "version": "1.96.11",
     "date": "2026-08-16",
     "changes": [

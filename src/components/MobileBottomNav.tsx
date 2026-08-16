@@ -116,13 +116,16 @@ function NavButton({
 // axis means the whole nav bar's height grows to match this circle, and the
 // four side NavButtons re-center within that taller row for free (they
 // already use justify-center on a stretched flex child, see NavButton).
-// -mx-0.5 (2026-08-16, requested by the user) trims the row's gap-1 down to
-// a small 2px gap on both sides of this button specifically — an earlier
-// -mx-1 pass closed that gap to 0, which read as too cramped against the
-// live ember-glow ring in person even though a static screenshot made it
-// look fine. The row's `gap` is uniform across all five slots, so a
-// negative margin on this one item is the only way to tighten just its own
-// neighboring gaps without touching Equip<->LuckyLad or Tavern<->Achiev.
+// flex-none w-16, not flex-1 (2026-08-16, requested by the user) — the real
+// source of the "huge gap" either side of this button wasn't the row's
+// gap-1 (two earlier passes tweaking that via negative margin barely moved
+// the needle): as a flex-1 item this column was exactly as wide as the
+// other four, but unlike them it's not a box filled edge-to-edge, it's a
+// 56px circle centered inside, so ~15-17px of dead transparent space sat
+// between the circle and each neighbor even with margin at 0. Fixing this
+// button's own column to a width close to the circle (64px) removes that
+// dead space at the source, and hands the freed-up width back to the other
+// four flex-1 columns automatically.
 function IdlingNavButton() {
   const activeTab = useTabStore((state) => state.activeTab)
   const setActiveTab = useTabStore((state) => state.setActiveTab)
@@ -134,7 +137,7 @@ function IdlingNavButton() {
     <button
       type="button"
       onClick={() => setActiveTab('combat')}
-      className="-mx-0.5 flex flex-1 flex-col items-center justify-center gap-0.5"
+      className="flex w-16 flex-none flex-col items-center justify-center gap-0.5"
     >
       <span
         className={`relative flex h-14 w-14 items-center justify-center rounded-full shadow-lg ${
