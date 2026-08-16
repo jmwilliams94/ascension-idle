@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.98.2",
+    "date": "2026-08-17",
+    "changes": [
+      "Fixed a newly-spawned monster being attackable almost instantly instead of waiting a full attack cycle",
+      "The monster portrait now stays in place and just dims with a \"Dead\" label during its respawn pause, instead of the whole panel resizing"
+    ]
+  },
+  {
     "version": "1.98.1",
     "date": "2026-08-17",
     "changes": [

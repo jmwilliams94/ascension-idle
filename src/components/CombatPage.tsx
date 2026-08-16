@@ -69,16 +69,18 @@ function hexColor(value: number): string {
 // How long a floating damage number stays visible after its log entry lands.
 const FLOATING_NUMBER_LIFETIME_MS = 800
 
-// Shown in place of the monster portrait/HP during useCombatStore's
-// respawn gap (see RESPAWN_GAP_MS) — same h-32 footprint as the portrait it
-// replaces, so the card doesn't visibly resize between states.
-function RespawnBanner({ seconds }: { seconds: number }) {
+// Overlaid on top of the monster portrait during useCombatStore's respawn
+// gap (see RESPAWN_GAP_MS) — deliberately layered over the SAME portrait
+// element rather than swapping it out for a different block (reported by
+// the user, 2026-08-17: swapping to a differently-shaped placeholder made
+// the whole card visibly resize/reflow every time a kill happened). The
+// portrait itself stays mounted the whole time (see the `opacity-30
+// grayscale` classes at both call sites below) — this just adds the "Dead"
+// label on top of it.
+function DeadOverlay() {
   return (
-    <div className="flex h-32 items-center gap-4">
-      <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-2xl border-2 border-dashed border-slate-800 bg-slate-950/60 text-slate-600">
-        <span className="text-xs">Respawning</span>
-      </div>
-      <p className="text-sm text-slate-500">Next enemy in {seconds}s...</p>
+    <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-slate-950/40">
+      <span className="text-xs font-bold uppercase tracking-wide text-slate-300">Dead</span>
     </div>
   )
 }
@@ -229,6 +231,7 @@ export default function CombatPage() {
   // every 200ms for the floating-number lifetime check above, reused here
   // rather than a second timer.
   const respawnSecondsLeft = respawnReadyAt > 0 ? Math.max(0, Math.ceil((respawnReadyAt - now) / 1000)) : 0
+  const isRespawning = respawnSecondsLeft > 0
 
   // "Best available" HP potion (confirmed with the user, 2026-07-31) — the
   // highest-tier owned stack with any left, so the strongest potion is
@@ -287,9 +290,6 @@ export default function CombatPage() {
           >
             {currentZone.backgroundUrl && <div className="absolute inset-0 bg-slate-950/60" />}
             <div className="relative">
-            {respawnSecondsLeft > 0 ? (
-              <RespawnBanner seconds={respawnSecondsLeft} />
-            ) : (
               <div className="flex items-center gap-4">
               <div className="relative h-32 w-32 shrink-0">
                 {activeType.portraitUrl ? (
@@ -297,15 +297,16 @@ export default function CombatPage() {
                     key={monsterInstanceKey}
                     src={activeType.portraitUrl}
                     alt={activeType.displayName}
-                    className={`h-32 w-32 rounded-2xl border-2 border-slate-700 object-contain p-[15%] ${isRareInstance ? 'super-quality-glow' : ''}`}
+                    className={`h-32 w-32 rounded-2xl border-2 border-slate-700 object-contain p-[15%] transition-opacity ${isRareInstance ? 'super-quality-glow' : ''} ${isRespawning ? 'opacity-30 grayscale' : ''}`}
                   />
                 ) : (
                   <div
                     key={monsterInstanceKey}
-                    className={`h-32 w-32 rounded-2xl border-2 border-slate-700 ${isRareInstance ? 'super-quality-glow' : ''}`}
+                    className={`h-32 w-32 rounded-2xl border-2 border-slate-700 transition-opacity ${isRareInstance ? 'super-quality-glow' : ''} ${isRespawning ? 'opacity-30 grayscale' : ''}`}
                     style={{ backgroundColor: hexColor(activeType.color) }}
                   />
                 )}
+                {isRespawning && <DeadOverlay />}
                 <AnimatePresence>
                   {floatingNumbers.map((entry) => (
                     <motion.div
@@ -330,14 +331,13 @@ export default function CombatPage() {
                   {isRareInstance && <span className="ml-2 text-xs font-bold text-amber-300">RARE</span>}
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
-                  {currentHp} / {maxHp} HP
+                  {isRespawning ? `Respawning in ${respawnSecondsLeft}s...` : `${currentHp} / ${maxHp} HP`}
                 </p>
                 <div className="mt-2">
-                  <HpBar current={currentHp} max={maxHp} />
+                  <HpBar current={isRespawning ? 0 : currentHp} max={maxHp} />
                 </div>
               </div>
               </div>
-            )}
 
             {characterId && <RowCombatPanel characterId={characterId} />}
 
@@ -633,9 +633,6 @@ export default function CombatPage() {
           >
             {currentZone.backgroundUrl && <div className="absolute inset-0 bg-slate-950/60" />}
             <div className="relative">
-            {respawnSecondsLeft > 0 ? (
-              <RespawnBanner seconds={respawnSecondsLeft} />
-            ) : (
               <div className="flex items-center gap-4">
               <div className="relative h-40 w-40 shrink-0">
                 {activeType.portraitUrl ? (
@@ -643,15 +640,16 @@ export default function CombatPage() {
                     key={monsterInstanceKey}
                     src={activeType.portraitUrl}
                     alt={activeType.displayName}
-                    className={`h-40 w-40 rounded-2xl border-2 border-slate-700 object-contain p-[15%] ${isRareInstance ? 'super-quality-glow' : ''}`}
+                    className={`h-40 w-40 rounded-2xl border-2 border-slate-700 object-contain p-[15%] transition-opacity ${isRareInstance ? 'super-quality-glow' : ''} ${isRespawning ? 'opacity-30 grayscale' : ''}`}
                   />
                 ) : (
                   <div
                     key={monsterInstanceKey}
-                    className={`h-40 w-40 rounded-2xl border-2 border-slate-700 ${isRareInstance ? 'super-quality-glow' : ''}`}
+                    className={`h-40 w-40 rounded-2xl border-2 border-slate-700 transition-opacity ${isRareInstance ? 'super-quality-glow' : ''} ${isRespawning ? 'opacity-30 grayscale' : ''}`}
                     style={{ backgroundColor: hexColor(activeType.color) }}
                   />
                 )}
+                {isRespawning && <DeadOverlay />}
                 <AnimatePresence>
                   {floatingNumbers.map((entry) => (
                     <motion.div
@@ -676,14 +674,13 @@ export default function CombatPage() {
                   {isRareInstance && <span className="ml-2 text-xs font-bold text-amber-300">RARE</span>}
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
-                  {currentHp} / {maxHp} HP
+                  {isRespawning ? `Respawning in ${respawnSecondsLeft}s...` : `${currentHp} / ${maxHp} HP`}
                 </p>
                 <div className="mt-2">
-                  <HpBar current={currentHp} max={maxHp} />
+                  <HpBar current={isRespawning ? 0 : currentHp} max={maxHp} />
                 </div>
               </div>
               </div>
-            )}
 
             {characterId && (
               <div className="max-w-xs">

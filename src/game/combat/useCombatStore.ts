@@ -264,6 +264,16 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         currentHp: nextHpValue,
         maxHp: nextHpValue,
         isRareInstance: nextIsRare,
+        // Reset both attack cadences to the spawn moment (bug fix, reported
+        // by the user, 2026-08-17) — previously left untouched through the
+        // gap, so on respawn the very next 100ms tick's cooldown check
+        // (`nowMs - lastAttackAt >= attackIntervalMs`) already passed
+        // (lastAttackAt was RESPAWN_GAP_MS-plus-old), letting the first hit
+        // land almost instantly instead of a full attackIntervalMs after
+        // the monster actually appeared. Applies symmetrically to the
+        // monster's own attack-back for the same reason.
+        lastAttackAt: nowMs,
+        lastMonsterAttackAt: nowMs,
         log: appendLog(
           s.log,
           nextIsRare
