@@ -56,6 +56,8 @@ function describeFailure(error?: string): string {
       return 'This item has no further upgrades.'
     case 'exceeds_character_level':
       return "This would exceed your character's own level."
+    case 'weapon_requires_master_forge':
+      return 'Weapons past level 120 can only be Level Upgraded at the Master Forge.'
     case 'not_owner':
     case 'item_not_found':
       return "Couldn't find that item."
@@ -202,12 +204,14 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
   const isSelectedEquipped = selectedItem ? isEquipped(selectedItem.id) : false
   const blockedByEquipLevel = materialMode === 'level' && isSelectedEquipped && exceedsCharacterLevel(nextLevelTemplate, characterLevel)
 
-  // Weapons at required_level 120+ pay in Fallen Stars instead of Comets
-  // (see forgeCosts.ts's levelUpgradeCurrency) — everything else unchanged.
-  const levelCurrency = selectedTemplate ? levelUpgradeCurrency(selectedTemplate.slot_type, selectedTemplate.required_level) : 'comet'
-  const levelCurrencyOwned = levelCurrency === 'fallen_star' ? fallenStars : comets
-  const levelCurrencyScrolls = levelCurrency === 'fallen_star' ? fallenStarScrolls : cometScrolls
-  const levelCurrencyLabel = levelCurrency === 'fallen_star' ? 'Fallen Star' : 'Comet'
+  // A weapon at required_level 120+ is Master-Forge-exclusive from here on —
+  // the regular Forge (single attempt or Comet Scroll batch) can't touch it
+  // at all, even though a next template genuinely exists in its chain (so
+  // isMaxLevel alone wouldn't catch this). Same 120+ boundary as
+  // levelUpgradeCurrency's Master Forge currency switch — not maxed takes
+  // priority (matches the SQL's own check order).
+  const weaponNeedsMasterForge =
+    !isMaxLevel && selectedTemplate ? levelUpgradeCurrency(selectedTemplate.slot_type, selectedTemplate.required_level) === 'fallen_star' : false
 
   const qualityDisabledReason = !selectedItem
     ? null
@@ -224,15 +228,15 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
       ? selectedTemplate?.item_family
         ? 'Already at the top tier for this item.'
         : 'This item has no further upgrades.'
-      : blockedByEquipLevel && nextLevelTemplate
-        ? `This would make the item level ${nextLevelTemplate.required_level}, above your own level ${characterLevel}. Unequip it first if you want to upgrade past your level.`
-        : effectiveCurrencyAvailable(levelCurrencyOwned, levelCurrencyScrolls) < levelCost
-          ? `Need ${levelCost} ${levelCurrencyLabel}${levelCost === 1 ? '' : 's'} (${
-              levelCurrencyScrolls > 0
-                ? `have ${levelCurrencyOwned} + ${levelCurrencyScrolls} Scroll${levelCurrencyScrolls === 1 ? '' : 's'}`
-                : `have ${levelCurrencyOwned}`
-            }).`
-          : null
+      : weaponNeedsMasterForge
+        ? 'Weapons past level 120 can only be Level Upgraded at the Master Forge.'
+        : blockedByEquipLevel && nextLevelTemplate
+          ? `This would make the item level ${nextLevelTemplate.required_level}, above your own level ${characterLevel}. Unequip it first if you want to upgrade past your level.`
+          : effectiveCurrencyAvailable(comets, cometScrolls) < levelCost
+            ? `Need ${levelCost} Comet${levelCost === 1 ? '' : 's'} (${
+                cometScrolls > 0 ? `have ${comets} + ${cometScrolls} Scroll${cometScrolls === 1 ? '' : 's'}` : `have ${comets}`
+              }).`
+            : null
 
   const previewItem: ItemInstance | null = (() => {
     if (!selectedItem) {
@@ -257,7 +261,7 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
     if (!selectedItem || (materialMode !== 'quality' && materialMode !== 'level')) {
       return
     }
-    if (materialMode === 'level' && blockedByEquipLevel) {
+    if (materialMode === 'level' && (blockedByEquipLevel || weaponNeedsMasterForge)) {
       return
     }
 
@@ -328,7 +332,7 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
                 </div>
               )}
 
-              {previewItem && !blockedByEquipLevel ? (
+              {previewItem && !blockedByEquipLevel && !weaponNeedsMasterForge ? (
                 <div className="flex justify-center gap-2">
                   <Button variant="primary" disabled={busy} onClick={() => void handleConfirm()}>
                     {busy ? 'Working…' : 'Confirm'}

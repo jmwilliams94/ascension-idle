@@ -18,18 +18,27 @@ export function previewLevelUpgradeCost(): number {
   return 1
 }
 
-// Weapons cost 1 Fallen Star per Level Upgrade attempt once the item's own
-// required_level is 120+ (mirrors the same check in level_upgrade/
-// master_forge_upgrade's SQL, migration
-// 20260831000000_weapon_high_level_upgrade_fallen_star_cost.sql — keep in
-// sync). Every other Level Upgrade (non-weapon, or a weapon below 120) still
-// costs 1 Comet. level_upgrade_scroll is a deliberate exception NOT covered
-// by this rule — a Comet Scroll always buys its batch of rolls regardless of
-// the target item's level, unchanged.
+// A weapon at required_level 120+ is Master-Forge-exclusive (2026-08-31,
+// migration 20260831010000_weapon_120_master_forge_only.sql — keep in sync):
+// the regular Forge tile (single attempt AND Comet Scroll batch) refuses it
+// outright with the 'weapon_requires_master_forge' error, and Master Forge
+// charges a flat 1 Fallen Star per level instead of the usual Comet/cost
+// formula (see previewMasterForgeLevelCost below). This helper doubles as
+// both "which currency does Master Forge charge" and "does the regular Forge
+// need to redirect the player to Master Forge" — both are the same
+// slotType==='weapon' && requiredLevel>=120 condition. Every other Level
+// Upgrade (non-weapon, or a weapon below 120) is unchanged, still 1 Comet.
 export type UpgradeCurrency = 'comet' | 'fallen_star'
 
 export function levelUpgradeCurrency(slotType: string | null | undefined, requiredLevel: number | null | undefined): UpgradeCurrency {
   return slotType === 'weapon' && typeof requiredLevel === 'number' && requiredLevel >= 120 ? 'fallen_star' : 'comet'
+}
+
+// Flat cost for Master Forge's weapon-120+ branch — no RNG cost formula,
+// since there's no more "manual" Forge cost to price 1.5x of past this
+// point (mirrors master_forge_upgrade's SQL `v_cost := 1` override).
+export function previewMasterForgeWeaponLevelCost(): number {
+  return 1
 }
 
 // Dynamic success chance (2026-08-05, confirmed with the user — mirrors

@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.96.17",
+    "date": "2026-08-16",
+    "changes": [
+      "Weapons past level 120 can now only be Level Upgraded at the Master Forge, for a flat 1 Fallen Star per level",
+      "Weapon Comet Scroll batches now stop automatically at level 120 instead of continuing"
+    ]
+  },
+  {
     "version": "1.96.16",
     "date": "2026-08-16",
     "changes": [

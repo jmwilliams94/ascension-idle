@@ -43,12 +43,16 @@ interface LevelUpgradeResult {
     | 'not_owner'
     | 'already_max_level'
     | 'not_enough_comets'
-    | 'not_enough_fallen_stars'
     | 'no_upgrade_path'
     | 'not_enough_room_to_unbundle'
     // Equipped-item-only guard (2026-08-14, mirrors master_forge_upgrade's own
     // check) — an item pulled from ordinary Inventory has no such limit.
     | 'exceeds_character_level'
+    // 2026-08-31: a weapon at required_level 120+ can no longer Level Upgrade
+    // here at all — Master Forge only past that point, flat 1 Fallen Star per
+    // level (see masterForgeUpgrade below). levelUpgradeCurrency in
+    // forgeCosts.ts is the client mirror of this same 120+ boundary.
+    | 'weapon_requires_master_forge'
   upgraded?: boolean
   level?: number
   // The item's new template on success (Level Upgrade now advances the item to
@@ -56,19 +60,11 @@ interface LevelUpgradeResult {
   // unchanged on failure.
   template_id?: string
   cost?: number
-  // 2026-08-31: which currency this particular attempt actually charged —
-  // 'fallen_star' for a weapon at required_level 120+, 'comet' otherwise (see
-  // levelUpgradeCurrency in forgeCosts.ts, the client mirror of this rule).
-  currency?: 'comet' | 'fallen_star'
   comets?: number
   comets_spent?: number
   comets_remaining?: number
   // Same post-unbundle-Scroll-count fix as Quality Upgrade above (Comet side).
   comet_scrolls_remaining?: number
-  // Only populated when currency = 'fallen_star' (see above).
-  fallen_stars_spent?: number
-  fallen_stars_remaining?: number
-  fallen_star_scrolls_remaining?: number
   // Same armor-only RNG socket side effect as Quality Upgrade above.
   sockets?: ItemInstance['sockets']
   socket_gained?: boolean
@@ -217,6 +213,11 @@ interface LevelUpgradeScrollResult {
     // upfront (before the Scroll is spent) if even the first roll in the
     // batch would already exceed the character's level.
     | 'exceeds_character_level'
+    // 2026-08-31: a weapon already at required_level 120+ can't even start a
+    // Comet Scroll batch — Master Forge only past that point. A batch that
+    // starts below 120 still runs, but silently stops (no refund) the moment
+    // a roll would cross above 120 — see level_upgrade_scroll's SQL.
+    | 'weapon_requires_master_forge'
   upgraded?: boolean
   rolls_attempted?: number
   rolls_succeeded?: number
@@ -332,12 +333,6 @@ export const useForgeStore = create<ForgeState>((set) => ({
     }
     if (result.ok && typeof result.comet_scrolls_remaining === 'number') {
       useCurrencyStore.getState().setCometScrolls(result.comet_scrolls_remaining)
-    }
-    if (result.ok && typeof result.fallen_stars_remaining === 'number') {
-      useCurrencyStore.getState().setFallenStars(result.fallen_stars_remaining)
-    }
-    if (result.ok && typeof result.fallen_star_scrolls_remaining === 'number') {
-      useCurrencyStore.getState().setFallenStarScrolls(result.fallen_star_scrolls_remaining)
     }
 
     return result

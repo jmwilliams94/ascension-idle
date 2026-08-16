@@ -14,6 +14,7 @@ import {
   findNextTemplateInChain,
   levelUpgradeCurrency,
   previewMasterForgeCost,
+  previewMasterForgeWeaponLevelCost,
 } from '../game/items/forgeCosts'
 import { useForgeStore } from '../game/items/useForgeStore'
 import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
@@ -129,13 +130,21 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
           upgradeType,
         )
       : null
-  const cost = successChancePct !== null ? previewMasterForgeCost(successChancePct) : null
-
   // Weapons at required_level 120+ pay their Level Upgrade in Fallen Stars
   // instead of Comets (see forgeCosts.ts's levelUpgradeCurrency) — Quality
-  // Upgrade is always Fallen Star regardless, unchanged.
+  // Upgrade is always Fallen Star regardless, unchanged. Master Forge is the
+  // *only* place a weapon can Level Upgrade past 120 (regular Forge refuses
+  // outright), at a flat 1 Fallen Star per level instead of the usual
+  // 1.5x-expected-cost formula — there's no more "manual" cost to price that
+  // formula off of once the regular Forge path is gone.
   const masterCurrency =
     upgradeType === 'quality' ? 'fallen_star' : levelUpgradeCurrency(selectedTemplate?.slot_type, selectedTemplate?.required_level)
+  const cost =
+    upgradeType === 'level' && masterCurrency === 'fallen_star'
+      ? previewMasterForgeWeaponLevelCost()
+      : successChancePct !== null
+        ? previewMasterForgeCost(successChancePct)
+        : null
 
   const resultExceedsCharacterLevel = upgradeType === 'level' && exceedsCharacterLevel(nextLevelTemplate, characterLevel)
 
