@@ -49,6 +49,7 @@ export default function ForgeCompositionTab({ onBack }: ForgeCompositionTabProps
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [materialEntries, setMaterialEntries] = useState<MaterialEntry[]>([])
   const [feedError, setFeedError] = useState<string | null>(null)
+  const [confirming, setConfirming] = useState(false)
 
   const selectedItem = items.find((item) => item.id === selectedItemId) ?? null
   const selectedTemplate = selectedItem ? (templates.find((t) => t.id === selectedItem.template_id) ?? null) : null
@@ -135,7 +136,12 @@ export default function ForgeCompositionTab({ onBack }: ForgeCompositionTabProps
       return
     }
 
-    const result = await compositionFeed(selectedItem.id, stoneAmounts, fuelItemIds)
+    // Minimum 1s so the white "staged" bar always gets a full second to ease
+    // into amber (CompositionLoadBar) before collapsing into committed
+    // progress, even if the RPC itself resolves faster than that.
+    setConfirming(true)
+    const [result] = await Promise.all([compositionFeed(selectedItem.id, stoneAmounts, fuelItemIds), new Promise((resolve) => setTimeout(resolve, 1000))])
+    setConfirming(false)
 
     if (!result.ok) {
       setFeedError(describeFeedFailure(result.error))
@@ -166,7 +172,7 @@ export default function ForgeCompositionTab({ onBack }: ForgeCompositionTabProps
           </div>
 
           {selectedItem && (
-            <CompositionLoadBar item={selectedItem} addedPoints={compositionAddedPoints} preview={compositionPreview} />
+            <CompositionLoadBar item={selectedItem} addedPoints={compositionAddedPoints} preview={compositionPreview} confirming={confirming} />
           )}
         </div>
 
@@ -178,6 +184,7 @@ export default function ForgeCompositionTab({ onBack }: ForgeCompositionTabProps
           ) : (
             <ForgeCompositionPanel
               item={selectedItem}
+              template={selectedTemplate}
               entries={materialEntries}
               busy={busy}
               onFeed={() => void handleFeed()}

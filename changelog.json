@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.96.4",
+    "date": "2026-08-16",
+    "changes": [
+      "Composition's loading bar now shows staged points as a white 'tentative' segment, which turns gold once you confirm the feed",
+      "Composition now shows a preview of the stat bonus your item will gain from the staged feed, not just the points/tier progress"
+    ]
+  },
+  {
     "version": "1.96.3",
     "date": "2026-08-16",
     "changes": [

@@ -1,14 +1,57 @@
 import type { MaterialEntry } from './ForgeMaterialSlot'
 import { Button } from './ui/Button'
+import { computeCompositionBonusStats } from '../game/items/equipmentBonus'
 import { compositionPointValue, compositionPointsRequired, formatCompositionTier, isCompositionMaxed, simulateCompositionFeed } from '../game/items/forgeCosts'
 import type { ItemInstance } from '../game/items/useInventoryStore'
+import type { ItemTemplate } from '../game/items/useItemTemplatesStore'
 
 interface ForgeCompositionPanelProps {
   item: ItemInstance
+  template: ItemTemplate | null
   entries: MaterialEntry[]
   busy: boolean
   onFeed: () => void
   feedError: string | null
+}
+
+function formatStatLabel(key: string): string {
+  return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+// Shows what feeding the staged Material would do to the item's own
+// composition-derived stat bonuses (computeCompositionBonusStats), not just
+// the tier/points progress bar above — the "bonus of the +" the player is
+// actually chasing. Only stat keys present at either level are listed, so a
+// key that's still rounding to +0 pre-feed but becomes nonzero after still
+// shows up as "— → +N".
+function BonusPreview({ template, currentLevel, afterLevel }: { template: ItemTemplate; currentLevel: number; afterLevel: number }) {
+  const currentBonus = computeCompositionBonusStats(template.base_stats, template.slot_type, currentLevel)
+  const afterBonus = computeCompositionBonusStats(template.base_stats, template.slot_type, afterLevel)
+  const keys = Array.from(new Set([...Object.keys(currentBonus), ...Object.keys(afterBonus)]))
+
+  if (keys.length === 0) {
+    return null
+  }
+
+  return (
+    <div>
+      <p className="text-[10px] uppercase tracking-wide text-slate-600">Bonus preview</p>
+      <div className="mt-1 space-y-0.5">
+        {keys.map((key) => {
+          const before = currentBonus[key] ?? 0
+          const after = afterBonus[key] ?? 0
+          return (
+            <div key={key} className="flex items-center justify-between text-[11px] text-slate-400">
+              <span>{formatStatLabel(key)}</span>
+              <span>
+                +{before} <span className="text-slate-600">→</span> <span className={after > before ? 'text-amber-300' : 'text-slate-400'}>+{after}</span>
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 export function ProgressBar({ level, points, required }: { level: number; points: number; required: number }) {
@@ -40,7 +83,7 @@ export function ProgressBar({ level, points, required }: { level: number; points
 // (ForgePanel's CompositionLoadBar) duplicates the "after feed" bar below for
 // visibility at a glance — this panel is still the source of the Feed action
 // itself.
-export default function ForgeCompositionPanel({ item, entries, busy, onFeed, feedError }: ForgeCompositionPanelProps) {
+export default function ForgeCompositionPanel({ item, template, entries, busy, onFeed, feedError }: ForgeCompositionPanelProps) {
   const maxed = isCompositionMaxed(item.composition_level)
   const required = compositionPointsRequired(item.composition_level)
 
@@ -72,6 +115,8 @@ export default function ForgeCompositionPanel({ item, entries, busy, onFeed, fee
           <ProgressBar level={preview.level} points={preview.points} required={preview.required} />
         </div>
       )}
+
+      {preview && template && <BonusPreview template={template} currentLevel={item.composition_level} afterLevel={preview.level} />}
 
       {maxed && <p className="text-center text-[10px] text-slate-500">Already at maximum composition (+{item.composition_level}).</p>}
       {feedError && <p className="text-center text-[10px] text-red-400">{feedError}</p>}
