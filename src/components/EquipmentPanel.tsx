@@ -15,8 +15,13 @@ import {
 import { useEquipmentStore, type EquipSlot } from '../game/items/useEquipmentStore'
 import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemTemplatesStore'
+import { usePromotionStore } from '../game/items/usePromotionStore'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
+import { useProgressionStore } from '../game/stats/useProgressionStore'
+import { getCurrentPromotionTitle, getNextEligiblePromotionTier } from '../game/stats/promotionHelpers'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
+import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
+import PromotionModal from './PromotionModal'
 
 // Slot size for this paper-doll — scaled up from the default h-16 w-16 now that
 // there's no central character placeholder competing for room (see below).
@@ -76,6 +81,17 @@ export default function EquipmentPanel() {
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
   const isHunter = selectedClassId === 'hunter'
   const characterName = useCharacterRecordStore((state) => state.characterName)
+
+  // Class Promotion (cosmetic title + one-time reward per tier) — see
+  // CLAUDE.accounts-and-classes.md. promotionLevel is server-authoritative,
+  // hydrated in useCharacterRecordStore.
+  const promotionLevel = useCharacterStore((state) => state.promotionLevel)
+  const promotionTiers = usePromotionStore((state) => state.tiers)
+  const characterLevel = useProgressionStore((state) => state.level)
+  const activeCharacterId = useActiveCharacterStore((state) => state.characterId)
+  const currentTitle = getCurrentPromotionTitle(promotionTiers, selectedClassId, promotionLevel)
+  const nextPromotionTier = getNextEligiblePromotionTier(promotionTiers, selectedClassId, promotionLevel)
+  const [promotionModalOpen, setPromotionModalOpen] = useState(false)
 
   const [selectedSlot, setSelectedSlot] = useState<EquipSlot | null>(null)
 
@@ -169,6 +185,23 @@ export default function EquipmentPanel() {
         )}
       </div>
       </AscensionCard>
+
+      <AscensionCard contentClassName="p-3">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-slate-300">
+            Title: <span className="font-medium text-amber-300">{currentTitle}</span>
+          </p>
+          {nextPromotionTier && characterLevel >= nextPromotionTier.level && (
+            <Button variant="primary" onClick={() => setPromotionModalOpen(true)}>
+              Promote
+            </Button>
+          )}
+        </div>
+      </AscensionCard>
+
+      {promotionModalOpen && activeCharacterId && nextPromotionTier && (
+        <PromotionModal tier={nextPromotionTier} characterId={activeCharacterId} onClose={() => setPromotionModalOpen(false)} />
+      )}
 
       {selected && selectedSlot && (
         <AscensionCard contentClassName="p-3">

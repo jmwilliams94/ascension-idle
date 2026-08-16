@@ -61,6 +61,9 @@ interface CharacterRow {
   // above — only ever written by draw_lucky_ticket, never the generic
   // autosave (see saveNow below).
   lucky_free_ticket_claimed_at: string | null
+  // Class Promotion (2026-09-01) — same trust model as above, only ever
+  // written by promote_character, never the generic autosave.
+  promotion_level: number
 }
 
 interface CharacterRecordState {
@@ -108,7 +111,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     const { data, error } = await supabase
       .from('characters')
       .select(
-        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, comet_count, fallen_star_count, comet_scroll_count, fallen_star_scroll_count, comet_box_count, lottery_ticket_count, composition_stones, gems, selected_monster_id, last_active_at, lucky_free_ticket_claimed_at',
+        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, comet_count, fallen_star_count, comet_scroll_count, fallen_star_scroll_count, comet_box_count, lottery_ticket_count, composition_stones, gems, selected_monster_id, last_active_at, lucky_free_ticket_claimed_at, promotion_level',
       )
       .eq('id', characterId)
       .maybeSingle<CharacterRow>()
@@ -125,6 +128,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     if (data.class && data.class in CLASS_DEFINITIONS) {
       useCharacterStore.getState().selectClass(data.class as ClassId)
     }
+    useCharacterStore.getState().setPromotionLevel(data.promotion_level)
     useProgressionStore.getState().hydrate({ level: data.level, gold: data.gold, exp: data.exp })
     useZoneStore.getState().hydrate({ zoneId: data.current_zone, monsterId: data.selected_monster_id })
     useEquipmentStore.getState().hydrate({

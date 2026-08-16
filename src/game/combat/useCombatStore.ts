@@ -23,6 +23,7 @@ import {
   resolvePhysicalDamage,
   rollAttackLands,
   rollBonusCurrencyDrops,
+  rollJadeShardDrop,
   rollDamageInRange,
   rollIsHit,
   rollIsRare,
@@ -448,6 +449,12 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         ].filter((part): part is string => part !== null)
         set((s) => ({
           log: appendLog(s.log, { kind: 'currency', message: `You found: ${parts.join(', ')}` }),
+        }))
+      }
+
+      if (rollJadeShardDrop(type.id)) {
+        set((s) => ({
+          log: appendLog(s.log, { kind: 'item', message: 'You found: Jade Shard' }),
         }))
       }
 

@@ -98,6 +98,8 @@ function rewardLabel(reward: LuckyReward): string {
       return 'Radiant Fawnhide Coat'
     case 'gear_ascended_random':
       return 'Ascended Gear'
+    case 'moon_box':
+      return 'Moon Box'
   }
 }
 
@@ -138,6 +140,8 @@ function rewardVisual(reward: LuckyReward): { icon?: string; iconSrc?: string; c
       return { icon: '🥋', color: QUALITY_COLORS.radiant }
     case 'gear_ascended_random':
       return { icon: '🗡️', color: QUALITY_COLORS.ascended }
+    case 'moon_box':
+      return { icon: '📦', iconSrc: getGearIconSrc('Moon Box'), color: MATERIAL_COLOR }
   }
 }
 
@@ -202,6 +206,8 @@ function buildLuckyRewardTooltip(reward: LuckyReward): ItemTooltipData {
         iconColor: QUALITY_COLORS.ascended,
         lines: ['Lucky Lad reward', 'Random class-appropriate item, level 15-70'],
       }
+    case 'moon_box':
+      return { title: 'Moon Box', icon: '📦', iconColor: MATERIAL_COLOR, lines: ['Lucky Lad reward'] }
   }
 }
 

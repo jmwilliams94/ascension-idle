@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.97.0",
+    "date": "2026-08-16",
+    "changes": [
+      "Added Class Promotion — Hunters can now promote through 5 titles (Archer through Archer Master) as they level, gathering materials to earn a title, gear, and rewards at each stage"
+    ]
+  },
+  {
     "version": "1.96.23",
     "date": "2026-08-16",
     "changes": [

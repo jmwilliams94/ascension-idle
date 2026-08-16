@@ -330,6 +330,14 @@ const FALLEN_STAR_DROP_CHANCE = 1 / 20000
 // margin at the user's request before shipping: ~1.5 Tempered / ~1 Infused /
 // ~0.24 Radiant / ~0.12 Ascended expected per 2-hour session.
 const DROP_CHANCE = 1 / 150
+
+// Jade Shard (2026-09-01, Class Promotion tier-70 material) — flat per-kill
+// chance scoped to exactly 3 monsters, mirrors combatResolver.ts's
+// rollJadeShardDrop/JADE_SHARD_DROP_CHANCE/JADE_SHARD_MONSTER_IDS — must
+// stay in sync. PLACEHOLDER rate, unlike DROP_CHANCE above.
+const JADE_SHARD_DROP_CHANCE = 1 / 300
+const JADE_SHARD_MONSTER_IDS = ['frostpelt', 'venomkin', 'dunecrawler']
+
 const QUALITY_DROP_CHANCES: [tier: string, chance: number][] = [
   ['ascended', 3 / 400],
   ['radiant', 3 / 200],
@@ -1116,7 +1124,8 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       // Level-appropriate selection (confirmed with the user, 2026-07-30):
       // picks a random gear family available to the character's class
       // (excluding the standalone 'sword' family and 'quiver'/'lucky-bow'/
-      // 'money-bag'/'gem-bag'), then the template in that family whose
+      // 'money-bag'/'gem-bag'/'promotion-gear'/'promotion-material'), then
+      // the template in that family whose
       // required_level is closest to the monster's own level. Done as a
       // single indexed SQL query now (pick_drop_template, see the
       // migration) instead of transferring the whole eligible-template
@@ -1134,6 +1143,29 @@ async function handleResolveCombat(req: Request): Promise<Response> {
           return null
         }
         return (data as { id: string; required_level: number; slot_type: string } | null) ?? null
+      }
+
+      // Jade Shard's own template lookup — a single fixed item, not a
+      // family/level pick like pickDropTemplate above, so a plain select is
+      // enough. Called only when the flat-chance roll below actually
+      // succeeds (rare, same lazy-fetch discipline as pickDropTemplate).
+      let jadeShardTemplate: { id: string; required_level: number; slot_type: string } | null | undefined
+      const pickJadeShardTemplate = async (): Promise<{ id: string; required_level: number; slot_type: string } | null> => {
+        if (jadeShardTemplate !== undefined) {
+          return jadeShardTemplate
+        }
+        const { data, error } = await db
+          .from('item_templates')
+          .select('id, required_level, slot_type')
+          .eq('name', 'Jade Shard')
+          .maybeSingle()
+        if (error) {
+          console.error('resolve-combat Jade Shard template lookup failed:', error.message)
+          jadeShardTemplate = null
+        } else {
+          jadeShardTemplate = (data as { id: string; required_level: number; slot_type: string } | null) ?? null
+        }
+        return jadeShardTemplate
       }
 
       let killsProcessed = 0
@@ -1209,6 +1241,27 @@ async function handleResolveCombat(req: Request): Promise<Response> {
         } else {
           cometsGained += bonusCurrency.comets
           fallenStarsGained += bonusCurrency.fallenStars
+        }
+
+        if (
+          character.selected_monster_id !== null &&
+          JADE_SHARD_MONSTER_IDS.includes(character.selected_monster_id) &&
+          Math.random() < JADE_SHARD_DROP_CHANCE
+        ) {
+          const jadeShard = await pickJadeShardTemplate()
+          if (jadeShard) {
+            const jadeShardDrop = { ...jadeShard, qualityTier: 'normal', compositionLevel: 0 }
+            if (mode === 'live') {
+              if (projectedOccupied < INVENTORY_SLOT_CAP) {
+                droppedTemplates.push(jadeShardDrop)
+                projectedOccupied += 1
+              } else {
+                inventoryFull = true
+              }
+            } else {
+              droppedTemplates.push(jadeShardDrop)
+            }
+          }
         }
 
         // Live mode stops the whole window right here — matches "you'd have

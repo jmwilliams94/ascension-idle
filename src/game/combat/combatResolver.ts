@@ -141,6 +141,22 @@ export function rollBonusCurrencyDrops(cometMultiplier = 1, fallenStarMultiplier
   }
 }
 
+// Jade Shard (2026-09-01, Class Promotion tier-70 material) — a flat
+// per-kill chance, same independent-roll shape as Comet/Fallen Star above,
+// but scoped to exactly 3 monsters instead of every kill (frostpelt/
+// venomkin/dunecrawler, levels 60/65/67 — the only monsters in that band).
+// PLACEHOLDER rate, unlike the Comet/Fallen Star numbers above. Deliberately
+// NOT the generic level-appropriate-family drop system (Jade Shard's
+// item_family is 'promotion-material', in NON_DROPPABLE_FAMILIES, so that
+// system never picks it) — this is its only drop path. Mirrored server-side
+// in resolve-combat/index.ts — must stay in sync.
+export const JADE_SHARD_DROP_CHANCE = 1 / 300
+export const JADE_SHARD_MONSTER_IDS = ['frostpelt', 'venomkin', 'dunecrawler']
+
+export function rollJadeShardDrop(monsterId: string | null): boolean {
+  return monsterId !== null && JADE_SHARD_MONSTER_IDS.includes(monsterId) && Math.random() < JADE_SHARD_DROP_CHANCE
+}
+
 // PLACEHOLDER monster attack cadence — fixed at once per second, not derived
 // from any per-monster "attack speed" concept (none exists yet, unlike the
 // player's own derived.attackSpeed).

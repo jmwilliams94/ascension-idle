@@ -89,6 +89,12 @@ export type LuckyRewardKind =
   | 'gear_radiant_bow'
   | 'gear_radiant_coat'
   | 'gear_ascended_random'
+  // Moon Box (2026-09-01) — a real standalone item_templates row (own
+  // 'moon-box' item_family, non-droppable via combat), same
+  // insert-item_instances-then-return-it grant shape as money_bag/gem_bag.
+  // Also the Class Promotion tier-110 cost item for Hunter — obtainable
+  // right now only via Lucky Lad; a real quest source is planned later.
+  | 'moon_box'
 
 export interface LuckyReward {
   kind: LuckyRewardKind

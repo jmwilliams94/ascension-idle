@@ -8,6 +8,7 @@ import { useAuthStore } from './lib/useAuthStore'
 import { useActiveCharacterStore, getStoredCharacterId, setStoredCharacterId } from './lib/useActiveCharacterStore'
 import { usePlayerRecordStore } from './lib/usePlayerRecordStore'
 import { useItemTemplatesStore } from './game/items/useItemTemplatesStore'
+import { usePromotionStore } from './game/items/usePromotionStore'
 
 function App() {
   const session = useAuthStore((state) => state.session)
@@ -17,6 +18,7 @@ function App() {
   const whatsNewEntries = usePlayerRecordStore((state) => state.whatsNewEntries)
   const dismissWhatsNew = usePlayerRecordStore((state) => state.dismissWhatsNew)
   const loadTemplates = useItemTemplatesStore((state) => state.loadTemplates)
+  const loadPromotionTiers = usePromotionStore((state) => state.loadTiers)
 
   const characterId = useActiveCharacterStore((state) => state.characterId)
   const setActiveCharacterId = useActiveCharacterStore((state) => state.setActiveCharacterId)
@@ -30,6 +32,10 @@ function App() {
   useEffect(() => {
     loadTemplates()
   }, [loadTemplates])
+
+  useEffect(() => {
+    loadPromotionTiers()
+  }, [loadPromotionTiers])
 
   useEffect(() => {
     if (userId) {

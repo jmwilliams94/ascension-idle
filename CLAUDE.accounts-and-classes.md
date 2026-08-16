@@ -33,3 +33,26 @@ One Supabase account (`auth.users`/`players`) can have up to **5 characters** (`
 - **`StatsPanel` collapsed by default** behind "Show ▼"/"Hide ▲". Attack shown as a range (`damageRangeFromMidpoint`), not a flat number.
 
 **Gear slots**: Headgear, Body armor, Shield (Warrior/Juggernaut only), Boots, Earrings, Necklace, Ring, Heavy Ring, Bracelet, Bag, Riding Crop, plus class-specific one-handed weapons (Sword, Backsword, Blade, Hook, Whip, Axe, Hammer, Club, Scepter, Dagger, Arrows) and two-handed (Bow, Glaive, Poleaxe, Spear, Wand, Halberd), plus special slots: Talisman, Garment, Dragon Soul, Martial Soul. Exact per-class slot assignment is **unresolved — needs a follow-up finalization pass**.
+
+**Class Promotion (v1.97.0, cosmetic only — no stat/combat effect)**: `characters.promotion_level` (default 0) tracks a character's highest reached tier — a distinct concept from the unrelated, unstored `PROMOTION_TIER_ANCHORS` EXP-pacing curve in `expCurve.ts`/`resolve-combat`. Every character starts as **"Novice \<ClassName\>"** (e.g. "Novice Hunter") before its first promotion — a fixed convention derived from `CLASS_DEFINITIONS`' `displayName` (`promotionHelpers.ts`'s `startingTitle`), not a `promotion_tiers` row. Data-driven via `promotion_tiers` (class/level/title/`items_required`/`award_items` jsonb, `skills_unlocked` text[]), so new classes are a pure seed-row addition, no code changes. `promote_character(character_id)` RPC (guaranteed success, no RNG, once level + cost are met) consumes cost and grants awards in one transaction, updating `promotion_level`; client wiring is `usePromotionStore.ts` (loads tiers once, wraps the RPC) + `promotionHelpers.ts` (`getCurrentPromotionTitle`/`getNextEligiblePromotionTier`, pure functions like `getAttributesForLevel`) + a Promote button/title line in `EquipmentPanel.tsx` opening `PromotionModal.tsx`. `skills_unlocked` is inert flavor text only — no ability/skill system exists yet (deferred), may later gate skill unlocks.
+
+Seeded so far for Hunter only — 5 tiers, no level-120 tier (matches the real game's actual promotion cap and the already-unsourced level-120 attribute anchor). Titles/items/skills went through two renames before settling (screenshot placeholders → an invented-naming pass `20260901010000_promotion_rename_pass.sql` → item/title adjustments `20260901020000_promotion_item_adjustments.sql`, after the user pointed out several items already belonged to other systems). Current state:
+
+| Level | Title | Requires | Award | Skills (inert) |
+|---|---|---|---|---|
+| 15 | Hunter | — | Fawnhide Coat (real catalog item, not a new one) | — |
+| 40 | Falcon Hunter | 5x Umbrite Ore | Ram's Horn Bow (real catalog item) | Multi-Shot |
+| 70 | Panther Hunter | 1x Jade Shard | — | Rapid |
+| 100 | Wyrm Hunter | 1x Comet | 1x Tempered Iris Gem (real Gem system, `characters.gems`) | — |
+| 110 | Grand Hunter | 1x Moon Box | 1x Fallen Star | — |
+
+Every character starts as "Novice \<ClassName\>"; the tier-15 title equals the plain class name ("Hunter") — matches the real game's own convention.
+
+**Item acquisition, by tier** (each now belongs to a different system rather than being promotion-exclusive):
+- Tier 15/40 awards reuse real existing gear-chain items (`Fawnhide Coat` req. level 15, `Ram's Horn Bow` req. level 45) — no new item_templates rows for these.
+- **Umbrite Ore** (tier 40 cost): intended as a future Mining drop (Idling tab) — no acquisition path exists yet, so tier 40 is unobtainable until Mining ships. Known/accepted gap, not a bug.
+- **Jade Shard** (tier 70 cost): a flat 1/300 per-kill drop (PLACEHOLDER rate) scoped to exactly 3 monsters — `frostpelt`/`venomkin`/`dunecrawler` (levels 60/65/67, the only monsters in that band). Independent-roll shape identical to Comet/Fallen Star, not the generic level-appropriate-family picker (`JADE_SHARD_DROP_CHANCE`/`JADE_SHARD_MONSTER_IDS`/`rollJadeShardDrop` in `combatResolver.ts`, mirrored in `resolve-combat/index.ts` — must stay in sync).
+- **Moon Box** (tier 110 cost): a real Lucky Lad reward (`pick_lucky_reward`'s Rare bucket, weight 0.5, PLACEHOLDER) — grants 1 `item_instances` row, same shape as Money Bag/Gem Bag. A real quest-reward source is planned later; Lucky Lad is the acquisition path for now.
+- **1x Tempered Iris Gem** (tier 100 award): `promote_character`'s `kind: 'gem'` branch (`{"kind":"gem","name":"iris_tempered","quantity":1}`) writes directly into `characters.gems` via the same `jsonb_set` read-modify-write idiom `draw_lucky_ticket` already uses for gem grants.
+
+Tier 100's cost and tier 110's award reuse the real Comet/Fallen Star currency directly (the source data's "Meteor"/"Dragon Ball" are this game's own pre-rename names for those two, per `CLAUDE.progression.md`) — not renamed, since they're the actual currencies, not new items. `Jade Shard`/`Umbrite Ore`/`Moon Box` share the `promotion-material` `item_family`, in `NON_DROPPABLE_FAMILIES` (`useInventoryStore.ts`) and its real server-side counterpart `pick_drop_template`'s SQL exclusion list, so none of them can ever drop via the generic random-kill-drop system — Jade Shard's real drop path is the bespoke monster-scoped roll above; Moon Box's is Lucky Lad; Umbrite Ore has none yet. Warrior/Trojan/Taoist tiers pending real reference data from the user.

@@ -5,17 +5,26 @@ import { useProgressionStore } from './useProgressionStore'
 interface CharacterState {
   selectedClassId: ClassId
   attributes: Attributes
+  // Highest Class Promotion tier reached (characters.promotion_level,
+  // default 0 = "Intern", not yet promoted) — cosmetic/title only, no
+  // relation to the attribute-anchor curve above. Server-authoritative,
+  // only ever written by promote_character (see usePromotionStore) —
+  // hydrated on load, never sent back via a normal character save.
+  promotionLevel: number
   selectClass: (classId: ClassId) => void
+  setPromotionLevel: (level: number) => void
 }
 
 export const useCharacterStore = create<CharacterState>((set) => ({
   selectedClassId: 'hunter',
   attributes: getAttributesForLevel('hunter', useProgressionStore.getState().level),
+  promotionLevel: 0,
   selectClass: (classId) =>
     set({
       selectedClassId: classId,
       attributes: getAttributesForLevel(classId, useProgressionStore.getState().level),
     }),
+  setPromotionLevel: (level) => set({ promotionLevel: level }),
 }))
 
 // Attributes are a pure function of (class, level) now (see classes.ts's
