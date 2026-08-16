@@ -132,6 +132,23 @@ interface CombatState {
   // Achievements & Pets, Stage 1 (see CLAUDE.md). Just a log line, no other
   // state change — the pet unlock itself already happened server-side.
   logPetObtained: (monsterName: string) => void
+  // Row Combat (Phase 1) support — player HP/knockout is one shared pool
+  // across single-target and row combat (the same character, same HP bar),
+  // so useRowCombatStore's own tick loop calls into these rather than
+  // forking a second HP pool. Mirrors runTick's own inline revive-check/
+  // incoming-damage logic above; kept as separate small methods rather than
+  // refactoring runTick to call them, to avoid touching proven behavior.
+  //
+  // Returns true if the player is still incapacitated (or was incapacitated
+  // and has just revived this call) — callers should skip their own action
+  // for this tick when true, same "revive fully, resume next tick" shape
+  // runTick's own reviveAt handling uses.
+  isKnockedOutAt: (nowMs: number) => boolean
+  // Applies a single already-fully-computed hit (defense/damage-reduction
+  // already applied by the caller, same as runTick's own `damage` value) to
+  // the shared player HP pool. No-ops while already knocked out or before
+  // maxPlayerHp has been lazily initialized (mirrors runTick's own guards).
+  applyIncomingDamage: (damage: number, nowMs: number, sourceName: string) => void
 }
 
 export const useCombatStore = create<CombatState>((set, get) => ({
@@ -503,4 +520,38 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         message: `You obtained the ${monsterName} pet!`,
       }),
     })),
+
+  isKnockedOutAt: (nowMs) => {
+    const state = get()
+    if (state.reviveAt <= 0) return false
+    if (nowMs < state.reviveAt) return true
+    set((s) => ({
+      reviveAt: 0,
+      currentPlayerHp: s.maxPlayerHp,
+      log: appendLog(s.log, { kind: 'knockout', message: 'You revive and rejoin the fight!' }),
+    }))
+    return true
+  },
+
+  applyIncomingDamage: (damage, nowMs, sourceName) => {
+    set((state) => {
+      if (state.reviveAt > 0 || state.maxPlayerHp <= 0) return {}
+      const nextHp = Math.max(0, state.currentPlayerHp - damage)
+      if (nextHp <= 0) {
+        return {
+          currentPlayerHp: 0,
+          reviveAt: nowMs + KNOCKOUT_LOCKOUT_MS,
+          log: appendLog(state.log, { kind: 'knockout', message: 'You were knocked out! Recovering for 10s...' }),
+        }
+      }
+      return {
+        currentPlayerHp: nextHp,
+        log: appendLog(state.log, {
+          kind: 'player-damage',
+          message: `${sourceName} hits you for ${damage}.`,
+          amount: damage,
+        }),
+      }
+    })
+  },
 }))

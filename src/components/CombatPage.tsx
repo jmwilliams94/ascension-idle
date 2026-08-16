@@ -15,6 +15,7 @@ import { usePotionStore } from '../game/items/usePotionStore'
 import { POTION_TYPES, HP_POTION_ORDER } from '../game/items/potionTypes'
 import WorldBossEventsCard from './WorldBossEventsCard'
 import WorldBossCard from './WorldBossCard'
+import RowCombatPanel from './RowCombatPanel'
 import { useActiveEventEmberColor } from '../game/hud/useEventEmberColor'
 import { EventEmberBorder } from '../game/hud/eventEmberBorder'
 import { eventBorderTintStyle } from '../game/hud/eventEmberBorderData'
@@ -79,28 +80,6 @@ export function HpBar({ current, max, barColorClass = 'bg-emerald-500' }: { curr
         animate={{ width: `${pct}%` }}
         transition={{ type: 'spring', stiffness: 140, damping: 22 }}
       />
-    </div>
-  )
-}
-
-// Purely a placeholder for now (confirmed with the user, 2026-08-01) — 4
-// locked slots under the currently-summoned monster, reserved for a future
-// multi-target unlock (see CLAUDE.md's "under consideration" note on a
-// higher account-wide ladder tier unlocking simultaneous targets for a
-// specific monster). Not wired to anything yet: no click handler, no data —
-// just scaffolding so the eventual feature has an obvious home to slot into.
-function MultiTargetSlots() {
-  return (
-    <div className="mt-3 grid grid-cols-4 gap-2">
-      {[0, 1, 2, 3].map((slot) => (
-        <div
-          key={slot}
-          title="Additional target — coming soon"
-          className="flex aspect-square items-center justify-center rounded-lg border-2 border-dashed border-slate-800 bg-slate-950/60 text-slate-600"
-        >
-          🔒
-        </div>
-      ))}
     </div>
   )
 }
@@ -337,7 +316,7 @@ export default function CombatPage() {
               </div>
             </div>
 
-            <MultiTargetSlots />
+            {characterId && <RowCombatPanel characterId={characterId} />}
 
             <Button variant="secondary" onClick={handleToggle} className="mt-4 w-full">
               {isFighting ? 'Stop' : 'Resume'}
@@ -679,9 +658,11 @@ export default function CombatPage() {
               </div>
             </div>
 
-            <div className="max-w-xs">
-              <MultiTargetSlots />
-            </div>
+            {characterId && (
+              <div className="max-w-xs">
+                <RowCombatPanel characterId={characterId} />
+              </div>
+            )}
 
             <Button variant="secondary" onClick={handleToggle} className="mt-4">
               {isFighting ? 'Stop' : 'Resume'}

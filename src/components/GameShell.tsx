@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import CombatEngine from '../game/combat/CombatEngine'
+import RowCombatEngine from '../game/combat/RowCombatEngine'
 import GlobalActivityConnection from './GlobalActivityConnection'
 import MailRealtimeConnection from './MailRealtimeConnection'
 import WorldBossConnection from './WorldBossConnection'
@@ -468,6 +469,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <UnclaimedLootBadge />
       <GainToastHost />
       <CombatEngine />
+      <RowCombatEngine />
       <GlobalActivityConnection accountId={accountId} />
       <MailRealtimeConnection characterId={characterId} />
       <WorldBossConnection />

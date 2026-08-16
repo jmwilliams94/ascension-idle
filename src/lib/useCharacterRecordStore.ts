@@ -12,6 +12,7 @@ import { useGemStore } from '../game/items/useGemStore'
 import type { GemCounts } from '../game/items/gemTypes'
 import { useLuckyStore } from '../game/lucky/useLuckyStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
+import { useRowCombatStore, type ServerRowSlot } from '../game/combat/useRowCombatStore'
 
 // Loads/saves the active character's row (characters table) — class, level, gold,
 // exp, zone, equipped items (including the Quiver, for Hunters). Replaces what
@@ -64,6 +65,12 @@ interface CharacterRow {
   // Class Promotion (2026-09-01) — same trust model as above, only ever
   // written by promote_character, never the generic autosave.
   promotion_level: number
+  // Row Combat (Phase 1) — same trust model as comet_count/gems above,
+  // never touched by the generic autosave; only resolve-row-combat/
+  // toggle_row_slot/claim_row_unlock ever write these.
+  row1_unlocked: boolean
+  row2_unlocked: boolean
+  row_slots: ServerRowSlot[]
 }
 
 interface CharacterRecordState {
@@ -107,11 +114,16 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     // existing zone-switch precedent (CombatPage.tsx's handleSelectZone
     // already calls this same clear() before switching zones).
     useCombatStore.getState().clear()
+    // Same "zombie fight" bug fix as useCombatStore.clear() above, applied to
+    // Row Combat — reset before the fetch so a character switch can't leave
+    // RowCombatEngine ticking against the previous character's slots.
+    useRowCombatStore.getState().applyServerSlots([])
+    useRowCombatStore.getState().setUnlocked(false, false)
 
     const { data, error } = await supabase
       .from('characters')
       .select(
-        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, comet_count, fallen_star_count, comet_scroll_count, fallen_star_scroll_count, comet_box_count, lottery_ticket_count, composition_stones, gems, selected_monster_id, last_active_at, lucky_free_ticket_claimed_at, promotion_level',
+        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, comet_count, fallen_star_count, comet_scroll_count, fallen_star_scroll_count, comet_box_count, lottery_ticket_count, composition_stones, gems, selected_monster_id, last_active_at, lucky_free_ticket_claimed_at, promotion_level, row1_unlocked, row2_unlocked, row_slots',
       )
       .eq('id', characterId)
       .maybeSingle<CharacterRow>()
@@ -151,6 +163,8 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     useCompositionStore.getState().hydrate(data.composition_stones)
     useGemStore.getState().hydrate(data.gems)
     useLuckyStore.getState().hydrate(data.lucky_free_ticket_claimed_at)
+    useRowCombatStore.getState().setUnlocked(data.row1_unlocked, data.row2_unlocked)
+    useRowCombatStore.getState().applyServerSlots(data.row_slots ?? [])
 
     set({ loaded: true, previousLastActiveAt: data.last_active_at, characterName: data.name })
   },

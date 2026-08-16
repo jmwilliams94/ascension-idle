@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.98.0",
+    "date": "2026-08-17",
+    "changes": [
+      "Added Row Combat: unlock Row 1 and Row 2 by reaching Kill Count milestones, then fight up to 6 enemies at once per row",
+      "Added Multi-Shot, a Hunter ability that strikes every enemy in an active row at once"
+    ]
+  },
+  {
     "version": "1.97.4",
     "date": "2026-08-17",
     "changes": [
