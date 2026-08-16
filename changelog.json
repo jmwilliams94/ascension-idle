@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.96.11",
+    "date": "2026-08-16",
+    "changes": [
+      "Restored a small gap between the Idling button and LuckyLad/Tavern on the mobile nav, after fully closing it made the ember glow feel cramped in person"
+    ]
+  },
+  {
     "version": "1.96.10",
     "date": "2026-08-16",
     "changes": [
