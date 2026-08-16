@@ -1,7 +1,7 @@
 {
   "name": "ascension-idle",
   "private": true,
-  "version": "1.96.18",
+  "version": "1.96.19",
   "type": "module",
   "scripts": {
     "dev": "vite",

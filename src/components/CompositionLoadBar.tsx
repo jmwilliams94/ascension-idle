@@ -22,6 +22,7 @@ const BURST_DISPLAY_MS = 2000
 interface Burst {
   id: number
   seed: number
+  x: number
 }
 
 // The single load bar spanning the Upgrade+Material slots — one bar, one job
@@ -69,9 +70,9 @@ export default function CompositionLoadBar({
   const nextLevel = Math.min(item.composition_level + 1, COMPOSITION_MAX_LEVEL)
   const nextCost = compositionPointsRequired(item.composition_level)
 
-  const spawnBurst = () => {
+  const spawnBurst = (x: number) => {
     const id = nextBurstId.current++
-    setBursts((current) => [...current, { id, seed: seedFromId(`composition-burst-${id}`) }])
+    setBursts((current) => [...current, { id, seed: seedFromId(`composition-burst-${id}`), x }])
     setTimeout(() => setBursts((current) => current.filter((burst) => burst.id !== id)), BURST_DISPLAY_MS)
   }
 
@@ -110,7 +111,7 @@ export default function CompositionLoadBar({
         if (cancelled) return
 
         if (toPercent >= 100) {
-          spawnBurst()
+          spawnBurst(toPercent)
         }
       }
     })()
@@ -134,7 +135,7 @@ export default function CompositionLoadBar({
           </div>
           {bursts.map((burst) => (
             <div key={burst.id} className="pointer-events-none absolute inset-0 overflow-visible">
-              <EmberBurstPoint x={100} y={50} color={WHITE} seed={burst.seed} radius={70} emberCount={20} />
+              <EmberBurstPoint x={burst.x} y={50} color={AMBER} seed={burst.seed} radius={70} emberCount={20} />
             </div>
           ))}
         </div>

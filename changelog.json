@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.96.19",
+    "date": "2026-08-16",
+    "changes": [
+      "Composition bar now bursts with gold embers when a piece of gear reaches its next tier"
+    ]
+  },
+  {
     "version": "1.96.18",
     "date": "2026-08-16",
     "changes": [
