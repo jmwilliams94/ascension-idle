@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.99.1",
+    "date": "2026-08-17",
+    "changes": [
+      "Fixed the Multi-Shot cooldown display and each Row Combat slot's respawn countdown not visibly ticking down",
+      "Row Combat's 6 slots now stretch evenly across the full width of the monster panel instead of a fixed grid",
+      "The respawn countdown for your normal target now shows above the \"Dead\" label instead of only in the side text"
+    ]
+  },
+  {
     "version": "1.99.0",
     "date": "2026-08-17",
     "changes": [

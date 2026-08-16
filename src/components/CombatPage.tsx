@@ -77,9 +77,10 @@ const FLOATING_NUMBER_LIFETIME_MS = 800
 // portrait itself stays mounted the whole time (see the `opacity-30
 // grayscale` classes at both call sites below) — this just adds the "Dead"
 // label on top of it.
-function DeadOverlay() {
+function DeadOverlay({ seconds }: { seconds: number }) {
   return (
-    <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-slate-950/40">
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 rounded-2xl bg-slate-950/40">
+      <span className="text-lg font-bold text-slate-100">{seconds}s</span>
       <span className="text-xs font-bold uppercase tracking-wide text-slate-300">Dead</span>
     </div>
   )
@@ -306,7 +307,7 @@ export default function CombatPage() {
                     style={{ backgroundColor: hexColor(activeType.color) }}
                   />
                 )}
-                {isRespawning && <DeadOverlay />}
+                {isRespawning && <DeadOverlay seconds={respawnSecondsLeft} />}
                 <AnimatePresence>
                   {floatingNumbers.map((entry) => (
                     <motion.div
@@ -649,7 +650,7 @@ export default function CombatPage() {
                     style={{ backgroundColor: hexColor(activeType.color) }}
                   />
                 )}
-                {isRespawning && <DeadOverlay />}
+                {isRespawning && <DeadOverlay seconds={respawnSecondsLeft} />}
                 <AnimatePresence>
                   {floatingNumbers.map((entry) => (
                     <motion.div

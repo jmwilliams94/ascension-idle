@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from './ui/Button'
 import { HpBar } from './CombatPage'
 import { supabase } from '../lib/supabaseClient'
-import { useRowCombatStore, ROW_RESPAWN_MS, MULTI_SHOT_COOLDOWN_MS, type ServerRowSlot } from '../game/combat/useRowCombatStore'
+import { useRowCombatStore, ROW_RESPAWN_MS, type ServerRowSlot } from '../game/combat/useRowCombatStore'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useAchievementsStore } from '../game/achievements/useAchievementsStore'
@@ -26,6 +26,22 @@ const ROW_REQUIRED_KILLS: Record<1 | 2, number> = { 1: 250, 2: 1000 }
 
 function bestClaimedTier(characterKills: Record<string, { claimedTierIndex: number }>): number {
   return Object.values(characterKills).reduce((max, entry) => Math.max(max, entry.claimedTierIndex), 0)
+}
+
+// Bug fix (reported by the user, 2026-08-17): both the Multi-Shot cooldown
+// label and each slot's "Respawn Ns" text used to compute Date.now() only
+// at render time, with nothing forcing a re-render as real time passed —
+// Multi-Shot's own countdown relied on an ad-hoc setInterval started
+// inside its click handler, which meant a cooldown active from page load
+// (or from a previous session) never ticked at all. A shared, persistent
+// ticking `now` tied to the component's own mount lifecycle fixes both.
+function useTickingNow(intervalMs: number): number {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), intervalMs)
+    return () => window.clearInterval(id)
+  }, [intervalMs])
+  return now
 }
 
 function RowUnlockSection({ characterId, row }: { characterId: string; row: 1 | 2 }) {
@@ -69,6 +85,7 @@ function RowSlotTile({ characterId, slotIndex }: { characterId: string; slotInde
   const slot = useRowCombatStore((state) => state.slots[slotIndex])
   const selectedMonsterId = useZoneStore((state) => state.selectedMonsterId)
   const [busy, setBusy] = useState(false)
+  const now = useTickingNow(1000)
 
   const handleClick = async () => {
     if (busy) return
@@ -89,7 +106,7 @@ function RowSlotTile({ characterId, slotIndex }: { characterId: string; slotInde
         onClick={() => void handleClick()}
         disabled={busy || !selectedMonsterId}
         title={selectedMonsterId ? 'Spawn the selected monster here' : 'Select a monster first'}
-        className="flex aspect-square items-center justify-center rounded-lg border-2 border-dashed border-slate-800 bg-slate-950/60 text-slate-600 transition hover:border-amber-500/60 hover:text-slate-400 disabled:cursor-not-allowed disabled:opacity-40"
+        className="flex aspect-square min-w-0 flex-1 items-center justify-center rounded-lg border-2 border-dashed border-slate-800 bg-slate-950/60 text-slate-600 transition hover:border-amber-500/60 hover:text-slate-400 disabled:cursor-not-allowed disabled:opacity-40"
       >
         +
       </button>
@@ -98,7 +115,7 @@ function RowSlotTile({ characterId, slotIndex }: { characterId: string; slotInde
 
   const type = slot.monsterTypeId ? ENEMY_TYPES[slot.monsterTypeId] : null
   const isDead = slot.deadAt !== 0
-  const respawnRemainingMs = isDead ? Math.max(0, ROW_RESPAWN_MS - (Date.now() - slot.deadAt)) : 0
+  const respawnRemainingMs = isDead ? Math.max(0, ROW_RESPAWN_MS - (now - slot.deadAt)) : 0
 
   return (
     <button
@@ -107,7 +124,7 @@ function RowSlotTile({ characterId, slotIndex }: { characterId: string; slotInde
       disabled={busy}
       title={type ? `${type.displayName} — click to disable` : undefined}
       key={slot.monsterInstanceKey}
-      className={`flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border-2 p-1 transition disabled:cursor-not-allowed ${
+      className={`flex aspect-square min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg border-2 p-1 transition disabled:cursor-not-allowed ${
         slot.isRareInstance ? 'super-quality-glow border-amber-500/60' : 'border-slate-700'
       } bg-slate-900/80 hover:border-amber-500/60`}
     >
@@ -128,7 +145,10 @@ function RowSlotTile({ characterId, slotIndex }: { characterId: string; slotInde
 function RowGrid({ characterId, row }: { characterId: string; row: 1 | 2 }) {
   const startIndex = row === 1 ? 0 : 6
   return (
-    <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+    // Flex, not grid — all 6 slots share the full width of the monster
+    // container equally (flex-1 on each tile below), always one row of 6
+    // abreast rather than wrapping into multiple rows at narrower widths.
+    <div className="flex gap-2">
       {Array.from({ length: 6 }, (_, i) => (
         <RowSlotTile key={startIndex + i} characterId={characterId} slotIndex={startIndex + i} />
       ))}
@@ -142,7 +162,7 @@ function MultiShotButton({ characterId }: { characterId: string }) {
   const anyEnabled = useRowCombatStore((state) => state.slots.some((s) => s.enabled))
   const row1Unlocked = useRowCombatStore((state) => state.row1Unlocked)
   const row2Unlocked = useRowCombatStore((state) => state.row2Unlocked)
-  const [now, setNow] = useState(() => Date.now())
+  const now = useTickingNow(250)
 
   // Shown (disabled, not hidden) as soon as a Hunter has unlocked either
   // row — hiding it entirely whenever no slot happens to be active made it
@@ -157,7 +177,6 @@ function MultiShotButton({ characterId }: { characterId: string }) {
   const handleFire = async () => {
     if (disabled) return
     useRowCombatStore.getState().fireMultiShotOptimistic(Date.now())
-    setNow(Date.now())
     await resolveRowCombat(characterId, { fireMultiShot: true })
   }
 
@@ -166,12 +185,7 @@ function MultiShotButton({ characterId }: { characterId: string }) {
       variant="primary"
       disabled={disabled}
       title={!anyEnabled ? 'Enable a row slot first' : undefined}
-      onClick={() => {
-        void handleFire()
-        // Keep the countdown label live while on cooldown.
-        const id = window.setInterval(() => setNow(Date.now()), 250)
-        window.setTimeout(() => window.clearInterval(id), MULTI_SHOT_COOLDOWN_MS + 500)
-      }}
+      onClick={() => void handleFire()}
       className="mb-2 w-full"
     >
       {onCooldown ? `Multi-Shot (${Math.max(0, secondsLeft)}s)` : 'Multi-Shot'}
