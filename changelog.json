@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.96.10",
+    "date": "2026-08-16",
+    "changes": [
+      "Tightened the gap on either side of the mobile nav's center Idling button",
+      "Equip and Achiev. now curve into a matching, more pronounced bottom-outer corner on the mobile nav bar"
+    ]
+  },
+  {
     "version": "1.96.9",
     "date": "2026-08-16",
     "changes": [

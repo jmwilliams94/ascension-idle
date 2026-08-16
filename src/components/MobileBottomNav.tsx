@@ -55,17 +55,41 @@ const RIGHT_ITEMS: { id: TabId; label: string }[] = [{ id: 'achievements', label
 // Same .btn-gold/.btn-gold-active treatment as TabNav.tsx's desktop buttons
 // (2026-08-16, requested by the user — "same button styling we've been
 // going with"), scaled down to this bar's compact size.
-function NavButton({ id, label, badge }: { id: TabId; label: string; badge?: number }) {
+// outerCorner (2026-08-16, requested by the user) — Equip/Achiev. are the
+// bar's two physical end buttons, so their one true outer-bottom corner gets
+// a radius matching the nav's own rounded-b-[1.75rem] (see MobileBottomNav's
+// className comment below) instead of the shared rounded-lg. Written as four
+// explicit longhand corners rather than mixing the `rounded-lg` shorthand
+// with a longhand override — both compile to the same border-radius
+// longhand at equal specificity, so which one wins would depend on
+// generated-CSS source order instead of JSX order.
+function NavButton({
+  id,
+  label,
+  badge,
+  outerCorner,
+}: {
+  id: TabId
+  label: string
+  badge?: number
+  outerCorner?: 'bl' | 'br'
+}) {
   const activeTab = useTabStore((state) => state.activeTab)
   const setActiveTab = useTabStore((state) => state.setActiveTab)
   const active = activeTab === id
   const icon = TAB_ICONS[id]
+  const cornerClass =
+    outerCorner === 'bl'
+      ? 'rounded-tl-lg rounded-tr-lg rounded-br-lg rounded-bl-[1.75rem]'
+      : outerCorner === 'br'
+        ? 'rounded-tl-lg rounded-tr-lg rounded-bl-lg rounded-br-[1.75rem]'
+        : 'rounded-lg'
 
   return (
     <button
       type="button"
       onClick={() => setActiveTab(id)}
-      className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[10px] font-medium leading-tight ${
+      className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-medium leading-tight ${cornerClass} ${
         active ? 'btn-gold-active' : 'btn-gold'
       }`}
     >
@@ -92,6 +116,11 @@ function NavButton({ id, label, badge }: { id: TabId; label: string; badge?: num
 // axis means the whole nav bar's height grows to match this circle, and the
 // four side NavButtons re-center within that taller row for free (they
 // already use justify-center on a stretched flex child, see NavButton).
+// -mx-1 (2026-08-16, requested by the user) cancels the row's gap-1 on both
+// sides of this button specifically, pulling LuckyLad/Tavern in flush
+// against it — the row's `gap` is uniform across all five slots, so a
+// negative margin on this one item is the only way to tighten just its own
+// neighboring gaps without touching Equip<->LuckyLad or Tavern<->Achiev.
 function IdlingNavButton() {
   const activeTab = useTabStore((state) => state.activeTab)
   const setActiveTab = useTabStore((state) => state.setActiveTab)
@@ -103,7 +132,7 @@ function IdlingNavButton() {
     <button
       type="button"
       onClick={() => setActiveTab('combat')}
-      className="flex flex-1 flex-col items-center justify-center gap-0.5"
+      className="-mx-1 flex flex-1 flex-col items-center justify-center gap-0.5"
     >
       <span
         className={`relative flex h-14 w-14 items-center justify-center rounded-full shadow-lg ${
@@ -256,13 +285,18 @@ export default function MobileBottomNav() {
       style={{ paddingBottom: 'env(safe-area-inset-bottom)', transform: 'translateZ(0)' }}
     >
       <div className="mx-auto flex max-w-md items-stretch gap-1 py-1">
-        {LEFT_ITEMS.map((item) => (
-          <NavButton key={item.id} {...item} />
+        {LEFT_ITEMS.map((item, index) => (
+          <NavButton key={item.id} {...item} outerCorner={index === 0 ? 'bl' : undefined} />
         ))}
         <IdlingNavButton />
         <TavernNavButton badges={{ marketplace: mailBadge }} />
         {RIGHT_ITEMS.map((item) => (
-          <NavButton key={item.id} {...item} badge={item.id === 'achievements' ? achievementsBadge : undefined} />
+          <NavButton
+            key={item.id}
+            {...item}
+            badge={item.id === 'achievements' ? achievementsBadge : undefined}
+            outerCorner="br"
+          />
         ))}
       </div>
     </nav>
