@@ -42,13 +42,19 @@ export function buildBorderEmbers(count: number, seed: number): BorderEmberConfi
   const rand = mulberry32(seed)
   return Array.from({ length: count }, () => {
     const angle = rand() * Math.PI * 2
-    // Anchor radius (46% of width/height) sits just inside the element's own
-    // border on all sides, whether that border is a circle or a rounded-rect.
-    const leftPct = 50 + Math.cos(angle) * 46
-    const topPct = 50 + Math.sin(angle) * 46
-    // Short outward travel only — "coming out from the border, not that far
-    // outward" per the confirmed design, unlike TierEmberEffect's full burst.
-    const distance = 3 + rand() * 5
+    // Anchor radius (56% of width/height) sits just OUTSIDE the element's own
+    // border on all sides, whether that border is a circle or a rounded-rect
+    // — moved out from an original 46% (2026-08-16, reported by the user:
+    // embers anchored just inside the border were unreadable against
+    // .btn-gold-active's own bright fill once a tab is selected). Anchoring
+    // outside means the embers never sit on top of the button's own
+    // background, so they stay visible in both the idle and active states.
+    const leftPct = 50 + Math.cos(angle) * 56
+    const topPct = 50 + Math.sin(angle) * 56
+    // Short further outward travel — "coming out from the border, not that
+    // far outward" per the confirmed design, unlike TierEmberEffect's full
+    // burst — the anchor above already does the "at the border" part.
+    const distance = 2 + rand() * 4
     return {
       leftPct,
       topPct,
