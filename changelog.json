@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.96.14",
+    "date": "2026-08-16",
+    "changes": [
+      "Fixed the mobile nav's Tavern popup menu not registering taps on its options",
+      "Deepened the bottom-outer corner curve on Equip and Achiev. further"
+    ]
+  },
+  {
     "version": "1.96.13",
     "date": "2026-08-16",
     "changes": [

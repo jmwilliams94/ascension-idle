@@ -57,7 +57,7 @@ const RIGHT_ITEMS: { id: TabId; label: string }[] = [{ id: 'achievements', label
 // going with"), scaled down to this bar's compact size.
 // outerCorner (2026-08-16, requested by the user) — Equip/Achiev. are the
 // bar's two physical end buttons, so their one true outer-bottom corner gets
-// a radius matching the nav's own rounded-b-[1.75rem] (see MobileBottomNav's
+// a radius matching the nav's own rounded-b-[2.5rem] (see MobileBottomNav's
 // className comment below) instead of the shared rounded-lg. Written as four
 // explicit longhand corners rather than mixing the `rounded-lg` shorthand
 // with a longhand override — both compile to the same border-radius
@@ -87,9 +87,9 @@ function NavButton({
   const icon = TAB_ICONS[id]
   const cornerClass =
     outerCorner === 'bl'
-      ? 'rounded-tl-lg rounded-tr-lg rounded-br-lg rounded-bl-[1.75rem]'
+      ? 'rounded-tl-lg rounded-tr-lg rounded-br-lg rounded-bl-[2.5rem]'
       : outerCorner === 'br'
-        ? 'rounded-tl-lg rounded-tr-lg rounded-bl-lg rounded-br-[1.75rem]'
+        ? 'rounded-tl-lg rounded-tr-lg rounded-bl-lg rounded-br-[2.5rem]'
         : 'rounded-lg'
 
   return (
@@ -282,7 +282,7 @@ export default function MobileBottomNav() {
 
   return (
     <nav
-      className="ascension-edge-t fixed inset-x-0 bottom-0 z-40 overflow-hidden rounded-b-[1.75rem] bg-[linear-gradient(180deg,_var(--ascension-ink-soft)_0%,_var(--ascension-ink)_100%)] lg:hidden"
+      className="ascension-edge-t fixed inset-x-0 bottom-0 z-40 rounded-b-[2.5rem] bg-[linear-gradient(180deg,_var(--ascension-ink-soft)_0%,_var(--ascension-ink)_100%)] lg:hidden"
       // translateZ(0) (2026-08-19, reported by the user: nav bar drifting
       // upward with the page mid-scroll on mobile) forces this onto its own
       // GPU compositing layer up front -- kept even after the 2026-08-14
@@ -291,13 +291,21 @@ export default function MobileBottomNav() {
       // guarded against), since it's a harmless no-cost defensive measure
       // for a fixed-position bar either way.
       //
-      // rounded-b + overflow-hidden (2026-08-16, requested by the user: bar
-      // should "contour" to the phone's rounded bottom corners) — Equip/
-      // Achiev. carry a matching rounded-b-[1.75rem] on their own one true
-      // outer corner (see NavButton's `outerCorner` prop), so this mask
-      // still reads as one continuous curve even though those buttons no
-      // longer sit flush against the row's edges (px-2 below, 2026-08-16,
-      // requested by the user, moves them off the phone's physical edge).
+      // rounded-b, no overflow-hidden (2026-08-16, requested by the user:
+      // bar should "contour" to the phone's rounded bottom corners) —
+      // border-radius clips this element's own background on its own,
+      // without needing overflow-hidden. Equip/Achiev. carry a matching
+      // rounded-b-[2.5rem] on their own one true outer corner (see
+      // NavButton's `outerCorner` prop) so the curve reads as continuous.
+      // overflow-hidden was here originally too, to clip those buttons
+      // flush to this same mask before they got their own outerCorner
+      // radius (and before px-2 moved them off the physical edge) — kept
+      // dropped now (2026-08-16, reported by the user: Tavern's popup menu
+      // stopped registering taps) since it was also silently clipping the
+      // Tavern rollup, which opens via `absolute bottom-full` and pokes out
+      // above this box: content clipped by an ancestor's overflow-hidden
+      // doesn't receive pointer events either, so every rollup item was a
+      // dead zone once this got added.
       style={{ paddingBottom: 'env(safe-area-inset-bottom)', transform: 'translateZ(0)' }}
     >
       <div className="mx-auto flex max-w-md items-stretch gap-1 px-2 py-1">
