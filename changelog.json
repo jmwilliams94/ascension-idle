@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.96.8",
+    "date": "2026-08-16",
+    "changes": [
+      "Enlarged the mobile bottom nav's center Idling button so it reads as the primary action",
+      "Mobile bottom nav now curves into the phone's rounded bottom corners instead of ending in a straight edge"
+    ]
+  },
+  {
     "version": "1.96.7",
     "date": "2026-08-16",
     "changes": [

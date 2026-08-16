@@ -87,6 +87,11 @@ function NavButton({ id, label, badge }: { id: TabId; label: string; badge?: num
 // of the nav (2026-08-16) instead of its own bespoke amber/slate colors, and
 // carries the World Boss/Gold Donation Event border embers — see
 // useEventEmberColor.ts for the red/green/gold priority rule.
+// Sized up (h-11 -> h-14, 2026-08-16, requested by the user) so the center
+// action button reads as the primary one — the row's items-stretch cross-
+// axis means the whole nav bar's height grows to match this circle, and the
+// four side NavButtons re-center within that taller row for free (they
+// already use justify-center on a stretched flex child, see NavButton).
 function IdlingNavButton() {
   const activeTab = useTabStore((state) => state.activeTab)
   const setActiveTab = useTabStore((state) => state.setActiveTab)
@@ -101,12 +106,12 @@ function IdlingNavButton() {
       className="flex flex-1 flex-col items-center justify-center gap-0.5"
     >
       <span
-        className={`relative flex h-11 w-11 items-center justify-center rounded-full shadow-lg ${
+        className={`relative flex h-14 w-14 items-center justify-center rounded-full shadow-lg ${
           active ? 'btn-gold-active shadow-amber-500/20' : 'btn-gold shadow-black/30'
         }`}
         style={eventBorderTintStyle(emberColor)}
       >
-        {icon && <NavIconGlyph icon={icon} sizeClassName="h-7 w-7" />}
+        {icon && <NavIconGlyph icon={icon} sizeClassName="h-9 w-9" />}
         <EventEmberBorder color={emberColor} count={20} />
       </span>
       <span className={`text-[10px] font-semibold leading-tight ${active ? 'text-amber-300' : 'text-slate-400'}`}>Idling</span>
@@ -233,7 +238,7 @@ export default function MobileBottomNav() {
 
   return (
     <nav
-      className="ascension-edge-t fixed inset-x-0 bottom-0 z-40 bg-[linear-gradient(180deg,_var(--ascension-ink-soft)_0%,_var(--ascension-ink)_100%)] lg:hidden"
+      className="ascension-edge-t fixed inset-x-0 bottom-0 z-40 overflow-hidden rounded-b-[1.75rem] bg-[linear-gradient(180deg,_var(--ascension-ink-soft)_0%,_var(--ascension-ink)_100%)] lg:hidden"
       // translateZ(0) (2026-08-19, reported by the user: nav bar drifting
       // upward with the page mid-scroll on mobile) forces this onto its own
       // GPU compositing layer up front -- kept even after the 2026-08-14
@@ -241,9 +246,16 @@ export default function MobileBottomNav() {
       // trigger for the iOS Safari `position: fixed` detach bug this
       // guarded against), since it's a harmless no-cost defensive measure
       // for a fixed-position bar either way.
+      //
+      // rounded-b + overflow-hidden (2026-08-16, requested by the user: bar
+      // should "contour" to the phone's rounded bottom corners) — the outer
+      // Equip/Achiev. buttons sit flush against the row's edges (no px on
+      // the inner row below) so this mask clips straight through their own
+      // square corners into the same arc, rather than hand-matching a
+      // border-radius to a device corner radius CSS can't actually read.
       style={{ paddingBottom: 'env(safe-area-inset-bottom)', transform: 'translateZ(0)' }}
     >
-      <div className="mx-auto flex max-w-md items-stretch gap-1 px-1 py-1">
+      <div className="mx-auto flex max-w-md items-stretch gap-1 py-1">
         {LEFT_ITEMS.map((item) => (
           <NavButton key={item.id} {...item} />
         ))}
