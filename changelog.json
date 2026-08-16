@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.99.0",
+    "date": "2026-08-17",
+    "changes": [
+      "Row Combat enemies can no longer be auto-attacked — they only take damage from Multi-Shot and future abilities, making abilities the whole point of engaging a row",
+      "Your normal Zone & Monster fight now keeps running in the background while a row is active, instead of being paused"
+    ]
+  },
+  {
     "version": "1.98.2",
     "date": "2026-08-17",
     "changes": [

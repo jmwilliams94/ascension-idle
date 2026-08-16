@@ -11,20 +11,22 @@
 // monsterDodge, drop-rate tables, the EXP curve) — mirror any change to
 // those files here too.
 //
-// KEY DIFFERENCE FROM resolve-combat's REWARD MATH: single-target combat
-// uses one closed-form formula over the whole elapsed window because
-// there's exactly one monster identity for that window. Row combat can't —
-// the auto-attack's target changes as slots die/respawn, and Multi-Shot
-// hits a changing set of targets. Since row combat never runs an hours-long
-// AFK-catchup window (see ROW_LIVE_LIVENESS_THRESHOLD_MS below), the fix is
-// a bounded discrete-event walk instead: each attack-tick/Multi-Shot event
-// applies the SAME deterministic hitChance x resolvePhysicalDamage(...)
+// Row slots are ABILITY/PASSIVE-ONLY targets — there is no basic
+// auto-attack against them (2026-08-17, requested by the user: with 6
+// slots to auto-target across, plain auto-attack alone was clearing Row 1
+// fast enough that Multi-Shot barely mattered). The only things that ever
+// deal real damage to a row slot are Multi-Shot (below) and, eventually,
+// other abilities/passives — never a periodic per-window formula the way
+// single-target combat's own closed-form reward math is. A plain resolve
+// call (fireMultiShot: false) only processes respawns that came due; a
+// fireMultiShot: true call applies one discrete hit to every enabled+alive
+// slot, using the SAME deterministic hitChance x resolvePhysicalDamage(...)
 // math resolve-combat already uses, directly against a slot's own real,
 // continuously-tracked current_hp — never a fresh random roll for damage
 // (the 2026-08-11 rewrite moved single-target off per-attack RNG simulation
-// for exactly this reason: two independent simulations of one window
-// disagreeing). This server function is the SOLE source of real rewards;
-// the client's own row tick loop is prediction-only.
+// for exactly this reason). This server function is the SOLE source of
+// real rewards; the client's own row tick loop (attack-back, respawn
+// countdown) is prediction/cosmetic-only.
 //
 // Monster attack-back is deliberately NOT simulated here — mirrors
 // resolve-combat's own existing, documented gap ("player HP has never been
@@ -592,10 +594,7 @@ async function handleResolveRowCombat(req: Request): Promise<Response> {
   }
 
   const derived = computeDerivedStats(attributes, equipmentBonus)
-  const attackIntervalMs = 1000 / derived.attackSpeed
   const isHunter = character.class === 'hunter'
-  let totalAttacks = Math.floor(elapsedMs / attackIntervalMs)
-  if (isHunter && !character.equipped_quiver_id) totalAttacks = 0
 
   // Per-zone attack midpoint — zone-scoped bonuses (account_zone_attack_bonus_pct)
   // mean the player's effective attack power can differ per slot's own
@@ -754,17 +753,13 @@ async function handleResolveRowCombat(req: Request): Promise<Response> {
     }
   }
 
-  const windowStart = now - elapsedMs
-  if (hasAnyEnabledSlot && totalAttacks > 0) {
-    for (let n = 1; n <= totalAttacks && !inventoryFull; n += 1) {
-      const t = windowStart + n * attackIntervalMs
-      processRespawnsUpTo(t)
-      const targetIndex = slots.findIndex((s) => s.enabled && s.currentHp > 0)
-      if (targetIndex >= 0) {
-        await applyHitToSlot(targetIndex, t)
-      }
-    }
-  }
+  // No basic auto-attack against row slots (2026-08-17, requested by the
+  // user — with 6 slots to auto-target across, plain auto-attack alone was
+  // clearing Row 1 fast enough that Multi-Shot barely mattered). Row slots
+  // are ability/passive-only targets now — the only thing that happens on
+  // a plain resolve call (no fireMultiShot) is processing any respawns
+  // that came due, below.
+  processRespawnsUpTo(now)
 
   let multiShotFired = false
   let multiShotOnCooldown = false

@@ -6,21 +6,14 @@ import { computeEquipmentBonus } from '../items/equipmentBonus'
 import { useEquipmentStore } from '../items/useEquipmentStore'
 import { useInventoryStore } from '../items/useInventoryStore'
 import { useItemTemplatesStore } from '../items/useItemTemplatesStore'
-import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
-import { getActiveGoldDonationEvent, useGoldDonationStore } from '../goldDonation/useGoldDonationStore'
-import { ENEMY_TYPES, zoneIdForMonster, type EnemyTypeId } from '../zones/zoneData'
+import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
 import { useCombatStore, type CombatLogEntry } from './useCombatStore'
 import {
   MONSTER_ATTACK_INTERVAL_MS,
   applyDamageReduction,
-  expectedRewardPerAttack,
   monsterAttackDamage,
-  monsterDefense,
-  monsterDodge,
   playerDefenseMultiplierForLevelDiff,
   resolvePhysicalDamage,
-  rollAttackLands,
-  rollDamageInRange,
   rollIsHit,
   rollIsRare,
   spawnMonsterHp,
@@ -33,15 +26,25 @@ import {
 // different slots can end up hosting different monster types. This store is
 // PREDICTION-ONLY, exactly like useCombatStore.runTick's own visual layer —
 // resolve-row-combat (the Edge Function) is the sole source of real rewards;
-// this tick loop only drives HP bars/log/pacing and a smooth
-// addPredictedRewards estimate, corrected on every resolveRowCombat response
-// (see resolveRowCombat.ts's reconciliation, which overwrites `slots` from
-// the server's confirmed state).
+// this tick loop only drives HP bars/log/pacing (attack-back, respawn
+// countdown), corrected on every resolveRowCombat response (see
+// resolveRowCombat.ts's reconciliation, which overwrites `slots` from the
+// server's confirmed state).
+//
+// Row slots are ability/passive-only targets — NO basic auto-attack (2026-
+// 08-17, requested by the user: with 6 slots to auto-target across, plain
+// auto-attack alone was clearing Row 1 fast enough that Multi-Shot barely
+// mattered). The normal single-target Zone & Monster fight keeps running in
+// the background exactly as it always has — toggling a row slot on was
+// never actually wired to pause it (the original Phase 1 plan's "pause
+// single-target on row toggle" mode-handoff never got implemented), which
+// turned out to be exactly the behavior wanted here: two independent damage
+// sources, auto-attack on the normal target, Multi-Shot (and future
+// abilities/passives) on row slots.
 //
 // Player HP/knockout is NOT duplicated here — see useCombatStore.ts's
 // isKnockedOutAt/applyIncomingDamage, added specifically so both combat
-// modes share one HP pool (the same character, same HP bar), consistent
-// with the "row mode pauses, doesn't replace, single-target" mode handoff.
+// modes share one HP pool (the same character, same HP bar).
 
 export const ROW_SLOT_COUNT = 12
 export const ROW_RESPAWN_MS = 15_000
@@ -107,7 +110,6 @@ interface RowCombatState {
   // multiShotOnCooldown handling).
   multiShotReadyAt: number
   log: CombatLogEntry[]
-  lastAttackAt: number
   setUnlocked: (row1Unlocked: boolean, row2Unlocked: boolean) => void
   // Overwrites local slot HP/enabled/monster/dead-at from the server's
   // confirmed state (called after every resolveRowCombat response) — never
@@ -138,7 +140,6 @@ export const useRowCombatStore = create<RowCombatState>((set, get) => ({
   row2Unlocked: false,
   multiShotReadyAt: 0,
   log: [],
-  lastAttackAt: 0,
 
   setUnlocked: (row1Unlocked, row2Unlocked) => set({ row1Unlocked, row2Unlocked }),
 
@@ -183,7 +184,7 @@ export const useRowCombatStore = create<RowCombatState>((set, get) => ({
     // isKnockedOutAt's comment).
     if (useCombatStore.getState().isKnockedOutAt(nowMs)) return
 
-    const { selectedClassId, attributes } = useCharacterStore.getState()
+    const { attributes } = useCharacterStore.getState()
     const characterLevel = useProgressionStore.getState().level
     const equipmentBonus = computeEquipmentBonus(
       useEquipmentStore.getState().equippedIds,
@@ -191,28 +192,6 @@ export const useRowCombatStore = create<RowCombatState>((set, get) => ({
       useItemTemplatesStore.getState().templates,
     )
     const derived = computeDerivedStats(attributes, equipmentBonus)
-    const attackIntervalMs = 1000 / derived.attackSpeed
-
-    const { accountZoneAttackBonusPct } = usePlayerRecordStore.getState()
-    const activeGoldDonationEvent = getActiveGoldDonationEvent(useGoldDonationStore.getState().pool, nowMs)
-    const eventExpMultiplier = activeGoldDonationEvent?.category === 'exp' ? activeGoldDonationEvent.multiplier : 1
-
-    // Per-zone attack midpoint, memoized — each slot's own monster may
-    // belong to a different zone than whatever's currently selected, since
-    // a slot locks in its monster at its own toggle-on time (mirrors
-    // resolve-row-combat's own attackMidpointForZone).
-    const attackMidpointCache = new Map<string, number>()
-    function attackMidpointForZone(zoneId: string | null): number {
-      const key = zoneId ?? ''
-      const cached = attackMidpointCache.get(key)
-      if (cached !== undefined) return cached
-      const accountAttackBonusPct = accountZoneAttackBonusPct[key] ?? 0
-      const physicalSubtotal = derived.physicalAttack * (1 + accountAttackBonusPct / 100) + derived.compositionPhysicalAttackBonus
-      const magicSubtotal = derived.magicAttack * (1 + accountAttackBonusPct / 100) + derived.compositionMagicAttackBonus
-      const value = physicalSubtotal * (1 + derived.drakeBonusPct / 100) + magicSubtotal * (1 + derived.emberBonusPct / 100)
-      attackMidpointCache.set(key, value)
-      return value
-    }
 
     const maxPlayerHp = derived.hp
     const effectivePlayerDefenseForType = (monsterLevel: number) =>
@@ -259,36 +238,6 @@ export const useRowCombatStore = create<RowCombatState>((set, get) => ({
         }
         anyChanged = true
       }
-    }
-
-    // Player's own basic attack — first enabled+alive slot, same "no manual
-    // targeting" auto-attack shape as single-target combat.
-    let logEntries: CombatLogEntry[] = []
-    if (nowMs - state.lastAttackAt >= attackIntervalMs) {
-      const targetIndex = nextSlots.findIndex((s) => s.enabled && s.currentHp > 0)
-      if (targetIndex >= 0 && !(selectedClassId === 'hunter' && !useEquipmentStore.getState().equippedIds.quiver)) {
-        const slot = nextSlots[targetIndex]
-        const type = ENEMY_TYPES[slot.monsterTypeId!]
-        const attackMidpoint = attackMidpointForZone(zoneIdForMonster(slot.monsterTypeId!))
-
-        const perAttack = expectedRewardPerAttack(attackMidpoint, derived.dexterity, type, characterLevel, derived.irisBonusPct, eventExpMultiplier)
-        useProgressionStore.getState().addPredictedRewards(perAttack.gold, perAttack.exp)
-
-        if (rollAttackLands(derived.dexterity, monsterDodge(type))) {
-          const damage = resolvePhysicalDamage(rollDamageInRange(attackMidpoint), monsterDefense(type, characterLevel))
-          const nextHp = Math.max(0, slot.currentHp - damage)
-          nextSlots[targetIndex] = { ...slot, currentHp: nextHp }
-          logEntries = appendLog(logEntries, { kind: 'damage', message: `You hit ${type.displayName} for ${damage}.`, amount: damage })
-          if (nextHp <= 0) {
-            nextSlots[targetIndex] = { ...nextSlots[targetIndex], deadAt: nowMs }
-            logEntries = appendLog(logEntries, { kind: 'kill', message: `${type.displayName} defeated!` })
-          }
-        } else {
-          logEntries = appendLog(logEntries, { kind: 'miss', message: `Your attack misses ${type.displayName}!` })
-        }
-      }
-      anyChanged = true
-      set((s) => ({ lastAttackAt: nowMs, log: logEntries.length > 0 ? [...s.log, ...logEntries].slice(-40) : s.log }))
     }
 
     // Lazy player-HP init, same as runTick — only writes when something's
