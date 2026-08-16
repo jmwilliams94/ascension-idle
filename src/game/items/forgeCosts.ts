@@ -262,6 +262,17 @@ export const COMPOSITION_FEED_FIRST_STEP_SECONDS = 1
 export const COMPOSITION_FEED_STEP_SECONDS = 0.5
 export const COMPOSITION_FEED_STEP_RESET_MS = 150
 
+// Padding added on top of the raw fill-duration sum. Without it, the parent's
+// setTimeout(minDelayMs) and CompositionLoadBar's own framer-motion await can
+// resolve in either order — if the parent flips `confirming` off first, the
+// bar's confirm effect gets torn down (cancelled = true) a tick before its
+// final controls.start() await resolves, so the tier-complete ember burst
+// never spawns and the bar just snaps back to the (already-advanced) real
+// position with no firework. This buffer keeps the internal animation
+// reliably finishing — and its burst spawning — before that happens, and
+// leaves it on screen for a moment after.
+const COMPOSITION_FEED_END_BUFFER_MS = 400
+
 export function estimateCompositionFeedAnimationMs(stepCount: number): number {
   if (stepCount <= 0) {
     return 0
@@ -269,7 +280,8 @@ export function estimateCompositionFeedAnimationMs(stepCount: number): number {
   const extraSteps = stepCount - 1
   return (
     COMPOSITION_FEED_FIRST_STEP_SECONDS * 1000 +
-    extraSteps * (COMPOSITION_FEED_STEP_SECONDS * 1000 + COMPOSITION_FEED_STEP_RESET_MS)
+    extraSteps * (COMPOSITION_FEED_STEP_SECONDS * 1000 + COMPOSITION_FEED_STEP_RESET_MS) +
+    COMPOSITION_FEED_END_BUFFER_MS
   )
 }
 

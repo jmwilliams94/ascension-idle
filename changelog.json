@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.96.20",
+    "date": "2026-08-16",
+    "changes": [
+      "Fixed the composition tier-up ember burst sometimes not appearing (timing race with the bar's reset)"
+    ]
+  },
+  {
     "version": "1.96.19",
     "date": "2026-08-16",
     "changes": [
