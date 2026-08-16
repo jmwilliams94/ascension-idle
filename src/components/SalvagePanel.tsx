@@ -193,12 +193,15 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
   )
 
   const bulkGroups = BULK_SALVAGE_TIERS.map((tier) => {
-    // Excludes anything with composition progress (+N) even within a bulk
-    // tier — same reasoning as ShopPanel's "Sell All Normal" (see
-    // InventoryPanel.tsx): composition investment makes an item worth more
-    // than its quality tier alone suggests, so a bulk sweep shouldn't touch
-    // it. Single-item Salvage (drag-and-drop) is unaffected.
-    const tierItems = salvageableItems.filter((item) => item.quality_tier === tier && item.composition_level === 0)
+    // Excludes anything with composition progress (+N) or an unlocked socket
+    // (even an empty one) within a bulk tier — same reasoning as
+    // InventoryPanel's "Sell All Normal" normalJunkItems filter: composition
+    // and socket investment make an item worth more than its quality tier
+    // alone suggests, so a bulk sweep shouldn't touch it. Single-item
+    // Salvage (drag-and-drop) is unaffected.
+    const tierItems = salvageableItems.filter(
+      (item) => item.quality_tier === tier && item.composition_level === 0 && item.sockets.length === 0,
+    )
     return {
       tier,
       items: tierItems,

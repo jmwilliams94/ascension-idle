@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.96.18",
+    "date": "2026-08-16",
+    "changes": [
+      "Bulk Salvage no longer sweeps up gear with an unlocked socket, so socket investment can't be accidentally destroyed"
+    ]
+  },
+  {
     "version": "1.96.17",
     "date": "2026-08-16",
     "changes": [
