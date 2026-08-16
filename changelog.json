@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.96.1",
+    "date": "2026-08-16",
+    "changes": [
+      "Idling button event embers now visibly emit from the border before drifting outward, instead of appearing already mid-flight",
+      "The Idling button also gets a slight colored ring matching the active event's color (red/green/gold) for a stronger at-a-glance cue"
+    ]
+  },
+  {
     "version": "1.96.0",
     "date": "2026-08-16",
     "changes": [

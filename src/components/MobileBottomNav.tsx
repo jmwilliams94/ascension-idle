@@ -7,6 +7,7 @@ import { useAchievementsStore, totalClaimableCount } from '../game/achievements/
 import { useMailStore, countUnreadMail } from '../game/marketplace/useMailStore'
 import { useActiveEventEmberColor } from '../game/hud/useEventEmberColor'
 import { EventEmberBorder } from '../game/hud/eventEmberBorder'
+import { eventBorderTintStyle } from '../game/hud/eventEmberBorderData'
 import { APP_VERSION } from '../version'
 
 const BASE_URL = import.meta.env.BASE_URL
@@ -103,6 +104,7 @@ function IdlingNavButton() {
         className={`relative flex h-11 w-11 items-center justify-center rounded-full shadow-lg ${
           active ? 'btn-gold-active shadow-amber-500/20' : 'btn-gold shadow-black/30'
         }`}
+        style={eventBorderTintStyle(emberColor)}
       >
         {icon && <NavIconGlyph icon={icon} sizeClassName="h-7 w-7" />}
         <EventEmberBorder color={emberColor} count={10} />

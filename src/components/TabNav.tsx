@@ -5,6 +5,7 @@ import { useAchievementsStore, totalClaimableCount } from '../game/achievements/
 import { useMailStore, countUnreadMail } from '../game/marketplace/useMailStore'
 import { useActiveEventEmberColor } from '../game/hud/useEventEmberColor'
 import { EventEmberBorder } from '../game/hud/eventEmberBorder'
+import { eventBorderTintStyle } from '../game/hud/eventEmberBorderData'
 
 const TAB_ITEMS: { id: TabId; label: string }[] = [
   { id: 'combat', label: 'Idling' },
@@ -23,14 +24,6 @@ const TAB_ITEMS: { id: TabId; label: string }[] = [
 // whichever tab is currently open, since .btn-gold-active is the permanently-
 // lit variant of .btn-gold's own :hover state.
 const TAB_BUTTON_CLASS = 'flex flex-col items-center justify-center gap-1.5 rounded-xl px-3 py-3 text-sm font-medium'
-
-// Split out from TabButton so only the Idling tab subscribes to the World
-// Boss / Gold Donation stores — the other 7 tabs don't need to re-render
-// when those change.
-function IdlingEventEmbers() {
-  const emberColor = useActiveEventEmberColor()
-  return <EventEmberBorder color={emberColor} />
-}
 
 // badge (2026-08-06, Achievements rework) — a small count bubble in the
 // corner, currently only used for the Achievements tab (claimable tier
@@ -56,7 +49,33 @@ function TabButton({ id, label, badge }: { id: TabId; label: string; badge?: num
           {badge! > 99 ? '99+' : badge}
         </span>
       )}
-      {id === 'combat' && <IdlingEventEmbers />}
+    </button>
+  )
+}
+
+// Split out from TabButton, as its own component (rather than a prop on
+// TabButton), so only the Idling tab subscribes to the World Boss / Gold
+// Donation stores — the other 7 tabs don't need to re-render when those
+// change. Same button markup as TabButton, plus the event-color outline
+// ring and border embers layered on top — see useEventEmberColor.ts for the
+// red/green/gold priority rule.
+function IdlingTabButton({ label }: { label: string }) {
+  const activeTab = useTabStore((state) => state.activeTab)
+  const setActiveTab = useTabStore((state) => state.setActiveTab)
+  const active = activeTab === 'combat'
+  const icon = TAB_ICONS.combat
+  const emberColor = useActiveEventEmberColor()
+
+  return (
+    <button
+      type="button"
+      onClick={() => setActiveTab('combat')}
+      className={`relative ${TAB_BUTTON_CLASS} ${active ? 'btn-gold-active' : 'btn-gold'}`}
+      style={eventBorderTintStyle(emberColor)}
+    >
+      {icon && <NavIconGlyph icon={icon} sizeClassName="h-8 w-8" />}
+      <span>{label}</span>
+      <EventEmberBorder color={emberColor} />
     </button>
   )
 }
@@ -66,9 +85,9 @@ function TabButton({ id, label, badge }: { id: TabId; label: string; badge?: num
 // confirmed with the user): same icon art, but all 8 tabs shown flat rather
 // than mobile's Town rollup grouping — desktop has the horizontal room
 // mobile doesn't, so the space-saving rollup isn't needed here. Combat
-// (labeled "Idling") renders through the same generic TabButton as every
-// other tab (2026-08-14) — it used to get its own special dynamic
-// equipped-weapon-icon button, replaced by the static hourglass icon.
+// (labeled "Idling") renders via its own IdlingTabButton (2026-08-16, so it
+// alone subscribes to the event embers) rather than the generic TabButton
+// every other tab uses.
 export default function TabNav() {
   const characterKills = useAchievementsStore((state) => state.characterKills)
   const accountKills = useAchievementsStore((state) => state.accountKills)
@@ -89,14 +108,18 @@ export default function TabNav() {
 
   return (
     <div className="hidden grid-cols-8 gap-2 lg:grid">
-      {TAB_ITEMS.map((item) => (
-        <TabButton
-          key={item.id}
-          id={item.id}
-          label={item.label}
-          badge={item.id === 'achievements' ? achievementsBadge : item.id === 'marketplace' ? mailBadge : undefined}
-        />
-      ))}
+      {TAB_ITEMS.map((item) =>
+        item.id === 'combat' ? (
+          <IdlingTabButton key={item.id} label={item.label} />
+        ) : (
+          <TabButton
+            key={item.id}
+            id={item.id}
+            label={item.label}
+            badge={item.id === 'achievements' ? achievementsBadge : item.id === 'marketplace' ? mailBadge : undefined}
+          />
+        ),
+      )}
     </div>
   )
 }

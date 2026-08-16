@@ -137,6 +137,35 @@ img {
   animation: effect-ember-radiate 2.2s ease-out infinite backwards;
 }
 
+/* Idling nav-button event embers (eventEmberBorder.tsx, 2026-08-16) — a
+   dedicated keyframe rather than reusing .effect-ember-radiate above, since
+   that one interpolates its transform across the *entire* 0%-100% span, so
+   by the time it fades in at 20% it's already drifted a chunk of the way to
+   its target offset. Here the ember holds still at its own border anchor
+   (translate(0,0)) through its fade-in (0%-15%), so it visibly emits right
+   at the border, and only starts drifting outward toward --ember-dx/
+   --ember-dy after that — a clearer "flows out from the border" read at
+   this effect's much shorter travel distance. Left as its own keyframe
+   instead of editing effect-ember-radiate's timing so the existing tier
+   effect (every gear/material tile in the game) is untouched. */
+@keyframes effect-ember-border-emit {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) scale(0.4);
+    opacity: 0;
+  }
+  15% {
+    transform: translate(-50%, -50%) translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--ember-dx, 0), var(--ember-dy, 0)) scale(0.5);
+    opacity: 0;
+  }
+}
+.effect-ember-border-emit {
+  animation: effect-ember-border-emit 1.8s ease-out infinite backwards;
+}
+
 /* Confetti-style burst (originally SalvageRevealToast, 2026-08-09/13; also
    used by MoneyBagRevealModal's own reveal since 2026-08-13, superseding
    its earlier burst-and-fade-in-place effect-ember-burst — deleted, this
