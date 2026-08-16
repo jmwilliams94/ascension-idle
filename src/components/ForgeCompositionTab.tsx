@@ -148,7 +148,7 @@ export default function ForgeCompositionTab({ onBack }: ForgeCompositionTabProps
     // (one second for a same-tier feed, longer if it cascades through
     // multiple tiers) so the RPC resolving early never cuts the animation off.
     const steps = simulateCompositionFeedSteps(selectedItem.composition_level, selectedItem.composition_points, compositionAddedPoints)
-    const minDelayMs = estimateCompositionFeedAnimationMs(steps.length)
+    const minDelayMs = estimateCompositionFeedAnimationMs(steps)
     setConfirming(true)
     const [result] = await Promise.all([
       compositionFeed(selectedItem.id, stoneAmounts, fuelItemIds),

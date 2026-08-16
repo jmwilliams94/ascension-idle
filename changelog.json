@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.96.22",
+    "date": "2026-08-16",
+    "changes": [
+      "Composition tier-ups now flash a white \"+N\" pop-up that holds for a second and fades before the bar loads the next tier"
+    ]
+  },
+  {
     "version": "1.96.21",
     "date": "2026-08-16",
     "changes": [

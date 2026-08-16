@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { useAnimationControls, motion } from 'framer-motion'
+import { AnimatePresence, useAnimationControls, motion } from 'framer-motion'
 import { EmberBurstPoint } from './EmberBurstPoint'
 import {
   COMPOSITION_FEED_FIRST_STEP_SECONDS,
+  COMPOSITION_FEED_NUMBER_FADE_MS,
+  COMPOSITION_FEED_NUMBER_HOLD_MS,
   COMPOSITION_FEED_STEP_RESET_MS,
   COMPOSITION_FEED_STEP_SECONDS,
   COMPOSITION_MAX_LEVEL,
@@ -23,6 +25,11 @@ interface Burst {
   id: number
   seed: number
   x: number
+}
+
+interface Popup {
+  id: number
+  text: string
 }
 
 // The single load bar spanning the Upgrade+Material slots — one bar, one job
@@ -59,8 +66,10 @@ export default function CompositionLoadBar({
   const controls = useAnimationControls()
   const [animatedLevel, setAnimatedLevel] = useState(item.composition_level)
   const [bursts, setBursts] = useState<Burst[]>([])
+  const [popup, setPopup] = useState<Popup | null>(null)
   const wasConfirming = useRef(false)
   const nextBurstId = useRef(0)
+  const nextPopupId = useRef(0)
 
   const required = compositionPointsRequired(item.composition_level)
   const currentPercent = required > 0 ? Math.min(100, (item.composition_points / required) * 100) : 100
@@ -103,16 +112,12 @@ export default function CompositionLoadBar({
     let cancelled = false
 
     void (async () => {
+      setPopup(null)
       for (let i = 0; i < steps.length; i += 1) {
         if (cancelled) return
         const step = steps[i]
         const fromPercent = step.required > 0 ? Math.min(100, (step.fromPoints / step.required) * 100) : 100
         const toPercent = step.required > 0 ? Math.min(100, (step.toPoints / step.required) * 100) : 100
-
-        if (i > 0) {
-          await new Promise((resolve) => setTimeout(resolve, COMPOSITION_FEED_STEP_RESET_MS))
-          if (cancelled) return
-        }
 
         setAnimatedLevel(step.level)
         controls.set({ width: `${fromPercent}%`, backgroundColor: AMBER })
@@ -121,12 +126,23 @@ export default function CompositionLoadBar({
 
         if (toPercent >= 100) {
           spawnBurst(toPercent)
+          setAnimatedLevel(step.level + 1)
+
+          const popupId = nextPopupId.current++
+          setPopup({ id: popupId, text: formatCompositionTier(step.level + 1) })
+          await new Promise((resolve) => setTimeout(resolve, COMPOSITION_FEED_NUMBER_HOLD_MS))
+          if (cancelled) return
+
+          setPopup(null)
+          await new Promise((resolve) => setTimeout(resolve, COMPOSITION_FEED_NUMBER_FADE_MS + COMPOSITION_FEED_STEP_RESET_MS))
+          if (cancelled) return
         }
       }
     })()
 
     return () => {
       cancelled = true
+      setPopup(null)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- confirming/controls only, deliberately: see the closure comment above for why item/addedPoints must NOT be deps.
   }, [confirming, controls])
@@ -148,6 +164,20 @@ export default function CompositionLoadBar({
               <EmberBurstPoint x={burst.x} y={50} color={AMBER} seed={burst.seed} radius={70} emberCount={20} />
             </div>
           ))}
+          <AnimatePresence>
+            {popup && (
+              <motion.span
+                key={popup.id}
+                initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: COMPOSITION_FEED_NUMBER_FADE_MS / 1000 }}
+                className="pointer-events-none absolute inset-x-0 -top-9 text-center text-2xl font-extrabold tabular-nums text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.6)]"
+              >
+                {popup.text}
+              </motion.span>
+            )}
+          </AnimatePresence>
         </div>
 
         <span className="w-8 shrink-0 text-left text-xs font-medium text-amber-300">{targetLevel !== null ? formatCompositionTier(targetLevel) : ''}</span>

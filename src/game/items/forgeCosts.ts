@@ -260,29 +260,47 @@ export function simulateCompositionFeedSteps(currentLevel: number, currentPoints
 // this so the network response never cuts the animation short.
 export const COMPOSITION_FEED_FIRST_STEP_SECONDS = 1
 export const COMPOSITION_FEED_STEP_SECONDS = 0.5
+
+// Whenever a step completes a tier, CompositionLoadBar holds a white "+N"
+// number pop-up on screen for COMPOSITION_FEED_NUMBER_HOLD_MS, fades it out
+// over COMPOSITION_FEED_NUMBER_FADE_MS, then pauses COMPOSITION_FEED_STEP_RESET_MS
+// longer before the bar resets to 0% and starts loading the next tier (if
+// there is one) — the pop-up finishing is what gates the next segment
+// starting, not a fixed timer independent of it.
+export const COMPOSITION_FEED_NUMBER_HOLD_MS = 1000
+export const COMPOSITION_FEED_NUMBER_FADE_MS = 300
 export const COMPOSITION_FEED_STEP_RESET_MS = 150
 
-// Padding added on top of the raw fill-duration sum. Without it, the parent's
+// Padding added on top of the raw duration sum. Without it, the parent's
 // setTimeout(minDelayMs) and CompositionLoadBar's own framer-motion await can
 // resolve in either order — if the parent flips `confirming` off first, the
 // bar's confirm effect gets torn down (cancelled = true) a tick before its
 // final controls.start() await resolves, so the tier-complete ember burst
 // never spawns and the bar just snaps back to the (already-advanced) real
 // position with no firework. This buffer keeps the internal animation
-// reliably finishing — and its burst spawning — before that happens, and
-// leaves it on screen for a moment after.
+// reliably finishing before that happens.
 const COMPOSITION_FEED_END_BUFFER_MS = 400
 
-export function estimateCompositionFeedAnimationMs(stepCount: number): number {
-  if (stepCount <= 0) {
+// Sums each step's fill duration, plus — for every step that completes a
+// tier — the number pop-up's hold+fade+reset pause that follows it (whether
+// or not another step comes after; the trailing pop-up on the very last step
+// still needs time to play out before the parent flips `confirming` off).
+// Takes the actual steps (not just a count) since only completing steps get
+// that extra pause — the common case (one step, no completion) stays a
+// snappy ~1s wait.
+export function estimateCompositionFeedAnimationMs(steps: CompositionFeedStep[]): number {
+  if (steps.length === 0) {
     return 0
   }
-  const extraSteps = stepCount - 1
-  return (
-    COMPOSITION_FEED_FIRST_STEP_SECONDS * 1000 +
-    extraSteps * (COMPOSITION_FEED_STEP_SECONDS * 1000 + COMPOSITION_FEED_STEP_RESET_MS) +
-    COMPOSITION_FEED_END_BUFFER_MS
-  )
+
+  const total = steps.reduce((sum, step, i) => {
+    const fillMs = (i === 0 ? COMPOSITION_FEED_FIRST_STEP_SECONDS : COMPOSITION_FEED_STEP_SECONDS) * 1000
+    const completesTier = step.toPoints >= step.required
+    const pauseMs = completesTier ? COMPOSITION_FEED_NUMBER_HOLD_MS + COMPOSITION_FEED_NUMBER_FADE_MS + COMPOSITION_FEED_STEP_RESET_MS : 0
+    return sum + fillMs + pauseMs
+  }, 0)
+
+  return total + COMPOSITION_FEED_END_BUFFER_MS
 }
 
 // Stones are drag-and-drop inventory items now (see InventoryPanel/ForgeFuelZone),
