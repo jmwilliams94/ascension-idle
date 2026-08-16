@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.97.4",
+    "date": "2026-08-17",
+    "changes": [
+      "Fixed a bug from the previous update that broke combat resolution (permission error) for all players"
+    ]
+  },
+  {
     "version": "1.97.3",
     "date": "2026-08-17",
     "changes": [
