@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.97.2",
+    "date": "2026-08-17",
+    "changes": [
+      "Gear now takes 3x longer to wear down before it needs repairing"
+    ]
+  },
+  {
     "version": "1.97.1",
     "date": "2026-08-16",
     "changes": [

@@ -267,11 +267,12 @@ function computeMaxDurability(slotType: string, requiredLevel: number): number |
 
 // Every equipped item's own full durability pool empties after this many
 // cumulative hours of active combat, regardless of its own max size —
-// normalized (rather than a flat points-per-minute rate) so "roughly once a
-// day" is achievable across gear with very different pool sizes without
-// per-item tuning. PLACEHOLDER, same disclosed-not-final status as every
-// other economy number in this game.
-const DURABILITY_TARGET_HOURS_TO_EMPTY_MS = 6 * 60 * 60 * 1000
+// normalized (rather than a flat points-per-minute rate) so gear survives
+// across multiple play sessions without per-item tuning. PLACEHOLDER, same
+// disclosed-not-final status as every other economy number in this game.
+// Tripled from the original 6h (2026-08-17) — decay was outpacing repair
+// affordability at low levels.
+const DURABILITY_TARGET_HOURS_TO_EMPTY_MS = 18 * 60 * 60 * 1000
 
 // Mirrors src/game/combat/combatResolver.ts
 const RARE_CHANCE = 0.05
