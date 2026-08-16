@@ -52,9 +52,9 @@ const BULK_TIER_GLOW: Record<BulkSalvageTier, { bright: string; base: string; da
   radiant: { bright: '#c084fc', base: QUALITY_COLORS.radiant, dark: '#7e22ce' },
 }
 
-// Bulk salvage runs the exact same per-item animation as a single salvage
-// (see SALVAGE_ANIMATION_MS below), just looped sequentially — so the total
-// time really is count * SALVAGE_ANIMATION_MS, not a separate faster path.
+// Bulk salvage plays one flat-length animation for the whole run regardless
+// of item count (2026-08-16, per the user's request — previously it was
+// count * SALVAGE_ANIMATION_MS, which made large bulk-salvages take minutes).
 // Formats that as a short human estimate for the button label/progress text.
 function formatDurationEstimate(ms: number): string {
   const totalSeconds = Math.max(1, Math.round(ms / 1000))
@@ -72,6 +72,9 @@ function formatDurationEstimate(ms: number): string {
 // outcome is still decided entirely by salvage_item, this just delays
 // revealing it.
 const SALVAGE_ANIMATION_MS = 1500
+// Flat duration for a bulk-salvage run, independent of how many items are in
+// it (2026-08-16, per the user's request — was count * SALVAGE_ANIMATION_MS).
+const BULK_SALVAGE_ANIMATION_MS = 2000
 const RESULT_DISPLAY_MS = 1800
 
 interface SalvageSlotProps {
@@ -170,9 +173,7 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [phase, setPhase] = useState<'idle' | 'salvaging' | 'bulk-salvaging'>('idle')
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
-  const [bulkProgress, setBulkProgress] = useState<{ tier: BulkSalvageTier; total: number; completed: number; apTotal: number } | null>(
-    null,
-  )
+  const [bulkProgress, setBulkProgress] = useState<{ tier: BulkSalvageTier; total: number } | null>(null)
 
   const selectedItem = items.find((item) => item.id === selectedItemId) ?? null
   const selectedTemplate = selectedItem ? templates.find((t) => t.id === selectedItem.template_id) : undefined
@@ -202,7 +203,7 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
       tier,
       items: tierItems,
       apEstimate: tierItems.length * previewSalvageApValue(tier),
-      timeEstimateMs: tierItems.length * SALVAGE_ANIMATION_MS,
+      timeEstimateMs: tierItems.length > 0 ? BULK_SALVAGE_ANIMATION_MS : 0,
     }
   })
 
@@ -255,12 +256,11 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
     }, SALVAGE_ANIMATION_MS)
   }
 
-  // Runs the exact same per-item animation/RPC pair handleSalvage uses,
-  // looped sequentially over every visible item of one tier — so the
-  // pre-click time estimate (bulkGroups' timeEstimateMs) matches how long
-  // this actually takes, not a separate faster bulk path. Individual
-  // failures don't abort the run (matches ShopPanel's own bulk-sell loop) —
-  // they're just tallied and reported in the final summary.
+  // Fires every item's RPC concurrently and holds the result behind one flat
+  // BULK_SALVAGE_ANIMATION_MS animation, so a bulk run always takes the same
+  // amount of time no matter how many items are in it. Individual failures
+  // don't abort the run (matches ShopPanel's own bulk-sell loop) — they're
+  // just tallied and reported in the final summary.
   const handleBulkSalvage = async (tier: BulkSalvageTier) => {
     if (phase !== 'idle') {
       return
@@ -272,22 +272,21 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
 
     setPhase('bulk-salvaging')
     setResult(null)
-    setBulkProgress({ tier, total: group.items.length, completed: 0, apTotal: 0 })
+    setBulkProgress({ tier, total: group.items.length })
+
+    const [outcomes] = await Promise.all([
+      Promise.all(group.items.map((item) => salvageItem(item.id))),
+      new Promise((resolve) => setTimeout(resolve, BULK_SALVAGE_ANIMATION_MS)),
+    ])
 
     let apTotal = 0
-    let completed = 0
     let failures = 0
-
-    for (const item of group.items) {
-      await new Promise((resolve) => setTimeout(resolve, SALVAGE_ANIMATION_MS))
-      const outcome = await salvageItem(item.id)
+    for (const outcome of outcomes) {
       if (outcome.ok && typeof outcome.apGained === 'number') {
         apTotal += outcome.apGained
       } else {
         failures += 1
       }
-      completed += 1
-      setBulkProgress({ tier, total: group.items.length, completed, apTotal })
     }
 
     if (apTotal > 0) {
@@ -358,23 +357,14 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
         {phase === 'bulk-salvaging' && bulkProgress && (
           <div className="w-full max-w-xs">
             <p className="mb-1 text-center text-[11px] text-slate-500">
-              Salvaging {BULK_TIER_LABEL[bulkProgress.tier]}… {bulkProgress.completed}/{bulkProgress.total} ·{' '}
-              {formatDurationEstimate((bulkProgress.total - bulkProgress.completed) * SALVAGE_ANIMATION_MS)} left
+              Salvaging {bulkProgress.total} {BULK_TIER_LABEL[bulkProgress.tier]} item{bulkProgress.total === 1 ? '' : 's'}…
             </p>
             <div className="h-2.5 overflow-hidden rounded-full bg-slate-800">
-              {/* One continuous left-to-right fill for the whole run (fixed
-                  2026-08-14, reported by the user — re-targeting `animate`
-                  on every completed item made the bar restart its transition
-                  from wherever it currently sat, one item late each time, so
-                  it looked like it was counting down then always fell short
-                  of the end). `total` is fixed for the life of a run, so the
-                  width/duration are set once here and never re-triggered by
-                  the `completed` ticks that only drive the label text above. */}
               <motion.div
                 className="h-full rounded-full bg-purple-500"
                 initial={{ width: '0%' }}
                 animate={{ width: '100%' }}
-                transition={{ duration: (bulkProgress.total * SALVAGE_ANIMATION_MS) / 1000, ease: 'linear' }}
+                transition={{ duration: BULK_SALVAGE_ANIMATION_MS / 1000, ease: 'linear' }}
               />
             </div>
           </div>

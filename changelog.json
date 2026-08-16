@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.96.5",
+    "date": "2026-08-16",
+    "changes": [
+      "Bulk Salvage now always takes a flat 2 seconds, regardless of how many items are in the batch"
+    ]
+  },
+  {
     "version": "1.96.4",
     "date": "2026-08-16",
     "changes": [
