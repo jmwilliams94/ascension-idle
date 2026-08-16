@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.96.3",
+    "date": "2026-08-16",
+    "changes": [
+      "Hunting/Mining/Events buttons in the Idling tab now use the same gold gradient nav styling as the rest of the app",
+      "The Events button now shows the same red/green/gold event embers as the Idling nav button",
+      "Event embers are now denser and travel 50% further outward on both buttons"
+    ]
+  },
+  {
     "version": "1.96.2",
     "date": "2026-08-16",
     "changes": [

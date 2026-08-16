@@ -107,7 +107,7 @@ function IdlingNavButton() {
         style={eventBorderTintStyle(emberColor)}
       >
         {icon && <NavIconGlyph icon={icon} sizeClassName="h-7 w-7" />}
-        <EventEmberBorder color={emberColor} count={10} />
+        <EventEmberBorder color={emberColor} count={20} />
       </span>
       <span className={`text-[10px] font-semibold leading-tight ${active ? 'text-amber-300' : 'text-slate-400'}`}>Idling</span>
     </button>

@@ -15,6 +15,9 @@ import { usePotionStore } from '../game/items/usePotionStore'
 import { POTION_TYPES, HP_POTION_ORDER } from '../game/items/potionTypes'
 import WorldBossEventsCard from './WorldBossEventsCard'
 import WorldBossCard from './WorldBossCard'
+import { useActiveEventEmberColor } from '../game/hud/useEventEmberColor'
+import { EventEmberBorder } from '../game/hud/eventEmberBorder'
+import { eventBorderTintStyle } from '../game/hud/eventEmberBorderData'
 
 // Matches getLevelDiffColor's tiers — White is an even match, Green means the
 // character comfortably outlevels the monster (reduced EXP), Red/Black mean
@@ -104,66 +107,55 @@ function MultiTargetSlots() {
 
 type CombatMode = 'hunting' | 'mining' | 'events'
 
+const MODE_BUTTON_CLASS = 'relative w-full rounded-lg px-3 py-1.5 text-xs font-medium'
+
 // In-page sub-mode switcher (2026-08-26) — same "sub-navigation inside one
 // top-level tab" convention MarketplacePanel's Browse/My Listings/Mail and
-// ShopPanel's Weapons/Armor/Potions already use (active pill: solid amber
-// border/fill; inactive: the shared ascension-chip-frame/ascension-chip-inner
-// wrapper). Mining is a coming-soon placeholder — always renders disabled,
-// no handler.
+// ShopPanel's Weapons/Armor/Potions already use. Buttons use the same
+// .btn-gold/.btn-gold-active treatment as the top-level nav (2026-08-16,
+// supersedes the earlier bespoke amber-pill/ascension-chip look) — .btn-gold
+// for idle, .btn-gold-active in place of it for whichever mode is selected.
+// Mining is a coming-soon placeholder — always `disabled` (`.btn-gold:disabled`
+// supplies the dimmed look), no handler.
 function CombatModeSwitcher({ mode, onChange }: { mode: CombatMode; onChange: (mode: CombatMode) => void }) {
   return (
     <div className="grid grid-cols-3 gap-2">
-      {mode === 'hunting' ? (
-        <button
-          type="button"
-          onClick={() => onChange('hunting')}
-          className="rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300"
-        >
-          Hunting
-        </button>
-      ) : (
-        <div className="ascension-chip-frame is-interactive">
-          <button
-            type="button"
-            onClick={() => onChange('hunting')}
-            className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100"
-          >
-            Hunting
-          </button>
-        </div>
-      )}
+      <button
+        type="button"
+        onClick={() => onChange('hunting')}
+        className={`${MODE_BUTTON_CLASS} ${mode === 'hunting' ? 'btn-gold-active' : 'btn-gold'}`}
+      >
+        Hunting
+      </button>
 
-      <div className="ascension-chip-frame opacity-50">
-        <button
-          type="button"
-          disabled
-          title="Coming soon"
-          className="ascension-chip-inner w-full cursor-not-allowed px-3 py-1.5 text-xs font-medium text-slate-500"
-        >
-          Mining
-        </button>
-      </div>
+      <button type="button" disabled title="Coming soon" className={`${MODE_BUTTON_CLASS} btn-gold cursor-not-allowed`}>
+        Mining
+      </button>
 
-      {mode === 'events' ? (
-        <button
-          type="button"
-          onClick={() => onChange('events')}
-          className="rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300"
-        >
-          Events
-        </button>
-      ) : (
-        <div className="ascension-chip-frame is-interactive">
-          <button
-            type="button"
-            onClick={() => onChange('events')}
-            className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100"
-          >
-            Events
-          </button>
-        </div>
-      )}
+      <EventsModeButton mode={mode} onChange={onChange} />
     </div>
+  )
+}
+
+// Split out from CombatModeSwitcher so only the Events button subscribes to
+// the World Boss / Gold Donation stores — Hunting/Mining don't need to
+// re-render when those change. Same red/green/gold border-ember + outline
+// tint as the Idling nav button (2026-08-16, requested by the user to apply
+// "the same ember rules" here) — see useEventEmberColor.ts for the priority
+// rule.
+function EventsModeButton({ mode, onChange }: { mode: CombatMode; onChange: (mode: CombatMode) => void }) {
+  const emberColor = useActiveEventEmberColor()
+
+  return (
+    <button
+      type="button"
+      onClick={() => onChange('events')}
+      className={`${MODE_BUTTON_CLASS} ${mode === 'events' ? 'btn-gold-active' : 'btn-gold'}`}
+      style={eventBorderTintStyle(emberColor)}
+    >
+      Events
+      <EventEmberBorder color={emberColor} />
+    </button>
   )
 }
 

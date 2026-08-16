@@ -54,7 +54,10 @@ export function buildBorderEmbers(count: number, seed: number): BorderEmberConfi
     // Short further outward travel — "coming out from the border, not that
     // far outward" per the confirmed design, unlike TierEmberEffect's full
     // burst — the anchor above already does the "at the border" part.
-    const distance = 2 + rand() * 4
+    // (2026-08-16: scaled 1.5x from an original 2-6px range, requested by
+    // the user once a second button — CombatPage's Events sub-tab — started
+    // using this effect too.)
+    const distance = 3 + rand() * 6
     return {
       leftPct,
       topPct,

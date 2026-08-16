@@ -2,7 +2,9 @@ import { useMemo, type CSSProperties } from 'react'
 import { buildBorderEmbers, EVENT_EMBER_HEX } from './eventEmberBorderData'
 import type { EventEmberColor } from './useEventEmberColor'
 
-// Idling nav button border embers — a sibling effect to tierEffects.tsx's
+// Event border embers — used by the Idling nav button (TabNav.tsx,
+// MobileBottomNav.tsx) and CombatPage.tsx's Events sub-tab button. A sibling
+// effect to tierEffects.tsx's
 // TierEmberEffect, but anchored around the element's own border (percentage
 // left/top on an ellipse inscribed just inside the box, so it hugs a circle
 // or a rounded-rect equally well) instead of bursting outward from a center
@@ -24,7 +26,7 @@ interface BorderEmberStyle extends CSSProperties {
 // unconditionally, same convention as TierEmberEffect's count<=0 guard.
 // Parent must be `position: relative` (and not clip overflow) for the
 // embers to anchor correctly.
-export function EventEmberBorder({ color, seed = 1, count = 12 }: { color: EventEmberColor | null; seed?: number; count?: number }) {
+export function EventEmberBorder({ color, seed = 1, count = 24 }: { color: EventEmberColor | null; seed?: number; count?: number }) {
   const embers = useMemo(() => buildBorderEmbers(count, seed), [count, seed])
 
   if (!color) {
