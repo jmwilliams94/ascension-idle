@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.96.23",
+    "date": "2026-08-16",
+    "changes": [
+      "Fixed World Boss damage tally counting overkill from the killing blow towards your total damage dealt"
+    ]
+  },
+  {
     "version": "1.96.22",
     "date": "2026-08-16",
     "changes": [
