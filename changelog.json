@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.96.7",
+    "date": "2026-08-16",
+    "changes": [
+      "Composition's Preview now shows an actual item tile of the resulting gear (with its ember effect) instead of a stat-bonus list",
+      "Composition's load bar is now a single fixed-size bar with the current and target tier shown as +N labels on either side",
+      "Confirming a Composition feed now visibly loads the bar left-to-right in gold, ending in a burst of white embers whenever it completes a tier",
+      "Removed the redundant Current/After Feed progress bars from the Composition panel now that the main load bar shows the same info"
+    ]
+  },
+  {
     "version": "1.96.6",
     "date": "2026-08-16",
     "changes": [

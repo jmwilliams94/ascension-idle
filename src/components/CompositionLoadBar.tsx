@@ -1,40 +1,49 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAnimationControls, motion } from 'framer-motion'
+import { EmberBurstPoint } from './EmberBurstPoint'
 import {
   COMPOSITION_FEED_FIRST_STEP_SECONDS,
   COMPOSITION_FEED_STEP_RESET_MS,
   COMPOSITION_FEED_STEP_SECONDS,
+  COMPOSITION_MAX_LEVEL,
   compositionPointsRequired,
   formatCompositionTier,
+  isCompositionMaxed,
   simulateCompositionFeedSteps,
   type CompositionSimulation,
 } from '../game/items/forgeCosts'
+import { seedFromId } from '../game/items/tierEffectsData'
 import type { ItemInstance } from '../game/items/useInventoryStore'
 
 const AMBER = '#fbbf24'
 const WHITE = '#ffffff'
+const BURST_DISPLAY_MS = 2000
 
-// The load bar spanning the Upgrade+Material slots. Two layers: a solid
-// "base" bar (always the real committed progress within whichever tier is
-// currently on screen) and one animated "overlay" bar on top of it (the
-// framer-motion `controls` below) that represents whatever the staged
-// Material would add.
+interface Burst {
+  id: number
+  seed: number
+}
+
+// The single load bar spanning the Upgrade+Material slots — one bar, one job
+// at a time, fixed size regardless of what's staged (a `w-8` reserved slot on
+// each side for the flanking "+N" labels, so neither their text nor the bar
+// itself ever changes width as material is added/removed):
 //
-// Pre-confirm, the overlay renders white — full width (100%) if the feed
-// would complete the current tier (the exact resulting position on the
-// *next* tier isn't knowable on this single 0-100 bar until the confirm
-// animation actually plays it out), otherwise the precise in-tier amount.
-//
-// On Feed, that white overlay eases into amber over one second, in place —
-// same width, just a color change, since it already sat exactly where the
-// first tier's fill ends. If that's the whole feed (stays within the current
-// tier), the animation stops there. If it completes one or more further
-// tiers, the base bar collapses to 0 (a new tier always starts at 0 points)
-// and the overlay resets to 0% width, pauses briefly, then fills to 100% —
-// repeating one tier at a time until it lands on the final tier's leftover
-// amount. ForgeCompositionTab's minimum feed delay
-// (estimateCompositionFeedAnimationMs) keeps the real server response from
-// cutting this animation off early.
+// - Nothing staged: plain amber fill at the item's real committed progress.
+// - Material staged, not yet confirmed: fill turns white and previews where
+//   confirming would land it — full width (100%) if it would complete the
+//   current tier (the exact position on the *next* tier isn't knowable on
+//   this bar until the confirm animation below plays it out), otherwise the
+//   precise in-tier amount. The "next +N" tier and its point cost show
+//   centered below the bar instead, since there's nothing to preview yet.
+// - On Feed: the bar snaps back to the real committed position, turns
+//   yellow, and loads left-to-right up to the target over one second. If
+//   that fill reaches the bar's right edge (i.e. it completed a tier), a
+//   white ember burst fires there and, if more tiers remain, the bar resets
+//   to 0% and repeats for the next tier — one at a time — until it lands on
+//   the final tier's leftover amount. ForgeCompositionTab's minimum feed
+//   delay (estimateCompositionFeedAnimationMs) keeps the real server
+//   response from cutting this animation off early.
 export default function CompositionLoadBar({
   item,
   addedPoints,
@@ -48,24 +57,30 @@ export default function CompositionLoadBar({
 }) {
   const controls = useAnimationControls()
   const [animatedLevel, setAnimatedLevel] = useState(item.composition_level)
-  const [onFirstStep, setOnFirstStep] = useState(true)
+  const [bursts, setBursts] = useState<Burst[]>([])
   const wasConfirming = useRef(false)
+  const nextBurstId = useRef(0)
 
   const required = compositionPointsRequired(item.composition_level)
   const currentPercent = required > 0 ? Math.min(100, (item.composition_points / required) * 100) : 100
   const afterPercent = preview ? (preview.required > 0 ? Math.min(100, (preview.points / preview.required) * 100) : 100) : currentPercent
   const tiersGained = preview ? preview.level - item.composition_level : 0
+  const maxed = isCompositionMaxed(item.composition_level)
+  const nextLevel = Math.min(item.composition_level + 1, COMPOSITION_MAX_LEVEL)
+  const nextCost = compositionPointsRequired(item.composition_level)
+
+  const spawnBurst = () => {
+    const id = nextBurstId.current++
+    setBursts((current) => [...current, { id, seed: seedFromId(`composition-burst-${id}`) }])
+    setTimeout(() => setBursts((current) => current.filter((burst) => burst.id !== id)), BURST_DISPLAY_MS)
+  }
 
   useEffect(() => {
     if (!confirming) {
       wasConfirming.current = false
 
-      // Reactive tentative preview: full-width when this feed would complete
-      // the current tier (the multi-tier case, whose real end position isn't
-      // knowable on this bar until confirmed), otherwise the precise in-tier
-      // amount. Clamped to 0 so an empty/staled staging never goes negative.
-      const tentativePercent = addedPoints <= 0 ? 0 : tiersGained > 0 ? Math.max(0, 100 - currentPercent) : Math.max(0, afterPercent - currentPercent)
-      void controls.start({ left: `${currentPercent}%`, width: `${tentativePercent}%`, backgroundColor: WHITE }, { duration: 0.3 })
+      const targetPercent = addedPoints <= 0 ? currentPercent : tiersGained > 0 ? 100 : Math.max(currentPercent, afterPercent)
+      void controls.start({ width: `${targetPercent}%`, backgroundColor: addedPoints <= 0 ? AMBER : WHITE }, { duration: 0.3 })
       return
     }
 
@@ -84,24 +99,18 @@ export default function CompositionLoadBar({
         const fromPercent = step.required > 0 ? Math.min(100, (step.fromPoints / step.required) * 100) : 100
         const toPercent = step.required > 0 ? Math.min(100, (step.toPoints / step.required) * 100) : 100
 
-        setAnimatedLevel(step.level)
-
-        if (i === 0) {
-          // First tier: the overlay just changes color in place (white ->
-          // amber) — it's already sitting at exactly this width from the
-          // pre-confirm tentative preview above.
-          setOnFirstStep(true)
-          controls.set({ left: `${fromPercent}%`, width: `${toPercent - fromPercent}%`, backgroundColor: WHITE })
-          await controls.start({ backgroundColor: AMBER }, { duration: COMPOSITION_FEED_FIRST_STEP_SECONDS })
-        } else {
-          // A new tier always starts at 0 points — collapse the base bar
-          // (render below) and have the overlay play out this tier's fill
-          // on its own, from a brief pause at 0% up to its result.
-          setOnFirstStep(false)
-          controls.set({ left: '0%', width: '0%', backgroundColor: AMBER })
+        if (i > 0) {
           await new Promise((resolve) => setTimeout(resolve, COMPOSITION_FEED_STEP_RESET_MS))
           if (cancelled) return
-          await controls.start({ width: `${toPercent}%` }, { duration: COMPOSITION_FEED_STEP_SECONDS })
+        }
+
+        setAnimatedLevel(step.level)
+        controls.set({ width: `${fromPercent}%`, backgroundColor: AMBER })
+        await controls.start({ width: `${toPercent}%` }, { duration: i === 0 ? COMPOSITION_FEED_FIRST_STEP_SECONDS : COMPOSITION_FEED_STEP_SECONDS })
+        if (cancelled) return
+
+        if (toPercent >= 100) {
+          spawnBurst()
         }
       }
     })()
@@ -112,21 +121,29 @@ export default function CompositionLoadBar({
   }, [confirming, addedPoints, tiersGained, currentPercent, afterPercent, item.composition_level, item.composition_points, controls])
 
   const displayLevel = confirming ? animatedLevel : item.composition_level
-  const pendingTiers = confirming ? Math.max(0, (preview?.level ?? item.composition_level) - animatedLevel) : tiersGained
-  const baseWidthPercent = confirming && !onFirstStep ? 0 : currentPercent
+  const targetLevel = preview ? preview.level : null
 
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-between text-[10px] text-slate-500">
-        <span>
-          {formatCompositionTier(displayLevel)} composition
-          {pendingTiers > 0 ? ` — +${pendingTiers} tier${pendingTiers === 1 ? '' : 's'} pending!` : ''}
-        </span>
-        {addedPoints > 0 && <span>+{addedPoints} pts staged</span>}
+    <div className="mx-auto w-full max-w-xs">
+      <div className="flex items-center gap-2">
+        <span className="w-8 shrink-0 text-right text-xs font-medium text-slate-300">{formatCompositionTier(displayLevel)}</span>
+
+        <div className="relative h-2.5 flex-1">
+          <div className="absolute inset-0 overflow-hidden rounded-full bg-slate-800">
+            <motion.div className="absolute inset-y-0 left-0 rounded-full" style={{ width: 0 }} animate={controls} initial={false} />
+          </div>
+          {bursts.map((burst) => (
+            <div key={burst.id} className="pointer-events-none absolute inset-0 overflow-visible">
+              <EmberBurstPoint x={100} y={50} color={WHITE} seed={burst.seed} radius={70} emberCount={20} />
+            </div>
+          ))}
+        </div>
+
+        <span className="w-8 shrink-0 text-left text-xs font-medium text-amber-300">{targetLevel !== null ? formatCompositionTier(targetLevel) : ''}</span>
       </div>
-      <div className="relative mt-1 h-2.5 overflow-hidden rounded-full bg-slate-800">
-        <div className="absolute inset-y-0 left-0 rounded-full bg-amber-400 transition-[width] duration-300" style={{ width: `${baseWidthPercent}%` }} />
-        <motion.div className="absolute inset-y-0 rounded-full" style={{ left: 0, width: 0 }} animate={controls} initial={false} />
+
+      <div className="mt-1 h-4 text-center text-[10px] text-slate-500">
+        {!preview && !maxed ? `Next ${formatCompositionTier(nextLevel)} — ${nextCost} pts` : ''}
       </div>
     </div>
   )
