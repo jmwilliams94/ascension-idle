@@ -28,7 +28,14 @@ export type MailCurrencyType = ListableCurrencyType | 'lottery_ticket' | 'ascens
 // claim_mail can remove a row).
 export type MailReason = 'purchase' | 'listing_cancelled' | 'listing_expired'
 
-export type MailReasonExtended = MailReason | 'admin_gift' | 'bug_report_reward'
+export type MailReasonExtended =
+  | MailReason
+  | 'admin_gift'
+  | 'bug_report_reward'
+  | 'suggestion_reward'
+  | 'world_boss_reward'
+  | 'gold_donation_reward'
+  | 'sale_notification'
 
 export interface MailEntry {
   id: string

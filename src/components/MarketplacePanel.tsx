@@ -565,6 +565,14 @@ function reasonLabel(reason: MailEntry['reason']): string {
       return 'Gift'
     case 'bug_report_reward':
       return 'Bug Report Reward'
+    case 'suggestion_reward':
+      return 'Suggestion Reward'
+    case 'world_boss_reward':
+      return 'World Boss Reward'
+    case 'gold_donation_reward':
+      return 'Gold Donation Reward'
+    case 'sale_notification':
+      return 'Listing Sold'
   }
 }
 

@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.97.3",
+    "date": "2026-08-17",
+    "changes": [
+      "Fixed a bug where an item listed on the Marketplace, or an item still sitting unclaimed in Mail, could silently count against your Inventory space and block getting new loot",
+      "Selling an item on the Marketplace now sends you a Mail notification naming the buyer and sale price"
+    ]
+  },
+  {
     "version": "1.97.2",
     "date": "2026-08-17",
     "changes": [
