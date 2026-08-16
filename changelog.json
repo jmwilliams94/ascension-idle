@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.96.21",
+    "date": "2026-08-16",
+    "changes": [
+      "Fixed the composition feed animation not playing at all (including multi-tier cascades) when the server responded faster than the fill animation"
+    ]
+  },
+  {
     "version": "1.96.20",
     "date": "2026-08-16",
     "changes": [

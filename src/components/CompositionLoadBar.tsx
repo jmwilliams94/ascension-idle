@@ -90,6 +90,15 @@ export default function CompositionLoadBar({
     }
     wasConfirming.current = true
 
+    // Read item/addedPoints from this render's closure rather than the
+    // dependency array below: compositionFeed patches the item's real
+    // composition_level/_points into the store as soon as the RPC resolves —
+    // almost always well before this cascade finishes playing out — and
+    // reacting to that mid-flight update (via a dependency-array re-run)
+    // would tear the cascade down before it completes. Since the effect only
+    // depends on `confirming`, this closure is guaranteed to hold the values
+    // from the render where confirming flipped true, i.e. before the RPC
+    // fired, which is what the cascade needs to be computed against.
     const steps = simulateCompositionFeedSteps(item.composition_level, item.composition_points, addedPoints)
     let cancelled = false
 
@@ -119,7 +128,8 @@ export default function CompositionLoadBar({
     return () => {
       cancelled = true
     }
-  }, [confirming, addedPoints, tiersGained, currentPercent, afterPercent, item.composition_level, item.composition_points, controls])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- confirming/controls only, deliberately: see the closure comment above for why item/addedPoints must NOT be deps.
+  }, [confirming, controls])
 
   const displayLevel = confirming ? animatedLevel : item.composition_level
   const targetLevel = preview ? preview.level : null
