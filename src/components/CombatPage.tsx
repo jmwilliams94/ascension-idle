@@ -16,6 +16,8 @@ import { POTION_TYPES, HP_POTION_ORDER } from '../game/items/potionTypes'
 import WorldBossEventsCard from './WorldBossEventsCard'
 import WorldBossCard from './WorldBossCard'
 import RowCombatPanel from './RowCombatPanel'
+import { useRowCombatStore } from '../game/combat/useRowCombatStore'
+import { supabase } from '../lib/supabaseClient'
 import { useActiveEventEmberColor } from '../game/hud/useEventEmberColor'
 import { EventEmberBorder } from '../game/hud/eventEmberBorder'
 import { eventBorderTintStyle } from '../game/hud/eventEmberBorderData'
@@ -68,6 +70,20 @@ function hexColor(value: number): string {
 
 // How long a floating damage number stays visible after its log entry lands.
 const FLOATING_NUMBER_LIFETIME_MS = 800
+
+// Row Combat: clear every row slot whenever the player switches which
+// enemy they're fighting (2026-08-17, requested by the user) — otherwise
+// Row Combat keeps fighting whatever monster type was locked in at each
+// slot's own toggle-on time even after the player has moved on to a
+// different primary target, which read as inconsistent. Optimistic local
+// clear first (RowCombatPanel updates immediately), RPC persists it
+// server-side — fire-and-forget, doesn't block switching targets.
+function clearRowSlotsForCharacter(characterId: string) {
+  useRowCombatStore.getState().applyServerSlots([])
+  void supabase.rpc('clear_row_slots', { p_character_id: characterId }).then(({ error }) => {
+    if (error) console.error('clear_row_slots failed', error)
+  })
+}
 
 // Overlaid on top of the monster portrait during useCombatStore's respawn
 // gap (see RESPAWN_GAP_MS) — deliberately layered over the SAME portrait
@@ -250,6 +266,11 @@ export default function CombatPage() {
   const dropdownMonsterId = selectedMonsterId ?? currentZone.monsterOrder[0] ?? null
 
   const handleFight = (typeId: EnemyTypeId) => {
+    // Only a genuine switch (not resuming the monster already selected)
+    // clears Row Combat — see clearRowSlotsForCharacter's own comment.
+    if (typeId !== monsterTypeId && characterId) {
+      clearRowSlotsForCharacter(characterId)
+    }
     setSelectedMonsterId(typeId)
     start(typeId)
   }
@@ -267,6 +288,7 @@ export default function CombatPage() {
       return
     }
     clearCombat()
+    if (characterId) clearRowSlotsForCharacter(characterId)
     setCurrentZoneId(zoneId)
   }
 

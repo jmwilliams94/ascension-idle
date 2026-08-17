@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.6",
+    "date": "2026-08-17",
+    "changes": [
+      "Switching which monster you're fighting (or changing zones) now clears any active Row Combat slots, instead of them continuing to fight whatever was locked in earlier"
+    ]
+  },
+  {
     "version": "1.99.5",
     "date": "2026-08-17",
     "changes": [
