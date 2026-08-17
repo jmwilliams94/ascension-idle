@@ -54,6 +54,8 @@ function describeFailure(error?: string): string {
       return 'Already at the top tier for this item.'
     case 'no_upgrade_path':
       return 'This item has no further upgrades.'
+    case 'no_quality_upgrade_path':
+      return "This item can't have its quality upgraded."
     case 'exceeds_character_level':
       return "This would exceed your character's own level."
     case 'weapon_requires_master_forge':
@@ -134,9 +136,12 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
     // The Quiver has no stats and no upgrade chain — Level Upgrade already
     // has nowhere to go, and Quality Upgrade would just burn Fallen Stars
     // for a cosmetic tier with nothing to scale. Excluded from this tile
-    // entirely rather than left to fail silently once dropped.
+    // entirely rather than left to fail silently once dropped. Promotion
+    // materials (Lunar Chest, Umbrite Ore, Jade Shard, Opaline Gem) are
+    // excluded for the same reason — they're plain quest/cost items, not
+    // gear, and the backend now rejects a Quality Upgrade on them anyway.
     const template = templates.find((entry) => entry.id === item.template_id)
-    if (template?.slot_type === 'quiver') {
+    if (template?.slot_type === 'quiver' || template?.slot_type === 'promotion-material') {
       return
     }
 

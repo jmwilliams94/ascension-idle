@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.12",
+    "date": "2026-08-17",
+    "changes": [
+      "Renamed Moon Box to Lunar Chest, and fixed a bug that let it (and other Class Promotion materials) be dropped into the Forge and given a quality tier"
+    ]
+  },
+  {
     "version": "1.99.11",
     "date": "2026-08-17",
     "changes": [

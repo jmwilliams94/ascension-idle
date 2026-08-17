@@ -36,6 +36,8 @@ function describeFailure(error?: string): string {
       return 'Already at the top tier for this item.'
     case 'no_upgrade_path':
       return 'This item has no further upgrades.'
+    case 'no_quality_upgrade_path':
+      return "This item can't have its quality upgraded."
     case 'exceeds_character_level':
       return "This would exceed your character's own level."
     case 'not_owner':
@@ -92,6 +94,15 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
   }
 
   const handleSelectItem = (id: string) => {
+    // Promotion materials (Lunar Chest, Umbrite Ore, Jade Shard, Opaline
+    // Gem) have no stats and no upgrade chain — same exclusion as the
+    // regular Forge's Quiver check (ForgeStandardPanel.tsx), extended to
+    // this slot_type since the backend now rejects a Quality Upgrade on
+    // them too.
+    const template = templates.find((entry) => entry.id === items.find((item) => item.id === id)?.template_id)
+    if (template?.slot_type === 'promotion-material') {
+      return
+    }
     setSelectedItemId(id)
     setResult(null)
   }

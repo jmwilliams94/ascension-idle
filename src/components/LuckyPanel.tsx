@@ -99,7 +99,7 @@ function rewardLabel(reward: LuckyReward): string {
     case 'gear_ascended_random':
       return 'Ascended Gear'
     case 'moon_box':
-      return 'Moon Box'
+      return 'Lunar Chest'
   }
 }
 
@@ -141,7 +141,7 @@ function rewardVisual(reward: LuckyReward): { icon?: string; iconSrc?: string; c
     case 'gear_ascended_random':
       return { icon: '🗡️', color: QUALITY_COLORS.ascended }
     case 'moon_box':
-      return { icon: '📦', iconSrc: getGearIconSrc('Moon Box'), color: MATERIAL_COLOR }
+      return { icon: '📦', iconSrc: getGearIconSrc('Lunar Chest'), color: MATERIAL_COLOR }
   }
 }
 
@@ -207,7 +207,7 @@ function buildLuckyRewardTooltip(reward: LuckyReward): ItemTooltipData {
         lines: ['Lucky Lad reward', 'Random class-appropriate item, level 15-70'],
       }
     case 'moon_box':
-      return { title: 'Moon Box', icon: '📦', iconColor: MATERIAL_COLOR, lines: ['Lucky Lad reward'] }
+      return { title: 'Lunar Chest', icon: '📦', iconColor: MATERIAL_COLOR, lines: ['Lucky Lad reward'] }
   }
 }
 
