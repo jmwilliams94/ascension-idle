@@ -48,9 +48,14 @@ function formatDuration(ms: number): string {
 // modal no longer needs to hold the player hostage to a bulk claim
 // succeeding — "Got it" just closes, and UnclaimedLootBadge's 🎁 button
 // remains the way back to anything still unresolved.
+//
+// The brief "Checking what happened while you were away…" spinner that used
+// to cover the round trip to runOfflineProgressCheck was removed (Pete's
+// request) — the check itself is unaffected, this modal just no longer shows
+// anything while it's in flight; only its eventual result (or a sync
+// failure) still pops up.
 export default function OfflineProgressModal() {
   const result = useOfflineProgressStore((state) => state.result)
-  const checking = useOfflineProgressStore((state) => state.checking)
   const syncFailed = useOfflineProgressStore((state) => state.syncFailed)
   const dismissResult = useOfflineProgressStore((state) => state.dismiss)
   const selectedMonsterId = useZoneStore((state) => state.selectedMonsterId)
@@ -58,14 +63,7 @@ export default function OfflineProgressModal() {
   const manuallyOpened = useLootHoldingModalStore((state) => state.open)
   const closeManualModal = useLootHoldingModalStore((state) => state.closeModal)
 
-  // Calculating takes priority over an explicit "Unclaimed rewards" open —
-  // a background resume check finishing mid-view will flip straight into the
-  // real "Welcome back" content via `show()`, which is fine; but a check
-  // starting *while* the player already has the manual view open shouldn't
-  // yank it away, so it's excluded here.
-  const isCalculating = checking && !result && !syncFailed && !manuallyOpened
-
-  if (!result && !manuallyOpened && !isCalculating && !syncFailed) {
+  if (!result && !manuallyOpened && !syncFailed) {
     return null
   }
 
@@ -85,13 +83,7 @@ export default function OfflineProgressModal() {
           bulk-action bar, detail card, even the "Got it" button itself). */}
       <div className="ascension-card-frame w-full max-w-md">
       <div className="ascension-card-inner max-h-[90vh] space-y-4 overflow-y-auto p-5">
-        {isCalculating ? (
-          <div className="flex flex-col items-center gap-3 py-6 text-center">
-            <span className="text-2xl">👋</span>
-            <h2 className="text-lg font-semibold text-white">Welcome back</h2>
-            <p className="text-sm font-medium text-slate-400 animate-pulse">Checking what happened while you were away…</p>
-          </div>
-        ) : syncFailed ? (
+        {syncFailed ? (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <span className="text-2xl">👋</span>
             <h2 className="text-lg font-semibold text-white">Welcome back</h2>

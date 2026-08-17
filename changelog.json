@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.13",
+    "date": "2026-08-17",
+    "changes": [
+      "Removed the brief \"Checking what happened while you were away\" popup on login/resume, because Pete requested he doesn't want to see it anymore — the actual sync with the server still happens in the background exactly as before"
+    ]
+  },
+  {
     "version": "1.99.12",
     "date": "2026-08-17",
     "changes": [

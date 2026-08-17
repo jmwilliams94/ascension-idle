@@ -132,22 +132,19 @@ export default function GameShell({ characterId }: { characterId: string }) {
       // Offline-progress catch-up runs once, before the live fight resumes —
       // reads the *previous* last_active_at (captured by loadCharacterRecord
       // above, before its own saveNow inside here refreshes it) so a quick
-      // reload can't double-count the same window.
-      useOfflineProgressStore.getState().setChecking(true)
-      try {
-        const outcome = await runOfflineProgressCheck(characterId)
+      // reload can't double-count the same window. No "Calculating…" spinner
+      // for this anymore (Pete's request) — the check itself still runs the
+      // same, it just doesn't show a waiting state while in flight.
+      const outcome = await runOfflineProgressCheck(characterId)
 
-        if (cancelled) {
-          return
-        }
+      if (cancelled) {
+        return
+      }
 
-        if (outcome.status === 'shown') {
-          useOfflineProgressStore.getState().show(outcome.result)
-        } else if (outcome.status === 'error') {
-          useOfflineProgressStore.getState().showSyncFailed()
-        }
-      } finally {
-        useOfflineProgressStore.getState().setChecking(false)
+      if (outcome.status === 'shown') {
+        useOfflineProgressStore.getState().show(outcome.result)
+      } else if (outcome.status === 'error') {
+        useOfflineProgressStore.getState().showSyncFailed()
       }
 
       // Resume the live fight against whatever monster was last selected — a fresh
@@ -271,16 +268,13 @@ export default function GameShell({ characterId }: { characterId: string }) {
       const awayMs = hiddenAt !== null ? now - hiddenAt : now - lastAliveAt
       hiddenAt = null
       const worthShowing = awayMs >= OFFLINE_SUMMARY_THRESHOLD_MS
-      if (worthShowing) {
-        useOfflineProgressStore.getState().setChecking(true)
-      }
       try {
         const outcome = await runOfflineProgressCheck(characterId)
         if (outcome.status === 'shown') {
           useOfflineProgressStore.getState().show(outcome.result)
         } else if (outcome.status === 'error' && worthShowing) {
           // Only surface the "couldn't sync" state for a gap that would have
-          // shown the spinner in the first place — a resolve blip on a
+          // been worth showing in the first place — a resolve blip on a
           // trivial few-second tab switch isn't worth an error popup (see
           // runOfflineProgressCheck's own comment on the two outcomes this
           // distinguishes).
@@ -288,7 +282,6 @@ export default function GameShell({ characterId }: { characterId: string }) {
         }
       } finally {
         checkInFlight = false
-        useOfflineProgressStore.getState().setChecking(false)
       }
     }
 
