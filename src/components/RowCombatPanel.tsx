@@ -186,7 +186,7 @@ function MultiShotButton({ characterId }: { characterId: string }) {
       disabled={disabled}
       title={!anyEnabled ? 'Enable a row slot first' : undefined}
       onClick={() => void handleFire()}
-      className="mb-2 w-full"
+      className="w-full"
     >
       {onCooldown ? `Multi-Shot (${Math.max(0, secondsLeft)}s)` : 'Multi-Shot'}
     </Button>
@@ -198,7 +198,7 @@ export default function RowCombatPanel({ characterId }: { characterId: string })
   const row2Unlocked = useRowCombatStore((state) => state.row2Unlocked)
 
   return (
-    <div className="mt-3 space-y-3">
+    <div className="mt-3 space-y-4">
       <MultiShotButton characterId={characterId} />
       {row1Unlocked ? <RowGrid characterId={characterId} row={1} /> : <RowUnlockSection characterId={characterId} row={1} />}
       {row2Unlocked ? <RowGrid characterId={characterId} row={2} /> : <RowUnlockSection characterId={characterId} row={2} />}

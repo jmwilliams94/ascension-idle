@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.2",
+    "date": "2026-08-17",
+    "changes": [
+      "Added more spacing between the Multi-Shot button and Row 1's slots so they no longer look crowded together"
+    ]
+  },
+  {
     "version": "1.99.1",
     "date": "2026-08-17",
     "changes": [
