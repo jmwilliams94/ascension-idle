@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Button } from './ui/Button'
-import { HpBar } from './CombatPage'
+import { HpBar, hexColor } from './CombatPage'
 import { supabase } from '../lib/supabaseClient'
 import { useRowCombatStore, ROW_RESPAWN_MS, type ServerRowSlot } from '../game/combat/useRowCombatStore'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
@@ -96,9 +96,17 @@ function RowSlotTile({ characterId, slotIndex }: { characterId: string; slotInde
   const multiShotHits = useRowCombatStore((state) => state.multiShotHits)
   const floatingHits = multiShotHits.filter((h) => h.slotIndex === slotIndex && now - h.timestamp < FLOATING_NUMBER_LIFETIME_MS)
 
+  const isDead = slot.enabled && slot.deadAt !== 0
+
   const handleClick = async () => {
     if (busy) return
     if (!slot.enabled && !selectedMonsterId) return
+    // Can't toggle off mid-respawn (2026-08-17, requested by the user) —
+    // otherwise toggling off then immediately back on re-rolls a fresh
+    // full-HP spawn instantly, skipping the 10s respawn wait entirely.
+    // Mirrored server-side in toggle_row_slot (the real authority; this is
+    // just so the button doesn't invite a click the server would reject).
+    if (isDead) return
     setBusy(true)
     await resolveRowCombat(characterId)
     const { data, error } = await supabase.rpc('toggle_row_slot', { p_character_id: characterId, p_slot_index: slotIndex })
@@ -123,26 +131,33 @@ function RowSlotTile({ characterId, slotIndex }: { characterId: string; slotInde
   }
 
   const type = slot.monsterTypeId ? ENEMY_TYPES[slot.monsterTypeId] : null
-  const isDead = slot.deadAt !== 0
   const respawnRemainingMs = isDead ? Math.max(0, ROW_RESPAWN_MS - (now - slot.deadAt)) : 0
 
   return (
     <button
       type="button"
       onClick={() => void handleClick()}
-      disabled={busy}
-      title={type ? `${type.displayName} — click to disable` : undefined}
+      disabled={busy || isDead}
+      title={isDead ? 'Respawning...' : type ? `${type.displayName} — click to disable` : undefined}
       key={slot.monsterInstanceKey}
-      className={`relative flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-lg border-2 p-1 transition disabled:cursor-not-allowed ${
+      className={`relative flex aspect-square w-full flex-col items-center justify-between overflow-hidden rounded-lg border-2 p-1 transition disabled:cursor-not-allowed ${
         slot.isRareInstance ? 'super-quality-glow border-amber-500/60' : 'border-slate-700'
       } bg-slate-900/80 hover:border-amber-500/60`}
     >
       {isDead ? (
-        <span className="text-[10px] text-slate-500">Respawn {Math.ceil(respawnRemainingMs / 1000)}s</span>
+        <div className="flex flex-1 items-center justify-center">
+          <span className="text-[10px] text-slate-500">Respawn {Math.ceil(respawnRemainingMs / 1000)}s</span>
+        </div>
       ) : (
         <>
-          <span className="w-full truncate px-0.5 text-center text-[10px] text-slate-300">{type?.displayName}</span>
-          <div className="w-full px-0.5">
+          <div className="flex min-h-0 flex-1 items-center justify-center">
+            {type?.portraitUrl ? (
+              <img src={type.portraitUrl} alt={type.displayName} className="h-full w-full object-contain" />
+            ) : (
+              <div className="h-full w-full rounded" style={{ backgroundColor: hexColor(type?.color ?? 0) }} />
+            )}
+          </div>
+          <div className="w-full px-0.5 pb-0.5">
             <HpBar current={slot.currentHp} max={slot.maxHp} barColorClass={slot.isRareInstance ? 'bg-amber-400' : 'bg-emerald-500'} />
           </div>
         </>

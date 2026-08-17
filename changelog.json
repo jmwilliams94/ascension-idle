@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.99.8",
+    "date": "2026-08-17",
+    "changes": [
+      "Row Combat tiles now show the monster's portrait centered with the HP bar pinned to the bottom, instead of a text name and mid-tile bar",
+      "Fixed being able to skip a Row Combat slot's 10-second respawn wait by toggling it off and back on"
+    ]
+  },
+  {
     "version": "1.99.7",
     "date": "2026-08-17",
     "changes": [

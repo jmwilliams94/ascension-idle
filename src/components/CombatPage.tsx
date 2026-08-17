@@ -64,7 +64,7 @@ function zoneLevelRange(zone: { monsterOrder: EnemyTypeId[] }): { min: number; m
 // Enemy colors are stored as 0xRRGGBB numbers (a Phaser-era convention, kept as-is
 // since nothing else about EnemyTypeDef needed to change) — this is the one spot
 // that converts to a CSS hex string for the placeholder portrait swatch.
-function hexColor(value: number): string {
+export function hexColor(value: number): string {
   return `#${value.toString(16).padStart(6, '0')}`
 }
 
