@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.14",
+    "date": "2026-08-17",
+    "changes": [
+      "Fixed the Players Online counter being slow or inconsistent about noticing when someone closed the game — it now reports leaving right away on a normal close instead of waiting on a connection timeout"
+    ]
+  },
+  {
     "version": "1.99.13",
     "date": "2026-08-17",
     "changes": [

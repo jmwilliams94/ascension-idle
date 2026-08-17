@@ -77,6 +77,20 @@ export default function GlobalActivityConnection({ accountId }: { accountId: str
       }
     }
 
+    // Closing the tab only reliably drops presence via visibilitychange/the
+    // socket's own disconnect detection on a genuinely clean close -- the
+    // server otherwise has to fall back to its heartbeat timeout, which can
+    // take anywhere from instant to tens of seconds depending on exactly how
+    // the browser tears the connection down, reading as "sometimes updates,
+    // sometimes doesn't" (reported by the user 2026-08-17). `pagehide` fires
+    // reliably on tab/browser close (unlike `beforeunload`, which is flakier
+    // and also hurts bfcache eligibility) and gives an explicit leave signal
+    // for this channel's topic, so a normal close reports offline right away
+    // instead of waiting on connection-loss detection.
+    const handlePageHide = () => {
+      void supabase.removeChannel(channel)
+    }
+
     channel
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState() as Record<string, Array<{ active?: boolean }>>
@@ -111,11 +125,13 @@ export default function GlobalActivityConnection({ accountId }: { accountId: str
       })
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('pagehide', handlePageHide)
 
     return () => {
       cancelled = true
       subscribed = false
       document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('pagehide', handlePageHide)
       void supabase.removeChannel(channel)
     }
   }, [accountId, setOnlineCount, setLatestAnnouncement, addAnnouncementHistoryEntry, addMilestoneEntry, addChatMessage])
