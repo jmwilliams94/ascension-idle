@@ -88,7 +88,7 @@ export default function WorldBossCard({ characterId }: { characterId: string }) 
             World Boss
           </p>
           <p className="mt-1 text-xs text-slate-500">
-            {bossDefeated ? 'Defeated — rewards mail out when the window ends' : windowEnded ? 'Fight ended' : 'Active'}
+            {bossDefeated ? 'Defeated — rewards have been mailed out' : windowEnded ? 'Fight ended' : 'Active'}
           </p>
         </div>
         <button

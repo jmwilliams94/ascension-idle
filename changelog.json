@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.17",
+    "date": "2026-08-17",
+    "changes": [
+      "World Boss rewards now mail out the instant the boss is defeated, instead of waiting for the fight's multi-hour window to fully end"
+    ]
+  },
+  {
     "version": "1.99.16",
     "date": "2026-08-17",
     "changes": [
