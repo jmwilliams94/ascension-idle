@@ -683,11 +683,7 @@ export default function CombatPage() {
               </div>
               </div>
 
-            {characterId && (
-              <div className="max-w-xs">
-                <RowCombatPanel characterId={characterId} />
-              </div>
-            )}
+            {characterId && <RowCombatPanel characterId={characterId} />}
 
             <Button variant="secondary" onClick={handleToggle} className="mt-4">
               {isFighting ? 'Stop' : 'Resume'}

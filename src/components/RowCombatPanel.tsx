@@ -106,7 +106,7 @@ function RowSlotTile({ characterId, slotIndex }: { characterId: string; slotInde
         onClick={() => void handleClick()}
         disabled={busy || !selectedMonsterId}
         title={selectedMonsterId ? 'Spawn the selected monster here' : 'Select a monster first'}
-        className="flex aspect-square min-w-0 flex-1 items-center justify-center rounded-lg border-2 border-dashed border-slate-800 bg-slate-950/60 text-slate-600 transition hover:border-amber-500/60 hover:text-slate-400 disabled:cursor-not-allowed disabled:opacity-40"
+        className="flex aspect-square w-full items-center justify-center rounded-lg border-2 border-dashed border-slate-800 bg-slate-950/60 text-slate-600 transition hover:border-amber-500/60 hover:text-slate-400 disabled:cursor-not-allowed disabled:opacity-40"
       >
         +
       </button>
@@ -124,7 +124,7 @@ function RowSlotTile({ characterId, slotIndex }: { characterId: string; slotInde
       disabled={busy}
       title={type ? `${type.displayName} — click to disable` : undefined}
       key={slot.monsterInstanceKey}
-      className={`flex aspect-square min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg border-2 p-1 transition disabled:cursor-not-allowed ${
+      className={`flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-lg border-2 p-1 transition disabled:cursor-not-allowed ${
         slot.isRareInstance ? 'super-quality-glow border-amber-500/60' : 'border-slate-700'
       } bg-slate-900/80 hover:border-amber-500/60`}
     >
@@ -152,10 +152,15 @@ function RowGrid({ characterId, row }: { characterId: string; row: 1 | 2 }) {
     // anchor telling the two apart).
     <div className="border-t border-slate-800 pt-3">
       <p className="text-heading-label mb-2">Row {row}</p>
-      {/* Flex, not grid — all 6 slots share the full width of the monster
-          container equally (flex-1 on each tile below), always one row of 6
-          abreast rather than wrapping into multiple rows at narrower widths. */}
-      <div className="flex gap-2">
+      {/* grid-cols-6 (not flex) — six explicit, exactly-equal tracks always
+          spanning the full container width, regardless of tile content.
+          flex + flex-1 + aspect-square turned out not to reliably grow tiles
+          to fill available width (reported by the user, 2026-08-17 — tiles
+          rendered near their own content size instead of stretching); a
+          grid track's width doesn't depend on content/aspect-ratio the way
+          a flex item's does, so each tile (w-full below) just fills its own
+          guaranteed 1/6th-width column. */}
+      <div className="grid grid-cols-6 gap-2">
         {Array.from({ length: 6 }, (_, i) => (
           <RowSlotTile key={startIndex + i} characterId={characterId} slotIndex={startIndex + i} />
         ))}

@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.99.4",
+    "date": "2026-08-17",
+    "changes": [
+      "Row Combat's 6 slots now actually stretch to fill the full width of the monster panel, matching the Multi-Shot button above them",
+      "Removed a leftover width cap on the desktop layout that was squeezing the whole Row Combat panel narrower than the rest of the card"
+    ]
+  },
+  {
     "version": "1.99.3",
     "date": "2026-08-17",
     "changes": [
