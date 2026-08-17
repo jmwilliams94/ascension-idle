@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.18",
+    "date": "2026-08-17",
+    "changes": [
+      "Fixed the Composition load bar's white preview not showing when staging stones/items before confirming"
+    ]
+  },
+  {
     "version": "1.99.17",
     "date": "2026-08-17",
     "changes": [

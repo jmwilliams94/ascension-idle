@@ -85,12 +85,23 @@ export default function CompositionLoadBar({
     setTimeout(() => setBursts((current) => current.filter((burst) => burst.id !== id)), BURST_DISPLAY_MS)
   }
 
+  // Tentative preview: must react to addedPoints/tiersGained/percent changes
+  // (staging or unstaging material) while confirming stays false, so this is
+  // deliberately its own effect with its own dependency array — separate
+  // from the confirm cascade below, whose effect must NOT depend on those
+  // same values (see that effect's comment for why).
+  useEffect(() => {
+    if (confirming) {
+      return
+    }
+    wasConfirming.current = false
+
+    const targetPercent = addedPoints <= 0 ? currentPercent : tiersGained > 0 ? 100 : Math.max(currentPercent, afterPercent)
+    void controls.start({ width: `${targetPercent}%`, backgroundColor: addedPoints <= 0 ? AMBER : WHITE }, { duration: 0.3 })
+  }, [confirming, addedPoints, tiersGained, currentPercent, afterPercent, controls])
+
   useEffect(() => {
     if (!confirming) {
-      wasConfirming.current = false
-
-      const targetPercent = addedPoints <= 0 ? currentPercent : tiersGained > 0 ? 100 : Math.max(currentPercent, afterPercent)
-      void controls.start({ width: `${targetPercent}%`, backgroundColor: addedPoints <= 0 ? AMBER : WHITE }, { duration: 0.3 })
       return
     }
 
