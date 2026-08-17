@@ -47,7 +47,9 @@ import {
 // modes share one HP pool (the same character, same HP bar).
 
 export const ROW_SLOT_COUNT = 12
-export const ROW_RESPAWN_MS = 15_000
+// Aligned with MULTI_SHOT_COOLDOWN_MS (2026-08-17, requested by the user) —
+// mirrors resolve-row-combat/index.ts's own ROW_RESPAWN_MS, must stay in sync.
+export const ROW_RESPAWN_MS = 10_000
 // Placeholder/tunable, matches resolve-row-combat/index.ts's own copy —
 // must stay in sync.
 export const MULTI_SHOT_COOLDOWN_MS = 10_000
@@ -101,6 +103,22 @@ export interface ServerRowSlot {
   dead_at: string | null
 }
 
+// One Multi-Shot target's real result, as reported by resolve-row-combat's
+// response (see resolveRowCombat.ts) — used to drive a floating "-N"/"Miss"
+// number over the right slot tile, same visual language CombatPage.tsx's
+// own floatingNumbers already uses for single-target combat. Multi-Shot's
+// damage is real server RNG (min/max rolled, not deterministic expected
+// value — see resolve-row-combat/index.ts's rollDamageInRange comment), so
+// unlike the rest of this store's tick loop, these are never predicted
+// client-side — only ever shown once the server's response actually arrives.
+export interface RowFloatingHit {
+  id: string
+  slotIndex: number
+  timestamp: number
+  hit: boolean
+  damage: number
+}
+
 interface RowCombatState {
   slots: RowSlotState[]
   row1Unlocked: boolean
@@ -110,6 +128,11 @@ interface RowCombatState {
   // multiShotOnCooldown handling).
   multiShotReadyAt: number
   log: CombatLogEntry[]
+  // Recent Multi-Shot results across all slots — RowSlotTile filters this
+  // down to its own slotIndex + a short recency window to render its own
+  // floating numbers. Capped, not pruned by age here (consumers do their
+  // own recency filtering against Date.now()).
+  multiShotHits: RowFloatingHit[]
   setUnlocked: (row1Unlocked: boolean, row2Unlocked: boolean) => void
   // Overwrites local slot HP/enabled/monster/dead-at from the server's
   // confirmed state (called after every resolveRowCombat response) — never
@@ -117,6 +140,7 @@ interface RowCombatState {
   // every other store in this game follows.
   applyServerSlots: (serverSlots: ServerRowSlot[]) => void
   applyServerMultiShotReadyAt: (readyAtIso: string) => void
+  applyMultiShotHits: (hits: { slotIndex: number; hit: boolean; damage: number }[]) => void
   // Local-only optimistic clear for a slot the player just toggled off —
   // avoids a one-tick flash of stale HP before the next reconcile lands.
   clearSlotLocally: (slotIndex: number) => void
@@ -140,8 +164,26 @@ export const useRowCombatStore = create<RowCombatState>((set, get) => ({
   row2Unlocked: false,
   multiShotReadyAt: 0,
   log: [],
+  multiShotHits: [],
 
   setUnlocked: (row1Unlocked, row2Unlocked) => set({ row1Unlocked, row2Unlocked }),
+
+  applyMultiShotHits: (hits) => {
+    if (hits.length === 0) return
+    const now = Date.now()
+    set((state) => ({
+      multiShotHits: [
+        ...state.multiShotHits,
+        ...hits.map((h) => ({
+          id: `${now}-${h.slotIndex}-${Math.random().toString(36).slice(2, 8)}`,
+          slotIndex: h.slotIndex,
+          timestamp: now,
+          hit: h.hit,
+          damage: h.damage,
+        })),
+      ].slice(-40),
+    }))
+  },
 
   applyServerSlots: (serverSlots) => {
     set((state) => ({

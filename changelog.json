@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.99.5",
+    "date": "2026-08-17",
+    "changes": [
+      "Multi-Shot now deals real rolled damage per target (with its own min/max variance, same as a normal attack) instead of an averaged number, at 50% of a normal hit since it strikes every target at once",
+      "Multi-Shot now shows floating damage/Miss numbers over each row slot it hits",
+      "Row respawn time now matches Multi-Shot's cooldown at 10 seconds",
+      "Multi-Shot now requires a living target in an active row to fire, and no longer consumes its cooldown when there isn't one"
+    ]
+  },
+  {
     "version": "1.99.4",
     "date": "2026-08-17",
     "changes": [

@@ -25,7 +25,9 @@ export interface ResolveRowCombatResult {
   rowSlots?: ServerRowSlot[]
   multiShotFired?: boolean
   multiShotOnCooldown?: boolean
+  multiShotNoTarget?: boolean
   multiShotReadyAt?: string
+  multiShotHits?: { slotIndex: number; hit: boolean; damage: number }[]
   petObtained?: string | null
   killCountUpdates?: { monster_id: string; character_kills: number | string; account_kills: number | string }[]
 }
@@ -63,6 +65,10 @@ export async function resolveRowCombat(
 
   if (result.rowSlots) {
     useRowCombatStore.getState().applyServerSlots(result.rowSlots)
+  }
+
+  if (result.multiShotHits && result.multiShotHits.length > 0) {
+    useRowCombatStore.getState().applyMultiShotHits(result.multiShotHits)
   }
 
   if (result.multiShotReadyAt) {

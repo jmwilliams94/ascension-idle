@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Button } from './ui/Button'
 import { HpBar } from './CombatPage'
 import { supabase } from '../lib/supabaseClient'
@@ -23,6 +24,10 @@ import { resolveRowCombat } from '../game/combat/resolveRowCombat'
 // 2 (250 kills on any one monster), Row 2 at tier 4 (1000 kills).
 const ROW_REQUIRED_TIER: Record<1 | 2, number> = { 1: 2, 2: 4 }
 const ROW_REQUIRED_KILLS: Record<1 | 2, number> = { 1: 250, 2: 1000 }
+
+// Mirrors CombatPage.tsx's own FLOATING_NUMBER_LIFETIME_MS — how long a
+// Multi-Shot "-N"/"Miss" number stays visible on a slot tile after landing.
+const FLOATING_NUMBER_LIFETIME_MS = 800
 
 function bestClaimedTier(characterKills: Record<string, { claimedTierIndex: number }>): number {
   return Object.values(characterKills).reduce((max, entry) => Math.max(max, entry.claimedTierIndex), 0)
@@ -85,7 +90,11 @@ function RowSlotTile({ characterId, slotIndex }: { characterId: string; slotInde
   const slot = useRowCombatStore((state) => state.slots[slotIndex])
   const selectedMonsterId = useZoneStore((state) => state.selectedMonsterId)
   const [busy, setBusy] = useState(false)
-  const now = useTickingNow(1000)
+  // 200ms — fine enough for the floating-number lifetime filter below, still
+  // coarse enough that the "Respawn Ns" ceil-second text doesn't need its own.
+  const now = useTickingNow(200)
+  const multiShotHits = useRowCombatStore((state) => state.multiShotHits)
+  const floatingHits = multiShotHits.filter((h) => h.slotIndex === slotIndex && now - h.timestamp < FLOATING_NUMBER_LIFETIME_MS)
 
   const handleClick = async () => {
     if (busy) return
@@ -124,7 +133,7 @@ function RowSlotTile({ characterId, slotIndex }: { characterId: string; slotInde
       disabled={busy}
       title={type ? `${type.displayName} — click to disable` : undefined}
       key={slot.monsterInstanceKey}
-      className={`flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-lg border-2 p-1 transition disabled:cursor-not-allowed ${
+      className={`relative flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-lg border-2 p-1 transition disabled:cursor-not-allowed ${
         slot.isRareInstance ? 'super-quality-glow border-amber-500/60' : 'border-slate-700'
       } bg-slate-900/80 hover:border-amber-500/60`}
     >
@@ -138,6 +147,22 @@ function RowSlotTile({ characterId, slotIndex }: { characterId: string; slotInde
           </div>
         </>
       )}
+      <AnimatePresence>
+        {floatingHits.map((entry) => (
+          <motion.div
+            key={entry.id}
+            initial={{ opacity: 1, y: 0 }}
+            animate={{ opacity: 0, y: -16 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8, ease: 'easeOut' }}
+            className={`pointer-events-none absolute left-1/2 top-1 -translate-x-1/2 text-[11px] font-bold ${
+              entry.hit ? 'text-amber-300' : 'text-slate-300'
+            }`}
+          >
+            {entry.hit ? `-${entry.damage}` : 'Miss'}
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </button>
   )
 }
@@ -172,7 +197,12 @@ function RowGrid({ characterId, row }: { characterId: string; row: 1 | 2 }) {
 function MultiShotButton({ characterId }: { characterId: string }) {
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
   const multiShotReadyAt = useRowCombatStore((state) => state.multiShotReadyAt)
-  const anyEnabled = useRowCombatStore((state) => state.slots.some((s) => s.enabled))
+  // Requires a living target, not just an enabled slot (2026-08-17, requested
+  // by the user) — an enabled slot mid-respawn has nothing to hit yet.
+  // Mirrors the server's own aliveTargets check (resolve-row-combat/index.ts),
+  // which is the actual authority — this is just so the button doesn't
+  // invite a press that the server would reject as a no-op anyway.
+  const anyAliveTarget = useRowCombatStore((state) => state.slots.some((s) => s.enabled && s.currentHp > 0))
   const row1Unlocked = useRowCombatStore((state) => state.row1Unlocked)
   const row2Unlocked = useRowCombatStore((state) => state.row2Unlocked)
   const now = useTickingNow(250)
@@ -185,7 +215,7 @@ function MultiShotButton({ characterId }: { characterId: string }) {
 
   const onCooldown = now < multiShotReadyAt
   const secondsLeft = Math.ceil((multiShotReadyAt - now) / 1000)
-  const disabled = onCooldown || !anyEnabled
+  const disabled = onCooldown || !anyAliveTarget
 
   const handleFire = async () => {
     if (disabled) return
@@ -197,7 +227,7 @@ function MultiShotButton({ characterId }: { characterId: string }) {
     <Button
       variant="primary"
       disabled={disabled}
-      title={!anyEnabled ? 'Enable a row slot first' : undefined}
+      title={!anyAliveTarget ? 'No living target in either row' : undefined}
       onClick={() => void handleFire()}
       className="w-full"
     >

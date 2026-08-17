@@ -19,14 +19,20 @@
 // other abilities/passives — never a periodic per-window formula the way
 // single-target combat's own closed-form reward math is. A plain resolve
 // call (fireMultiShot: false) only processes respawns that came due; a
-// fireMultiShot: true call applies one discrete hit to every enabled+alive
-// slot, using the SAME deterministic hitChance x resolvePhysicalDamage(...)
-// math resolve-combat already uses, directly against a slot's own real,
-// continuously-tracked current_hp — never a fresh random roll for damage
-// (the 2026-08-11 rewrite moved single-target off per-attack RNG simulation
-// for exactly this reason). This server function is the SOLE source of
-// real rewards; the client's own row tick loop (attack-back, respawn
-// countdown) is prediction/cosmetic-only.
+// fireMultiShot: true call applies one REAL rolled hit (see
+// rollDamageInRange below, and MULTI_SHOT_DAMAGE_MULTIPLIER for the 50%
+// per-target reduction, both 2026-08-17) to every enabled+alive slot,
+// directly against a slot's own real, continuously-tracked current_hp —
+// deliberately NOT the deterministic expected-value math single-target
+// combat's continuous per-window formula uses, since Multi-Shot is a
+// discrete, single, player-pressed action (closer to World Boss's "one
+// real, immediately server-resolved attempt" than to a periodic tick) —
+// see rollDamageInRange's own comment for why real RNG here doesn't
+// reintroduce the divergence problem the 2026-08-11 rewrite fixed. This
+// server function is the SOLE source of real rewards; the client's own
+// row tick loop (attack-back, respawn countdown) is prediction/cosmetic-
+// only, and Multi-Shot's actual hit/miss/damage numbers are only ever
+// shown once this function's response arrives (multiShotHits below).
 //
 // Monster attack-back is deliberately NOT simulated here — mirrors
 // resolve-combat's own existing, documented gap ("player HP has never been
@@ -277,6 +283,35 @@ function resolvePhysicalDamage(attack: number, defense: number): number {
   return Math.max(mitigated, floor, 1)
 }
 
+// Min/max damage roll — mirrors combatResolver.ts's damageRangeFromMidpoint/
+// rollDamageInRange (must stay in sync). Not needed by single-target's own
+// resolve-combat (deterministic expected-value math there), but Multi-Shot
+// (2026-08-17, requested by the user) is a discrete, single, player-pressed
+// action rather than a continuous per-tick accrual — closer to World Boss's
+// "one real, immediately server-resolved attempt" than to single-target's
+// continuous formula — so real rolled damage (with visible variance, and a
+// real number to show as a floating "-N") makes more sense here than an
+// expected-value fraction, without reintroducing the client/server
+// divergence problem the EV rewrite fixed (that was about the SAME window
+// being simulated twice; here the server rolls once, the client only ever
+// displays what the server already decided).
+const DAMAGE_ROLL_MIN_RATIO = 0.9
+const DAMAGE_ROLL_MAX_RATIO = 1.1
+
+function rollDamageInRange(midpoint: number): number {
+  const min = Math.max(1, Math.round(midpoint * DAMAGE_ROLL_MIN_RATIO))
+  const max = Math.max(min, Math.round(midpoint * DAMAGE_ROLL_MAX_RATIO))
+  return min + Math.floor(Math.random() * (max - min + 1))
+}
+
+// Multi-Shot deals reduced damage per target since it hits every alive slot
+// at once (2026-08-17, requested by the user, "50% of the damage
+// calculation") — applied to the final resolved (post-defense) damage
+// number, not the raw attack value, so it reads as a flat "half of what a
+// normal hit would have dealt" rather than interacting with the
+// MIN_DAMAGE_PERCENT_OF_ATTACK floor in a less obvious way.
+const MULTI_SHOT_DAMAGE_MULTIPLIER = 0.5
+
 function rollBonusCurrencyDrops(cometMultiplier: number, fallenStarMultiplier: number) {
   return {
     comets: Math.random() < COMET_DROP_CHANCE * cometMultiplier ? 1 : 0,
@@ -338,7 +373,11 @@ const INVENTORY_SLOT_CAP = 40
 // ordinary live-tick jitter (the 4s reconcile cadence plus network slack) is
 // defined as zero elapsed time, by design. See the file header.
 const ROW_LIVE_LIVENESS_THRESHOLD_MS = 10_000
-const ROW_RESPAWN_MS = 15_000
+// Aligned with MULTI_SHOT_COOLDOWN_MS (2026-08-17, requested by the user) —
+// both 10s, so a slot that died right as Multi-Shot went on cooldown is
+// back up by the time it's off cooldown again. Mirrored in
+// useRowCombatStore.ts's own ROW_RESPAWN_MS, must stay in sync.
+const ROW_RESPAWN_MS = 10_000
 // Placeholder/tunable, matches the plan's confirmed default.
 const MULTI_SHOT_COOLDOWN_MS = 10_000
 
@@ -554,6 +593,8 @@ async function handleResolveRowCombat(req: Request): Promise<Response> {
       rowSlots: serializeRowSlots(parseRowSlots(gathered.row_slots)),
       multiShotFired: false,
       multiShotOnCooldown: false,
+      multiShotNoTarget: false,
+      multiShotHits: [],
       petObtained: null,
     })
   }
@@ -636,6 +677,11 @@ async function handleResolveRowCombat(req: Request): Promise<Response> {
   const droppedTemplates: { id: string; required_level: number; slot_type: string; qualityTier: string; compositionLevel: number }[] = []
   let cometsGained = 0
   let fallenStarsGained = 0
+  // Per-target Multi-Shot results (real rolled hit/miss/damage), relayed to
+  // the client so it can render floating damage numbers on each row slot —
+  // see the file header note on why Multi-Shot uses real rolls instead of
+  // the deterministic expected-value math single-target combat uses.
+  const multiShotHits: { slotIndex: number; hit: boolean; damage: number }[] = []
 
   let jadeShardTemplate: { id: string; required_level: number; slot_type: string } | null | undefined
   async function pickJadeShardTemplate() {
@@ -665,13 +711,15 @@ async function handleResolveRowCombat(req: Request): Promise<Response> {
     }
   }
 
-  // Applies one deterministic expected-value hit to a single slot, mutating
-  // its current_hp directly (a real, continuous value — not the closed-form
-  // "expectedKillsThisWindow" abstraction resolve-combat uses). A kill is
-  // simply current_hp crossing <= 0; overkill is naturally discarded rather
-  // than needing a separate cap, and damage-dealt EXP accrues on every hit
-  // regardless of whether it kills, matching the intent of resolve-combat's
-  // own DAMAGE_EXP_SHARE mechanic.
+  // Applies one real, rolled hit to a single slot (Multi-Shot's own damage
+  // model — see the rollDamageInRange comment above for why this is a real
+  // roll rather than single-target's deterministic expected-value math),
+  // mutating its current_hp directly. A kill is simply current_hp crossing
+  // <= 0; overkill is naturally discarded, and damage-dealt EXP accrues on
+  // every landed hit regardless of whether it kills, matching the intent of
+  // resolve-combat's own DAMAGE_EXP_SHARE mechanic. Records the outcome
+  // (hit/miss/damage) in multiShotHits either way, so the client can show a
+  // real floating number/Miss text per target instead of nothing.
   async function applyHitToSlot(slotIndex: number, eventTimeMs: number) {
     if (inventoryFull) return
     const slot = slots[slotIndex]
@@ -680,12 +728,19 @@ async function handleResolveRowCombat(req: Request): Promise<Response> {
     if (!type) return
 
     const hitChance = 1 - Math.min(Math.max(0, monsterDodge(type) - derived.dexterity) * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
-    const expectedDamagePerHit = resolvePhysicalDamage(attackMidpointForZone(type.zone_id), monsterDefense(type, character.level))
-    const dmg = hitChance * expectedDamagePerHit
+
+    if (Math.random() >= hitChance) {
+      multiShotHits.push({ slotIndex, hit: false, damage: 0 })
+      return
+    }
+
+    const rawDamage = resolvePhysicalDamage(rollDamageInRange(attackMidpointForZone(type.zone_id)), monsterDefense(type, character.level))
+    const damage = Math.max(1, Math.round(rawDamage * MULTI_SHOT_DAMAGE_MULTIPLIER))
     const expMultiplier = EXP_MULTIPLIER_BY_COLOR[getLevelDiffColor(character.level, type.level)]
 
-    rawExpGainedFloat += dmg * ((expRewardForLevel(type.level) * DAMAGE_EXP_SHARE) / type.max_hp) * expMultiplier * RARE_BLENDED_DAMAGE_EXP_FACTOR
-    slot.currentHp -= dmg
+    rawExpGainedFloat += damage * ((expRewardForLevel(type.level) * DAMAGE_EXP_SHARE) / type.max_hp) * expMultiplier * RARE_BLENDED_DAMAGE_EXP_FACTOR
+    slot.currentHp -= damage
+    multiShotHits.push({ slotIndex, hit: true, damage })
 
     if (slot.currentHp > 0) return
 
@@ -763,21 +818,31 @@ async function handleResolveRowCombat(req: Request): Promise<Response> {
 
   let multiShotFired = false
   let multiShotOnCooldown = false
+  // No living target to hit (2026-08-17, requested by the user) — pressing
+  // Multi-Shot with every enabled slot empty/dead is a no-op that does NOT
+  // consume the cooldown, same spirit as the on-cooldown case above not
+  // consuming it either. Checked AFTER processRespawnsUpTo so a slot whose
+  // 10s respawn timer just elapsed counts as a valid target.
+  let multiShotNoTarget = false
   const multiShotLastFiredMs = new Date(character.row_multi_shot_last_fired_at).getTime()
   let newMultiShotLastFiredAt = character.row_multi_shot_last_fired_at
 
   if (fireMultiShot && isHunter && hasAnyEnabledSlot) {
     if (now - multiShotLastFiredMs < MULTI_SHOT_COOLDOWN_MS) {
       multiShotOnCooldown = true
-    } else if (!inventoryFull) {
+    } else {
       processRespawnsUpTo(now)
       const aliveTargets = slots.map((s, i) => i).filter((i) => slots[i].enabled && slots[i].currentHp > 0)
-      for (const idx of aliveTargets) {
-        if (inventoryFull) break
-        await applyHitToSlot(idx, now)
+      if (aliveTargets.length === 0) {
+        multiShotNoTarget = true
+      } else if (!inventoryFull) {
+        for (const idx of aliveTargets) {
+          if (inventoryFull) break
+          await applyHitToSlot(idx, now)
+        }
+        multiShotFired = true
+        newMultiShotLastFiredAt = new Date(now).toISOString()
       }
-      multiShotFired = true
-      newMultiShotLastFiredAt = new Date(now).toISOString()
     }
   }
 
@@ -850,7 +915,9 @@ async function handleResolveRowCombat(req: Request): Promise<Response> {
     rowSlots: apply.row_slots ?? serializeRowSlots(slots),
     multiShotFired,
     multiShotOnCooldown,
+    multiShotNoTarget,
     multiShotReadyAt: new Date(new Date(newMultiShotLastFiredAt).getTime() + MULTI_SHOT_COOLDOWN_MS).toISOString(),
+    multiShotHits,
     petObtained: petObtainedMonsterId,
     killCountUpdates: apply.kill_count_updates ?? [],
   })
