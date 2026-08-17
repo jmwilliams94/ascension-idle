@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.99.15",
+    "date": "2026-08-17",
+    "changes": [
+      "Fixed a bug where an item claimed from Mail (after a purchase, or a cancelled/expired listing) could never be listed on the Marketplace again",
+      "Items in Mail history now show what they looked like when they arrived, instead of updating to match later Forge changes"
+    ]
+  },
+  {
     "version": "1.99.14",
     "date": "2026-08-17",
     "changes": [

@@ -72,6 +72,19 @@ export interface MailEntry {
   // toward the "unread mail" nav badges — see hasUnclaimedMail/
   // countUnreadMail below).
   claimed_at: string | null
+  // Item snapshot (20260907000000_mail_item_snapshot_and_resell_fix.sql) —
+  // what the item looked like at the moment it was mailed, captured by
+  // buy_marketplace_listing/end_marketplace_listing/admin_send_mail. Null
+  // for item_id === null rows and for any row mailed before this migration.
+  // Preferred over the live `item` join for display so a mail history entry
+  // doesn't keep changing appearance as the player later Forges/levels/
+  // requalitys the item after claiming it — same idea as
+  // marketplace_listings' own item_* snapshot (see MarketplacePanel.tsx's
+  // mailSnapshotItem).
+  item_template_id: string | null
+  item_quality_tier: string | null
+  item_level: number | null
+  item_composition_level: number | null
 }
 
 // A "group" is either one ungrouped row (pre-existing marketplace mail,
@@ -151,7 +164,7 @@ export const useMailStore = create<MailState>((set, get) => ({
     const { data, error } = await supabase
       .from('mail')
       .select(
-        'id, character_id, item_id, currency_type, amount, reason, mail_batch_id, sender_label, subject, message, claimed_at, created_at',
+        'id, character_id, item_id, currency_type, amount, reason, mail_batch_id, sender_label, subject, message, claimed_at, created_at, item_template_id, item_quality_tier, item_level, item_composition_level',
       )
       .eq('character_id', characterId)
       .order('created_at', { ascending: true })

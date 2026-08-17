@@ -576,13 +576,41 @@ function reasonLabel(reason: MailEntry['reason']): string {
   }
 }
 
+// A mail row's own item_* snapshot columns (20260907000000_mail_item_
+// snapshot_and_resell_fix.sql) — what the item looked like the moment it was
+// mailed, frozen even if the player later Forges/levels/requalitys it after
+// claiming. Mirrors snapshotPreviewItem above; the difference from that one
+// is the fallback isn't "Item unavailable" — a mailed item's live join stays
+// RLS-readable forever (still owned by the recipient), so a pre-migration
+// row with no snapshot just falls back to the live item in the caller.
+function mailSnapshotItem(entry: MailEntry): ItemInstance | null {
+  if (!entry.item_template_id || !entry.item_quality_tier) {
+    return null
+  }
+  return {
+    id: entry.id,
+    template_id: entry.item_template_id,
+    owner_id: '',
+    quality_tier: entry.item_quality_tier,
+    level: entry.item_level ?? 1,
+    composition_level: entry.item_composition_level ?? 0,
+    composition_points: 0,
+    sockets: [],
+    enchant: null,
+    durability: 0,
+    created_at: entry.created_at,
+    location: 'inventory',
+  }
+}
+
 function mailEntryLabel(entry: MailEntry, templates: ItemTemplate[]): string {
   if (entry.currency_type) {
     return mailCurrencyLabel(entry.currency_type)
   }
-  if (entry.item) {
-    const template = templates.find((t) => t.id === entry.item!.template_id)
-    return formatItemDisplayName(template?.name ?? 'Unknown item', entry.item.quality_tier, entry.item.composition_level)
+  const resolved = mailSnapshotItem(entry) ?? entry.item
+  if (resolved) {
+    const template = templates.find((t) => t.id === resolved.template_id)
+    return formatItemDisplayName(template?.name ?? 'Unknown item', resolved.quality_tier, resolved.composition_level)
   }
   return 'Item unavailable'
 }
@@ -626,20 +654,24 @@ function MailEntryTile({
     )
   }
 
-  const template = entry.item ? templates.find((t) => t.id === entry.item!.template_id) : undefined
+  const resolved = mailSnapshotItem(entry) ?? entry.item
+  const template = resolved ? templates.find((t) => t.id === resolved.template_id) : undefined
 
   return (
     <InventorySlot
       slotId={entry.id}
-      filled={Boolean(entry.item)}
+      filled={Boolean(resolved)}
       sizeClassName={SLOT_SIZE_CLASS}
-      icon={entry.item ? getItemIcon(template?.slot_type) : undefined}
-      iconSrc={entry.item ? getGearIconSrc(template?.name) : undefined}
-      qualityColor={entry.item ? getQualityColor(entry.item.quality_tier) : undefined}
-      compositionLevel={entry.item?.composition_level}
+      icon={resolved ? getItemIcon(template?.slot_type) : undefined}
+      iconSrc={resolved ? getGearIconSrc(template?.name) : undefined}
+      qualityColor={resolved ? getQualityColor(resolved.quality_tier) : undefined}
+      compositionLevel={resolved?.composition_level}
+      // Keyed off the real live item, not `resolved` (which can be
+      // mailSnapshotItem's synthetic durability: 0) — the snapshot has no
+      // real durability data, same reasoning ListingTile's broken prop uses.
       broken={entry.item && itemHasDurability(template?.slot_type) ? entry.item.durability <= 0 : undefined}
       label={mailEntryLabel(entry, templates)}
-      tooltip={entry.item ? buildGearTooltip(entry.item, template) : undefined}
+      tooltip={resolved ? buildGearTooltip(resolved, template) : undefined}
       selected={selected}
       onClick={onClick}
     />
