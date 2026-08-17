@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.11",
+    "date": "2026-08-17",
+    "changes": [
+      "Getting an armor socket now also announces how many successful upgrades of that type it took, and calls out when a long unlucky streak finally ends"
+    ]
+  },
+  {
     "version": "1.99.10",
     "date": "2026-08-17",
     "changes": [

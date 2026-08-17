@@ -21,6 +21,7 @@ export const ANNOUNCEMENT_ICONS: Record<string, string> = {
   lucky_gear_radiant_coat: '🥋',
   lucky_gear_ascended_random: '🗡️',
   level_130: '🏆',
+  socket_dry_streak_end: '🎲',
 }
 
 const GEM_IDS: GemTypeId[] = ['drake', 'ember', 'bastion', 'iris']
