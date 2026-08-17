@@ -13,8 +13,11 @@ import type { ListableCurrencyType } from './useMarketplaceStore'
 // stays untouched. 'gold' (added for World Boss rewards, migration
 // 20260826000000_add_world_boss.sql) is the same story — Mail-claimable, never
 // marketplace-listable, since Marketplace/Shop gold proceeds always credit
-// characters.gold directly instead of routing through Mail.
-export type MailCurrencyType = ListableCurrencyType | 'lottery_ticket' | 'ascension_points' | 'gold'
+// characters.gold directly instead of routing through Mail. 'comet_box'
+// (added for the World Boss/Gold Donation reward overhaul,
+// 20260904000000_event_reward_overhaul.sql) is the same story — Mail-
+// claimable, never marketplace-listable.
+export type MailCurrencyType = ListableCurrencyType | 'lottery_ticket' | 'ascension_points' | 'gold' | 'comet_box'
 
 // Mail (see CLAUDE.md's Marketplace section and
 // supabase/migrations/20260802050000_add_marketplace.sql). Sale proceeds
@@ -216,6 +219,9 @@ export const useMailStore = create<MailState>((set, get) => ({
             break
           case 'gold':
             useProgressionStore.getState().setGold(result.new_count)
+            break
+          case 'comet_box':
+            currencyStore.setCometBoxes(result.new_count)
             break
         }
       } else if (entry?.item) {

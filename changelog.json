@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.7",
+    "date": "2026-08-17",
+    "changes": [
+      "World Boss and Gold Donation Event rewards overhauled: 1st place now gets 3 Fallen Stars, a Comet Box, and 10 Lottery Tickets; 2nd gets 2 Fallen Stars, 2 Comet Scrolls, and 7 Lottery Tickets; 3rd gets 1 Fallen Star, 1 Comet Scroll, and 4 Lottery Tickets; everyone who participates gets 1 Lottery Ticket"
+    ]
+  },
+  {
     "version": "1.99.6",
     "date": "2026-08-17",
     "changes": [
