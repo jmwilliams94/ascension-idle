@@ -145,13 +145,21 @@ function RowSlotTile({ characterId, slotIndex }: { characterId: string; slotInde
 function RowGrid({ characterId, row }: { characterId: string; row: 1 | 2 }) {
   const startIndex = row === 1 ? 0 : 6
   return (
-    // Flex, not grid — all 6 slots share the full width of the monster
-    // container equally (flex-1 on each tile below), always one row of 6
-    // abreast rather than wrapping into multiple rows at narrower widths.
-    <div className="flex gap-2">
-      {Array.from({ length: 6 }, (_, i) => (
-        <RowSlotTile key={startIndex + i} characterId={characterId} slotIndex={startIndex + i} />
-      ))}
+    // Labeled + top-bordered as its own section (reported by the user,
+    // 2026-08-17 — with no heading at all once unlocked, Row 1's tiles read
+    // as part of the Multi-Shot button above rather than a distinct row;
+    // a bigger gap alone didn't fix that, since there was still no textual
+    // anchor telling the two apart).
+    <div className="border-t border-slate-800 pt-3">
+      <p className="text-heading-label mb-2">Row {row}</p>
+      {/* Flex, not grid — all 6 slots share the full width of the monster
+          container equally (flex-1 on each tile below), always one row of 6
+          abreast rather than wrapping into multiple rows at narrower widths. */}
+      <div className="flex gap-2">
+        {Array.from({ length: 6 }, (_, i) => (
+          <RowSlotTile key={startIndex + i} characterId={characterId} slotIndex={startIndex + i} />
+        ))}
+      </div>
     </div>
   )
 }

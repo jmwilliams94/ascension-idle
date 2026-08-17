@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.3",
+    "date": "2026-08-17",
+    "changes": [
+      "Added \"Row 1\"/\"Row 2\" section labels and a divider line so each row clearly reads as its own section instead of blending into the Multi-Shot button above it"
+    ]
+  },
+  {
     "version": "1.99.2",
     "date": "2026-08-17",
     "changes": [
