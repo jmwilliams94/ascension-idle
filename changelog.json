@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.9",
+    "date": "2026-08-17",
+    "changes": [
+      "Row Combat's respawning slots now show the dimmed monster portrait with a countdown above \"Dead\", matching your primary target's respawn display, instead of plain text"
+    ]
+  },
+  {
     "version": "1.99.8",
     "date": "2026-08-17",
     "changes": [

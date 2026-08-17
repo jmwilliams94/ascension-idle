@@ -93,11 +93,16 @@ function clearRowSlotsForCharacter(characterId: string) {
 // portrait itself stays mounted the whole time (see the `opacity-30
 // grayscale` classes at both call sites below) — this just adds the "Dead"
 // label on top of it.
-function DeadOverlay({ seconds }: { seconds: number }) {
+// `compact` (reused by RowCombatPanel.tsx's much smaller row tiles,
+// 2026-08-17) shrinks the text — the default sizing was tuned for this
+// page's own large (128-160px) portrait and would overflow a ~50-70px tile.
+export function DeadOverlay({ seconds, compact = false }: { seconds: number; compact?: boolean }) {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 rounded-2xl bg-slate-950/40">
-      <span className="text-lg font-bold text-slate-100">{seconds}s</span>
-      <span className="text-xs font-bold uppercase tracking-wide text-slate-300">Dead</span>
+    <div
+      className={`absolute inset-0 flex flex-col items-center justify-center gap-0.5 bg-slate-950/40 ${compact ? 'rounded-lg' : 'rounded-2xl'}`}
+    >
+      <span className={`font-bold text-slate-100 ${compact ? 'text-[11px]' : 'text-lg'}`}>{seconds}s</span>
+      <span className={`font-bold uppercase tracking-wide text-slate-300 ${compact ? 'text-[8px]' : 'text-xs'}`}>Dead</span>
     </div>
   )
 }

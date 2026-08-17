@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Button } from './ui/Button'
-import { HpBar, hexColor } from './CombatPage'
+import { HpBar, hexColor, DeadOverlay } from './CombatPage'
 import { supabase } from '../lib/supabaseClient'
 import { useRowCombatStore, ROW_RESPAWN_MS, type ServerRowSlot } from '../game/combat/useRowCombatStore'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
@@ -144,24 +144,28 @@ function RowSlotTile({ characterId, slotIndex }: { characterId: string; slotInde
         slot.isRareInstance ? 'super-quality-glow border-amber-500/60' : 'border-slate-700'
       } bg-slate-900/80 hover:border-amber-500/60`}
     >
-      {isDead ? (
-        <div className="flex flex-1 items-center justify-center">
-          <span className="text-[10px] text-slate-500">Respawn {Math.ceil(respawnRemainingMs / 1000)}s</span>
-        </div>
-      ) : (
-        <>
-          <div className="flex min-h-0 flex-1 items-center justify-center">
-            {type?.portraitUrl ? (
-              <img src={type.portraitUrl} alt={type.displayName} className="h-full w-full object-contain" />
-            ) : (
-              <div className="h-full w-full rounded" style={{ backgroundColor: hexColor(type?.color ?? 0) }} />
-            )}
-          </div>
-          <div className="w-full px-0.5 pb-0.5">
-            <HpBar current={slot.currentHp} max={slot.maxHp} barColorClass={slot.isRareInstance ? 'bg-amber-400' : 'bg-emerald-500'} />
-          </div>
-        </>
-      )}
+      {/* Same dimmed-image + overlay treatment as the primary target's own
+          respawn gap (CombatPage.tsx's DeadOverlay) — the portrait stays
+          visible (just faded) instead of being replaced by bare text,
+          2026-08-17, requested by the user. */}
+      <div className="flex min-h-0 flex-1 items-center justify-center">
+        {type?.portraitUrl ? (
+          <img
+            src={type.portraitUrl}
+            alt={type.displayName}
+            className={`h-full w-full object-contain transition-opacity ${isDead ? 'opacity-30 grayscale' : ''}`}
+          />
+        ) : (
+          <div
+            className={`h-full w-full rounded transition-opacity ${isDead ? 'opacity-30 grayscale' : ''}`}
+            style={{ backgroundColor: hexColor(type?.color ?? 0) }}
+          />
+        )}
+      </div>
+      <div className="w-full px-0.5 pb-0.5">
+        <HpBar current={isDead ? 0 : slot.currentHp} max={slot.maxHp} barColorClass={slot.isRareInstance ? 'bg-amber-400' : 'bg-emerald-500'} />
+      </div>
+      {isDead && <DeadOverlay seconds={Math.ceil(respawnRemainingMs / 1000)} compact />}
       <AnimatePresence>
         {floatingHits.map((entry) => (
           <motion.div
