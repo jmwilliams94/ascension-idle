@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.10",
+    "date": "2026-08-17",
+    "changes": [
+      "Fixed Row Combat's Multi-Shot kills not benefiting from an active Gold Donation Event buff (Achievement bonuses were already applying correctly)"
+    ]
+  },
+  {
     "version": "1.99.9",
     "date": "2026-08-17",
     "changes": [

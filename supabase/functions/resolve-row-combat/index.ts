@@ -491,6 +491,11 @@ interface GatherStateResult {
     account_zone_attack_bonus_pct: Record<string, number> | null
     account_zone_drop_bonus_pct: Record<string, number> | null
   } | null
+  // Gold Donation Event's active buff, if any (see CLAUDE.server-events.md)
+  // — mirrors resolve-combat's own field, was missing here entirely until
+  // 2026-08-17 (reported by the user), so Multi-Shot kills never benefited
+  // from a live event buff the way single-target kills already did.
+  active_event?: { category: string; multiplier: number } | null
 }
 
 async function handleResolveRowCombat(req: Request): Promise<Response> {
@@ -637,6 +642,17 @@ async function handleResolveRowCombat(req: Request): Promise<Response> {
   const derived = computeDerivedStats(attributes, equipmentBonus)
   const isHunter = character.class === 'hunter'
 
+  // Gold Donation Event's active buff (2026-08-17, requested by the user —
+  // was missing entirely before this) — mirrors resolve-combat/index.ts's
+  // own derivation exactly. Exactly one of these is > 1 at a time, matching
+  // whichever category the event rolled ('socket_unlock' is handled in the
+  // Forge RPCs, never applies here).
+  const activeEvent = gathered.active_event ?? null
+  const eventExpMultiplier = activeEvent?.category === 'exp' ? activeEvent.multiplier : 1
+  const eventCometMultiplier = activeEvent?.category === 'comet' ? activeEvent.multiplier : 1
+  const eventFallenStarMultiplier = activeEvent?.category === 'fallen_star' ? activeEvent.multiplier : 1
+  const eventQualityMultiplier = activeEvent?.category === 'quality_tier' ? activeEvent.multiplier : 1
+
   // Per-zone attack midpoint — zone-scoped bonuses (account_zone_attack_bonus_pct)
   // mean the player's effective attack power can differ per slot's own
   // monster's zone, since each slot locks in whatever was selected at its own
@@ -765,8 +781,8 @@ async function handleResolveRowCombat(req: Request): Promise<Response> {
         if (occupied < INVENTORY_SLOT_CAP) {
           droppedTemplates.push({
             ...template,
-            qualityTier: rollDroppedQualityTier(accountDropMultiplier),
-            compositionLevel: rollDroppedCompositionLevel(accountDropMultiplier),
+            qualityTier: rollDroppedQualityTier(accountDropMultiplier * eventQualityMultiplier),
+            compositionLevel: rollDroppedCompositionLevel(accountDropMultiplier * eventQualityMultiplier),
           })
           occupied += 1
         } else {
@@ -776,7 +792,10 @@ async function handleResolveRowCombat(req: Request): Promise<Response> {
     }
 
     if (!inventoryFull) {
-      const bonusCurrency = rollBonusCurrencyDrops(accountDropMultiplier, accountDropMultiplier)
+      const bonusCurrency = rollBonusCurrencyDrops(
+        accountDropMultiplier * eventCometMultiplier,
+        accountDropMultiplier * eventFallenStarMultiplier,
+      )
       if (bonusCurrency.comets > 0) {
         if (occupied < INVENTORY_SLOT_CAP) {
           cometsGained += 1
@@ -849,7 +868,7 @@ async function handleResolveRowCombat(req: Request): Promise<Response> {
   processRespawnsUpTo(now)
 
   const goldGained = Math.round(goldGainedFloat)
-  const expGained = Math.round(rawExpGainedFloat * (1 + irisBonusPct / 100))
+  const expGained = Math.round(rawExpGainedFloat * (1 + irisBonusPct / 100) * eventExpMultiplier)
   const totalKills = Object.values(killDeltas).reduce((sum, v) => sum + v, 0)
 
   let level = character.level
