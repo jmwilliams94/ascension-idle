@@ -9,7 +9,7 @@ import { Button } from './ui/Button'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useForgeStore } from '../game/items/useForgeStore'
 import { effectiveCurrencyAvailable } from '../game/items/forgeCosts'
-import { parseGemDragId } from '../game/items/gemTypes'
+import { parseGemDragId, type GemTier, type GemTypeId } from '../game/items/gemTypes'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 
@@ -50,7 +50,9 @@ function describeSocketFailure(error?: string): string {
 // drag a gem tile from the grid below onto one of its (unlocked) socket
 // slots. A filled socket stays a live drop target — it can be overwritten
 // with a different gem — but there's deliberately no way to empty one again,
-// per the user's explicit "gems can never be removed."
+// per the user's explicit "gems can never be removed." Because of that,
+// dropping a gem only stages it as a pending preview (see pendingSocket) —
+// the RPC doesn't fire until the player hits Confirm.
 interface ForgeSocketsTabProps {
   onBack: () => void
 }
@@ -67,6 +69,10 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [unlockError, setUnlockError] = useState<string | null>(null)
   const [socketError, setSocketError] = useState<string | null>(null)
+  // A gem dropped onto a socket but not yet confirmed — see handleConfirmSocket.
+  // Socketing is irreversible (gems can never be removed), so the drop only
+  // stages a preview; the RPC doesn't fire until the player explicitly confirms.
+  const [pendingSocket, setPendingSocket] = useState<{ index: number; gemId: GemTypeId; tier: GemTier } | null>(null)
 
   const selectedItem = items.find((item) => item.id === selectedItemId) ?? null
   const selectedTemplate = selectedItem ? (templates.find((t) => t.id === selectedItem.template_id) ?? null) : null
@@ -81,6 +87,7 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
     setSelectedItemId(null)
     setUnlockError(null)
     setSocketError(null)
+    setPendingSocket(null)
   }
 
   const handleDropItemId = (itemId: string) => {
@@ -90,6 +97,7 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
     setSelectedItemId(itemId)
     setUnlockError(null)
     setSocketError(null)
+    setPendingSocket(null)
   }
 
   const handleUnlock = async () => {
@@ -103,7 +111,10 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
     }
   }
 
-  const handleDropGem = async (socketIndex: number, id: string) => {
+  // Stages the dropped gem as a pending preview rather than socketing it
+  // immediately — the player must hit Confirm before it actually consumes
+  // the gem, since a socketed gem can never be removed.
+  const handleDropGem = (socketIndex: number, id: string) => {
     if (!selectedItem || socketIndex >= socketCount) {
       return
     }
@@ -112,10 +123,24 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
       return
     }
     setSocketError(null)
-    const result = await socketGem(selectedItem.id, socketIndex, parsed.gemId, parsed.tier)
+    setPendingSocket({ index: socketIndex, gemId: parsed.gemId, tier: parsed.tier })
+  }
+
+  const handleCancelSocket = () => {
+    setPendingSocket(null)
+    setSocketError(null)
+  }
+
+  const handleConfirmSocket = async () => {
+    if (!selectedItem || !pendingSocket) {
+      return
+    }
+    setSocketError(null)
+    const result = await socketGem(selectedItem.id, pendingSocket.index, pendingSocket.gemId, pendingSocket.tier)
     if (!result.ok) {
       setSocketError(describeSocketFailure(result.error))
     }
+    setPendingSocket(null)
   }
 
   const handleTileDrop = (overTarget: string, id: string) => {
@@ -124,11 +149,11 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
       return
     }
     if (overTarget === 'socket-0') {
-      void handleDropGem(0, id)
+      handleDropGem(0, id)
       return
     }
     if (overTarget === 'socket-1') {
-      void handleDropGem(1, id)
+      handleDropGem(1, id)
     }
   }
 
@@ -141,8 +166,18 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
       >
           <div className="flex items-start justify-center gap-6">
             <ForgeUpgradeSlot item={selectedItem} template={selectedTemplate} onRemove={handleRemoveItem} />
-            <ForgeSocketSlot index={0} unlocked={socketCount >= 1} filledKey={selectedItem?.sockets[0] ?? null} />
-            <ForgeSocketSlot index={1} unlocked={socketCount >= 2} filledKey={selectedItem?.sockets[1] ?? null} />
+            <ForgeSocketSlot
+              index={0}
+              unlocked={socketCount >= 1}
+              filledKey={selectedItem?.sockets[0] ?? null}
+              pendingGem={pendingSocket?.index === 0 ? pendingSocket : null}
+            />
+            <ForgeSocketSlot
+              index={1}
+              unlocked={socketCount >= 2}
+              filledKey={selectedItem?.sockets[1] ?? null}
+              pendingGem={pendingSocket?.index === 1 ? pendingSocket : null}
+            />
           </div>
 
           {!selectedItem && <EquippedGearPicker onSelect={handleDropItemId} />}
@@ -181,7 +216,25 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
               <p className="text-center text-[10px] text-slate-500">This item doesn't support sockets.</p>
             )}
 
-            {socketCount > 0 && <p className="text-center text-[11px] text-slate-600">Drag a gem from below onto a socket to fill it.</p>}
+            {socketCount > 0 && !pendingSocket && (
+              <p className="text-center text-[11px] text-slate-600">Drag a gem from below onto a socket to fill it.</p>
+            )}
+
+            {pendingSocket && (
+              <div className="space-y-2">
+                <p className="text-center text-[11px] text-amber-400">
+                  Gems can never be removed once socketed. Confirm to lock this in.
+                </p>
+                <div className="flex items-center justify-center gap-2">
+                  <Button variant="primary" disabled={busy} onClick={() => void handleConfirmSocket()} className="flex-1">
+                    {busy ? 'Working…' : 'Confirm Socket'}
+                  </Button>
+                  <Button variant="secondary" disabled={busy} onClick={handleCancelSocket} className="flex-1">
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {unlockError && <p className="text-center text-[11px] text-red-400">{unlockError}</p>}
             {socketError && <p className="text-center text-[11px] text-red-400">{socketError}</p>}

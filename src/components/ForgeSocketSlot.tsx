@@ -1,6 +1,6 @@
 import InventorySlot, { SLOT_LABEL_HEIGHT_CLASS, SLOT_SIZE_CLASS, SLOT_WIDTH_CLASS } from './InventorySlot'
 import { useIsDropTarget } from './dragDropContext'
-import { buildGemTooltip, getGemIconSrc, getGemTierColor, parseGemStorageKey } from '../game/items/gemTypes'
+import { buildGemTooltip, getGemIconSrc, getGemTierColor, parseGemStorageKey, type GemTier, type GemTypeId } from '../game/items/gemTypes'
 
 interface ForgeSocketSlotProps {
   index: number
@@ -14,9 +14,14 @@ interface ForgeSocketSlotProps {
   // a live drop target too — slots can be overwritten with a different gem,
   // just never emptied (see socket_gem's SQL, no "unsocket" path exists).
   filledKey: string | null
+  // A gem dropped here but not yet confirmed (see ForgeSocketsTab's
+  // pendingSocket) — rendered as a dimmed, dashed-ring "ghost" instead of a
+  // committed fill, since socketing is irreversible and shouldn't happen on
+  // drop alone.
+  pendingGem?: { gemId: GemTypeId; tier: GemTier } | null
 }
 
-export default function ForgeSocketSlot({ index, unlocked, filledKey }: ForgeSocketSlotProps) {
+export default function ForgeSocketSlot({ index, unlocked, filledKey, pendingGem }: ForgeSocketSlotProps) {
   const isDropTarget = useIsDropTarget(`socket-${index}`)
   const parsed = filledKey ? parseGemStorageKey(filledKey) : null
 
@@ -30,10 +35,22 @@ export default function ForgeSocketSlot({ index, unlocked, filledKey }: ForgeSoc
         <div
           data-drop-zone={`socket-${index}`}
           className={`${SLOT_SIZE_CLASS} shrink-0 rounded-lg transition-shadow ${
-            isDropTarget ? 'ring-2 ring-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.6)]' : ''
+            isDropTarget ? 'ring-2 ring-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.6)]' : pendingGem ? 'ring-2 ring-dashed ring-amber-400/70' : ''
           }`}
         >
-          {parsed ? (
+          {pendingGem ? (
+            <div className="opacity-50">
+              <InventorySlot
+                slotId={`forge-socket-${index}-pending`}
+                filled
+                sizeClassName={SLOT_SIZE_CLASS}
+                icon="💎"
+                iconSrc={getGemIconSrc(pendingGem.gemId, pendingGem.tier)}
+                qualityColor={getGemTierColor(pendingGem.tier)}
+                tooltip={buildGemTooltip(pendingGem.gemId, pendingGem.tier)}
+              />
+            </div>
+          ) : parsed ? (
             <InventorySlot
               slotId={`forge-socket-${index}`}
               filled

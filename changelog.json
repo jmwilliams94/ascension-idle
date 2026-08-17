@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.19",
+    "date": "2026-08-18",
+    "changes": [
+      "Socketing a gem now requires a Confirm button instead of committing the instant you drop it, since gems can't be removed once socketed"
+    ]
+  },
+  {
     "version": "1.99.18",
     "date": "2026-08-17",
     "changes": [
