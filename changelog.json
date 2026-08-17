@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.16",
+    "date": "2026-08-17",
+    "changes": [
+      "The \"your listing sold\" Mail notification now says Claim instead of Mark as Read, and claiming it immediately shows your updated Gold/Ascension Points instead of needing a reload"
+    ]
+  },
+  {
     "version": "1.99.15",
     "date": "2026-08-17",
     "changes": [

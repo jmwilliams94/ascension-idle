@@ -774,10 +774,10 @@ function MailDetailModal({
 
         {canClaim ? (
           <Button variant="primary" disabled={busy} onClick={onClaim} className="w-full">
-            {busy ? 'Claiming…' : rewardEntries.length > 0 ? 'Claim' : 'Mark as Read'}
+            {busy ? 'Claiming…' : 'Claim'}
           </Button>
         ) : (
-          <p className="text-center text-[11px] text-slate-600">{rewardEntries.length > 0 ? 'Claimed' : 'Read'}</p>
+          <p className="text-center text-[11px] text-slate-600">Claimed</p>
         )}
       </div>
     </div>

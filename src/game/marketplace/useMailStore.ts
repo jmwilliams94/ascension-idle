@@ -244,6 +244,31 @@ export const useMailStore = create<MailState>((set, get) => ({
         // no new item_instances row to fetch beyond what's already in the
         // entry.
         useInventoryStore.getState().addItem(entry.item)
+      } else if (entry?.reason === 'sale_notification') {
+        // Sale proceeds (Gold or Ascension Points) were already credited
+        // directly to the seller by buy_marketplace_listing at sale time —
+        // this message-only row (no item_id/currency_type) carries nothing
+        // to grant, so claim_mail's response has no new_count to read.
+        // Without this, the balance change was already sitting in the DB
+        // but the seller's client wouldn't show it until a full reload
+        // (reported by the user, 2026-08-17) — fetch both live values now so
+        // clicking Claim actually reflects the gain immediately.
+        const { data: characterRow } = await supabase
+          .from('characters')
+          .select('gold, account_id')
+          .eq('id', characterId)
+          .maybeSingle()
+        if (characterRow) {
+          useProgressionStore.getState().setGold(characterRow.gold)
+          const { data: playerRow } = await supabase
+            .from('players')
+            .select('ascension_points')
+            .eq('id', characterRow.account_id)
+            .maybeSingle()
+          if (playerRow) {
+            usePlayerRecordStore.getState().setAscensionPoints(playerRow.ascension_points)
+          }
+        }
       }
 
       // Marks claimed rather than removing (2026-08-13, mail is now
