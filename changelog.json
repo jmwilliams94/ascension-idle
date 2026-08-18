@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.25",
+    "date": "2026-08-18",
+    "changes": [
+      "Rescaled the new Twin-soul/Wuxia/Juggernaut weapon stats so different weapon types (clubs, swords, blades, mauls, backswords) actually hit differently instead of all being identical — not yet playable, prep work only"
+    ]
+  },
+  {
     "version": "1.99.24",
     "date": "2026-08-18",
     "changes": [
