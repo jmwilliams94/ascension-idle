@@ -34,9 +34,9 @@ const SLOT_SIZE = 'h-16 w-16 lg:h-24 lg:w-24'
 
 // Multi-slot equipping (confirmed, 2026-07-31 — supersedes the earlier
 // "only Main Hand is functional" version). Matches the 6 slot_types that
-// actually have catalog data; Off-hand/Shield stays a locked placeholder for
-// every class except Hunter, who gets a functional Quiver there instead (see
-// below) — no shield item_family exists at all.
+// actually have catalog data. The 7th slot (`quiver`, DB-wise) is the
+// paper-doll's Off-hand/Shield tile — its meaning is class-dependent, see
+// SECOND_HAND_BY_CLASS below.
 const SLOTS: { slot: EquipSlot; label: string; icon: string; gridArea: string }[] = [
   { slot: 'hat', label: 'Head', icon: '🪖', gridArea: 'head' },
   { slot: 'necklace', label: 'Necklace', icon: '📿', gridArea: 'neck' },
@@ -46,7 +46,18 @@ const SLOTS: { slot: EquipSlot; label: string; icon: string; gridArea: string }[
   { slot: 'coat', label: 'Armor', icon: '🥋', gridArea: 'armor' },
 ]
 
-const QUIVER_SLOT_CONFIG = { slot: 'quiver' as EquipSlot, label: 'Quiver', icon: '🏹', gridArea: 'offhand' }
+// Second-hand slot (2026-08-18 repurposing) — the underlying storage
+// (`equipped_quiver_id`/`slot_type: 'quiver'`) is shared by all 4 classes,
+// but what it means differs per class: Hunter's ammo Quiver (no stats, mirrors
+// Main Hand's glow — see the `isHunter` special-casing below), Twin-soul's
+// second dual-wielded weapon, or Juggernaut's Shield — all three are real,
+// functional slots. Wuxia has no real item here at all; its tile is rendered
+// separately below as a non-interactive dimmed echo of Main Hand.
+const SECOND_HAND_BY_CLASS: Partial<Record<string, { label: string; icon: string }>> = {
+  hunter: { label: 'Quiver', icon: '🏹' },
+  'twin-soul': { label: 'Off Hand', icon: '⚔️' },
+  juggernaut: { label: 'Shield', icon: '🛡️' },
+}
 
 // Paper-doll layout (2026-08-05, confirmed with the user from a hand-drawn
 // reference: Head/Chest(Armor)/Boots stacked in a center column, Necklace
@@ -80,6 +91,7 @@ export default function EquipmentPanel() {
   const templates = useItemTemplatesStore((state) => state.templates)
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
   const isHunter = selectedClassId === 'hunter'
+  const secondHandConfig = SECOND_HAND_BY_CLASS[selectedClassId]
   const characterName = useCharacterRecordStore((state) => state.characterName)
 
   // Class Promotion (cosmetic title + one-time reward per tier) — see
@@ -133,15 +145,24 @@ export default function EquipmentPanel() {
           gridTemplateAreas: '". head ." "neck . ring" ". armor ." "offhand . main" ". boots ."',
         }}
       >
-        {[...SLOTS, ...(isHunter ? [QUIVER_SLOT_CONFIG] : [])].map(({ slot, label, icon, gridArea }) => {
+        {[
+          ...SLOTS,
+          ...(secondHandConfig
+            ? [{ slot: 'quiver' as EquipSlot, label: secondHandConfig.label, icon: secondHandConfig.icon, gridArea: 'offhand' }]
+            : []),
+        ].map(({ slot, label, icon, gridArea }) => {
           const equipped = findEquipped(slot)
-          // Cosmetic-only (confirmed with the user, 2026-08-07): the Quiver's
-          // own quality tier is meaningless (it has no stat bonuses and is
-          // never dropped/upgraded), so its glow/ember effect mirrors
-          // whatever Bow is equipped in Main Hand instead — purely a display
-          // match, doesn't touch the Quiver's real tooltip/stats below, and
-          // has no effect on the Quiver's actual (always-Normal) tier.
-          const glowQualityTier = slot === 'quiver' ? findEquipped('weapon')?.item.quality_tier : equipped?.item.quality_tier
+          // Cosmetic-only (confirmed with the user, 2026-08-07), Hunter's
+          // Quiver only: its own quality tier is meaningless (it has no stat
+          // bonuses and is never dropped/upgraded), so its glow/ember effect
+          // mirrors whatever Bow is equipped in Main Hand instead — purely a
+          // display match, doesn't touch the Quiver's real tooltip/stats
+          // below, and has no effect on the Quiver's actual (always-Normal)
+          // tier. Twin-soul's off-hand weapon and Juggernaut's Shield are
+          // real gear with their own real quality tier, so they don't mirror
+          // Main Hand at all.
+          const glowQualityTier =
+            slot === 'quiver' && isHunter ? findEquipped('weapon')?.item.quality_tier : equipped?.item.quality_tier
 
           return (
             <div key={slot} style={{ gridArea }} className="flex items-center justify-center">
@@ -162,12 +183,16 @@ export default function EquipmentPanel() {
                 tooltip={
                   equipped
                     ? buildGearTooltip(
-                        // Same mirror as glowQualityTier above (2026-08-14) —
-                        // the Quiver's own tooltip (title/color) should read
-                        // as whatever quality the equipped Bow is, not its
-                        // own always-Normal tier. Quiver has no base_stats,
-                        // so this can't affect any displayed stat numbers.
-                        slot === 'quiver' ? { ...equipped.item, quality_tier: glowQualityTier ?? 'normal' } : equipped.item,
+                        // Same mirror as glowQualityTier above (2026-08-14),
+                        // Hunter's Quiver only — its own tooltip (title/color)
+                        // should read as whatever quality the equipped Bow
+                        // is, not its own always-Normal tier. Quiver has no
+                        // base_stats, so this can't affect any displayed stat
+                        // numbers. Twin-soul/Juggernaut's real second-hand
+                        // gear shows its own real tooltip, untouched.
+                        slot === 'quiver' && isHunter
+                          ? { ...equipped.item, quality_tier: glowQualityTier ?? 'normal' }
+                          : equipped.item,
                         equipped.template,
                       )
                     : undefined
@@ -178,7 +203,31 @@ export default function EquipmentPanel() {
           )
         })}
 
-        {!isHunter && (
+        {selectedClassId === 'wuxia' && (
+          // Wuxia has no real item in this slot at all — the Backsword's
+          // off-hand blade is part of the weapon's own sprite, not a
+          // separate equip. This just echoes whatever's in Main Hand at
+          // reduced opacity to signal "occupied, not equippable" (per the
+          // user), rather than showing the generic locked placeholder other
+          // not-yet-built slots use.
+          <div style={{ gridArea: 'offhand' }} className="flex items-center justify-center opacity-40">
+            {(() => {
+              const mainHand = findEquipped('weapon')
+              return (
+                <EquipmentSlot
+                  label="Off Hand"
+                  icon={mainHand ? getItemIcon(mainHand.template.slot_type) : '⚔️'}
+                  iconSrc={mainHand ? getGearIconSrc(mainHand.template.name) : undefined}
+                  filled={Boolean(mainHand)}
+                  qualityColor={mainHand ? getQualityColor(mainHand.item.quality_tier) : undefined}
+                  sizeClassName={SLOT_SIZE}
+                />
+              )
+            })()}
+          </div>
+        )}
+
+        {!secondHandConfig && selectedClassId !== 'wuxia' && (
           <div style={{ gridArea: 'offhand' }} className="flex items-center justify-center">
             <EquipmentSlot label="Off-hand / Shield" icon="🛡️" locked sizeClassName={SLOT_SIZE} />
           </div>

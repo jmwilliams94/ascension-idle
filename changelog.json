@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.22",
+    "date": "2026-08-18",
+    "changes": [
+      "Added backend groundwork for a class-specific second equip slot (off-hand weapon / Shield) — not yet playable, prep work only"
+    ]
+  },
+  {
     "version": "1.99.21",
     "date": "2026-08-18",
     "changes": [

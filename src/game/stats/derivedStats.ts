@@ -104,6 +104,13 @@ export interface EquipmentBonus {
   // straight onto hp below same as the attribute-derived base, not scaled by
   // anything (no account-wide multiplier applies to it, unlike attack).
   enchantHpBonus?: number
+  // Gear-granted flat HP (2026-08-18, Juggernaut Shield's "Life" stat —
+  // base_stats.max_hp, scaled by quality tier like every other gear stat).
+  // A separate additive field from enchantHpBonus above rather than merged
+  // into it, since this one *does* scale with quality tier (scaledStat) while
+  // Enchant's HP roll is a fixed value baked in at roll time — keeping them
+  // separate avoids conflating two different scaling rules under one field.
+  gearHpBonus?: number
   // Enchantress "Bless" bonus (see gemCatalog.ts's BLESS_PCT_STEPS,
   // item_instances.enchant.blessPct) — summed across every equipped item.
   blessDamageReductionPct?: number
@@ -112,7 +119,14 @@ export interface EquipmentBonus {
 export function computeDerivedStats(attributes: Attributes, equipmentBonus: EquipmentBonus = {}): DerivedStats {
   const { strength, agility, vitality, spirit } = attributes
 
-  const hp = BASE_HP + vitality * 24 + strength * 3 + agility * 3 + spirit * 3 + (equipmentBonus.enchantHpBonus ?? 0)
+  const hp =
+    BASE_HP +
+    vitality * 24 +
+    strength * 3 +
+    agility * 3 +
+    spirit * 3 +
+    (equipmentBonus.enchantHpBonus ?? 0) +
+    (equipmentBonus.gearHpBonus ?? 0)
   const mp = BASE_MP + spirit * 5
   const physicalAttack = strength * PHYSICAL_ATTACK_PER_STRENGTH + (equipmentBonus.physicalAttack ?? 0)
   const magicAttack = spirit * MAGIC_ATTACK_PER_SPIRIT + (equipmentBonus.magicAttack ?? 0)

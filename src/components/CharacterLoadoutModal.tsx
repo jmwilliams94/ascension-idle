@@ -24,7 +24,13 @@ const SLOTS: { slot: LoadoutSlot; label: string; icon: string; gridArea: string 
   { slot: 'boots', label: 'Boots', icon: '👢', gridArea: 'boots' },
   { slot: 'coat', label: 'Armor', icon: '🥋', gridArea: 'armor' },
 ]
-const QUIVER_SLOT_CONFIG = { slot: 'quiver' as LoadoutSlot, label: 'Quiver', icon: '🏹', gridArea: 'offhand' }
+// Second-hand slot — same class-dependent repurposing of the `quiver` slot
+// EquipmentPanel.tsx does (see its own comment for the full rationale).
+const SECOND_HAND_BY_CLASS: Partial<Record<string, { label: string; icon: string }>> = {
+  hunter: { label: 'Quiver', icon: '🏹' },
+  'twin-soul': { label: 'Off Hand', icon: '⚔️' },
+  juggernaut: { label: 'Shield', icon: '🛡️' },
+}
 
 // Same snapshot-preview pattern as MarketplacePanel's snapshotPreviewItem /
 // LootHoldingCard's previewInstanceForEntry -- a synthetic ItemInstance built
@@ -68,7 +74,10 @@ export default function CharacterLoadoutModal() {
   }
 
   const isHunter = loadout?.character.class === 'hunter'
+  const loadoutClassId = loadout?.character.class
+  const secondHandConfig = loadoutClassId ? SECOND_HAND_BY_CLASS[loadoutClassId] : undefined
   const weaponLoadoutItem = loadout?.equipment.weapon ?? null
+  const weaponTemplate = weaponLoadoutItem ? templates.find((t) => t.id === weaponLoadoutItem.template_id) : undefined
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4" onClick={close}>
@@ -100,16 +109,23 @@ export default function CharacterLoadoutModal() {
               gridTemplateAreas: '". head ." "neck . ring" ". armor ." "offhand . main" ". boots ."',
             }}
           >
-            {[...SLOTS, ...(isHunter ? [QUIVER_SLOT_CONFIG] : [])].map(({ slot, label, icon, gridArea }) => {
+            {[
+              ...SLOTS,
+              ...(secondHandConfig
+                ? [{ slot: 'quiver' as LoadoutSlot, label: secondHandConfig.label, icon: secondHandConfig.icon, gridArea: 'offhand' }]
+                : []),
+            ].map(({ slot, label, icon, gridArea }) => {
               const loadoutItem = loadout.equipment[slot]
               const template = loadoutItem ? templates.find((t) => t.id === loadoutItem.template_id) : undefined
               const equipped = loadoutItem && template ? { item: previewLoadoutItem(loadoutItem, template), template } : null
 
-              // Same cosmetic-only mirror EquipmentPanel does: the Quiver's
-              // own tier is meaningless (no stats, never dropped/upgraded),
-              // so its glow/tooltip color matches whatever Bow is equipped.
+              // Same cosmetic-only mirror EquipmentPanel does, Hunter's
+              // Quiver only: its own tier is meaningless (no stats, never
+              // dropped/upgraded), so its glow/tooltip color matches whatever
+              // Bow is equipped. Twin-soul/Juggernaut's real second-hand gear
+              // shows its own real tier.
               const glowQualityTier =
-                slot === 'quiver' ? weaponLoadoutItem?.quality_tier : equipped?.item.quality_tier
+                slot === 'quiver' && isHunter ? weaponLoadoutItem?.quality_tier : equipped?.item.quality_tier
 
               return (
                 <div key={slot} style={{ gridArea }} className="flex items-center justify-center">
@@ -128,7 +144,9 @@ export default function CharacterLoadoutModal() {
                     tooltip={
                       equipped
                         ? buildGearTooltip(
-                            slot === 'quiver' ? { ...equipped.item, quality_tier: glowQualityTier ?? 'normal' } : equipped.item,
+                            slot === 'quiver' && isHunter
+                              ? { ...equipped.item, quality_tier: glowQualityTier ?? 'normal' }
+                              : equipped.item,
                             equipped.template,
                           )
                         : undefined
@@ -139,7 +157,22 @@ export default function CharacterLoadoutModal() {
               )
             })}
 
-            {!isHunter && (
+            {loadoutClassId === 'wuxia' && (
+              // Same decorative dimmed echo of Main Hand EquipmentPanel.tsx
+              // renders for a live Wuxia character — see its comment.
+              <div style={{ gridArea: 'offhand' }} className="flex items-center justify-center opacity-40">
+                <EquipmentSlot
+                  label="Off Hand"
+                  icon={weaponTemplate ? getItemIcon(weaponTemplate.slot_type) : '⚔️'}
+                  iconSrc={weaponTemplate ? getGearIconSrc(weaponTemplate.name) : undefined}
+                  filled={Boolean(weaponLoadoutItem)}
+                  qualityColor={weaponLoadoutItem ? getQualityColor(weaponLoadoutItem.quality_tier) : undefined}
+                  sizeClassName={SLOT_SIZE}
+                />
+              </div>
+            )}
+
+            {!secondHandConfig && loadoutClassId !== 'wuxia' && (
               <div style={{ gridArea: 'offhand' }} className="flex items-center justify-center">
                 <EquipmentSlot label="Off-hand / Shield" icon="🛡️" locked sizeClassName={SLOT_SIZE} />
               </div>

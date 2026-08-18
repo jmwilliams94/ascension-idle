@@ -144,6 +144,7 @@ export function computeEquipmentBonus(
     bastionBonusPct: 0,
     irisBonusPct: 0,
     enchantHpBonus: 0,
+    gearHpBonus: 0,
     blessDamageReductionPct: 0,
   }
 
@@ -170,6 +171,10 @@ export function computeEquipmentBonus(
     bonus.magicDefense += scaledStat(template.base_stats, 'magic_defense', item.quality_tier) ?? 0
     bonus.dodge += scaledStat(template.base_stats, 'dodge', item.quality_tier) ?? 0
     bonus.dexterity += scaledStat(template.base_stats, 'dexterity', item.quality_tier) ?? 0
+    // Shield's flat "Life" stat (Juggernaut's second-hand slot) — see
+    // derivedStats.ts's gearHpBonus comment for why this is a separate field
+    // from Enchant's own HP roll rather than merged into it.
+    bonus.gearHpBonus += scaledStat(template.base_stats, 'max_hp', item.quality_tier) ?? 0
 
     // Physical/magic attack composition bonus is tracked separately per type
     // (compositionPhysicalAttackBonus/compositionMagicAttackBonus) rather
