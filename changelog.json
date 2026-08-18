@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.24",
+    "date": "2026-08-18",
+    "changes": [
+      "Added backend groundwork for Juggernaut's gear (clubs, swords, blades, mauls, shields, helmets, armor) — not yet playable, prep work only"
+    ]
+  },
+  {
     "version": "1.99.23",
     "date": "2026-08-18",
     "changes": [
