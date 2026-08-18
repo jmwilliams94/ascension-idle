@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.28",
+    "date": "2026-08-18",
+    "changes": [
+      "Added a level 5 and level 10 tier to every new class's one-handed and two-handed weapons — not yet playable, prep work only"
+    ]
+  },
+  {
     "version": "1.99.27",
     "date": "2026-08-18",
     "changes": [
