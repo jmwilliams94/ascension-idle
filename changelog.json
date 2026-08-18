@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.21",
+    "date": "2026-08-18",
+    "changes": [
+      "Added backend groundwork for Wuxia's gear (weapons, headgear, robes, bracelets, bags) — not yet playable, prep work only"
+    ]
+  },
+  {
     "version": "1.99.20",
     "date": "2026-08-18",
     "changes": [
