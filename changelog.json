@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.20",
+    "date": "2026-08-18",
+    "changes": [
+      "Fixed the mobile Tavern pop-out menu (Market/Bank/Shop/Forge) being too narrow and clipping item labels"
+    ]
+  },
+  {
     "version": "1.99.19",
     "date": "2026-08-18",
     "changes": [

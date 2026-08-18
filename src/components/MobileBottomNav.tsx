@@ -213,7 +213,18 @@ function TavernNavButton({ badges }: { badges: Partial<Record<TabId, number>> })
             // the conflict entirely (bit once, 2026-08-15 — silently dropped
             // this popout back into normal document flow, stretching the
             // bottom nav bar instead of floating above it).
-            className="absolute bottom-full mb-2 shadow-xl shadow-black/60"
+            //
+            // right-0 + min-w (2026-08-18, reported by the user: popout too
+            // narrow, cutting off item text) — this wrapper is a `flex-[0.85]`
+            // item with flex-basis 0%, and with left/right both auto an
+            // absolutely-positioned child's shrink-to-fit width is computed
+            // against that 0-basis containing block rather than its own
+            // content on mobile Safari, squeezing the menu narrower than its
+            // text. Pinning `right-0` anchors it to the container's actual
+            // right edge (keeping it on-screen since Tavern sits near the
+            // bar's right side) and `min-w-max` forces the width to the
+            // widest item's intrinsic content size instead of shrinking.
+            className="absolute bottom-full right-0 mb-2 min-w-max shadow-xl shadow-black/60"
           >
             <div className="ascension-chip-frame">
               <div className="ascension-chip-inner flex flex-col items-stretch gap-0.5 p-1">
