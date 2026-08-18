@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.23",
+    "date": "2026-08-18",
+    "changes": [
+      "Added backend groundwork for Twin-soul's gear (clubs, swords, blades, off-hand weapons, headgear, mail armor) — not yet playable, prep work only"
+    ]
+  },
+  {
     "version": "1.99.22",
     "date": "2026-08-18",
     "changes": [
