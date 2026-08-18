@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.27",
+    "date": "2026-08-18",
+    "changes": [
+      "Renamed all new Twin-soul/Wuxia/Juggernaut items so each weapon and armor type has its own distinct name instead of reusing the same words everywhere, and renamed Twin-soul's Mail armor to Armor — not yet playable, prep work only"
+    ]
+  },
+  {
     "version": "1.99.26",
     "date": "2026-08-18",
     "changes": [
