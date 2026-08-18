@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.26",
+    "date": "2026-08-18",
+    "changes": [
+      "Fixed Wuxia's Backsword magic attack being scaled off the wrong reference column — now uses the real magic-attack numbers instead of the physical ones — not yet playable, prep work only"
+    ]
+  },
+  {
     "version": "1.99.25",
     "date": "2026-08-18",
     "changes": [
