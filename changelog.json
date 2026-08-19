@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.99.30",
+    "date": "2026-08-19",
+    "changes": [
+      "Fixed the socket dry streak (shown when a Quality/Level Upgrade socket procs) to count every attempt since the last socket, including failed ones — it now accurately reflects how many Comets/Fallen Stars were actually spent",
+      "Added a global announcement when a character obtains a pet"
+    ]
+  },
+  {
     "version": "1.99.29",
     "date": "2026-08-19",
     "changes": [
