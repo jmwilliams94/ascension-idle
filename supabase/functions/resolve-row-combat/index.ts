@@ -203,18 +203,21 @@ const MIN_DAMAGE_PERCENT_OF_ATTACK = 0.1
 const RARE_BLENDED_REWARD_FACTOR = (1 - RARE_CHANCE) + RARE_CHANCE * RARE_REWARD_MULTIPLIER // 1.2
 const RARE_BLENDED_DAMAGE_EXP_FACTOR = (1 - RARE_CHANCE) + RARE_CHANCE * (RARE_REWARD_MULTIPLIER / RARE_HP_MULTIPLIER) // 1.075
 
-const COMET_DROP_CHANCE = 1 / 500
-const FALLEN_STAR_DROP_CHANCE = 1 / 20000
-const DROP_CHANCE = 1 / 150
+// Row Combat-specific rates, deliberately 4x single-target's own COMET_DROP_CHANCE/
+// FALLEN_STAR_DROP_CHANCE/DROP_CHANCE/QUALITY_DROP_CHANCES (combatResolver.ts) —
+// confirmed with the user 2026-08-20 as a Row Combat-only buff, not a global rebalance.
+const COMET_DROP_CHANCE = 1 / 125
+const FALLEN_STAR_DROP_CHANCE = 1 / 5000
+const DROP_CHANCE = 2 / 75
 const JADE_SHARD_DROP_CHANCE = 1 / 300
 const JADE_SHARD_MONSTER_IDS = ['frostpelt', 'venomkin', 'dunecrawler']
 const PET_DROP_CHANCE = 1 / 25000
 
 const QUALITY_DROP_CHANCES: [tier: string, chance: number][] = [
-  ['ascended', 3 / 400],
-  ['radiant', 3 / 200],
-  ['infused', 1 / 16],
-  ['tempered', 3 / 32],
+  ['ascended', 3 / 100],
+  ['radiant', 3 / 50],
+  ['infused', 1 / 4],
+  ['tempered', 3 / 8],
 ]
 
 function rollDroppedQualityTier(qualityBonusMultiplier = 1): string {
