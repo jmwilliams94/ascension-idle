@@ -311,6 +311,8 @@ export default function CombatPage() {
           separate markup, not a responsive reflow of the same JSX, so
           nothing here can regress the desktop view. */}
       <div className="space-y-3 lg:hidden">
+        <CombatModeSwitcher mode={mode} onChange={setMode} />
+
         {mode === 'hunting' && activeType && (
           <div
             className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/80 bg-cover bg-center p-4"
@@ -436,8 +438,6 @@ export default function CombatPage() {
             </div>
           </AscensionCard>
         )}
-
-        <CombatModeSwitcher mode={mode} onChange={setMode} />
 
         {mode === 'events' && <WorldBossEventsCard characterId={characterId} />}
 

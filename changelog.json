@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.36",
+    "date": "2026-08-20",
+    "changes": [
+      "Moved the mobile Hunting/Mining/Events switcher above the enemy panel"
+    ]
+  },
+  {
     "version": "1.99.35",
     "date": "2026-08-20",
     "changes": [
