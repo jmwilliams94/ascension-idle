@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.31",
+    "date": "2026-08-19",
+    "changes": [
+      "Raised Level Upgrade's success chance at Normal quality from 90%/60% (lowest/highest level) to 95%/75%"
+    ]
+  },
+  {
     "version": "1.99.30",
     "date": "2026-08-19",
     "changes": [

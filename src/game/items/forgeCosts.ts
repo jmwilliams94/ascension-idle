@@ -51,14 +51,15 @@ export function previewMasterForgeWeaponLevelCost(): number {
 // no odds at all, per the existing "no success rate is ever shown" design —
 // this mirror is Master-Forge-only).
 //
-// Level Upgrade: 90% (item's own level is the lowest in its family chain) to
-// 60% (highest), halved again for every quality tier above Normal. Quality
-// Upgrade: 85% to 75% by the same level-position logic, x0.58 per quality
-// tier above Normal (retuned same day from x0.65 — the user asked for
-// Radiant->Ascended specifically to land "closer to the 15% mark," which
-// x0.58 does almost exactly: ~14.6-16.6%). Both PLACEHOLDER curves, same
-// disclosed-not-final status as every other economy number in this game —
-// Level Upgrade's is grounded in a real reference point the user supplied
+// Level Upgrade: 95% (item's own level is the lowest in its family chain) to
+// 75% (highest), halved again for every quality tier above Normal (raised
+// from 90%/60% 2026-08-19, per the user). Quality Upgrade: 85% to 75% by the
+// same level-position logic, x0.58 per quality tier above Normal (retuned
+// same day from x0.65 — the user asked for Radiant->Ascended specifically to
+// land "closer to the 15% mark," which x0.58 does almost exactly:
+// ~14.6-16.6%). Both PLACEHOLDER curves, same disclosed-not-final status as
+// every other economy number in this game — Level Upgrade's original
+// 90%/60% was grounded in a real reference point the user supplied
 // ("upgrading super gear from level 100 to 110 used to cost about 20-40
 // comets," i.e. ~2.5-5% near max level/quality); Quality Upgrade's has no
 // such anchor beyond the Radiant target above.
@@ -79,7 +80,7 @@ export function computeUpgradeSuccessChancePct(
   const t = maxLevel > minLevel ? Math.min(1, Math.max(0, (requiredLevel - minLevel) / (maxLevel - minLevel))) : 0
 
   const qualityIndex = QUALITY_TIER_INDEX[qualityTier] ?? 0
-  const [baseMin, baseMax, tierMultiplier] = upgradeType === 'level' ? [90, 60, 0.5] : [85, 75, 0.58]
+  const [baseMin, baseMax, tierMultiplier] = upgradeType === 'level' ? [95, 75, 0.5] : [85, 75, 0.58]
 
   const chance = (baseMin - t * (baseMin - baseMax)) * tierMultiplier ** qualityIndex
   return Math.min(99, Math.max(1, chance))
