@@ -499,7 +499,17 @@ function MyListingsTab({ characterId, templates }: { characterId: string; templa
   const myListings = useMarketplaceStore((state) => state.myListings)
   const busy = useMarketplaceStore((state) => state.busy)
   const endListing = useMarketplaceStore((state) => state.endListing)
+  const loadMyListings = useMarketplaceStore((state) => state.loadMyListings)
   const [error, setError] = useState<string | null>(null)
+
+  // Re-run the sweep-then-reload while a player sits on this tab, not just
+  // at login — loadMyListings already sweeps expired listings back to Mail
+  // (20260920000000_sweep_expired_listings.sql), this just keeps that
+  // fresh for someone watching an "Expires in 4m" listing count down.
+  useEffect(() => {
+    const id = window.setInterval(() => void loadMyListings(characterId), 60_000)
+    return () => window.clearInterval(id)
+  }, [characterId, loadMyListings])
 
   const handleEnd = async (listingId: string) => {
     setError(null)

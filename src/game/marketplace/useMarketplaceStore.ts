@@ -171,6 +171,22 @@ export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
   },
 
   loadMyListings: async (characterId) => {
+    // Lazily resolve any of this character's own listings that timed out
+    // since the last load -- same "trigger on mount" pattern as
+    // ensure_world_boss_spawn(), since loadMyListings already runs on every
+    // login (GameShell eager-load) and every My Listings visit. Without
+    // this, an expired listing just sits at status = 'active' forever
+    // unless the seller happens to notice and click Cancel themselves (see
+    // 20260920000000_sweep_expired_listings.sql).
+    const { data: sweepData, error: sweepError } = await supabase.rpc('sweep_expired_listings', {
+      p_character_id: characterId,
+    })
+    if (sweepError) {
+      console.error('Sweep expired listings call failed', sweepError)
+    } else if ((sweepData as { swept_count?: number } | null)?.swept_count) {
+      await useMailStore.getState().loadMail(characterId)
+    }
+
     const { data, error } = await supabase
       .from('marketplace_listings')
       .select('*')

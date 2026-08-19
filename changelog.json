@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.33",
+    "date": "2026-08-19",
+    "changes": [
+      "Fixed Marketplace listings that time out sometimes not returning the item — expired listings now automatically get mailed back the moment you log in or open Marketplace, instead of only when someone happens to click Cancel on them"
+    ]
+  },
+  {
     "version": "1.99.32",
     "date": "2026-08-19",
     "changes": [
