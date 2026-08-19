@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.29",
+    "date": "2026-08-19",
+    "changes": [
+      "Renamed every Club/Sword/Blade/Wand/Backsword item across the new classes to a name pulled from real Conquer Online item data, and added a new Level 1 starter Blade — not yet playable, prep work only"
+    ]
+  },
+  {
     "version": "1.99.28",
     "date": "2026-08-18",
     "changes": [
