@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.99.34",
+    "date": "2026-08-19",
+    "changes": [
+      "Lowered future Gold Donation Event targets to 30M-50M Gold (down from 50M-100M), always a round million figure",
+      "Replaced the Gold Donation amount textbox with a slider that moves in 250k increments"
+    ]
+  },
+  {
     "version": "1.99.33",
     "date": "2026-08-19",
     "changes": [

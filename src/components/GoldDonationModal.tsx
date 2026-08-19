@@ -14,6 +14,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   rpc_failed: 'Something went wrong — try again.',
 }
 
+const DONATION_STEP = 250_000
+
 // Opened from WorldBossEventsCard's Gold Donation Event summary block. Not a
 // third permanent card — the Events sub-mode only has two slots (top card,
 // fight card), both already used by WorldBossEventsCard/WorldBossCard, so a
@@ -25,19 +27,24 @@ export default function GoldDonationModal({ characterId, onClose }: { characterI
   const busy = useGoldDonationStore((state) => state.busy)
   const donate = useGoldDonationStore((state) => state.donate)
 
-  const [amount, setAmount] = useState('')
+  // Slider max is the player's Gold balance, rounded down to the nearest
+  // step — never above what they can actually afford.
+  const maxAmount = Math.max(0, Math.floor(gold / DONATION_STEP) * DONATION_STEP)
+  const canAffordStep = maxAmount >= DONATION_STEP
+
+  const [amount, setAmount] = useState(DONATION_STEP)
   const [lastResult, setLastResult] = useState<GoldDonationResult | null>(null)
   const [leaderboardOpen, setLeaderboardOpen] = useState(false)
 
-  const parsedAmount = Math.floor(Number(amount))
-  const canDonate = pool?.status === 'collecting' && !busy && Number.isFinite(parsedAmount) && parsedAmount > 0 && parsedAmount <= gold
+  const clampedAmount = Math.min(amount, maxAmount)
+  const canDonate = pool?.status === 'collecting' && !busy && canAffordStep && clampedAmount >= DONATION_STEP
 
   const handleDonate = async () => {
     if (!canDonate) return
-    const result = await donate(characterId, parsedAmount)
+    const result = await donate(characterId, clampedAmount)
     setLastResult(result)
     if (result.ok) {
-      setAmount('')
+      setAmount(DONATION_STEP)
     }
   }
 
@@ -81,14 +88,25 @@ export default function GoldDonationModal({ characterId, onClose }: { characterI
 
         {pool?.status === 'collecting' && (
           <>
-            <input
-              type="number"
-              min={1}
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-              placeholder="Amount"
-              className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:border-amber-500/60 focus:outline-none"
-            />
+            {canAffordStep ? (
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500">Amount</span>
+                  <span className="text-sm font-medium text-amber-300">{formatGoldAmount(clampedAmount)}</span>
+                </div>
+                <input
+                  type="range"
+                  min={DONATION_STEP}
+                  max={maxAmount}
+                  step={DONATION_STEP}
+                  value={clampedAmount}
+                  onChange={(event) => setAmount(Number(event.target.value))}
+                  className="w-full accent-amber-500"
+                />
+              </div>
+            ) : (
+              <p className="text-center text-xs text-slate-500">You need at least {formatGoldAmount(DONATION_STEP)} Gold to donate.</p>
+            )}
 
             <Button variant="primary" disabled={!canDonate} onClick={() => void handleDonate()} className="w-full">
               {busy ? 'Donating…' : 'Donate'}
