@@ -1127,7 +1127,18 @@ export default function InventoryPanel({
                 dragEnabled
                 dragPayload={{ id: dragId, icon: '☄️', iconSrc: COMET_ICON_SRC, qualityColor: MATERIAL_COLOR }}
                 onDrop={handleTileDrop}
-                onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'comet' })}
+                onClick={(event) => {
+                  // Same shift-click shortcut as gear tiles above, targeting
+                  // the 'material' drop-zone key instead — Forge/Composition
+                  // are the only current onTileDrop consumers that check
+                  // 'material'; everyone else no-ops.
+                  if (event.shiftKey) {
+                    event.stopPropagation()
+                    onTileDrop('material', dragId)
+                    return
+                  }
+                  toggleSlot({ kind: 'currency', dragId, currencyType: 'comet' })
+                }}
               />
             ) : (
               <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'comet' })} />
@@ -1181,7 +1192,14 @@ export default function InventoryPanel({
                 dragEnabled
                 dragPayload={{ id: dragId, icon: '🔮', iconSrc: FALLEN_STAR_ICON_SRC, qualityColor: FALLEN_STAR_COLOR }}
                 onDrop={handleTileDrop}
-                onClick={() => toggleSlot({ kind: 'currency', dragId, currencyType: 'fallen_star' })}
+                onClick={(event) => {
+                  if (event.shiftKey) {
+                    event.stopPropagation()
+                    onTileDrop('material', dragId)
+                    return
+                  }
+                  toggleSlot({ kind: 'currency', dragId, currencyType: 'fallen_star' })
+                }}
               />
             ) : (
               <InventorySlot
@@ -1239,7 +1257,14 @@ export default function InventoryPanel({
                 dragEnabled
                 dragPayload={{ id: dragId, icon: '📜', iconSrc: COMET_SCROLL_ICON_SRC, qualityColor: MATERIAL_COLOR }}
                 onDrop={handleTileDrop}
-                onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'comet' })}
+                onClick={(event) => {
+                  if (event.shiftKey) {
+                    event.stopPropagation()
+                    onTileDrop('material', dragId)
+                    return
+                  }
+                  toggleSlot({ kind: 'scroll', dragId, currencyType: 'comet' })
+                }}
               />
             ) : (
               <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'comet' })} />
@@ -1281,7 +1306,14 @@ export default function InventoryPanel({
                 dragEnabled
                 dragPayload={{ id: dragId, icon: '📜', iconSrc: FALLEN_STAR_SCROLL_ICON_SRC, qualityColor: FALLEN_STAR_COLOR }}
                 onDrop={handleTileDrop}
-                onClick={() => toggleSlot({ kind: 'scroll', dragId, currencyType: 'fallen_star' })}
+                onClick={(event) => {
+                  if (event.shiftKey) {
+                    event.stopPropagation()
+                    onTileDrop('material', dragId)
+                    return
+                  }
+                  toggleSlot({ kind: 'scroll', dragId, currencyType: 'fallen_star' })
+                }}
               />
             ) : (
               <InventorySlot
@@ -1410,7 +1442,23 @@ export default function InventoryPanel({
                 dragEnabled
                 dragPayload={{ id: item.id, icon, iconSrc, qualityColor }}
                 onDrop={handleTileDrop}
-                onClick={() => toggleSlot({ kind: 'item', id: item.id })}
+                onClick={(event) => {
+                  // Desktop shortcut (2026-08-19) — shift-click drops this
+                  // item straight into whatever drop-zone key a real drag
+                  // would land in for an "upgrade"-style target (Forge's
+                  // Upgrade Slot, Composition/Sockets/Enchantress's item
+                  // slot). Every current onTileDrop consumer that cares about
+                  // gear listens for 'upgrade' — Marketplace/Salvage use
+                  // their own keys ('marketplace-listing'/'salvage') and
+                  // simply no-op here, same as they would for an
+                  // unrecognized drop target today.
+                  if (event.shiftKey) {
+                    event.stopPropagation()
+                    onTileDrop('upgrade', item.id)
+                    return
+                  }
+                  toggleSlot({ kind: 'item', id: item.id })
+                }}
               />
             ) : (
               <InventorySlot key={item.id} {...commonProps} onClick={() => toggleSlot({ kind: 'item', id: item.id })} />

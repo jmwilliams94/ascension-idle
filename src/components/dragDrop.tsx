@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import type { ComponentProps, ReactNode } from 'react'
+import type { ComponentProps, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import { DragDropContext, queryDropZoneRects, resolveDropTarget, useDraggableTile } from './dragDropContext'
@@ -114,7 +114,7 @@ interface DraggableInventorySlotProps extends BaseSlotProps {
   dragEnabled: boolean
   dragPayload: DragPayload | null
   onDrop: (overTarget: string | null, draggedId: string) => void
-  onClick?: () => void
+  onClick?: (event: ReactMouseEvent<HTMLButtonElement>) => void
 }
 
 // Wraps InventorySlot with useDraggableTile — split out as its own component

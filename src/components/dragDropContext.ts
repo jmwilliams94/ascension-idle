@@ -1,5 +1,5 @@
 import { createContext, useContext, useRef } from 'react'
-import type { PointerEvent as ReactPointerEvent } from 'react'
+import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react'
 
 // A minimal cross-input (mouse + touch + pen) drag-and-drop primitive built on
 // Pointer Events, originally built for Forge only, generalized 2026-07-31
@@ -148,13 +148,13 @@ interface UseDraggableTileArgs {
   // (or null if released somewhere with no valid target) — same "no-op if
   // nowhere valid" behavior the old native-DnD drop targets already had.
   onDrop: (overTarget: string | null, draggedId: string) => void
-  onClick?: () => void
+  onClick?: (event: ReactMouseEvent<HTMLButtonElement>) => void
 }
 
 interface DraggableTileHandlers {
   draggable: boolean
   dragging: boolean
-  onClick?: () => void
+  onClick?: (event: ReactMouseEvent<HTMLButtonElement>) => void
   onPointerDown?: (event: ReactPointerEvent<HTMLButtonElement>) => void
   onPointerMove?: (event: ReactPointerEvent<HTMLButtonElement>) => void
   onPointerUp?: (event: ReactPointerEvent<HTMLButtonElement>) => void
@@ -274,12 +274,12 @@ export function useDraggableTile({ enabled, payload, onDrop, onClick }: UseDragg
     }
   }
 
-  const handleClick = () => {
+  const handleClick = (event: ReactMouseEvent<HTMLButtonElement>) => {
     if (justDraggedRef.current) {
       justDraggedRef.current = false
       return
     }
-    onClick?.()
+    onClick?.(event)
   }
 
   return {

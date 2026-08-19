@@ -1,4 +1,4 @@
-import { useEffect, useState, type DragEvent, type PointerEvent } from 'react'
+import { useEffect, useState, type DragEvent, type MouseEvent as ReactMouseEvent, type PointerEvent } from 'react'
 import CompareTooltipRow from './CompareTooltipRow'
 import HoverTooltip from './HoverTooltip'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
@@ -77,7 +77,11 @@ interface InventorySlotProps {
   // doesn't have a durability concept at all (Quiver, non-gear tiles).
   broken?: boolean
   selected?: boolean
-  onClick?: () => void
+  // Native event is passed through (rather than a bare `() => void`) so a
+  // caller can inspect event.shiftKey — used by InventoryPanel's gear/Comet/
+  // Fallen Star tiles to route a shift-click straight into whichever Forge
+  // drop target a normal drag-and-drop would land in (see onTileDrop).
+  onClick?: (event: ReactMouseEvent<HTMLButtonElement>) => void
   // Right-click shortcut (e.g. arrow stacks equip directly on right-click instead
   // of requiring select-then-press-Equip) — when provided, the browser's native
   // context menu is suppressed on this tile.

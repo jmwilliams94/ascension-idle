@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.99.32",
+    "date": "2026-08-19",
+    "changes": [
+      "Desktop: shift-click a gear item or Comet/Fallen Star (or their Scrolls) in the Inventory grid to send it straight into the right Forge slot, instead of having to drag it"
+    ]
+  },
+  {
     "version": "1.99.31",
     "date": "2026-08-19",
     "changes": [
