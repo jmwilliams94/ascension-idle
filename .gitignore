@@ -29,6 +29,12 @@ reference/
 # Supabase CLI local state (project link cache, not shared/committed)
 supabase/.temp/
 
+# Test/dev GLB models dropped into public/models/ while iterating on the
+# Settings > Rendering tab (see RenderingTestPanel.tsx) -- not real game
+# assets yet, and often several MB each, so don't bloat git history with
+# them. .gitkeep placeholders (tracked) keep the folder structure itself.
+public/models/**/*.glb
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.100.1",
+    "date": "2026-08-20",
+    "changes": [
+      "Rendering tab preview now auto-fits the camera to whatever model is loaded, so models exported at very different real-world scales still frame correctly"
+    ]
+  },
+  {
     "version": "1.100.0",
     "date": "2026-08-20",
     "changes": [

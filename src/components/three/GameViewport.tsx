@@ -1,6 +1,6 @@
 import { Suspense, type ReactNode } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls } from '@react-three/drei'
+import { Bounds, Center, OrbitControls } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import ModelLoader from './ModelLoader'
 
@@ -31,7 +31,17 @@ export default function GameViewport({
         <ambientLight intensity={0.6} />
         <directionalLight position={[3, 5, 2]} intensity={1.2} castShadow />
 
-        <Suspense fallback={<ModelLoader />}>{children}</Suspense>
+        <Suspense fallback={<ModelLoader />}>
+          {/* Source models arrive at whatever real-world scale they were
+              exported at (e.g. Meshy's cm size picker) -- Bounds measures
+              whatever's mounted underneath and reframes the camera to fit
+              it, and Center recenters it at the origin, so any model/gear
+              scale looks right without hardcoding a target size. `observe`
+              re-fits if the mounted content changes (e.g. swapping paths). */}
+          <Bounds fit clip observe margin={1.2}>
+            <Center>{children}</Center>
+          </Bounds>
+        </Suspense>
 
         <OrbitControls makeDefault enableDamping />
 
