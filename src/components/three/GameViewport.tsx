@@ -1,6 +1,6 @@
 import { Suspense, type ReactNode } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { Bounds, Center, OrbitControls } from '@react-three/drei'
+import { Bounds, Center, Environment, OrbitControls } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import ModelLoader from './ModelLoader'
 
@@ -30,6 +30,12 @@ export default function GameViewport({
         <color attach="background" args={['#0b0f19']} />
         <ambientLight intensity={0.6} />
         <directionalLight position={[3, 5, 2]} intensity={1.2} castShadow />
+        {/* PBR materials (GLTF's default MeshStandardMaterial, especially
+            anything metallic) rely on environment reflections, not just
+            direct lights, to read as lit -- without this, metallic surfaces
+            render near-black regardless of light intensity. background=false
+            keeps the navy <color> above instead of showing the HDRI itself. */}
+        <Environment preset="studio" background={false} />
 
         <Suspense fallback={<ModelLoader />}>
           {/* Source models arrive at whatever real-world scale they were
