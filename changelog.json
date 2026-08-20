@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.100.0",
+    "date": "2026-08-20",
+    "changes": [
+      "Added a Rendering tab in Settings for previewing 3D model files (early dev tool, not player content yet)"
+    ]
+  },
+  {
     "version": "1.99.37",
     "date": "2026-08-20",
     "changes": [

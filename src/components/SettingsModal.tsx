@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { lazy, Suspense, useState, type ReactNode } from 'react'
 import { changelogNewestFirst } from '../lib/changelog'
 import { useIsAdmin } from '../lib/adminConfig'
 import { useBugReportStore, countOpenBugReports } from '../game/bugReports/useBugReportStore'
@@ -9,6 +9,15 @@ import ItemEffectGallery from './ItemEffectGallery'
 import PlanPanel from './PlanPanel'
 import SuggestionsPanel from './SuggestionsPanel'
 import BugReportPanel from './BugReportPanel'
+
+// Lazy -- three/@react-three/fiber/drei/postprocessing alone push the main
+// bundle's single chunk past vite-plugin-pwa's 2MB Workbox precache limit
+// (build fails outright, not just a size warning) if imported eagerly here.
+// Code-splitting this behind the tab click keeps that weight out of every
+// player's initial load and out of the precache manifest entirely -- it's a
+// dev/debug tool, not gameplay UI, so no one should pay for it unless they
+// open it.
+const RenderingTestPanel = lazy(() => import('./RenderingTestPanel'))
 
 interface SettingsSection {
   id: string
@@ -56,6 +65,17 @@ export default function SettingsModal({ characterId, onClose }: { characterId: s
       badge: suggestionsBadge,
     },
     { id: 'bugs', label: 'Bug Reports', content: <BugReportPanel characterId={characterId} />, badge: bugsBadge },
+    // Rendering (2026-08-20, requested by the user) -- dev/debug tab for
+    // testing GLB model loading, not gameplay UI. See RenderingTestPanel.tsx.
+    {
+      id: 'rendering',
+      label: 'Rendering',
+      content: (
+        <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
+          <RenderingTestPanel />
+        </Suspense>
+      ),
+    },
     // Admin tab (2026-08-13, requested by the user) — only ever shown for the
     // hardcoded admin account (see useIsAdmin's own doc comment); real
     // enforcement lives server-side in the RPCs it calls, this is cosmetic.
