@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.101.5",
+    "date": "2026-08-21",
+    "changes": [
+      "Shop: Buy 5/10 moved from the level-10 ring to the level-1 Tin Ring, the only starter item where bulk-buying makes sense"
+    ]
+  },
+  {
     "version": "1.101.4",
     "date": "2026-08-21",
     "changes": [

@@ -174,12 +174,19 @@ function GearRow({ template, bulkBuy }: { template: ItemTemplate; bulkBuy: boole
 // Per distinct slot_type within a tab's already-level-sorted template list,
 // the first entry above level 1 gets the Buy 5/10 buttons — level-1 starter
 // gear is free/trivial and not worth bulk-buying, so it's skipped rather
-// than counted as "first".
+// than counted as "first". Rings are the one exception (confirmed with the
+// user): the level-1 ring itself is the eligible one, not the level-10 ring
+// that would otherwise be "first".
+const BULK_BUY_ALLOW_LEVEL_1_SLOT_TYPES = new Set(['ring'])
+
 function bulkBuyEligibleIds(sortedTemplates: ItemTemplate[]): Set<string> {
   const seenSlotTypes = new Set<string>()
   const eligible = new Set<string>()
   for (const template of sortedTemplates) {
-    if (template.required_level <= 1 || seenSlotTypes.has(template.slot_type)) {
+    if (
+      (template.required_level <= 1 && !BULK_BUY_ALLOW_LEVEL_1_SLOT_TYPES.has(template.slot_type)) ||
+      seenSlotTypes.has(template.slot_type)
+    ) {
       continue
     }
     seenSlotTypes.add(template.slot_type)
