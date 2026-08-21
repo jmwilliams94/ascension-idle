@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.102.1",
+    "date": "2026-08-22",
+    "changes": [
+      "Mining's server-side engine is now in place behind the scenes — still not reachable in-game yet"
+    ]
+  },
+  {
     "version": "1.102.0",
     "date": "2026-08-22",
     "changes": [

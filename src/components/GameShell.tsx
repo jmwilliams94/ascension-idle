@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import CombatEngine from '../game/combat/CombatEngine'
 import RowCombatEngine from '../game/combat/RowCombatEngine'
+import MiningEngine from '../game/mining/MiningEngine'
 import GlobalActivityConnection from './GlobalActivityConnection'
 import MailRealtimeConnection from './MailRealtimeConnection'
 import WorldBossConnection from './WorldBossConnection'
@@ -463,6 +464,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <GainToastHost />
       <CombatEngine />
       <RowCombatEngine />
+      <MiningEngine />
       <GlobalActivityConnection accountId={accountId} />
       <MailRealtimeConnection characterId={characterId} />
       <WorldBossConnection />
