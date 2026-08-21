@@ -90,11 +90,18 @@ function availableToClass(template: ItemTemplate, classId: string): boolean {
   return template.required_class === null || template.required_class === classId
 }
 
-function GearRow({ template }: { template: ItemTemplate }) {
+// Buy 5 / Buy 10 just call buyShopItem in a sequential loop client-side —
+// there's no bulk-quantity RPC, and each call already re-validates
+// gold/level/room server-side, so the loop simply stops the moment one
+// attempt comes back !ok (including 'inventory_full', which leaves the
+// existing InventoryFullModal's pendingFullDrop state for the player to
+// resolve rather than the loop trying to push through it).
+function GearRow({ template, bulkBuy }: { template: ItemTemplate; bulkBuy: boolean }) {
   const characterId = useActiveCharacterStore((state) => state.characterId)
   const level = useProgressionStore((state) => state.level)
   const gold = useProgressionStore((state) => state.gold)
   const buyShopItem = useInventoryStore((state) => state.buyShopItem)
+  const [bulkBusy, setBulkBusy] = useState(false)
 
   const meetsLevel = level >= template.required_level
   const canAfford = gold >= template.price
@@ -104,12 +111,22 @@ function GearRow({ template }: { template: ItemTemplate }) {
   // actually succeeds — no local spendGold pre-deduction, so an
   // 'inventory_full' response never costs the player gold they didn't
   // actually spend (see InventoryFullModal for how that gets resolved).
-  const handleBuy = async () => {
-    if (!characterId || !canBuy) {
+  const handleBuyMany = async (count: number) => {
+    if (!characterId || !canBuy || bulkBusy) {
       return
     }
-    await buyShopItem(template)
+    setBulkBusy(true)
+    for (let i = 0; i < count; i++) {
+      const result = await buyShopItem(template)
+      if (!result.ok) {
+        break
+      }
+    }
+    setBulkBusy(false)
   }
+
+  const disabled = !canBuy || bulkBusy
+  const title = !meetsLevel ? `Requires level ${template.required_level}` : !canAfford ? 'Not enough gold' : undefined
 
   return (
     <div className="ascension-chip-frame">
@@ -134,18 +151,53 @@ function GearRow({ template }: { template: ItemTemplate }) {
           </div>
         </div>
 
-        <Button
-          variant="primary"
-          disabled={!canBuy}
-          title={!meetsLevel ? `Requires level ${template.required_level}` : !canAfford ? 'Not enough gold' : undefined}
-          onClick={() => void handleBuy()}
-          className="shrink-0"
-        >
-          Buy
-        </Button>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <Button variant="primary" disabled={disabled} title={title} onClick={() => void handleBuyMany(1)} className="w-full">
+            Buy
+          </Button>
+          {bulkBuy && (
+            <div className="flex gap-1">
+              <Button
+                variant="secondary"
+                disabled={disabled}
+                title={title}
+                onClick={() => void handleBuyMany(5)}
+                className="px-2 py-1 text-[11px]"
+              >
+                Buy 5
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={disabled}
+                title={title}
+                onClick={() => void handleBuyMany(10)}
+                className="px-2 py-1 text-[11px]"
+              >
+                Buy 10
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
+}
+
+// Per distinct slot_type within a tab's already-level-sorted template list,
+// the first entry above level 1 gets the Buy 5/10 buttons — level-1 starter
+// gear is free/trivial and not worth bulk-buying, so it's skipped rather
+// than counted as "first".
+function bulkBuyEligibleIds(sortedTemplates: ItemTemplate[]): Set<string> {
+  const seenSlotTypes = new Set<string>()
+  const eligible = new Set<string>()
+  for (const template of sortedTemplates) {
+    if (template.required_level <= 1 || seenSlotTypes.has(template.slot_type)) {
+      continue
+    }
+    seenSlotTypes.add(template.slot_type)
+    eligible.add(template.id)
+  }
+  return eligible
 }
 
 export default function ShopPanel() {
@@ -197,6 +249,10 @@ export default function ShopPanel() {
     .filter((t) => JEWELLER_SLOTS.includes(t.slot_type) && availableToClass(t, selectedClassId))
     .filter((t) => t.required_level <= SHOP_MAX_LEVEL)
     .sort((a, b) => a.required_level - b.required_level)
+
+  const bulkBuyWeaponIds = bulkBuyEligibleIds(weaponTemplates)
+  const bulkBuyArmorIds = bulkBuyEligibleIds(armorTemplates)
+  const bulkBuyJewellerIds = bulkBuyEligibleIds(jewellerTemplates)
 
   // Repair All (2026-08-14, requested by the user — a single flat action, no
   // per-item picker) — every owned item (equipped, inventory, or bank) below
@@ -273,7 +329,9 @@ export default function ShopPanel() {
             {weaponTemplates.length === 0 ? (
               <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">Nothing available yet</p>
             ) : (
-              weaponTemplates.map((template) => <GearRow key={template.id} template={template} />)
+              weaponTemplates.map((template) => (
+                <GearRow key={template.id} template={template} bulkBuy={bulkBuyWeaponIds.has(template.id)} />
+              ))
             )}
           </div>
         )}
@@ -283,7 +341,9 @@ export default function ShopPanel() {
             {armorTemplates.length === 0 ? (
               <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">Nothing available yet</p>
             ) : (
-              armorTemplates.map((template) => <GearRow key={template.id} template={template} />)
+              armorTemplates.map((template) => (
+                <GearRow key={template.id} template={template} bulkBuy={bulkBuyArmorIds.has(template.id)} />
+              ))
             )}
           </div>
         )}
@@ -293,7 +353,9 @@ export default function ShopPanel() {
             {jewellerTemplates.length === 0 ? (
               <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">Nothing available yet</p>
             ) : (
-              jewellerTemplates.map((template) => <GearRow key={template.id} template={template} />)
+              jewellerTemplates.map((template) => (
+                <GearRow key={template.id} template={template} bulkBuy={bulkBuyJewellerIds.has(template.id)} />
+              ))
             )}
           </div>
         )}

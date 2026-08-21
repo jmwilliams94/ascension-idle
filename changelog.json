@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.101.3",
+    "date": "2026-08-21",
+    "changes": [
+      "Shop: the cheapest non-starter weapon/armor/jewellery item of each type now has Buy 5 and Buy 10 buttons alongside Buy"
+    ]
+  },
+  {
     "version": "1.101.2",
     "date": "2026-08-21",
     "changes": [
