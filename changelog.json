@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.101.6",
+    "date": "2026-08-21",
+    "changes": [
+      "Gold Donation Event: target lowered to 15M-30M, and rewards now mail out the instant the goal is hit instead of waiting for the bonus buff to finish"
+    ]
+  },
+  {
     "version": "1.101.5",
     "date": "2026-08-21",
     "changes": [
