@@ -2,7 +2,7 @@
 
 > Part of the split `CLAUDE.md` docs — see [`CLAUDE.md`](CLAUDE.md) for git/versioning workflow and cross-cutting gotchas.
 
-Cross-player shared events, as opposed to every other system in this game (per-character or per-account). Reached via the Idling tab's **Hunting / Mining / Events** in-page sub-mode switcher (`CombatModeSwitcher` in `CombatPage.tsx`, 3-button pill row — desktop: above the Inventory card in the right column; mobile: above the Zone & Monster card). Hunting is today's existing Zone/Monster/Fight view (default). Mining is a disabled coming-soon placeholder, no functionality. Events swaps two cards: Zone & Monster → `WorldBossEventsCard.tsx` (boss window countdown + a disabled "Gold Donation Event — coming soon" seam for a planned second event, not yet designed), and the monster-fight card → `WorldBossCard.tsx`.
+Cross-player shared events, as opposed to every other system in this game (per-character or per-account). Reached via the Idling tab's **Hunting / Mining / Events** in-page sub-mode switcher (`CombatModeSwitcher` in `CombatPage.tsx`, 3-button pill row — desktop: above the Inventory card in the right column; mobile: above the Zone & Monster card). Hunting is today's existing Zone/Monster/Fight view (default). Mining is a real second idle-combat mode now (2026-08-22) — see `CLAUDE.combat-and-loot.md`'s own Mining section. Events swaps two cards: Zone & Monster → `WorldBossEventsCard.tsx` (boss window countdown + a disabled "Gold Donation Event — coming soon" seam for a planned second event, not yet designed), and the monster-fight card → `WorldBossCard.tsx`.
 
 ## World Boss (v1.93.0)
 
