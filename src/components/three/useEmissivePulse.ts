@@ -65,6 +65,17 @@ export function useEmissivePulse(target: THREE.Object3D | null, options: Emissiv
       for (const material of materials) {
         if (!material.isMeshStandardMaterial || !material.emissiveMap) continue
 
+        // three.js caches compiled WebGLPrograms by a key derived from the
+        // material's own properties -- it does NOT account for what
+        // onBeforeCompile actually does. r3f's render loop can compile this
+        // material's original (unpatched) program on an early frame before
+        // this effect even runs; without a distinct cache key, the renderer
+        // then silently reuses that already-compiled program on
+        // needsUpdate and never calls onBeforeCompile again, so the patch
+        // appears to do nothing. A unique key per patched material forces
+        // its own program slot.
+        material.customProgramCacheKey = () => `emissive-pulse-${material.uuid}`
+
         material.onBeforeCompile = (shader: THREE.WebGLProgramParametersWithUniforms) => {
           shader.uniforms.uPulseT = { value: 0 }
           shader.uniforms.uPulseAxis = { value: axis }
