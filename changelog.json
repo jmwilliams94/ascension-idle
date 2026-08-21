@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.101.7",
+    "date": "2026-08-21",
+    "changes": [
+      "Forge: Normal-quality Level Upgrade success odds raised again, now guaranteed at the lowest level down to 80% at the highest"
+    ]
+  },
+  {
     "version": "1.101.6",
     "date": "2026-08-21",
     "changes": [
