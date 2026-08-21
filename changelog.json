@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.103.1",
+    "date": "2026-08-22",
+    "changes": [
+      "Your first Pickaxe is now bought from the Shop's Weapons tab (50 gold) instead of being handed out for free"
+    ]
+  },
+  {
     "version": "1.103.0",
     "date": "2026-08-22",
     "changes": [

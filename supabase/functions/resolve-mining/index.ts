@@ -252,8 +252,12 @@ async function handleResolveMining(req: Request): Promise<Response> {
 
     const pickaxe = gathered.pickaxe
     if (!pickaxe) {
+      // Expected business state (never bought a Pickaxe yet), not a server
+      // error — default 200 status, same treatment world-boss-attack gives
+      // 'quiver_required'. The client pre-disables Mine/Tier Up once
+      // usePickaxeStore.itemId is null, so this is a defense-in-depth path.
       await releaseClaim('no_pickaxe')
-      return json({ ok: false, error: 'no_pickaxe' }, 500)
+      return json({ ok: false, error: 'no_pickaxe' })
     }
 
     const lastResolvedMs = new Date(character.mining_last_resolved_at).getTime()

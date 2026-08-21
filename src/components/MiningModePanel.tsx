@@ -47,6 +47,7 @@ export default function MiningModePanel({ characterId }: { characterId: string }
   const start = useMiningStore((state) => state.start)
   const stop = useMiningStore((state) => state.stop)
 
+  const ownsPickaxe = usePickaxeStore((state) => state.itemId !== null)
   const tierName = usePickaxeStore((state) => state.tierName)
   const compositionLevel = usePickaxeStore((state) => state.compositionLevel)
   const ascendedGemType = usePickaxeStore((state) => state.ascendedGemType)
@@ -121,7 +122,8 @@ export default function MiningModePanel({ characterId }: { characterId: string }
 
         <Button
           variant="primary"
-          disabled={isMining && activeMineId === dropdownMineId}
+          disabled={!ownsPickaxe || (isMining && activeMineId === dropdownMineId)}
+          title={!ownsPickaxe ? 'Buy a Pickaxe from the Shop first' : undefined}
           onClick={() => handleMine(dropdownMineId)}
           className="mt-3 w-full"
         >
@@ -130,6 +132,12 @@ export default function MiningModePanel({ characterId }: { characterId: string }
       </AscensionCard>
 
       <AscensionCard title="Pickaxe">
+        {!ownsPickaxe ? (
+          <p className="mt-2 text-xs text-slate-500">
+            You don't own a Pickaxe yet — buy one from the Shop's Weapons tab to start mining.
+          </p>
+        ) : (
+        <>
         <p className="mt-2 text-sm font-medium text-slate-200">
           {tierName}
           {compositionLevel > 0 ? ` (+${compositionLevel})` : ''}
@@ -160,6 +168,8 @@ export default function MiningModePanel({ characterId }: { characterId: string }
           </>
         ) : (
           <p className="mt-2 text-xs text-emerald-400">Max tier reached.</p>
+        )}
+        </>
         )}
       </AscensionCard>
 

@@ -1,6 +1,7 @@
 import { supabase } from '../../lib/supabaseClient'
 import { useProgressionStore } from '../stats/useProgressionStore'
 import { useGemStore } from '../items/useGemStore'
+import { useInventoryStore, type ItemInstance } from '../items/useInventoryStore'
 import type { GemCounts } from '../items/gemCatalog'
 import { usePickaxeStore } from './usePickaxeStore'
 import type { PickaxeTierName } from './pickaxeCosts'
@@ -42,6 +43,47 @@ export async function tierUpgradePickaxe(characterId: string): Promise<PickaxeTi
     if (result.gems) {
       useGemStore.getState().setGems(result.gems)
     }
+  }
+
+  return result
+}
+
+export interface PurchasePickaxeResult {
+  ok: boolean
+  error?: string
+  item?: ItemInstance
+  gold?: number
+  gold_spent?: number
+}
+
+// Base Pickaxe is a Shop purchase (2026-08-22, requested by the user) — not
+// a free auto-grant. Buys and immediately equips in one server-side
+// transaction (shop_buy_pickaxe), so the client just needs to add the
+// granted item to Inventory and point usePickaxeStore at it. Gold applied as
+// a negative delta via addRewards, same convention as sellItem/
+// tierUpgradePickaxe — never an absolute overwrite (see useProgressionStore's
+// own comment on why: risks stomping a concurrent gain from another source).
+export async function purchasePickaxe(characterId: string): Promise<PurchasePickaxeResult> {
+  const { data, error } = await supabase.rpc('shop_buy_pickaxe', { character_id: characterId })
+
+  if (error) {
+    console.error('shop_buy_pickaxe call failed', error)
+    return { ok: false, error: 'call_failed' }
+  }
+
+  const result = data as PurchasePickaxeResult
+
+  if (result.ok && result.item) {
+    useInventoryStore.getState().addItem(result.item)
+    if (typeof result.gold_spent === 'number' && result.gold_spent > 0) {
+      useProgressionStore.getState().addRewards(-result.gold_spent, 0)
+    }
+    usePickaxeStore.getState().hydrate({
+      itemId: result.item.id,
+      tierName: 'Pickaxe',
+      compositionLevel: 0,
+      ascendedGemType: null,
+    })
   }
 
   return result
