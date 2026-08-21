@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.102.0",
+    "date": "2026-08-22",
+    "changes": [
+      "First groundwork for Mining: a Pickaxe you can tier up from Normal through Ascended, plus 30 new Ore materials to be found in the mines — not reachable in-game yet, more coming soon"
+    ]
+  },
+  {
     "version": "1.101.10",
     "date": "2026-08-21",
     "changes": [

@@ -86,6 +86,7 @@ export const COMPOSITION_BONUS_STAT_KEYS: Record<string, string[]> = {
   hat: ['physical_defense'],
   coat: ['physical_defense', 'magic_defense'],
   boots: ['dodge'],
+  pickaxe: ['physical_attack'],
 }
 
 // Returns only keys with a nonzero rounded bonus (a level-1 item's tiny base
