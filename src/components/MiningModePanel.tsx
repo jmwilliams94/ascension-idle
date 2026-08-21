@@ -182,7 +182,7 @@ export default function MiningModePanel({ characterId }: { characterId: string }
                 className={`h-32 w-32 rounded-2xl border-2 border-slate-700 transition-opacity ${isRespawning ? 'opacity-30 grayscale' : ''}`}
                 style={{ backgroundColor: hexColor(NODE_SWATCH_COLOR) }}
               />
-              {isRespawning && <DeadOverlay seconds={respawnSecondsLeft} />}
+              {isRespawning && <DeadOverlay seconds={respawnSecondsLeft} label="Depleted" />}
               <AnimatePresence>
                 {log
                   .filter((entry) => entry.kind === 'damage' && now - entry.timestamp < 800)

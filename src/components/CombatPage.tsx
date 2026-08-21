@@ -99,13 +99,24 @@ function clearRowSlotsForCharacter(characterId: string) {
 // `compact` (reused by RowCombatPanel.tsx's much smaller row tiles,
 // 2026-08-17) shrinks the text — the default sizing was tuned for this
 // page's own large (128-160px) portrait and would overflow a ~50-70px tile.
-export function DeadOverlay({ seconds, compact = false }: { seconds: number; compact?: boolean }) {
+export function DeadOverlay({
+  seconds,
+  compact = false,
+  label = 'Dead',
+}: {
+  seconds: number
+  compact?: boolean
+  // MiningModePanel.tsx passes 'Depleted' — a mining node isn't a creature,
+  // "Dead" reads wrong for it. Every other caller (the monster/row-combat
+  // respawn gap) keeps the original default.
+  label?: string
+}) {
   return (
     <div
       className={`absolute inset-0 flex flex-col items-center justify-center gap-0.5 bg-slate-950/40 ${compact ? 'rounded-lg' : 'rounded-2xl'}`}
     >
       <span className={`font-bold text-slate-100 ${compact ? 'text-[11px]' : 'text-lg'}`}>{seconds}s</span>
-      <span className={`font-bold uppercase tracking-wide text-slate-300 ${compact ? 'text-[8px]' : 'text-xs'}`}>Dead</span>
+      <span className={`font-bold uppercase tracking-wide text-slate-300 ${compact ? 'text-[8px]' : 'text-xs'}`}>{label}</span>
     </div>
   )
 }

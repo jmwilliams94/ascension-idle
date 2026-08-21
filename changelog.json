@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.103.2",
+    "date": "2026-08-22",
+    "changes": [
+      "A depleted mining node now says \"Depleted\" instead of \"Dead\" while it regenerates"
+    ]
+  },
+  {
     "version": "1.103.1",
     "date": "2026-08-22",
     "changes": [
