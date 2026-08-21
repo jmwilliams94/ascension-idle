@@ -28,6 +28,8 @@ export default function RenderingTestPanel() {
   const bloom = useRenderStore((state) => state.bloom)
   const setBloomEnabled = useRenderStore((state) => state.setBloomEnabled)
   const setBloomIntensity = useRenderStore((state) => state.setBloomIntensity)
+  const emissivePulse = useRenderStore((state) => state.emissivePulse)
+  const setEmissivePulse = useRenderStore((state) => state.setEmissivePulse)
 
   const [characterDraft, setCharacterDraft] = useState(characterModelPath ?? '')
   const [slotDrafts, setSlotDrafts] = useState<Partial<Record<RenderSlot, string>>>({})
@@ -43,10 +45,10 @@ export default function RenderingTestPanel() {
         <div className="h-80 w-full">
           <ModelErrorBoundary resetKey={[characterModelPath, ...RENDER_SLOTS.map((slot) => equippedItems[slot])].join('|')}>
             <GameViewport bloomEnabled={bloom.enabled} bloomIntensity={bloom.intensity}>
-              {characterModelPath && <Character modelPath={characterModelPath} />}
+              {characterModelPath && <Character modelPath={characterModelPath} emissivePulse={emissivePulse} />}
               {RENDER_SLOTS.map((slot) => {
                 const path = equippedItems[slot]
-                return path ? <Character key={slot} modelPath={path} /> : null
+                return path ? <Character key={slot} modelPath={path} emissivePulse={emissivePulse} /> : null
               })}
             </GameViewport>
           </ModelErrorBoundary>
@@ -125,6 +127,63 @@ export default function RenderingTestPanel() {
             className="flex-1 disabled:opacity-40"
           />
           <span className="w-8 shrink-0 text-right">{bloom.intensity.toFixed(1)}</span>
+        </label>
+      </div>
+
+      <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+        <label className="flex items-center justify-between text-sm text-slate-300">
+          <span>Emissive Pulse</span>
+          <input
+            type="checkbox"
+            checked={emissivePulse.enabled}
+            onChange={(event) => setEmissivePulse({ enabled: event.target.checked })}
+          />
+        </label>
+        <p className="mt-1 text-xs text-slate-500">
+          Travels along a model's longest axis, multiplied against its emissiveMap (if it has one) — only lights up
+          textures like glowing veins/cracks, not the whole surface.
+        </p>
+        <label className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+          <span className="w-16 shrink-0">Speed</span>
+          <input
+            type="range"
+            min={0.05}
+            max={2}
+            step={0.05}
+            value={emissivePulse.speed}
+            disabled={!emissivePulse.enabled}
+            onChange={(event) => setEmissivePulse({ speed: Number(event.target.value) })}
+            className="flex-1 disabled:opacity-40"
+          />
+          <span className="w-8 shrink-0 text-right">{emissivePulse.speed.toFixed(2)}</span>
+        </label>
+        <label className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+          <span className="w-16 shrink-0">Width</span>
+          <input
+            type="range"
+            min={0.02}
+            max={0.6}
+            step={0.02}
+            value={emissivePulse.width}
+            disabled={!emissivePulse.enabled}
+            onChange={(event) => setEmissivePulse({ width: Number(event.target.value) })}
+            className="flex-1 disabled:opacity-40"
+          />
+          <span className="w-8 shrink-0 text-right">{emissivePulse.width.toFixed(2)}</span>
+        </label>
+        <label className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+          <span className="w-16 shrink-0">Intensity</span>
+          <input
+            type="range"
+            min={0.5}
+            max={6}
+            step={0.1}
+            value={emissivePulse.intensity}
+            disabled={!emissivePulse.enabled}
+            onChange={(event) => setEmissivePulse({ intensity: Number(event.target.value) })}
+            className="flex-1 disabled:opacity-40"
+          />
+          <span className="w-8 shrink-0 text-right">{emissivePulse.intensity.toFixed(1)}</span>
         </label>
       </div>
     </div>
