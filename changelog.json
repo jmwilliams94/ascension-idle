@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.101.4",
+    "date": "2026-08-21",
+    "changes": [
+      "Shop: Buy 10/Buy 5/Buy now sit in a single row with matching gold styling instead of stacked buttons"
+    ]
+  },
+  {
     "version": "1.101.3",
     "date": "2026-08-21",
     "changes": [
