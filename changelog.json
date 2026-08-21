@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.101.8",
+    "date": "2026-08-21",
+    "changes": [
+      "Fixed Shop item and inventory cards overflowing the screen edge on mobile"
+    ]
+  },
+  {
     "version": "1.101.7",
     "date": "2026-08-21",
     "changes": [

@@ -154,15 +154,33 @@ function GearRow({ template, bulkBuy }: { template: ItemTemplate; bulkBuy: boole
         <div className="flex shrink-0 items-center gap-1">
           {bulkBuy && (
             <>
-              <Button variant="primary" disabled={disabled} title={title} onClick={() => void handleBuyMany(10)}>
+              <Button
+                variant="primary"
+                disabled={disabled}
+                title={title}
+                onClick={() => void handleBuyMany(10)}
+                className="px-2 py-1 text-[11px]"
+              >
                 Buy 10
               </Button>
-              <Button variant="primary" disabled={disabled} title={title} onClick={() => void handleBuyMany(5)}>
+              <Button
+                variant="primary"
+                disabled={disabled}
+                title={title}
+                onClick={() => void handleBuyMany(5)}
+                className="px-2 py-1 text-[11px]"
+              >
                 Buy 5
               </Button>
             </>
           )}
-          <Button variant="primary" disabled={disabled} title={title} onClick={() => void handleBuyMany(1)}>
+          <Button
+            variant="primary"
+            disabled={disabled}
+            title={title}
+            onClick={() => void handleBuyMany(1)}
+            className={bulkBuy ? 'px-2 py-1 text-[11px]' : undefined}
+          >
             Buy
           </Button>
         </div>
