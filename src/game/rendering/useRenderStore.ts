@@ -38,8 +38,12 @@ export const useRenderStore = create<RenderState>((set) => ({
   bloom: { enabled: false, intensity: 0.4 },
   // On by default -- unlike Bloom this only ever affects meshes that already
   // have an emissiveMap baked in (see useEmissivePulse.ts), so there's
-  // nothing to wash out on a model that lacks one.
-  emissivePulse: { enabled: true, speed: 0.4, width: 0.18, intensity: 2.5 },
+  // nothing to wash out on a model that lacks one. Intensity defaults high
+  // (2026-08-21) -- a baked emissive texture is often fairly dim on its own
+  // (e.g. Stormvein Greatsword's vein streaks are nowhere near HDR-bright),
+  // and under full studio environment lighting (see GameViewport) a subtle
+  // boost gets lost against the rest of the model's PBR shading entirely.
+  emissivePulse: { enabled: true, speed: 0.4, width: 0.14, intensity: 14 },
   setCharacterModelPath: (path) => set({ characterModelPath: path }),
   setEquippedItem: (slot, path) =>
     set((state) => {

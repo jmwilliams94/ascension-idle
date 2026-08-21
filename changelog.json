@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.101.2",
+    "date": "2026-08-21",
+    "changes": [
+      "Rendering tab: emissive pulse intensity default raised significantly, plus temporary console diagnostics to track down why the effect isn't visible yet"
+    ]
+  },
+  {
     "version": "1.101.1",
     "date": "2026-08-21",
     "changes": [

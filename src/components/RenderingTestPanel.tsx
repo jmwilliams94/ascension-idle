@@ -176,8 +176,8 @@ export default function RenderingTestPanel() {
           <input
             type="range"
             min={0.5}
-            max={6}
-            step={0.1}
+            max={25}
+            step={0.5}
             value={emissivePulse.intensity}
             disabled={!emissivePulse.enabled}
             onChange={(event) => setEmissivePulse({ intensity: Number(event.target.value) })}

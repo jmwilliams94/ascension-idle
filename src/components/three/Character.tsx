@@ -21,6 +21,6 @@ export default function Character({ modelPath, emissivePulse }: CharacterProps) 
   // useEmissivePulse below would only ever see null -- state set via the ref
   // callback re-renders once the object3D actually exists after mount.
   const [node, setNode] = useState<Object3D | null>(null)
-  useEmissivePulse(node, emissivePulse ?? { enabled: false, speed: 0.4, width: 0.18, intensity: 2 })
+  useEmissivePulse(node, emissivePulse ?? { enabled: false, speed: 0.4, width: 0.14, intensity: 14 })
   return <primitive ref={setNode} object={scene} />
 }

@@ -58,12 +58,27 @@ export function useEmissivePulse(target: THREE.Object3D | null, options: Emissiv
     const max = box.max.getComponent(axisIndex)
 
     const patched: PatchedUniforms[] = []
+    // Temporary diagnostic logging (2026-08-21) -- remove once confirmed
+    // working live. Reports what the traversal actually found, since a
+    // silent skip (wrong material type, no emissiveMap) looks identical to
+    // "the shader patch didn't work" from the outside.
+    let meshCount = 0
+    let candidateCount = 0
 
     target.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return
+      meshCount++
       const materials = Array.isArray(child.material) ? child.material : [child.material]
       for (const material of materials) {
-        if (!material.isMeshStandardMaterial || !material.emissiveMap) continue
+        if (!material.isMeshStandardMaterial || !material.emissiveMap) {
+          console.info('[emissivePulse] skipped material', {
+            name: material.name || child.name,
+            isMeshStandardMaterial: material.isMeshStandardMaterial,
+            hasEmissiveMap: Boolean((material as THREE.MeshStandardMaterial).emissiveMap),
+          })
+          continue
+        }
+        candidateCount++
 
         // three.js caches compiled WebGLPrograms by a key derived from the
         // material's own properties -- it does NOT account for what
@@ -86,6 +101,17 @@ export function useEmissivePulse(target: THREE.Object3D | null, options: Emissiv
           // doesn't depend on options.width/options.intensity.
           shader.uniforms.uPulseWidth = { value: 0 }
           shader.uniforms.uPulseIntensity = { value: 0 }
+
+          // Diagnostic: .replace() silently no-ops (no error, no visible
+          // effect) if the target chunk string isn't found -- confirm both
+          // injection points actually matched before shipping this as
+          // "working".
+          const hasBeginVertex = shader.vertexShader.includes('#include <begin_vertex>')
+          const hasEmissiveFragment = shader.fragmentShader.includes('#include <emissivemap_fragment>')
+          console.info('[emissivePulse] onBeforeCompile fired', {
+            hasBeginVertex,
+            hasEmissiveFragment,
+          })
 
           shader.vertexShader = shader.vertexShader
             .replace('#include <common>', '#include <common>\nuniform vec3 uPulseAxis;\nvarying float vPulseCoord;')
@@ -112,6 +138,14 @@ export function useEmissivePulse(target: THREE.Object3D | null, options: Emissiv
         }
         material.needsUpdate = true
       }
+    })
+
+    console.info('[emissivePulse] setup complete', {
+      meshCount,
+      candidateCount,
+      axisIndex,
+      min,
+      max,
     })
 
     patchedRef.current = patched
