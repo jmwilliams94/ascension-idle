@@ -54,6 +54,12 @@ import { useZoneStore } from '../game/zones/useZoneStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
 import { runOfflineProgressCheck, OFFLINE_SUMMARY_THRESHOLD_MS } from '../game/combat/offlineProgress'
 import { useOfflineProgressStore } from '../game/combat/useOfflineProgressStore'
+import { useMineStore } from '../game/mining/useMineStore'
+import { useMiningStore } from '../game/mining/useMiningStore'
+import { usePickaxeStore } from '../game/mining/usePickaxeStore'
+import { useIdleModeStore } from '../game/mining/useIdleModeStore'
+import { runOfflineMiningProgressCheck } from '../game/mining/offlineMiningProgress'
+import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 
 // Rendered once a character is active (see App.tsx) — everything that was the whole
 // app before the character-slots restructure. Account-level concerns (What's New,
@@ -130,30 +136,71 @@ export default function GameShell({ characterId }: { characterId: string }) {
         return
       }
 
-      // Offline-progress catch-up runs once, before the live fight resumes —
-      // reads the *previous* last_active_at (captured by loadCharacterRecord
-      // above, before its own saveNow inside here refreshes it) so a quick
-      // reload can't double-count the same window. No "Calculating…" spinner
-      // for this anymore (Pete's request) — the check itself still runs the
-      // same, it just doesn't show a waiting state while in flight.
-      const outcome = await runOfflineProgressCheck(characterId)
+      // Pickaxe is a real item_instances row (see the mining schema
+      // migration) but not a normal equipment slot — hydrate its client
+      // snapshot here, once Inventory (loaded above) actually has it, using
+      // the raw ids useCharacterRecordStore's load exposed.
+      const { equippedPickaxeId, pickaxeAscendedGemType } = useCharacterRecordStore.getState()
+      const pickaxeItem = equippedPickaxeId
+        ? useInventoryStore.getState().items.find((item) => item.id === equippedPickaxeId)
+        : undefined
+      const pickaxeTemplate = pickaxeItem
+        ? useItemTemplatesStore.getState().templates.find((t) => t.id === pickaxeItem.template_id)
+        : undefined
+      usePickaxeStore.getState().hydrate({
+        itemId: equippedPickaxeId,
+        tierName: pickaxeTemplate?.name ?? null,
+        compositionLevel: pickaxeItem?.composition_level ?? 0,
+        ascendedGemType: pickaxeAscendedGemType,
+      })
+
+      // Hunting and Mining can never both accrue offline progress (confirmed
+      // by the user) — last_active_idle_mode decides which single check runs.
+      // Mining doesn't have its own "welcome back" summary modal yet (v1
+      // scope) — its catch-up still runs so nothing is silently lost
+      // (granted Ore/Gems land straight in Inventory/gems via resolveMining),
+      // it just isn't surfaced with a popup the way Hunting's is.
+      const idleMode = useIdleModeStore.getState().lastActiveIdleMode
+
+      if (idleMode === 'mining') {
+        await runOfflineMiningProgressCheck(characterId)
+      } else {
+        // Offline-progress catch-up runs once, before the live fight resumes —
+        // reads the *previous* last_active_at (captured by loadCharacterRecord
+        // above, before its own saveNow inside here refreshes it) so a quick
+        // reload can't double-count the same window. No "Calculating…" spinner
+        // for this anymore (Pete's request) — the check itself still runs the
+        // same, it just doesn't show a waiting state while in flight.
+        const outcome = await runOfflineProgressCheck(characterId)
+
+        if (cancelled) {
+          return
+        }
+
+        if (outcome.status === 'shown') {
+          useOfflineProgressStore.getState().show(outcome.result)
+        } else if (outcome.status === 'error') {
+          useOfflineProgressStore.getState().showSyncFailed()
+        }
+      }
 
       if (cancelled) {
         return
       }
 
-      if (outcome.status === 'shown') {
-        useOfflineProgressStore.getState().show(outcome.result)
-      } else if (outcome.status === 'error') {
-        useOfflineProgressStore.getState().showSyncFailed()
-      }
-
-      // Resume the live fight against whatever monster was last selected — a fresh
-      // instance, not mid-HP (consistent with how the offline-progress simulator
-      // treats a resumed session too).
-      const { selectedMonsterId } = useZoneStore.getState()
-      if (selectedMonsterId && !useCombatStore.getState().isFighting) {
-        useCombatStore.getState().start(selectedMonsterId)
+      // Resume whichever mode was last active — a fresh instance, not
+      // mid-HP (consistent with how the offline-progress simulator treats a
+      // resumed session too).
+      if (idleMode === 'mining') {
+        const { currentMineId } = useMineStore.getState()
+        if (currentMineId && !useMiningStore.getState().isMining) {
+          useMiningStore.getState().start(currentMineId)
+        }
+      } else {
+        const { selectedMonsterId } = useZoneStore.getState()
+        if (selectedMonsterId && !useCombatStore.getState().isFighting) {
+          useCombatStore.getState().start(selectedMonsterId)
+        }
       }
     }
 
@@ -270,6 +317,14 @@ export default function GameShell({ characterId }: { characterId: string }) {
       hiddenAt = null
       const worthShowing = awayMs >= OFFLINE_SUMMARY_THRESHOLD_MS
       try {
+        // Mirrors the load effect's own branch — Hunting and Mining can
+        // never both accrue offline progress. Mining has no resume-summary
+        // modal yet (v1 scope), so its branch just resolves silently; the
+        // real grants (Ore/Gems) still land correctly either way.
+        if (useIdleModeStore.getState().lastActiveIdleMode === 'mining') {
+          await runOfflineMiningProgressCheck(characterId)
+          return
+        }
         const outcome = await runOfflineProgressCheck(characterId)
         if (outcome.status === 'shown') {
           useOfflineProgressStore.getState().show(outcome.result)

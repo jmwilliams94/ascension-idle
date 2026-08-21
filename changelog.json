@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.103.0",
+    "date": "2026-08-22",
+    "changes": [
+      "Added Mining! A new Mining sub-mode alongside Hunting on the Idling tab — mine one of 4 nodes (Windhollow, Cinderleaf, Stormvale, Sunscar Wastes) with your Pickaxe for Ore and a chance at Gems",
+      "New Pickaxe tool: tier it up from Normal through Ascended using Gems and Gold, no equipped gear involved",
+      "Hunting and Mining can't run at the same time — starting one stops the other, including while away"
+    ]
+  },
+  {
     "version": "1.102.1",
     "date": "2026-08-22",
     "changes": [

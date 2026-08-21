@@ -19,7 +19,10 @@ interface PickaxeState {
     compositionLevel: number
     ascendedGemType: string | null
   }) => void
-  applyTierUpgrade: (tierName: PickaxeTierName) => void
+  // ascendedGemType is only passed when pickaxe_tier_upgrade's response
+  // actually rolled one (reaching Ascended for the first time) — omitted
+  // (undefined) leaves the existing value alone on every other tier-up.
+  applyTierUpgrade: (tierName: PickaxeTierName, ascendedGemType?: GemTypeId | null) => void
 }
 
 function resolveTierName(saved: string | null): PickaxeTierName {
@@ -38,7 +41,8 @@ export const usePickaxeStore = create<PickaxeState>((set) => ({
       compositionLevel: data.compositionLevel,
       ascendedGemType: (data.ascendedGemType as GemTypeId | null) ?? null,
     }),
-  applyTierUpgrade: (tierName) => set({ tierName }),
+  applyTierUpgrade: (tierName, ascendedGemType) =>
+    set((s) => ({ tierName, ascendedGemType: ascendedGemType !== undefined ? ascendedGemType : s.ascendedGemType })),
 }))
 
 export function currentPickaxeBaseAttack(tierName: PickaxeTierName): number {

@@ -13,6 +13,8 @@ import type { GemCounts } from '../game/items/gemTypes'
 import { useLuckyStore } from '../game/lucky/useLuckyStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
 import { useRowCombatStore, type ServerRowSlot } from '../game/combat/useRowCombatStore'
+import { useMineStore } from '../game/mining/useMineStore'
+import { useIdleModeStore } from '../game/mining/useIdleModeStore'
 
 // Loads/saves the active character's row (characters table) — class, level, gold,
 // exp, zone, equipped items (including the Quiver, for Hunters). Replaces what
@@ -71,6 +73,18 @@ interface CharacterRow {
   row1_unlocked: boolean
   row2_unlocked: boolean
   row_slots: ServerRowSlot[]
+  // Mining (see supabase/migrations/20260926000000_add_mining_pickaxe.sql) —
+  // selected_mine_id/last_active_idle_mode are session/cosmetic, same
+  // client-writable treatment as selected_monster_id/current_zone.
+  // equipped_pickaxe_id/pickaxe_ascended_gem_type are server-authoritative
+  // (only ensure_starter_pickaxe/pickaxe_tier_upgrade ever write them) —
+  // exposed via CharacterRecordState below rather than hydrated straight
+  // into a store here, since resolving the pickaxe's own tier name needs
+  // Inventory + item template data this store doesn't load.
+  selected_mine_id: string | null
+  last_active_idle_mode: string
+  equipped_pickaxe_id: string | null
+  pickaxe_ascended_gem_type: string | null
 }
 
 interface CharacterRecordState {
@@ -87,6 +101,12 @@ interface CharacterRecordState {
   // creation, see CLAUDE.md's Character naming note), used wherever the UI shows
   // the player by name instead of a generic "Your ___" label.
   characterName: string
+  // See the CharacterRow field comments above — read by GameShell's load
+  // effect once Inventory has also finished loading, to hydrate
+  // usePickaxeStore (needs the item_instances row + its template, which this
+  // store doesn't load itself).
+  equippedPickaxeId: string | null
+  pickaxeAscendedGemType: string | null
   loadCharacterRecord: (characterId: string) => Promise<void>
   saveNow: (characterId: string) => Promise<void>
 }
@@ -95,6 +115,8 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
   loaded: false,
   previousLastActiveAt: null,
   characterName: '',
+  equippedPickaxeId: null,
+  pickaxeAscendedGemType: null,
 
   loadCharacterRecord: async (characterId) => {
     set({ loaded: false })
@@ -123,7 +145,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     const { data, error } = await supabase
       .from('characters')
       .select(
-        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, comet_count, fallen_star_count, comet_scroll_count, fallen_star_scroll_count, comet_box_count, lottery_ticket_count, composition_stones, gems, selected_monster_id, last_active_at, lucky_free_ticket_claimed_at, promotion_level, row1_unlocked, row2_unlocked, row_slots',
+        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, comet_count, fallen_star_count, comet_scroll_count, fallen_star_scroll_count, comet_box_count, lottery_ticket_count, composition_stones, gems, selected_monster_id, last_active_at, lucky_free_ticket_claimed_at, promotion_level, row1_unlocked, row2_unlocked, row_slots, selected_mine_id, last_active_idle_mode, equipped_pickaxe_id, pickaxe_ascended_gem_type',
       )
       .eq('id', characterId)
       .maybeSingle<CharacterRow>()
@@ -165,8 +187,16 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     useLuckyStore.getState().hydrate(data.lucky_free_ticket_claimed_at)
     useRowCombatStore.getState().setUnlocked(data.row1_unlocked, data.row2_unlocked)
     useRowCombatStore.getState().applyServerSlots(data.row_slots ?? [])
+    useMineStore.getState().hydrate({ mineId: data.selected_mine_id })
+    useIdleModeStore.getState().hydrate(data.last_active_idle_mode)
 
-    set({ loaded: true, previousLastActiveAt: data.last_active_at, characterName: data.name })
+    set({
+      loaded: true,
+      previousLastActiveAt: data.last_active_at,
+      characterName: data.name,
+      equippedPickaxeId: data.equipped_pickaxe_id,
+      pickaxeAscendedGemType: data.pickaxe_ascended_gem_type,
+    })
   },
 
   saveNow: async (characterId) => {
@@ -176,6 +206,8 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
 
     const zone = useZoneStore.getState()
     const equipment = useEquipmentStore.getState()
+    const mine = useMineStore.getState()
+    const idleMode = useIdleModeStore.getState()
 
     // gold/level/exp/class are deliberately NOT written here — `characters`
     // only grants `authenticated` UPDATE on the session/cosmetic columns
@@ -195,6 +227,8 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
         equipped_coat_id: equipment.equippedIds.coat,
         equipped_quiver_id: equipment.equippedIds.quiver,
         selected_monster_id: zone.selectedMonsterId,
+        selected_mine_id: mine.currentMineId,
+        last_active_idle_mode: idleMode.lastActiveIdleMode,
         last_active_at: new Date().toISOString(),
       })
       .eq('id', characterId)

@@ -21,6 +21,9 @@ import { supabase } from '../lib/supabaseClient'
 import { useActiveEventEmberColor } from '../game/hud/useEventEmberColor'
 import { EventEmberBorder } from '../game/hud/eventEmberBorder'
 import { eventBorderTintStyle } from '../game/hud/eventEmberBorderData'
+import MiningModePanel from './MiningModePanel'
+import { useMiningStore } from '../game/mining/useMiningStore'
+import { useIdleModeStore } from '../game/mining/useIdleModeStore'
 
 // Matches getLevelDiffColor's tiers — White is an even match, Green means the
 // character comfortably outlevels the monster (reduced EXP), Red/Black mean
@@ -132,8 +135,9 @@ const MODE_BUTTON_CLASS = 'relative w-full rounded-lg px-3 py-1.5 text-xs font-m
 // .btn-gold/.btn-gold-active treatment as the top-level nav (2026-08-16,
 // supersedes the earlier bespoke amber-pill/ascension-chip look) — .btn-gold
 // for idle, .btn-gold-active in place of it for whichever mode is selected.
-// Mining is a coming-soon placeholder — always `disabled` (`.btn-gold:disabled`
-// supplies the dimmed look), no handler.
+// Mining (2026-08-22) — a second idle-combat mode, mutually exclusive with
+// Hunting (see MiningModePanel.tsx's stopHuntingIfActive/CombatPage's own
+// handleFight).
 function CombatModeSwitcher({ mode, onChange }: { mode: CombatMode; onChange: (mode: CombatMode) => void }) {
   return (
     <div className="grid grid-cols-3 gap-2">
@@ -145,7 +149,11 @@ function CombatModeSwitcher({ mode, onChange }: { mode: CombatMode; onChange: (m
         Hunting
       </button>
 
-      <button type="button" disabled title="Coming soon" className={`${MODE_BUTTON_CLASS} btn-gold cursor-not-allowed`}>
+      <button
+        type="button"
+        onClick={() => onChange('mining')}
+        className={`${MODE_BUTTON_CLASS} ${mode === 'mining' ? 'btn-gold-active' : 'btn-gold'}`}
+      >
         Mining
       </button>
 
@@ -276,6 +284,14 @@ export default function CombatPage() {
     if (typeId !== monsterTypeId && characterId) {
       clearRowSlotsForCharacter(characterId)
     }
+    // Hunting and Mining can never both be active (confirmed by the user) —
+    // mirrors MiningModePanel's own stopHuntingIfActive. Calling stop() here
+    // is enough to trigger MiningEngine's own subscription-driven final
+    // resolve, same as the reverse direction.
+    if (useMiningStore.getState().isMining) {
+      useMiningStore.getState().stop()
+    }
+    useIdleModeStore.getState().setLastActiveIdleMode('hunting')
     setSelectedMonsterId(typeId)
     start(typeId)
   }
@@ -312,6 +328,12 @@ export default function CombatPage() {
           nothing here can regress the desktop view. */}
       <div className="space-y-3 lg:hidden">
         <CombatModeSwitcher mode={mode} onChange={setMode} />
+
+        {mode === 'mining' && characterId && (
+          <div className="space-y-3">
+            <MiningModePanel characterId={characterId} />
+          </div>
+        )}
 
         {mode === 'hunting' && activeType && (
           <div
@@ -526,6 +548,8 @@ export default function CombatPage() {
       {/* Desktop layout (`lg` and up) — unchanged from before this step. */}
       <div className="hidden gap-4 lg:grid lg:grid-cols-2">
       <div className="space-y-4">
+        {mode === 'mining' && characterId && <MiningModePanel characterId={characterId} />}
+
         {mode === 'hunting' ? (
         <AscensionCard title="Zone & Monster">
           <div className="mt-2 flex flex-wrap gap-3">
