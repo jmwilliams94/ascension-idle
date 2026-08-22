@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.106.1",
+    "date": "2026-08-22",
+    "changes": [
+      "Selling gear on the Marketplace now properly releases its old owner's Gear Score claim, so the buyer never sees a confusing claim prompt referencing a stranger"
+    ]
+  },
+  {
     "version": "1.106.0",
     "date": "2026-08-22",
     "changes": [
