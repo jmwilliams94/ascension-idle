@@ -38,7 +38,15 @@ export default function VipStatusHud() {
       type="button"
       onClick={() => useVipSettingsModalStore.getState().openModal()}
       title={`VIP until ${new Date(vipExpiresAt).toLocaleString()} — click for VIP settings`}
-      className="flex shrink-0 items-center gap-1 rounded-lg border border-amber-500/60 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 backdrop-blur transition hover:bg-amber-500/20"
+      // No backdrop-blur (dropped 2026-10-01, reported by the user — mobile
+      // nav bar drifting slightly during scroll). backdrop-filter anywhere on
+      // the page is the documented trigger for iOS Safari's position: fixed
+      // detach bug (see MobileBottomNav.tsx's own translateZ(0) comment,
+      // which names backdrop-blur specifically as "the original trigger").
+      // This badge only started actually rendering once VIP status became
+      // reachable/tested this session — the class was here since v1.107.0,
+      // just never active on-screen before.
+      className="flex shrink-0 items-center gap-1 rounded-lg border border-amber-500/60 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 transition hover:bg-amber-500/20"
     >
       <img src={VIP_TOKEN_ICON_SRC} alt="" className="h-4 w-4 object-contain" />
       VIP · {daysLeft}d left
