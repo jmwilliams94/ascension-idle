@@ -4,7 +4,7 @@ import { useChatStore } from '../game/social/useChatStore'
 import { useAnnouncementHistoryStore } from '../game/social/useAnnouncementHistoryStore'
 import { useCharacterLoadoutStore } from '../game/social/useCharacterLoadoutStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
-import { ANNOUNCEMENT_ICONS } from './GlobalAnnouncementTicker'
+import { AnnouncementIcon } from './GlobalAnnouncementTicker'
 import { VIP_TOKEN_ICON_SRC } from '../game/items/forgeCosts'
 
 interface FeedItem {
@@ -14,7 +14,8 @@ interface FeedItem {
   message: string
   kind: 'chat' | 'announcement'
   // Raw global_announcements kind (e.g. 'level_130'), only set for
-  // kind: 'announcement' -- picks the right icon via ANNOUNCEMENT_ICONS
+  // kind: 'announcement' -- picks the right icon via AnnouncementIcon
+  // (same real-art-over-emoji resolution GlobalAnnouncementTicker uses)
   // instead of a flat 📣 for everything.
   announcementKind?: string
   // VIP badge (groundwork only) -- only ever set for kind: 'chat', sourced
@@ -179,7 +180,11 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
                   key={item.id}
                   className="flex items-start gap-2 rounded-md bg-amber-500/10 px-2 py-1 text-xs text-amber-200"
                 >
-                  <span aria-hidden="true">{ANNOUNCEMENT_ICONS[item.announcementKind ?? ''] ?? '📣'}</span>
+                  <AnnouncementIcon
+                    kind={item.announcementKind ?? ''}
+                    message={item.message}
+                    imgClassName="h-4 w-4 shrink-0 object-contain"
+                  />
                   <span className="min-w-0 flex-1 break-words">{item.message}</span>
                 </div>
               ) : (

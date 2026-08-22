@@ -83,7 +83,7 @@ function resolveAnnouncementIconSrc(kind: string, message: string): string | und
 // fallback deliberately isn't forced into the same box — a fixed h/w would
 // clip an emoji glyph rather than scale it — so it just gets a shrink-0 to
 // match layout, sized by its surrounding text instead.
-function AnnouncementIcon({ kind, message, imgClassName }: { kind: string; message: string; imgClassName: string }) {
+export function AnnouncementIcon({ kind, message, imgClassName }: { kind: string; message: string; imgClassName: string }) {
   const iconSrc = resolveAnnouncementIconSrc(kind, message)
   if (iconSrc) {
     return <img src={iconSrc} alt="" className={imgClassName} />

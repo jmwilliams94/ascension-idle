@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.107.4",
+    "date": "2026-09-30",
+    "changes": [
+      "Global Chat's activity feed now shows the actual item/gear art for rare-drop announcements instead of a generic placeholder icon, matching what the announcement banner already showed"
+    ]
+  },
+  {
     "version": "1.107.3",
     "date": "2026-09-30",
     "changes": [
