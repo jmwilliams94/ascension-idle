@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.106.4",
+    "date": "2026-08-22",
+    "changes": [
+      "Fixed a second, deeper cause of the same Hunting/Mining catch-up bug — switching into a mode you hadn't used in a while could still dump a backlog of rewards on you the instant it started, even after the first fix"
+    ]
+  },
+  {
     "version": "1.106.3",
     "date": "2026-08-22",
     "changes": [

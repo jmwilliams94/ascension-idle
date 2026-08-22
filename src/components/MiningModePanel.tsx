@@ -14,6 +14,7 @@ import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { previewPickaxeTierUpgradeCost } from '../game/mining/pickaxeCosts'
 import { tierUpgradePickaxe } from '../game/mining/pickaxeActions'
+import { touchMiningLastResolvedAt } from '../game/mining/resolveMining'
 import { formatItemDisplayName } from '../game/items/equipmentBonus'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
@@ -30,11 +31,16 @@ const NODE_SWATCH_COLOR = 0x8b8378
 // Starting a mining session stops any active Hunting fight (and vice versa
 // in CombatPage.tsx's handleFight) — Hunting and Mining can never both
 // accrue progress, confirmed by the user. Calling useCombatStore.stop()
-// here is enough to trigger CombatEngine's own subscription-driven final
-// resolve — no need to call resolveCombat directly from here.
-function stopHuntingIfActive() {
+// triggers CombatEngine's own subscription-driven final resolve, closing out
+// Hunting's own trailing window. That alone doesn't protect Mining's own
+// pointer though — mining_last_resolved_at sits frozen the whole time
+// Hunting was active, so without the touch call below, resuming Mining here
+// would replay that entire Hunting session as a Mining catch-up (bug,
+// reported by the user, fixed 2026-09-30 — see the migration's own comment).
+function stopHuntingIfActive(characterId: string) {
   if (useCombatStore.getState().isFighting) {
     useCombatStore.getState().stop()
+    void touchMiningLastResolvedAt(characterId)
   }
 }
 
@@ -86,7 +92,7 @@ export default function MiningModePanel({ characterId }: { characterId: string }
   const dropdownMineId = currentMineId ?? MINE_ORDER[0]
 
   const handleMine = (mineId: MineId) => {
-    stopHuntingIfActive()
+    stopHuntingIfActive(characterId)
     useIdleModeStore.getState().setLastActiveIdleMode('mining')
     setCurrentMineId(mineId)
     start(mineId)

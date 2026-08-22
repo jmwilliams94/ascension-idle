@@ -78,3 +78,16 @@ export async function resolveMining(characterId: string, mode: ResolveMiningMode
 
   return result
 }
+
+// Resets mining_last_resolved_at to now with zero reward grant — called only
+// when Mining is *entered* from Hunting (MiningModePanel.tsx's
+// stopHuntingIfActive), so a stale pointer left over from however long ago
+// Mining last ran doesn't get replayed as a catch-up the instant it resumes.
+// See resolveCombat.ts's touchCombatLastResolvedAt (the Hunting-side mirror)
+// and the migration (20260930110000_touch_last_resolved_on_mode_switch.sql).
+export async function touchMiningLastResolvedAt(characterId: string): Promise<void> {
+  const { error } = await supabase.rpc('touch_mining_last_resolved_at', { p_character_id: characterId })
+  if (error) {
+    console.error('touch_mining_last_resolved_at failed', error)
+  }
+}

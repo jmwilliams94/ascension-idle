@@ -117,3 +117,16 @@ export async function resolveCombat(characterId: string, mode: ResolveCombatMode
 
   return result
 }
+
+// Resets combat_last_resolved_at to now with zero reward grant — called only
+// when Hunting is *entered* from Mining (CombatPage.tsx's handleFight), so a
+// stale pointer left over from however long ago Hunting last ran doesn't get
+// replayed as a catch-up the instant it resumes. See the migration
+// (20260930110000_touch_last_resolved_on_mode_switch.sql) for why this is a
+// dedicated RPC rather than going through resolveCombat itself.
+export async function touchCombatLastResolvedAt(characterId: string): Promise<void> {
+  const { error } = await supabase.rpc('touch_combat_last_resolved_at', { p_character_id: characterId })
+  if (error) {
+    console.error('touch_combat_last_resolved_at failed', error)
+  }
+}

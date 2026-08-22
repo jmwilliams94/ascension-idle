@@ -7,6 +7,7 @@ import { Select } from './ui/Select'
 import { ENEMY_TYPES, ZONES, ZONE_ORDER, type EnemyTypeId, type ZoneId } from '../game/zones/zoneData'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
+import { touchCombatLastResolvedAt } from '../game/combat/resolveCombat'
 import { getLevelDiffColor } from '../game/combat/combatResolver'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
@@ -296,11 +297,18 @@ export default function CombatPage() {
       clearRowSlotsForCharacter(characterId)
     }
     // Hunting and Mining can never both be active (confirmed by the user) —
-    // mirrors MiningModePanel's own stopHuntingIfActive. Calling stop() here
-    // is enough to trigger MiningEngine's own subscription-driven final
-    // resolve, same as the reverse direction.
+    // mirrors MiningModePanel's own stopHuntingIfActive. stop() triggers
+    // MiningEngine's own subscription-driven final resolve, closing out
+    // Mining's own trailing window — but combat_last_resolved_at sits frozen
+    // the whole time Mining was active, so without the touch call below,
+    // resuming Hunting here would replay that entire Mining session as a
+    // Hunting catch-up (bug, reported by the user, fixed 2026-09-30 — see
+    // the migration's own comment).
     if (useMiningStore.getState().isMining) {
       useMiningStore.getState().stop()
+      if (characterId) {
+        void touchCombatLastResolvedAt(characterId)
+      }
     }
     useIdleModeStore.getState().setLastActiveIdleMode('hunting')
     setSelectedMonsterId(typeId)
