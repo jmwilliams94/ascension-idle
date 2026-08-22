@@ -97,12 +97,38 @@ function availableToClass(template: ItemTemplate, classId: string): boolean {
 // attempt comes back !ok (including 'inventory_full', which leaves the
 // existing InventoryFullModal's pendingFullDrop state for the player to
 // resolve rather than the loop trying to push through it).
+// Surfaces a purchase failure reason (2026-09-30, reported by the user —
+// buying a Pickaxe appeared to silently do nothing; turned out GearRow never
+// showed *any* buy failure for *any* item, it just quietly stopped the
+// loop). 'inventory_full' still gets the richer InventoryFullModal treatment
+// separately (see useInventoryStore.buyShopItem) — this is the fallback for
+// every other rejection reason, which previously had no visible feedback at
+// all.
+function describeBuyError(error?: string): string {
+  switch (error) {
+    case 'not_enough_gold':
+      return 'Not enough gold.'
+    case 'level_too_low':
+      return "You don't meet the level requirement."
+    case 'wrong_class':
+      return "This item isn't usable by your class."
+    case 'inventory_full':
+      return 'Inventory full.'
+    case 'template_not_found':
+    case 'not_owner':
+      return "Couldn't find that item."
+    default:
+      return 'Something went wrong.'
+  }
+}
+
 function GearRow({ template, bulkBuy }: { template: ItemTemplate; bulkBuy: boolean }) {
   const characterId = useActiveCharacterStore((state) => state.characterId)
   const level = useProgressionStore((state) => state.level)
   const gold = useProgressionStore((state) => state.gold)
   const buyShopItem = useInventoryStore((state) => state.buyShopItem)
   const [bulkBusy, setBulkBusy] = useState(false)
+  const [buyError, setBuyError] = useState<string | null>(null)
 
   const meetsLevel = level >= template.required_level
   const canAfford = gold >= template.price
@@ -117,9 +143,11 @@ function GearRow({ template, bulkBuy }: { template: ItemTemplate; bulkBuy: boole
       return
     }
     setBulkBusy(true)
+    setBuyError(null)
     for (let i = 0; i < count; i++) {
       const result = await buyShopItem(template)
       if (!result.ok) {
+        setBuyError(describeBuyError(result.error))
         break
       }
     }
@@ -186,6 +214,7 @@ function GearRow({ template, bulkBuy }: { template: ItemTemplate; bulkBuy: boole
           </Button>
         </div>
       </div>
+      {buyError && <p className="px-2 pb-1.5 text-[11px] text-rose-400">{buyError}</p>}
     </div>
   )
 }

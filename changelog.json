@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.105.5",
+    "date": "2026-08-22",
+    "changes": [
+      "Shop purchases now show the reason when a buy fails (not enough gold, wrong class, etc.) instead of silently doing nothing"
+    ]
+  },
+  {
     "version": "1.105.4",
     "date": "2026-08-22",
     "changes": [
