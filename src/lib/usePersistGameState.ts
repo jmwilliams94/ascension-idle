@@ -3,6 +3,8 @@ import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
+import { useMineStore } from '../game/mining/useMineStore'
+import { useIdleModeStore } from '../game/mining/useIdleModeStore'
 import { useCharacterRecordStore } from './useCharacterRecordStore'
 
 const AUTOSAVE_DEBOUNCE_MS = 2000
@@ -70,6 +72,20 @@ export function usePersistGameState(characterId: string | undefined, loaded: boo
     const unsubscribeCharacter = useCharacterStore.subscribe(() => scheduleSave())
     const unsubscribeZone = useZoneStore.subscribe(() => scheduleSave())
     const unsubscribeEquipment = useEquipmentStore.subscribe(() => scheduleSave())
+    // Bug fix (2026-08-22, reported by the user — real Hunting knockouts
+    // while they believed they were only mining): selected_mine_id/
+    // last_active_idle_mode were hydrated on load and included in saveNow's
+    // payload, but nothing here ever *triggered* a save when either
+    // changed — Mining grants no gold/EXP/zone/equipment change on its own,
+    // so a pure mining session had almost no reliable trigger to persist
+    // which mode was active, only the best-effort tab-hide/beforeunload
+    // safety net below (which the comment on those handlers already admits
+    // isn't guaranteed to land). A missed safety-net save meant the next
+    // load read back a stale last_active_idle_mode (often 'hunting'),
+    // silently resuming a real fight in the background while the player was
+    // looking at the Mining page.
+    const unsubscribeMine = useMineStore.subscribe(() => scheduleSave())
+    const unsubscribeIdleMode = useIdleModeStore.subscribe(() => scheduleSave())
 
     // beforeunload isn't reliable (browsers may not wait for the fetch to complete),
     // and visibilitychange 'hidden' fires on tab switch/backgrounding too, giving the
@@ -95,6 +111,8 @@ export function usePersistGameState(characterId: string | undefined, loaded: boo
       unsubscribeCharacter()
       unsubscribeZone()
       unsubscribeEquipment()
+      unsubscribeMine()
+      unsubscribeIdleMode()
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('beforeunload', handleBeforeUnload)
     }

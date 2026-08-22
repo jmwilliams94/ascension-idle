@@ -190,13 +190,28 @@ export default function GameShell({ characterId }: { characterId: string }) {
 
       // Resume whichever mode was last active — a fresh instance, not
       // mid-HP (consistent with how the offline-progress simulator treats a
-      // resumed session too).
+      // resumed session too). Defensively stops the *other* mode first
+      // (2026-08-22, reported by the user — real Hunting knockouts while
+      // they believed they were only mining, traced to a missed autosave
+      // leaving last_active_idle_mode stale): the fix for the root cause is
+      // usePersistGameState.ts now actually persisting mine/idle-mode
+      // changes, but this stop() is a second, independent guarantee that
+      // Hunting and Mining can never both end up active here even from some
+      // other edge case, matching the same mutual-exclusivity CombatPage.tsx's
+      // handleFight / MiningModePanel.tsx's handleMine already enforce at
+      // the two manual activation points.
       if (idleMode === 'mining') {
+        if (useCombatStore.getState().isFighting) {
+          useCombatStore.getState().stop()
+        }
         const { currentMineId } = useMineStore.getState()
         if (currentMineId && !useMiningStore.getState().isMining) {
           useMiningStore.getState().start(currentMineId)
         }
       } else {
+        if (useMiningStore.getState().isMining) {
+          useMiningStore.getState().stop()
+        }
         const { selectedMonsterId } = useZoneStore.getState()
         if (selectedMonsterId && !useCombatStore.getState().isFighting) {
           useCombatStore.getState().start(selectedMonsterId)

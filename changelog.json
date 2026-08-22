@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.103.4",
+    "date": "2026-08-22",
+    "changes": [
+      "Fixed a bug where Hunting could silently resume in the background (and knock you out) while you were actively mining, caused by your mine selection sometimes not saving"
+    ]
+  },
+  {
     "version": "1.103.3",
     "date": "2026-08-22",
     "changes": [
