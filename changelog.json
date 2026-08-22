@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.108.1",
+    "date": "2026-10-01",
+    "changes": [
+      "Fixed VIP auto-sell/auto-salvage/auto-bank not processing Ore and gear sitting in Unclaimed Rewards after an AFK session",
+      "Mining now shows its own \"Welcome back\" summary after being away, matching Hunting's, including a breakdown of anything VIP auto-sold, auto-salvaged, or auto-banked while you were gone"
+    ]
+  },
+  {
     "version": "1.108.0",
     "date": "2026-10-01",
     "changes": [

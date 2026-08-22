@@ -142,14 +142,20 @@ export default function GameShell({ characterId }: { characterId: string }) {
 
       // Hunting and Mining can never both accrue offline progress (confirmed
       // by the user) — last_active_idle_mode decides which single check runs.
-      // Mining doesn't have its own "welcome back" summary modal yet (v1
-      // scope) — its catch-up still runs so nothing is silently lost
-      // (granted Ore/Gems land straight in Inventory/gems via resolveMining),
-      // it just isn't surfaced with a popup the way Hunting's is.
       const idleMode = useIdleModeStore.getState().lastActiveIdleMode
 
       if (idleMode === 'mining') {
-        await runOfflineMiningProgressCheck(characterId)
+        const miningOutcome = await runOfflineMiningProgressCheck(characterId)
+
+        if (cancelled) {
+          return
+        }
+
+        if (miningOutcome.status === 'shown') {
+          useOfflineProgressStore.getState().showMining(miningOutcome.result)
+        } else if (miningOutcome.status === 'error') {
+          useOfflineProgressStore.getState().showSyncFailed()
+        }
       } else {
         // Offline-progress catch-up runs once, before the live fight resumes —
         // reads the *previous* last_active_at (captured by loadCharacterRecord
@@ -309,7 +315,8 @@ export default function GameShell({ characterId }: { characterId: string }) {
     let lastAliveAt = Date.now()
 
     const checkOfflineProgressOnResume = async () => {
-      if (checkInFlight || useOfflineProgressStore.getState().result !== null) {
+      const offlineProgressState = useOfflineProgressStore.getState()
+      if (checkInFlight || offlineProgressState.result !== null || offlineProgressState.miningResult !== null) {
         return
       }
       checkInFlight = true
@@ -319,11 +326,14 @@ export default function GameShell({ characterId }: { characterId: string }) {
       const worthShowing = awayMs >= OFFLINE_SUMMARY_THRESHOLD_MS
       try {
         // Mirrors the load effect's own branch — Hunting and Mining can
-        // never both accrue offline progress. Mining has no resume-summary
-        // modal yet (v1 scope), so its branch just resolves silently; the
-        // real grants (Ore/Gems) still land correctly either way.
+        // never both accrue offline progress.
         if (useIdleModeStore.getState().lastActiveIdleMode === 'mining') {
-          await runOfflineMiningProgressCheck(characterId)
+          const miningOutcome = await runOfflineMiningProgressCheck(characterId)
+          if (miningOutcome.status === 'shown') {
+            useOfflineProgressStore.getState().showMining(miningOutcome.result)
+          } else if (miningOutcome.status === 'error' && worthShowing) {
+            useOfflineProgressStore.getState().showSyncFailed()
+          }
           return
         }
         const outcome = await runOfflineProgressCheck(characterId)

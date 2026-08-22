@@ -2,6 +2,9 @@ import { useMineStore } from './useMineStore'
 import { useIdleModeStore } from './useIdleModeStore'
 import { resolveMining } from './resolveMining'
 import { OFFLINE_SUMMARY_THRESHOLD_MS } from '../combat/offlineProgress'
+import { runVipAutomationPass } from '../vip/runVipAutomationPass'
+import { isVipAutomationSummaryEmpty, type VipAutomationSummary } from '../vip/vipAutomationSummary'
+import { useLootHoldingStore } from '../items/useLootHoldingStore'
 
 // Mining's own away-time reconciliation, mirroring offlineProgress.ts
 // exactly — the server's own mining_last_resolved_at naturally shows a large
@@ -20,6 +23,7 @@ export interface OfflineMiningProgressResult {
   umbriteOre: number
   gems: number
   nodeDisplayName: string | null
+  vipSummary?: VipAutomationSummary
 }
 
 export type OfflineMiningProgressOutcome =
@@ -41,6 +45,21 @@ export async function runOfflineMiningProgressCheck(characterId: string): Promis
     return { status: 'error' }
   }
 
+  // resolveMining only *fires* a Loot Holding refetch when it grants held
+  // items (a bare `void loadLootHolding(...)`, not awaited — see its own
+  // comment) — awaiting a fresh load ourselves here guarantees the entries
+  // just granted by the resolve above are actually in the store before the
+  // automation pass reads it, not racing that fire-and-forget call.
+  await useLootHoldingStore.getState().loadLootHolding(characterId)
+
+  // Run before the "worth showing" gate below — a short away-window can
+  // still have leftover Loot Holding entries from earlier sessions worth
+  // auto-liquidating, and this is the one place that gap (Ore sitting
+  // unsold after an AFK mining session, reported by the user) gets closed
+  // deterministically rather than relying on the live reactive engine's
+  // debounce timer to eventually notice.
+  const vipSummary = await runVipAutomationPass()
+
   if (!result.gained || (result.elapsedMs ?? 0) < OFFLINE_SUMMARY_THRESHOLD_MS) {
     return { status: 'nothing' }
   }
@@ -54,6 +73,7 @@ export async function runOfflineMiningProgressCheck(characterId: string): Promis
       umbriteOre: result.gained.umbriteOre,
       gems: result.gained.gems,
       nodeDisplayName: result.nodeDisplayName ?? null,
+      vipSummary: isVipAutomationSummaryEmpty(vipSummary) ? undefined : vipSummary,
     },
   }
 }

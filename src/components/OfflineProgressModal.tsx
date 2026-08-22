@@ -7,12 +7,44 @@ import { useLootHoldingStore } from '../game/items/useLootHoldingStore'
 import { useLootHoldingModalStore } from '../game/items/useLootHoldingModalStore'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { ENEMY_TYPES } from '../game/zones/zoneData'
+import type { VipAutomationSummary } from '../game/vip/vipAutomationSummary'
 
 function formatDuration(ms: number): string {
   const totalMinutes = Math.round(ms / 60000)
   const hours = Math.floor(totalMinutes / 60)
   const minutes = totalMinutes % 60
   return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
+}
+
+// Shown below either mode's own stat grid when the away-window had any VIP
+// automation activity (see runVipAutomationPass.ts) — the "breakdown of what
+// auto-sold" the user asked for after a real bug where Ore sat unsold in
+// Loot Holding with nothing telling them why.
+function VipAutomationSummarySection({ summary }: { summary: VipAutomationSummary }) {
+  return (
+    <div className="space-y-1 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+      <p className="font-semibold text-amber-300">👑 VIP Automations</p>
+      <ul className="space-y-0.5 text-slate-300">
+        {summary.oreSoldCount > 0 && (
+          <li>
+            Auto-sold {summary.oreSoldCount} Ore for {summary.goldGained.toLocaleString()} gold
+          </li>
+        )}
+        {summary.itemsSalvagedCount > 0 && (
+          <li>
+            Auto-salvaged {summary.itemsSalvagedCount} item{summary.itemsSalvagedCount === 1 ? '' : 's'} for {summary.apGained} Ascension
+            Point{summary.apGained === 1 ? '' : 's'}
+          </li>
+        )}
+        {summary.itemsBankedCount > 0 && (
+          <li>
+            Auto-banked {summary.itemsBankedCount} item{summary.itemsBankedCount === 1 ? '' : 's'} (+{summary.compositionPointsGained}{' '}
+            Composition Points)
+          </li>
+        )}
+      </ul>
+    </div>
+  )
 }
 
 // Shown after a load resolves a nonzero offline-progress result (see
@@ -57,6 +89,7 @@ function formatDuration(ms: number): string {
 // failure) still pops up.
 export default function OfflineProgressModal() {
   const result = useOfflineProgressStore((state) => state.result)
+  const miningResult = useOfflineProgressStore((state) => state.miningResult)
   const syncFailed = useOfflineProgressStore((state) => state.syncFailed)
   const dismissResult = useOfflineProgressStore((state) => state.dismiss)
   const selectedMonsterId = useZoneStore((state) => state.selectedMonsterId)
@@ -75,16 +108,17 @@ export default function OfflineProgressModal() {
   // happens instead. Doesn't touch the 'result'/'syncFailed' modes, which
   // always have their own content regardless of Loot Holding's count.
   useEffect(() => {
-    if (manuallyOpened && !result && !syncFailed && lootHoldingCount === 0) {
+    if (manuallyOpened && !result && !miningResult && !syncFailed && lootHoldingCount === 0) {
       closeManualModal()
     }
-  }, [manuallyOpened, result, syncFailed, lootHoldingCount, closeManualModal])
+  }, [manuallyOpened, result, miningResult, syncFailed, lootHoldingCount, closeManualModal])
 
-  if (!result && !manuallyOpened && !syncFailed) {
+  if (!result && !miningResult && !manuallyOpened && !syncFailed) {
     return null
   }
 
   const type = result && selectedMonsterId ? ENEMY_TYPES[selectedMonsterId] : null
+  const vipSummary = result?.vipSummary ?? miningResult?.vipSummary
 
   const handleClose = () => {
     dismissResult()
@@ -115,12 +149,18 @@ export default function OfflineProgressModal() {
         ) : (
           <>
             <div className="flex items-start gap-3">
-              <span className="text-2xl">{result ? '👋' : '📦'}</span>
+              <span className="text-2xl">{result || miningResult ? '👋' : '📦'}</span>
               <div>
-                <h2 className="text-lg font-semibold text-white">{result ? 'Welcome back' : 'Unclaimed rewards'}</h2>
+                <h2 className="text-lg font-semibold text-white">{result || miningResult ? 'Welcome back' : 'Unclaimed rewards'}</h2>
                 {result && type && (
                   <p className="mt-1 text-sm text-slate-400">
                     While you were away ({formatDuration(result.elapsedMs)}), your character kept fighting {type.displayName}.
+                  </p>
+                )}
+                {miningResult && (
+                  <p className="mt-1 text-sm text-slate-400">
+                    While you were away ({formatDuration(miningResult.elapsedMs)}), your character kept mining
+                    {miningResult.nodeDisplayName ? ` ${miningResult.nodeDisplayName}` : ''}.
                   </p>
                 )}
               </div>
@@ -186,6 +226,33 @@ export default function OfflineProgressModal() {
                 )}
               </dl>
             )}
+
+            {miningResult && (
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-sm text-slate-300">
+                <div className="flex justify-between">
+                  <dt className="text-slate-400">Nodes mined</dt>
+                  <dd>{miningResult.kills}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-slate-400">Ore</dt>
+                  <dd className="font-semibold text-slate-200">+{miningResult.ore}</dd>
+                </div>
+                {miningResult.umbriteOre > 0 && (
+                  <div className="flex justify-between">
+                    <dt className="text-slate-400">Umbrite Ore</dt>
+                    <dd className="font-semibold text-amber-300">+{miningResult.umbriteOre}</dd>
+                  </div>
+                )}
+                {miningResult.gems > 0 && (
+                  <div className="flex justify-between">
+                    <dt className="text-slate-400">Gems</dt>
+                    <dd className="font-semibold text-sky-300">+{miningResult.gems}</dd>
+                  </div>
+                )}
+              </dl>
+            )}
+
+            {vipSummary && <VipAutomationSummarySection summary={vipSummary} />}
 
             {lootHoldingCount > 0 && <LootHoldingCard />}
 

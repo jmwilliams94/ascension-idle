@@ -1,6 +1,9 @@
 import { useZoneStore } from '../zones/useZoneStore'
 import { resolveCombat } from './resolveCombat'
 import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
+import { runVipAutomationPass } from '../vip/runVipAutomationPass'
+import { isVipAutomationSummaryEmpty, type VipAutomationSummary } from '../vip/vipAutomationSummary'
+import { useLootHoldingStore } from '../items/useLootHoldingStore'
 
 // Idle/AFK progress while away, and the login-time reconciliation of live
 // combat both go through the same resolve-combat Edge Function now (see
@@ -37,6 +40,7 @@ export interface OfflineProgressResult {
   // OfflineProgressModal can render it directly with no lookup of its own.
   // Null when no pet was obtained during the away window.
   petObtained: string | null
+  vipSummary?: VipAutomationSummary
 }
 
 // Discriminated so a caller can tell "genuinely nothing happened" (no
@@ -68,6 +72,19 @@ export async function runOfflineProgressCheck(characterId: string): Promise<Offl
     return { status: 'error' }
   }
 
+  // resolveCombat only *fires* a Loot Holding refetch when it grants held
+  // items (a bare `void loadLootHolding(...)`, not awaited — see its own
+  // comment) — awaiting a fresh load ourselves here guarantees the entries
+  // just granted by the resolve above are actually in the store before the
+  // automation pass reads it, not racing that fire-and-forget call.
+  await useLootHoldingStore.getState().loadLootHolding(characterId)
+
+  // Run before the "worth showing" gate below — a short away-window can
+  // still have leftover Loot Holding entries from earlier sessions worth
+  // auto-liquidating, closing that gap deterministically rather than relying
+  // on the live reactive engine's debounce timer to eventually notice.
+  const vipSummary = await runVipAutomationPass()
+
   if (!result.gained || (result.elapsedMs ?? 0) < OFFLINE_SUMMARY_THRESHOLD_MS) {
     return { status: 'nothing' }
   }
@@ -84,6 +101,7 @@ export async function runOfflineProgressCheck(characterId: string): Promise<Offl
       comets: result.gained.comets,
       fallenStars: result.gained.fallenStars,
       petObtained: result.petObtained ? (ENEMY_TYPES[result.petObtained as EnemyTypeId]?.displayName ?? 'monster') : null,
+      vipSummary: isVipAutomationSummaryEmpty(vipSummary) ? undefined : vipSummary,
     },
   }
 }
