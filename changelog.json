@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.107.0",
+    "date": "2026-09-30",
+    "changes": [
+      "Added the VIP Token — an extremely rare Lucky Lad prize (rarer than any other reward), also sendable via Admin Mail. Using one grants 30 days of VIP status, shown as a small badge in the HUD and a crown next to your name in Global Chat. VIP doesn't do anything extra yet — perks are coming in a future update"
+    ]
+  },
+  {
     "version": "1.106.4",
     "date": "2026-08-22",
     "changes": [

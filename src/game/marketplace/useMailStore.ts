@@ -16,8 +16,10 @@ import type { ListableCurrencyType } from './useMarketplaceStore'
 // characters.gold directly instead of routing through Mail. 'comet_box'
 // (added for the World Boss/Gold Donation reward overhaul,
 // 20260904000000_event_reward_overhaul.sql) is the same story — Mail-
-// claimable, never marketplace-listable.
-export type MailCurrencyType = ListableCurrencyType | 'lottery_ticket' | 'ascension_points' | 'gold' | 'comet_box'
+// claimable, never marketplace-listable. 'vip_token' (groundwork only) is
+// the same story too — Admin Mail can grant it, but it's never a
+// marketplace-listable currency type.
+export type MailCurrencyType = ListableCurrencyType | 'lottery_ticket' | 'ascension_points' | 'gold' | 'comet_box' | 'vip_token'
 
 // Mail (see CLAUDE.md's Marketplace section and
 // supabase/migrations/20260802050000_add_marketplace.sql). Sale proceeds
@@ -235,6 +237,9 @@ export const useMailStore = create<MailState>((set, get) => ({
             break
           case 'comet_box':
             currencyStore.setCometBoxes(result.new_count)
+            break
+          case 'vip_token':
+            currencyStore.setVipTokens(result.new_count)
             break
         }
       } else if (entry?.item) {

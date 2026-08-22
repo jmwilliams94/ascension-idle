@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabaseClient'
 import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
+import { useCharacterStore } from '../stats/useCharacterStore'
 import { useCompositionStore, type CompositionStones } from './useCompositionStore'
 import { useGemStore } from './useGemStore'
 import type { GemCounts, GemTier, GemTypeId } from './gemTypes'
@@ -84,6 +85,17 @@ interface OpenCometBoxResult {
   error?: 'not_owner' | 'not_enough_boxes'
   comet_box_count?: number
   bank_comets?: number
+}
+
+// use_vip_token (groundwork only) — consumes 1 VIP Token
+// (characters.vip_token_count) and adds a flat 30 days to
+// characters.vip_expires_at, a cross-store mutation (character count +
+// character expiry) same shape as openCometBox above, so it lives here too.
+interface UseVipTokenResult {
+  ok: boolean
+  error?: 'not_owner' | 'not_enough_tokens'
+  vip_token_count?: number
+  vip_expires_at?: string
 }
 
 interface TransferCurrencyResult {
@@ -182,6 +194,8 @@ interface BankState {
   withdrawCurrencyItem: (characterId: string, currencyType: BankCurrencyType, amount: number) => Promise<BankItemResult>
   // Comet Box "Open" (2026-08-25) — see OpenCometBoxResult above.
   openCometBox: (characterId: string) => Promise<OpenCometBoxResult>
+  // VIP Token "Use" (groundwork only) — see UseVipTokenResult above.
+  useVipToken: (characterId: string) => Promise<UseVipTokenResult>
 }
 
 export const useBankStore = create<BankState>((set, get) => ({
@@ -492,6 +506,26 @@ export const useBankStore = create<BankState>((set, get) => ({
     if (result.ok && typeof result.comet_box_count === 'number' && typeof result.bank_comets === 'number') {
       useCurrencyStore.getState().setCometBoxes(result.comet_box_count)
       usePlayerRecordStore.getState().setBankBalances({ bankComets: result.bank_comets })
+    }
+
+    return result
+  },
+
+  useVipToken: async (characterId) => {
+    set({ busy: true })
+    const { data, error } = await supabase.rpc('use_vip_token', { p_character_id: characterId })
+    set({ busy: false })
+
+    if (error) {
+      console.error('Use VIP token call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as UseVipTokenResult
+
+    if (result.ok && typeof result.vip_token_count === 'number' && result.vip_expires_at) {
+      useCurrencyStore.getState().setVipTokens(result.vip_token_count)
+      useCharacterStore.getState().setVipExpiresAt(result.vip_expires_at)
     }
 
     return result

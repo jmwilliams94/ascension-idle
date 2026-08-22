@@ -20,6 +20,7 @@ export const ANNOUNCEMENT_ICONS: Record<string, string> = {
   lucky_gear_radiant_bow: '🏹',
   lucky_gear_radiant_coat: '🥋',
   lucky_gear_ascended_random: '🗡️',
+  lucky_vip_token: '👑',
   level_130: '🏆',
   socket_dry_streak_end: '🎲',
   pet_obtained: '🐾',

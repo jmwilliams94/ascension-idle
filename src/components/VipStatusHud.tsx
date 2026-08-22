@@ -1,0 +1,41 @@
+import { useEffect, useState } from 'react'
+import { useCharacterStore } from '../game/stats/useCharacterStore'
+
+// Small readout, shown in GameShell's top HUD strip (groundwork only, see
+// CLAUDE.progression.md's VIP section) — confirms a VIP Token's Use actually
+// worked and shows the remaining time. No gameplay bonuses hang off VIP yet,
+// so this is purely informational. Renders nothing for a character that's
+// never been VIP, or whose VIP has lapsed (vip_expires_at in the past).
+export default function VipStatusHud() {
+  const vipExpiresAt = useCharacterStore((state) => state.vipExpiresAt)
+
+  // Same "Date.now() into state via a slow interval, never read live during
+  // render" pattern as LuckyPanel's own free-ticket countdown — this only
+  // needs to be roughly live, not to-the-second.
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(Date.now()), 60_000)
+    return () => window.clearInterval(interval)
+  }, [])
+
+  if (!vipExpiresAt) {
+    return null
+  }
+
+  const remainingMs = new Date(vipExpiresAt).getTime() - now
+  if (remainingMs <= 0) {
+    return null
+  }
+
+  const daysLeft = Math.max(1, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)))
+
+  return (
+    <div
+      title={`VIP until ${new Date(vipExpiresAt).toLocaleString()}`}
+      className="shrink-0 rounded-lg border border-amber-500/60 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 backdrop-blur"
+    >
+      👑 VIP · {daysLeft}d left
+    </div>
+  )
+}

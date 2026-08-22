@@ -50,6 +50,12 @@ interface CurrencyState {
   // here alongside the other currency-like counts rather than getting its
   // own store.
   lotteryTickets: number
+  // VIP Token (groundwork only) — same virtual-tile counter shape as
+  // cometBoxes above (characters.vip_token_count). Consuming one is a
+  // cross-store mutation (character vip_token_count + character
+  // vip_expires_at), so its RPC wrapper lives in useBankStore.useVipToken
+  // rather than here — this store only ever reflects the count itself.
+  vipTokens: number
   // Ascension Points moved to usePlayerRecordStore (2026-08-03) — it's
   // account-wide (a premium currency), not per-character, so it doesn't
   // belong in this store anymore. See usePlayerRecordStore.ts.
@@ -66,6 +72,7 @@ interface CurrencyState {
     fallenStarScrolls: number
     cometBoxes: number
     lotteryTickets: number
+    vipTokens: number
   }) => void
   setComets: (value: number) => void
   setFallenStars: (value: number) => void
@@ -73,6 +80,7 @@ interface CurrencyState {
   setFallenStarScrolls: (value: number) => void
   setCometBoxes: (value: number) => void
   setLotteryTickets: (value: number) => void
+  setVipTokens: (value: number) => void
   // Bundles 10 loose units into 1 Scroll — one fixed-size transaction per
   // call (mirrors buyArrows/buyPotions always purchasing one full stack),
   // not a variable amount.
@@ -90,6 +98,7 @@ export const useCurrencyStore = create<CurrencyState>((set) => ({
   fallenStarScrolls: 0,
   cometBoxes: 0,
   lotteryTickets: 0,
+  vipTokens: 0,
 
   hydrate: (saved) =>
     set({
@@ -99,6 +108,7 @@ export const useCurrencyStore = create<CurrencyState>((set) => ({
       fallenStarScrolls: saved.fallenStarScrolls,
       cometBoxes: saved.cometBoxes,
       lotteryTickets: saved.lotteryTickets,
+      vipTokens: saved.vipTokens,
     }),
   setComets: (value) => set({ comets: value }),
   setFallenStars: (value) => set({ fallenStars: value }),
@@ -106,6 +116,7 @@ export const useCurrencyStore = create<CurrencyState>((set) => ({
   setFallenStarScrolls: (value) => set({ fallenStarScrolls: value }),
   setCometBoxes: (value) => set({ cometBoxes: value }),
   setLotteryTickets: (value) => set({ lotteryTickets: value }),
+  setVipTokens: (value) => set({ vipTokens: value }),
 
   bundleScroll: async (characterId, currencyType) => {
     const { data, error } = await supabase.rpc('bundle_currency_scroll', {

@@ -96,6 +96,12 @@ export type LuckyRewardKind =
   // Also the Class Promotion tier-110 cost item for Hunter — obtainable
   // right now only via Lucky Lad; a real quest source is planned later.
   | 'moon_box'
+  // VIP Token (groundwork only) — same virtual-tile counter shape as
+  // comet_box above (characters.vip_token_count). Rarer than every other
+  // kind (weight 0.02, below the three hyper-rare gear kinds' 0.06-0.08) —
+  // consuming one adds 30 days of VIP via use_vip_token (see
+  // useBankStore.useVipToken), no gameplay bonuses implemented yet.
+  | 'vip_token'
 
 export interface LuckyReward {
   kind: LuckyRewardKind
@@ -110,6 +116,7 @@ interface LuckyCharacterTotals {
   fallen_star_scroll_count: number
   comet_box_count: number
   lottery_ticket_count: number
+  vip_token_count: number
 }
 
 export interface DrawLuckyTicketResult {
@@ -197,6 +204,7 @@ export const useLuckyStore = create<LuckyState>((set, get) => ({
       useCurrencyStore.getState().setFallenStarScrolls(result.character.fallen_star_scroll_count)
       useCurrencyStore.getState().setCometBoxes(result.character.comet_box_count)
       useCurrencyStore.getState().setLotteryTickets(result.character.lottery_ticket_count)
+      useCurrencyStore.getState().setVipTokens(result.character.vip_token_count)
     }
 
     if (result.ok && typeof result.ascension_points === 'number') {
@@ -249,6 +257,7 @@ export const useLuckyStore = create<LuckyState>((set, get) => ({
       useCurrencyStore.getState().setFallenStarScrolls(result.character.fallen_star_scroll_count)
       useCurrencyStore.getState().setCometBoxes(result.character.comet_box_count)
       useCurrencyStore.getState().setLotteryTickets(result.character.lottery_ticket_count)
+      useCurrencyStore.getState().setVipTokens(result.character.vip_token_count)
     }
 
     if (result.ok && typeof result.ascension_points === 'number') {

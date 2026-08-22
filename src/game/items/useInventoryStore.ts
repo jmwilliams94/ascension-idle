@@ -157,7 +157,12 @@ export function occupiedSlotCount(items: ItemInstance[]): number {
   // own non-stacking item too — one Scroll tile per owned Scroll.
   const currency = useCurrencyStore.getState()
   const currencyCount =
-    currency.comets + currency.fallenStars + currency.cometScrolls + currency.fallenStarScrolls + currency.cometBoxes
+    currency.comets +
+    currency.fallenStars +
+    currency.cometScrolls +
+    currency.fallenStarScrolls +
+    currency.cometBoxes +
+    currency.vipTokens
   return gearCount + totalStoneCount + totalGemCount + potionStackCount + currencyCount
 }
 

@@ -6,11 +6,13 @@ import {
   COMET_ICON_SRC,
   COMET_SCROLL_ICON_SRC,
   COMET_BOX_ICON_SRC,
+  VIP_TOKEN_COLOR,
   buildCometTooltip,
   buildFallenStarTooltip,
   buildCometScrollTooltip,
   buildFallenStarScrollTooltip,
   buildCometBoxTooltip,
+  buildVipTokenTooltip,
 } from '../items/forgeCosts'
 import type { ItemTooltipData } from '../items/itemTooltip'
 import type { ListableCurrencyType } from './useMarketplaceStore'
@@ -73,6 +75,7 @@ export function mailCurrencyLabel(type: MailCurrencyType): string {
   if (type === 'ascension_points') return 'Ascension Points'
   if (type === 'gold') return 'Gold'
   if (type === 'comet_box') return 'Comet Box'
+  if (type === 'vip_token') return 'VIP Token'
   return listableCurrencyLabel(type)
 }
 
@@ -81,6 +84,7 @@ export function mailCurrencyVisual(type: MailCurrencyType): ListableCurrencyVisu
   if (type === 'ascension_points') return { iconSrc: ASCENSION_POINTS_ICON_SRC, qualityColor: ASCENSION_POINTS_COLOR }
   if (type === 'gold') return { icon: '💰', qualityColor: GOLD_COLOR }
   if (type === 'comet_box') return { iconSrc: COMET_BOX_ICON_SRC, qualityColor: MATERIAL_COLOR }
+  if (type === 'vip_token') return { icon: '👑', qualityColor: VIP_TOKEN_COLOR }
   return listableCurrencyVisual(type)
 }
 
@@ -121,13 +125,15 @@ export function mailCurrencyTooltip(type: MailCurrencyType, amount?: number | nu
             }
           : type === 'comet_box'
             ? buildCometBoxTooltip()
-            : type === 'comet'
-              ? buildCometTooltip()
-              : type === 'fallen_star'
-                ? buildFallenStarTooltip()
-                : type === 'comet_scroll'
-                  ? buildCometScrollTooltip()
-                  : buildFallenStarScrollTooltip()
+            : type === 'vip_token'
+              ? buildVipTokenTooltip()
+              : type === 'comet'
+                ? buildCometTooltip()
+                : type === 'fallen_star'
+                  ? buildFallenStarTooltip()
+                  : type === 'comet_scroll'
+                    ? buildCometScrollTooltip()
+                    : buildFallenStarScrollTooltip()
 
   if (amount && amount > 1) {
     return { ...base, stats: [...(base.stats ?? []), `Amount: ${amount}`] }

@@ -552,6 +552,34 @@ export function buildCometBoxTooltip(): ItemTooltipData {
   }
 }
 
+// VIP Token (groundwork only, requested by the user) — same virtual-tile
+// pattern as Comet Box above (characters.vip_token_count, no per-unit DB
+// row). Consuming one adds VIP_TOKEN_DURATION_DAYS to characters.vip_expires_at
+// (see use_vip_token) — VIP itself grants no gameplay bonuses yet, this is
+// groundwork only. No real art yet (no Gem-style "user-supplied" asset
+// exists for this), so it uses a plain emoji icon, same as Lottery Ticket.
+export const VIP_TOKEN_DURATION_DAYS = 30
+export const VIP_TOKEN_COLOR = '#facc15'
+const VIP_TOKEN_DRAG_ID_PREFIX = 'vip-token:'
+
+export function vipTokenDragId(index: number): string {
+  return `${VIP_TOKEN_DRAG_ID_PREFIX}${index}`
+}
+
+export function isVipTokenDragId(id: string): boolean {
+  return id.startsWith(VIP_TOKEN_DRAG_ID_PREFIX)
+}
+
+export function buildVipTokenTooltip(): ItemTooltipData {
+  return {
+    title: 'VIP Token',
+    icon: '👑',
+    iconColor: VIP_TOKEN_COLOR,
+    lines: ['Lucky Lad reward'],
+    stats: [`Use to add ${VIP_TOKEN_DURATION_DAYS} days of VIP`],
+  }
+}
+
 // Gear's "Deposit as Composition" path (stage 4 of the Warehouse economy
 // redesign, 2026-07-31) — six separate, non-fungible per-slot-type point
 // pools (characters.gear_composition_points jsonb), distinct from the shared

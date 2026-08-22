@@ -11,20 +11,28 @@ interface CharacterState {
   // only ever written by promote_character (see usePromotionStore) —
   // hydrated on load, never sent back via a normal character save.
   promotionLevel: number
+  // VIP status (groundwork only, characters.vip_expires_at) — null means
+  // never VIP. Server-authoritative, only ever written by use_vip_token
+  // (see useBankStore.useVipToken) — hydrated on load, never sent back via
+  // a normal character save.
+  vipExpiresAt: string | null
   selectClass: (classId: ClassId) => void
   setPromotionLevel: (level: number) => void
+  setVipExpiresAt: (value: string | null) => void
 }
 
 export const useCharacterStore = create<CharacterState>((set) => ({
   selectedClassId: 'hunter',
   attributes: getAttributesForLevel('hunter', useProgressionStore.getState().level),
   promotionLevel: 0,
+  vipExpiresAt: null,
   selectClass: (classId) =>
     set({
       selectedClassId: classId,
       attributes: getAttributesForLevel(classId, useProgressionStore.getState().level),
     }),
   setPromotionLevel: (level) => set({ promotionLevel: level }),
+  setVipExpiresAt: (value) => set({ vipExpiresAt: value }),
 }))
 
 // Attributes are a pure function of (class, level) now (see classes.ts's

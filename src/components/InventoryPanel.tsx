@@ -28,11 +28,14 @@ import {
   COMET_SCROLL_ICON_SRC,
   COMET_BOX_ICON_SRC,
   COMET_BOX_REWARD_AMOUNT,
+  VIP_TOKEN_COLOR,
+  VIP_TOKEN_DURATION_DAYS,
   buildFallenStarScrollTooltip,
   buildFallenStarTooltip,
   buildCometScrollTooltip,
   buildCometTooltip,
   buildCometBoxTooltip,
+  buildVipTokenTooltip,
   buildStoneTooltip,
   buildMoneyBagTooltip,
   buildGemBagTooltip,
@@ -42,6 +45,7 @@ import {
   cometDragId,
   cometScrollDragId,
   cometBoxDragId,
+  vipTokenDragId,
   getStoneIconSrc,
   stoneDragId,
 } from '../game/items/forgeCosts'
@@ -92,6 +96,7 @@ type SelectedSlot =
   | { kind: 'currency'; dragId: string; currencyType: 'comet' | 'fallen_star' }
   | { kind: 'scroll'; dragId: string; currencyType: 'comet' | 'fallen_star' }
   | { kind: 'comet_box'; dragId: string }
+  | { kind: 'vip_token'; dragId: string }
   | null
 
 interface InventoryPanelProps {
@@ -193,9 +198,14 @@ export default function InventoryPanel({
   const cometScrolls = useCurrencyStore((state) => state.cometScrolls)
   const fallenStarScrolls = useCurrencyStore((state) => state.fallenStarScrolls)
   const cometBoxes = useCurrencyStore((state) => state.cometBoxes)
+  const vipTokens = useCurrencyStore((state) => state.vipTokens)
   const bundleScroll = useCurrencyStore((state) => state.bundleScroll)
   const unbundleScroll = useCurrencyStore((state) => state.unbundleScroll)
   const openCometBox = useBankStore((state) => state.openCometBox)
+  // Named consumeVipToken, not useVipToken -- eslint's react-hooks plugin
+  // treats any identifier starting with "use" as a hook, which would
+  // wrongly flag handleUseVipToken's plain async call to it below.
+  const consumeVipToken = useBankStore((state) => state.useVipToken)
   const characterId = useActiveCharacterStore((state) => state.characterId)
   const claimGearSnapshot = useGearSnapshotStore((state) => state.claimSnapshot)
   const showGearClaimPrompt = useGearClaimPromptStore((state) => state.show)
@@ -260,6 +270,12 @@ export default function InventoryPanel({
   const [cometBoxPopoverAnchorRect, setCometBoxPopoverAnchorRect] = useState<DOMRect | null>(null)
   const [cometBoxBusy, setCometBoxBusy] = useState(false)
   const [cometBoxError, setCometBoxError] = useState<string | null>(null)
+  // VIP Token "Use" popover (groundwork only) — same click-opened
+  // TooltipActionPopover shell as the Comet Box popover above, own state
+  // since VIP Token has its own single action (Use, no Bank/Bank All).
+  const [vipTokenPopoverAnchorRect, setVipTokenPopoverAnchorRect] = useState<DOMRect | null>(null)
+  const [vipTokenBusy, setVipTokenBusy] = useState(false)
+  const [vipTokenError, setVipTokenError] = useState<string | null>(null)
   // Money Bag / Gem Bag "Open" popover (Lucky Lad rewards expansion,
   // 2026-08-09) — same click-opened TooltipActionPopover shell as the Scroll
   // popover above, but takes precedence over equipPopoverEnabled/
@@ -301,6 +317,7 @@ export default function InventoryPanel({
       (!enableBankDeposit && bundlePopoverAnchorRect !== null) ||
       scrollPopoverAnchorRect !== null ||
       cometBoxPopoverAnchorRect !== null ||
+      vipTokenPopoverAnchorRect !== null ||
       bagPopoverAnchorRect !== null)
 
   const visiblePotionStacks = potionStacks.filter((stack) => stack.count > 0)
@@ -384,6 +401,12 @@ export default function InventoryPanel({
   const cometBoxShown = Math.min(cometBoxes, remainingAfterFallenStarScrolls)
   const cometBoxTiles = Array.from({ length: cometBoxShown }, (_, index) => ({ index, dragId: cometBoxDragId(index) }))
 
+  // VIP Token (groundwork only) — same virtual-tile shape as Comet Box
+  // above, allocated last in the same greedy budget chain.
+  const remainingAfterCometBoxes = Math.max(0, remainingAfterFallenStarScrolls - cometBoxTiles.length)
+  const vipTokenShown = Math.min(vipTokens, remainingAfterCometBoxes)
+  const vipTokenTiles = Array.from({ length: vipTokenShown }, (_, index) => ({ index, dragId: vipTokenDragId(index) }))
+
   const occupiedCount =
     stoneTiles.length +
     gemTiles.length +
@@ -392,6 +415,7 @@ export default function InventoryPanel({
     cometScrollTiles.length +
     fallenStarScrollTiles.length +
     cometBoxTiles.length +
+    vipTokenTiles.length +
     visiblePotionStacks.length +
     visibleItems.length
   const emptySlotCount = Math.max(0, INVENTORY_SLOT_CAP - occupiedCount)
@@ -435,7 +459,12 @@ export default function InventoryPanel({
   const selectedScrollType = selectedSlot?.kind === 'scroll' ? selectedSlot.currencyType : undefined
 
   const slotKey = (slot: NonNullable<SelectedSlot>): string =>
-    slot.kind === 'stone' || slot.kind === 'gem' || slot.kind === 'currency' || slot.kind === 'scroll' || slot.kind === 'comet_box'
+    slot.kind === 'stone' ||
+    slot.kind === 'gem' ||
+    slot.kind === 'currency' ||
+    slot.kind === 'scroll' ||
+    slot.kind === 'comet_box' ||
+    slot.kind === 'vip_token'
       ? slot.dragId
       : `${slot.kind}:${slot.id}`
 
@@ -488,6 +517,13 @@ export default function InventoryPanel({
   const closeCometBoxPopover = () => {
     setSelectedSlot(null)
     setCometBoxPopoverAnchorRect(null)
+  }
+
+  // VIP Token popover-only — dismiss action, also used after a successful
+  // Use from inside the popover.
+  const closeVipTokenPopover = () => {
+    setSelectedSlot(null)
+    setVipTokenPopoverAnchorRect(null)
   }
 
   // Bag popover-only — dismiss action, also used after a successful Open
@@ -920,6 +956,23 @@ export default function InventoryPanel({
     closeCometBoxPopover()
   }
 
+  const handleUseVipToken = async () => {
+    if (!characterId) {
+      return
+    }
+    setVipTokenError(null)
+    setVipTokenBusy(true)
+    const result = await consumeVipToken(characterId)
+    setVipTokenBusy(false)
+
+    if (!result.ok) {
+      setVipTokenError(result.error === 'not_enough_tokens' ? 'No VIP Tokens to use.' : "Couldn't use.")
+      return
+    }
+
+    closeVipTokenPopover()
+  }
+
   // Excludes anything with composition progress (+N) even at Normal quality,
   // since that's no longer junk. Also excludes anything with an unlocked
   // socket (even an empty one) — sockets cost real Fallen Stars (weapons) or
@@ -997,6 +1050,7 @@ export default function InventoryPanel({
 
           {scrollError && <span className="text-xs text-amber-400">{scrollError}</span>}
           {cometBoxError && <span className="text-xs text-amber-400">{cometBoxError}</span>}
+          {vipTokenError && <span className="text-xs text-amber-400">{vipTokenError}</span>}
         </div>
 
         {/* overflow-x-auto is a defensive backstop, not the primary fix — the
@@ -1411,6 +1465,48 @@ export default function InventoryPanel({
             )
           })}
 
+          {vipTokenTiles.map(({ dragId }) => {
+            if (reservedItemIds.includes(dragId)) {
+              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+            }
+
+            const isSelected = selectedSlot?.kind === 'vip_token' && selectedSlot.dragId === dragId
+
+            const commonProps = {
+              slotId: dragId,
+              filled: true as const,
+              sizeClassName: SLOT_SIZE_CLASS,
+              icon: '👑',
+              qualityColor: VIP_TOKEN_COLOR,
+              label: 'VIP Token',
+              tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildVipTokenTooltip(),
+              selected: isSelected,
+            }
+
+            const vipTokenSlot = onTileDrop ? (
+              <DraggableInventorySlot
+                key={dragId}
+                {...commonProps}
+                dragEnabled
+                dragPayload={{ id: dragId, icon: '👑', qualityColor: VIP_TOKEN_COLOR }}
+                onDrop={handleTileDrop}
+                onClick={() => toggleSlot({ kind: 'vip_token', dragId })}
+              />
+            ) : (
+              <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'vip_token', dragId })} />
+            )
+
+            return (
+              <div
+                key={dragId}
+                data-tooltip-action-anchor
+                onClick={(event) => setVipTokenPopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
+              >
+                {vipTokenSlot}
+              </div>
+            )
+          })}
+
           {visibleItems.map((item) => {
             if (reservedItemIds.includes(item.id)) {
               return <InventorySlot key={item.id} slotId={item.id} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
@@ -1666,6 +1762,21 @@ export default function InventoryPanel({
             },
           ]}
           onClose={closeCometBoxPopover}
+        />
+      )}
+
+      {selectedSlot?.kind === 'vip_token' && vipTokenPopoverAnchorRect && (
+        <TooltipActionPopover
+          anchorRect={vipTokenPopoverAnchorRect}
+          tooltip={buildVipTokenTooltip()}
+          actions={[
+            {
+              label: vipTokenBusy ? 'Using…' : `Use (+${VIP_TOKEN_DURATION_DAYS}d VIP)`,
+              onClick: () => void handleUseVipToken(),
+              disabled: vipTokenBusy,
+            },
+          ]}
+          onClose={closeVipTokenPopover}
         />
       )}
 

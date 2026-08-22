@@ -12,6 +12,10 @@ export interface ChatMessage {
   characterName: string
   message: string
   createdAt: string
+  // VIP badge (groundwork only) — a snapshot of whether the sender was VIP
+  // at send time (chat_messages.is_vip, set by send_chat_message), not a
+  // live lookup. See ChatOverlay.tsx for where this renders.
+  isVip: boolean
 }
 
 const HISTORY_LIMIT = 50
@@ -27,6 +31,7 @@ function toChatMessage(row: Record<string, unknown>): ChatMessage {
     characterName: row.character_name as string,
     message: row.message as string,
     createdAt: row.created_at as string,
+    isVip: Boolean(row.is_vip),
   }
 }
 
@@ -86,7 +91,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     const { data, error } = await supabase
       .from('chat_messages')
-      .select('id, character_name, message, created_at')
+      .select('id, character_name, message, created_at, is_vip')
       .order('created_at', { ascending: false })
       .limit(HISTORY_LIMIT)
 

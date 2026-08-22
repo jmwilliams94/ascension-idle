@@ -30,6 +30,8 @@ import {
   buildStoneTooltip,
   buildMoneyBagTooltip,
   buildGemBagTooltip,
+  buildVipTokenTooltip,
+  VIP_TOKEN_COLOR,
   MONEY_BAG_GOLD_BY_CLASS,
 } from '../game/items/forgeCosts'
 import { GEM_TYPES, formatGemTierLabel, getGemIconSrc, getGemTierColor, buildGemTooltip, type GemTier, type GemTypeId } from '../game/items/gemTypes'
@@ -100,6 +102,8 @@ function rewardLabel(reward: LuckyReward): string {
       return 'Ascended Gear'
     case 'moon_box':
       return 'Lunar Chest'
+    case 'vip_token':
+      return 'VIP Token'
   }
 }
 
@@ -142,6 +146,8 @@ function rewardVisual(reward: LuckyReward): { icon?: string; iconSrc?: string; c
       return { icon: '🗡️', color: QUALITY_COLORS.ascended }
     case 'moon_box':
       return { icon: '📦', iconSrc: getGearIconSrc('Lunar Chest'), color: MATERIAL_COLOR }
+    case 'vip_token':
+      return { icon: '👑', color: VIP_TOKEN_COLOR }
   }
 }
 
@@ -208,6 +214,8 @@ function buildLuckyRewardTooltip(reward: LuckyReward): ItemTooltipData {
       }
     case 'moon_box':
       return { title: 'Lunar Chest', icon: '📦', iconColor: MATERIAL_COLOR, lines: ['Lucky Lad reward'] }
+    case 'vip_token':
+      return buildVipTokenTooltip()
   }
 }
 

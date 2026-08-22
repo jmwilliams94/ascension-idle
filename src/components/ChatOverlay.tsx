@@ -16,6 +16,9 @@ interface FeedItem {
   // kind: 'announcement' -- picks the right icon via ANNOUNCEMENT_ICONS
   // instead of a flat 📣 for everything.
   announcementKind?: string
+  // VIP badge (groundwork only) -- only ever set for kind: 'chat', sourced
+  // from ChatMessage.isVip (a send-time snapshot, see useChatStore.ts).
+  isVip?: boolean
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -92,6 +95,7 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
       characterName: m.characterName,
       message: m.message,
       kind: 'chat',
+      isVip: m.isVip,
     }))
     // Deduped by id, not concatenated -- a recent milestone can legitimately
     // be present in both announcementEntries (the routine last-10) and
@@ -189,6 +193,11 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
                         : 'border-slate-700 bg-slate-800/60 text-slate-300 hover:border-slate-500 hover:text-slate-100'
                     }`}
                   >
+                    {item.isVip && (
+                      <span aria-label="VIP" title="VIP" className="mr-1">
+                        👑
+                      </span>
+                    )}
                     {item.characterName}
                   </button>
                   <span className="break-words">{item.message}</span>
