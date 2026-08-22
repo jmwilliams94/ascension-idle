@@ -556,10 +556,11 @@ export function buildCometBoxTooltip(): ItemTooltipData {
 // pattern as Comet Box above (characters.vip_token_count, no per-unit DB
 // row). Consuming one adds VIP_TOKEN_DURATION_DAYS to characters.vip_expires_at
 // (see use_vip_token) — VIP itself grants no gameplay bonuses yet, this is
-// groundwork only. No real art yet (no Gem-style "user-supplied" asset
-// exists for this), so it uses a plain emoji icon, same as Lottery Ticket.
+// groundwork only. Real art (2026-09-30), same iconSrc-over-icon priority as
+// COMET_ICON_SRC/FALLEN_STAR_ICON_SRC above.
 export const VIP_TOKEN_DURATION_DAYS = 30
 export const VIP_TOKEN_COLOR = '#facc15'
+export const VIP_TOKEN_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/vip-token.png`
 const VIP_TOKEN_DRAG_ID_PREFIX = 'vip-token:'
 
 export function vipTokenDragId(index: number): string {
@@ -573,7 +574,7 @@ export function isVipTokenDragId(id: string): boolean {
 export function buildVipTokenTooltip(): ItemTooltipData {
   return {
     title: 'VIP Token',
-    icon: '👑',
+    iconSrc: VIP_TOKEN_ICON_SRC,
     iconColor: VIP_TOKEN_COLOR,
     lines: ['Lucky Lad reward'],
     stats: [`Use to add ${VIP_TOKEN_DURATION_DAYS} days of VIP`],

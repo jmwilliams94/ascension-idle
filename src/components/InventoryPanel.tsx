@@ -30,6 +30,7 @@ import {
   COMET_BOX_REWARD_AMOUNT,
   VIP_TOKEN_COLOR,
   VIP_TOKEN_DURATION_DAYS,
+  VIP_TOKEN_ICON_SRC,
   buildFallenStarScrollTooltip,
   buildFallenStarTooltip,
   buildCometScrollTooltip,
@@ -1477,6 +1478,7 @@ export default function InventoryPanel({
               filled: true as const,
               sizeClassName: SLOT_SIZE_CLASS,
               icon: '👑',
+              iconSrc: VIP_TOKEN_ICON_SRC,
               qualityColor: VIP_TOKEN_COLOR,
               label: 'VIP Token',
               tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildVipTokenTooltip(),
@@ -1488,7 +1490,7 @@ export default function InventoryPanel({
                 key={dragId}
                 {...commonProps}
                 dragEnabled
-                dragPayload={{ id: dragId, icon: '👑', qualityColor: VIP_TOKEN_COLOR }}
+                dragPayload={{ id: dragId, icon: '👑', iconSrc: VIP_TOKEN_ICON_SRC, qualityColor: VIP_TOKEN_COLOR }}
                 onDrop={handleTileDrop}
                 onClick={() => toggleSlot({ kind: 'vip_token', dragId })}
               />

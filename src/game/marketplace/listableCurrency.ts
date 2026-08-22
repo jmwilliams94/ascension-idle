@@ -7,6 +7,7 @@ import {
   COMET_SCROLL_ICON_SRC,
   COMET_BOX_ICON_SRC,
   VIP_TOKEN_COLOR,
+  VIP_TOKEN_ICON_SRC,
   buildCometTooltip,
   buildFallenStarTooltip,
   buildCometScrollTooltip,
@@ -66,6 +67,10 @@ const ASCENSION_POINTS_COLOR = '#a855f7'
 // per-file pattern rather than centralizing it) — fixed 2026-08-13, reported
 // by the user: mail tiles were showing a 🎖️ medal emoji instead of this.
 const ASCENSION_POINTS_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/ascension-points.png`
+// Real art (2026-09-30), supersedes the 🎫 emoji everywhere a Lottery Ticket
+// tile renders — same per-file local-const pattern as ASCENSION_POINTS_ICON_SRC
+// above (Lottery Ticket is Mail/LuckyLad-only, never marketplace-listable).
+const LOTTERY_TICKET_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/lottery-ticket.png`
 
 // Gold's own color, matching ExpBar.tsx's top-HUD gold readout convention.
 const GOLD_COLOR = '#F0B87A'
@@ -80,11 +85,11 @@ export function mailCurrencyLabel(type: MailCurrencyType): string {
 }
 
 export function mailCurrencyVisual(type: MailCurrencyType): ListableCurrencyVisual {
-  if (type === 'lottery_ticket') return { icon: '🎫', qualityColor: MATERIAL_COLOR }
+  if (type === 'lottery_ticket') return { iconSrc: LOTTERY_TICKET_ICON_SRC, qualityColor: MATERIAL_COLOR }
   if (type === 'ascension_points') return { iconSrc: ASCENSION_POINTS_ICON_SRC, qualityColor: ASCENSION_POINTS_COLOR }
   if (type === 'gold') return { icon: '💰', qualityColor: GOLD_COLOR }
   if (type === 'comet_box') return { iconSrc: COMET_BOX_ICON_SRC, qualityColor: MATERIAL_COLOR }
-  if (type === 'vip_token') return { icon: '👑', qualityColor: VIP_TOKEN_COLOR }
+  if (type === 'vip_token') return { iconSrc: VIP_TOKEN_ICON_SRC, qualityColor: VIP_TOKEN_COLOR }
   return listableCurrencyVisual(type)
 }
 
@@ -103,7 +108,7 @@ export function mailCurrencyTooltip(type: MailCurrencyType, amount?: number | nu
     type === 'lottery_ticket'
       ? {
           title: 'Lottery Ticket',
-          icon: '🎫',
+          iconSrc: LOTTERY_TICKET_ICON_SRC,
           iconColor: MATERIAL_COLOR,
           lines: ['LuckyLad'],
           stats: ['An extra draw at LuckyLad'],
