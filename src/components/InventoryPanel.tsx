@@ -264,6 +264,15 @@ export default function InventoryPanel({
   const [bagPopoverAnchorRect, setBagPopoverAnchorRect] = useState<DOMRect | null>(null)
   const [bagBusy, setBagBusy] = useState(false)
   const [bagError, setBagError] = useState<string | null>(null)
+  // Pickaxe (2026-08-22, requested by the user) — same "own TooltipActionPopover,
+  // takes precedence over equipPopoverEnabled" shape as the Money Bag/Gem Bag
+  // popover above. A Pickaxe is never equippable via GearEquipPopover's normal
+  // mechanism (it's always-equipped through characters.equipped_pickaxe_id
+  // instead, see the Mining design doc) and must never be swept up by "Sell All
+  // Normal" (see normalJunkItems below), but the user still wants a deliberate,
+  // individual way to sell it — this popover is that one reachable path,
+  // regardless of which InventoryPanel instance renders it.
+  const [pickaxePopoverAnchorRect, setPickaxePopoverAnchorRect] = useState<DOMRect | null>(null)
   const [bankDepositBusy, setBankDepositBusy] = useState(false)
   const [bankDepositError, setBankDepositError] = useState<string | null>(null)
   const [sellBusy, setSellBusy] = useState(false)
@@ -297,7 +306,8 @@ export default function InventoryPanel({
       (!enableBankDeposit && bundlePopoverAnchorRect !== null) ||
       scrollPopoverAnchorRect !== null ||
       cometBoxPopoverAnchorRect !== null ||
-      bagPopoverAnchorRect !== null)
+      bagPopoverAnchorRect !== null ||
+      pickaxePopoverAnchorRect !== null)
 
   const visiblePotionStacks = potionStacks.filter((stack) => stack.count > 0)
 
@@ -491,6 +501,12 @@ export default function InventoryPanel({
   const closeBagPopover = () => {
     setSelectedSlot(null)
     setBagPopoverAnchorRect(null)
+  }
+
+  // Pickaxe popover-only — dismiss action, also used after a successful Sell.
+  const closePickaxePopover = () => {
+    setSelectedSlot(null)
+    setPickaxePopoverAnchorRect(null)
   }
 
   // Every enableBankDeposit handler below follows the same shape: deposit,
@@ -888,10 +904,20 @@ export default function InventoryPanel({
   // Excludes anything with composition progress (+N) even at Normal quality,
   // since that's no longer junk. Also excludes anything with an unlocked
   // socket (even an empty one) — sockets cost real Fallen Stars (weapons) or
-  // a rare RNG proc (armor) to unlock, so that gear isn't junk either.
-  const normalJunkItems = visibleItems.filter(
-    (item) => item.quality_tier === 'normal' && item.composition_level === 0 && item.sockets.length === 0
-  )
+  // a rare RNG proc (armor) to unlock, so that gear isn't junk either. And
+  // excludes the Pickaxe (2026-08-22, requested by the user) — it's always
+  // quality_tier 'normal' by design (see the Mining doc) and would otherwise
+  // read as junk to this filter, but it's the character's only one and
+  // losing it means re-buying from the Shop and starting its tier/
+  // composition progress over; it must only ever be sold deliberately, via
+  // its own popover below.
+  const normalJunkItems = visibleItems.filter((item) => {
+    if (item.quality_tier !== 'normal' || item.composition_level !== 0 || item.sockets.length !== 0) {
+      return false
+    }
+    const template = templates.find((entry) => entry.id === item.template_id)
+    return template?.item_family !== 'pickaxe'
+  })
 
   const normalJunkTotal = normalJunkItems.reduce((sum, item) => {
     const template = templates.find((entry) => entry.id === item.template_id)
@@ -1401,6 +1427,13 @@ export default function InventoryPanel({
                 : buildGemBagTooltip()
               : null
 
+            // Pickaxe (2026-08-22, requested by the user) — not equippable via
+            // GearEquipPopover's normal mechanism, must never be swept up by
+            // "Sell All Normal" (normalJunkItems below), but still needs a
+            // deliberate individual Sell path — see the state declarations
+            // above for the full reasoning.
+            const isPickaxeItem = template?.item_family === 'pickaxe'
+
             const commonProps = {
               slotId: item.id,
               filled: true as const,
@@ -1475,6 +1508,22 @@ export default function InventoryPanel({
                   key={item.id}
                   data-tooltip-action-anchor
                   onClick={(event) => setBagPopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
+                >
+                  {slot}
+                </div>
+              )
+            }
+
+            // Pickaxe's own popover — same precedence-over-equipPopoverEnabled
+            // shape as the bag branch above, for the same reason (this item
+            // has no meaningful action there — GearEquipPopover's Equip button
+            // would just show "Not wearable yet" forever).
+            if (isPickaxeItem) {
+              return (
+                <div
+                  key={item.id}
+                  data-tooltip-action-anchor
+                  onClick={(event) => setPickaxePopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
                 >
                   {slot}
                 </div>
@@ -1665,6 +1714,22 @@ export default function InventoryPanel({
           />
         )}
       {bagError && <p className="text-xs text-amber-400">{bagError}</p>}
+
+      {selectedItem && pickaxePopoverAnchorRect && selectedTemplate?.item_family === 'pickaxe' && (
+        <TooltipActionPopover
+          anchorRect={pickaxePopoverAnchorRect}
+          tooltip={buildGearTooltip(selectedItem, selectedTemplate)}
+          actions={[
+            {
+              label: sellBusy ? 'Selling…' : `Sell (${previewSellPrice(selectedTemplate.price, selectedItem.quality_tier)} gold)`,
+              onClick: () => void handleSell(selectedItem),
+              disabled: sellBusy,
+            },
+          ]}
+          onClose={closePickaxePopover}
+        />
+      )}
+      {sellError && pickaxePopoverAnchorRect && <p className="text-xs text-amber-400">{sellError}</p>}
 
       {selectedPotionStack && (
         <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">

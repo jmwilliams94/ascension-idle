@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.103.7",
+    "date": "2026-08-22",
+    "changes": [
+      "Pickaxe can no longer be accidentally sold via \"Sell All Normal\" — it now has its own dedicated Sell button instead"
+    ]
+  },
+  {
     "version": "1.103.6",
     "date": "2026-08-22",
     "changes": [
