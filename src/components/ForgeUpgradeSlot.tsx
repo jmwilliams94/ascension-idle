@@ -16,6 +16,8 @@ interface ForgeUpgradeSlotProps {
   item: ItemInstance | null
   template: ItemTemplate | null
   onRemove: () => void
+  hold?: boolean
+  onHoldChange?: (hold: boolean) => void
 }
 
 // The drop target for Forge's drag-and-drop flow (see dragDrop.tsx) — its
@@ -27,7 +29,7 @@ interface ForgeUpgradeSlotProps {
 // regardless of where the drag ends, same as a "Remove" click. Reuses
 // InventorySlot (rather than its own bespoke tile markup) so the universal
 // hover tooltip works here too.
-export default function ForgeUpgradeSlot({ item, template, onRemove }: ForgeUpgradeSlotProps) {
+export default function ForgeUpgradeSlot({ item, template, onRemove, hold, onHoldChange }: ForgeUpgradeSlotProps) {
   const icon = getItemIcon(template?.slot_type)
   const iconSrc = getGearIconSrc(template?.name)
   const drag = useDraggableTile({
@@ -69,6 +71,13 @@ export default function ForgeUpgradeSlot({ item, template, onRemove }: ForgeUpgr
           onPointerCancel={drag.onPointerCancel}
         />
       </div>
+
+      {onHoldChange && (
+        <label className="flex items-center gap-1.5 text-[10px] text-slate-500">
+          <input type="checkbox" checked={Boolean(hold)} onChange={(event) => onHoldChange(event.target.checked)} />
+          Hold?
+        </label>
+      )}
 
       {item && (
         <div className="text-center">

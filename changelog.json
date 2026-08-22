@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.106.2",
+    "date": "2026-08-22",
+    "changes": [
+      "Added a \"Hold?\" checkbox to the Forge's Upgrade Slot — unticked, a completed upgrade returns your item to Inventory immediately; ticked, the item and material stay put so you can fire off more upgrades in a row without re-dragging"
+    ]
+  },
+  {
     "version": "1.106.1",
     "date": "2026-08-22",
     "changes": [

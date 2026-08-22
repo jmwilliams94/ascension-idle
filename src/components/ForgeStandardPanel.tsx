@@ -95,6 +95,7 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [materialEntries, setMaterialEntries] = useState<MaterialEntry[]>([])
   const [attemptResult, setAttemptResult] = useState<AttemptResult | null>(null)
+  const [hold, setHold] = useState(false)
 
   const selectedItem = items.find((item) => item.id === selectedItemId) ?? null
   const selectedTemplate = selectedItem ? (templates.find((t) => t.id === selectedItem.template_id) ?? null) : null
@@ -116,14 +117,7 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
       return undefined
     }
 
-    const timeout = setTimeout(() => {
-      setAttemptResult(null)
-      if (attemptResult.success) {
-        setSelectedItemId(null)
-        setMaterialEntries([])
-      }
-    }, RESULT_DISPLAY_MS)
-
+    const timeout = setTimeout(() => setAttemptResult(null), RESULT_DISPLAY_MS)
     return () => clearTimeout(timeout)
   }, [attemptResult])
 
@@ -284,10 +278,20 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
       return
     }
 
+    const upgraded = Boolean(result.upgraded)
     setAttemptResult({
-      success: Boolean(result.upgraded),
-      message: result.upgraded ? 'Upgrade succeeded!' : 'Upgrade failed — materials were still spent.',
+      success: upgraded,
+      message: upgraded ? 'Upgrade succeeded!' : 'Upgrade failed — materials were still spent.',
     })
+
+    // Held: item + material stay put (indefinitely, until Remove or a new
+    // drop) so successive upgrade rolls can be fired without re-dragging.
+    // Not held: return the item to the Inventory grid immediately rather
+    // than waiting out the result banner's display timer.
+    if (upgraded && !hold) {
+      setSelectedItemId(null)
+      setMaterialEntries([])
+    }
   }
 
   return (
@@ -304,7 +308,7 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
         }
       >
         <div className="flex items-start justify-center gap-6">
-          <ForgeUpgradeSlot item={selectedItem} template={selectedTemplate} onRemove={handleRemove} />
+          <ForgeUpgradeSlot item={selectedItem} template={selectedTemplate} onRemove={handleRemove} hold={hold} onHoldChange={setHold} />
           <ForgeMaterialSlot entries={materialEntries} templates={templates} onRemoveEntry={handleRemoveMaterial} />
           <ForgePreviewSlot previewItem={previewItem} previewTemplate={previewTemplate} slotId="forge-standard-preview" />
         </div>
