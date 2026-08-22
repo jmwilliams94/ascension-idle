@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.105.4",
+    "date": "2026-08-22",
+    "changes": [
+      "The Shop now only sells the base Pickaxe — higher tiers come only from Tier Up",
+      "Tier Up now upgrades the Pickaxe's quality in place instead of swapping it for a differently-named item",
+      "Pickaxe's quality can no longer be changed via the standard Forge Quality Upgrade — Tier Up is the only way"
+    ]
+  },
+  {
     "version": "1.105.3",
     "date": "2026-08-22",
     "changes": [

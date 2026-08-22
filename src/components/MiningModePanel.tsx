@@ -14,6 +14,7 @@ import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { previewPickaxeTierUpgradeCost } from '../game/mining/pickaxeCosts'
 import { tierUpgradePickaxe } from '../game/mining/pickaxeActions'
+import { formatItemDisplayName } from '../game/items/equipmentBonus'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { useGemStore } from '../game/items/useGemStore'
@@ -60,8 +61,12 @@ export default function MiningModePanel({ characterId }: { characterId: string }
   const pickaxeItem = weaponId ? items.find((item) => item.id === weaponId) : undefined
   const pickaxeTemplate = pickaxeItem ? templates.find((t) => t.id === pickaxeItem.template_id) : undefined
   const equipped = Boolean(pickaxeTemplate && pickaxeTemplate.item_family === 'pickaxe')
-  const tierName = equipped ? pickaxeTemplate!.name : 'Pickaxe'
-  const compositionLevel = equipped ? pickaxeItem!.composition_level : 0
+  // Tier Up bumps quality_tier directly now (2026-09-30, requested by the
+  // user — supersedes an earlier "5 separate templates" design), so the
+  // display name uses the same qualityTier-prefix convention every other
+  // gear tooltip does ("Tempered Pickaxe", plus a "(+N)" composition suffix)
+  // rather than a raw template name.
+  const displayName = equipped ? formatItemDisplayName(pickaxeTemplate!.name, pickaxeItem!.quality_tier, pickaxeItem!.composition_level) : 'Pickaxe'
   const ascendedGemType = useCharacterRecordStore((state) => state.pickaxeAscendedGemType) as GemTypeId | null
 
   const gold = useProgressionStore((state) => state.gold)
@@ -99,7 +104,7 @@ export default function MiningModePanel({ characterId }: { characterId: string }
     }
   }
 
-  const cost = previewPickaxeTierUpgradeCost(tierName, ascendedGemType)
+  const cost = previewPickaxeTierUpgradeCost(pickaxeItem?.quality_tier ?? 'normal', ascendedGemType)
   const canAffordGold = !cost || gold >= cost.goldCost
   const canAffordGems = !cost || cost.gemIds.every((gemId) => gemCount(gems, gemId, cost.gemTier) >= cost.gemAmountEach)
   const canAffordTierUp = canAffordGold && canAffordGems
@@ -154,10 +159,7 @@ export default function MiningModePanel({ characterId }: { characterId: string }
           </p>
         ) : (
           <>
-            <p className="mt-2 text-sm font-medium text-slate-200">
-              {tierName}
-              {compositionLevel > 0 ? ` (+${compositionLevel})` : ''}
-            </p>
+            <p className="mt-2 text-sm font-medium text-slate-200">{displayName}</p>
 
             {cost ? (
               <>

@@ -55,11 +55,9 @@ Deno.serve(async (req) => {
 })
 
 // ---------------------------------------------------------------------------
-// Mirrors src/game/items/equipmentBonus.ts — pickaxe quality_tier is always
-// 'normal' (tier progress lives in which template it points at, see the
-// Pickaxe design note in the schema migration), so QUALITY_STAT_MULTIPLIERS
-// is really only here for correctness/future-proofing, not because it ever
-// does anything today (multiplier['normal'] === 1).
+// Mirrors src/game/items/equipmentBonus.ts — pickaxe_tier_upgrade (SQL) bumps
+// a Pickaxe's real quality_tier directly (2026-09-30, requested by the user),
+// so this actually scales attack now, same as any other gear's quality tier.
 // ---------------------------------------------------------------------------
 const QUALITY_STAT_MULTIPLIERS: Record<string, number> = {
   normal: 1,
@@ -150,6 +148,7 @@ interface CharacterSnapshot {
 interface PickaxeSnapshot {
   id: string
   template_id: string
+  quality_tier: string
   composition_level: number
   physical_attack: number
 }
@@ -271,10 +270,11 @@ async function handleResolveMining(req: Request): Promise<Response> {
 
     const pickaxe = gathered.pickaxe
     if (!pickaxe) {
-      // Expected business state (never bought a Pickaxe yet), not a server
-      // error — default 200 status, same treatment world-boss-attack gives
-      // 'quiver_required'. The client pre-disables Mine/Tier Up once
-      // usePickaxeStore.itemId is null, so this is a defense-in-depth path.
+      // Expected business state (nothing pickaxe-family equipped in the
+      // Main Hand weapon slot), not a server error — default 200 status,
+      // same treatment world-boss-attack gives 'quiver_required'. The
+      // client pre-disables Mine/Tier Up in that case too, so this is a
+      // defense-in-depth path.
       await releaseClaim('no_pickaxe')
       return json({ ok: false, error: 'no_pickaxe' })
     }
@@ -284,11 +284,13 @@ async function handleResolveMining(req: Request): Promise<Response> {
     const elapsedMs = Math.min(Math.max(claimedMs - lastResolvedMs, 0), MINING_AFK_CAP_MS)
 
     // No class/attributes/other-equipped-gear involved at all — deliberately
-    // "none of the user's equipped gear" per the design spec. Quality tier is
-    // always 'normal' for a Pickaxe (multiplier 1), composition bonus uses
-    // the same flat 5%/tier-of-raw-base-stat formula every other gear slot
-    // uses.
-    const scaledAttack = Math.round(pickaxe.physical_attack * (QUALITY_STAT_MULTIPLIERS.normal ?? 1))
+    // "none of the user's equipped gear" per the design spec. Quality tier
+    // genuinely varies now (2026-09-30, requested by the user — Tier Up
+    // bumps it directly instead of swapping templates), so it's read off the
+    // real equipped item rather than assumed 'normal'. Composition bonus
+    // uses the same flat 5%/tier-of-raw-base-stat formula every other gear
+    // slot uses.
+    const scaledAttack = Math.round(pickaxe.physical_attack * (QUALITY_STAT_MULTIPLIERS[pickaxe.quality_tier] ?? 1))
     const compositionBonus = Math.round(pickaxe.physical_attack * COMPOSITION_BONUS_PCT_PER_TIER * pickaxe.composition_level)
     const attackMidpoint = scaledAttack + compositionBonus
 
