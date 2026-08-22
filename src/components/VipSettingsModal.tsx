@@ -61,26 +61,24 @@ export default function VipSettingsModal() {
         </div>
 
         <div className="space-y-4">
-          <div className="flex items-start justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/40 p-3">
-            <div>
+          <div className="space-y-1 rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+            <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-medium text-slate-100">Auto-Sell Ore</p>
-              <p className="text-[11px] text-slate-500">Sells Ore for gold as it's mined, so it never fills up your Inventory.</p>
+              <ToggleSwitch checked={settings.autoSellOre} onChange={(checked) => void updateSettings({ autoSellOre: checked })} label="Auto-Sell Ore" />
             </div>
-            <ToggleSwitch checked={settings.autoSellOre} onChange={(checked) => void updateSettings({ autoSellOre: checked })} label="Auto-Sell Ore" />
+            <p className="text-[11px] text-slate-500">Sells Ore for gold as it's mined, so it never fills up your Inventory.</p>
           </div>
 
           <div className="space-y-2 rounded-xl border border-slate-800 bg-slate-950/40 p-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium text-slate-100">Auto-Salvage Quality Gear</p>
-                <p className="text-[11px] text-slate-500">Salvages dropped gear at or above the chosen quality for Ascension Points.</p>
-              </div>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-medium text-slate-100">Auto-Salvage Quality Gear</p>
               <ToggleSwitch
                 checked={settings.autoSalvage.enabled}
                 onChange={(checked) => void updateSettings({ autoSalvage: { ...settings.autoSalvage, enabled: checked } })}
                 label="Auto-Salvage Quality Gear"
               />
             </div>
+            <p className="text-[11px] text-slate-500">Salvages dropped gear at or above the chosen quality for Ascension Points.</p>
             {settings.autoSalvage.enabled && (
               <label className="flex items-center gap-2 text-xs text-slate-400">
                 Minimum quality:
@@ -102,20 +100,18 @@ export default function VipSettingsModal() {
           </div>
 
           <div className="space-y-2 rounded-xl border border-slate-800 bg-slate-950/40 p-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium text-slate-100">Auto-Bank +N Gear</p>
-                <p className="text-[11px] text-slate-500">
-                  Liquidates gear at or above the chosen Composition level into that slot's Gear Points pool. This destroys the
-                  item — same as the Bank tab's manual "Bank" action, not physical storage.
-                </p>
-              </div>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-medium text-slate-100">Auto-Bank +N Gear</p>
               <ToggleSwitch
                 checked={settings.autoBank.enabled}
                 onChange={(checked) => void updateSettings({ autoBank: { ...settings.autoBank, enabled: checked } })}
                 label="Auto-Bank +N Gear"
               />
             </div>
+            <p className="text-[11px] text-slate-500">
+              Liquidates gear at or above the chosen Composition level into that slot's Gear Points pool. This destroys the item
+              — same as the Bank tab's manual "Bank" action, not physical storage.
+            </p>
             {settings.autoBank.enabled && (
               <label className="flex items-center gap-2 text-xs text-slate-400">
                 Minimum Composition level:
