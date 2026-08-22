@@ -8,6 +8,7 @@ import { useLootHoldingModalStore } from '../game/items/useLootHoldingModalStore
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { ENEMY_TYPES } from '../game/zones/zoneData'
 import type { VipAutomationSummary } from '../game/vip/vipAutomationSummary'
+import { formatGoldAmount } from '../game/stats/formatGold'
 
 function formatDuration(ms: number): string {
   const totalMinutes = Math.round(ms / 60000)
@@ -16,33 +17,51 @@ function formatDuration(ms: number): string {
   return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
 }
 
+// One "Auto-Salvaging / +21 AP" row within VipAutomationSummarySection below.
+function VipAutomationRow({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return (
+    <div>
+      <p className="text-xs text-slate-400">{label}</p>
+      <p className="text-sm font-semibold text-amber-200">
+        {value} <span className="font-normal text-slate-500">{detail}</span>
+      </p>
+    </div>
+  )
+}
+
 // Shown below either mode's own stat grid when the away-window had any VIP
 // automation activity (see runVipAutomationPass.ts) — the "breakdown of what
 // auto-sold" the user asked for after a real bug where Ore sat unsold in
-// Loot Holding with nothing telling them why.
+// Loot Holding with nothing telling them why. Each action gets its own
+// labeled row (requested by the user, after the first pass's bulleted-
+// sentence version) rather than a single line of prose.
 function VipAutomationSummarySection({ summary }: { summary: VipAutomationSummary }) {
   return (
-    <div className="space-y-1 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
-      <p className="font-semibold text-amber-300">👑 VIP Automations</p>
-      <ul className="space-y-0.5 text-slate-300">
-        {summary.oreSoldCount > 0 && (
-          <li>
-            Auto-sold {summary.oreSoldCount} Ore for {summary.goldGained.toLocaleString()} gold
-          </li>
-        )}
+    <div className="space-y-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+      <p className="text-sm font-semibold text-amber-300">👑 VIP Automations</p>
+      <div className="space-y-2.5">
         {summary.itemsSalvagedCount > 0 && (
-          <li>
-            Auto-salvaged {summary.itemsSalvagedCount} item{summary.itemsSalvagedCount === 1 ? '' : 's'} for {summary.apGained} Ascension
-            Point{summary.apGained === 1 ? '' : 's'}
-          </li>
+          <VipAutomationRow
+            label="Auto-Salvaging"
+            value={`+${summary.apGained} AP`}
+            detail={`(${summary.itemsSalvagedCount} item${summary.itemsSalvagedCount === 1 ? '' : 's'})`}
+          />
+        )}
+        {summary.oreSoldCount > 0 && (
+          <VipAutomationRow
+            label="Auto-Selling"
+            value={`${formatGoldAmount(summary.goldGained)} gold`}
+            detail={`(${summary.oreSoldCount} Ore)`}
+          />
         )}
         {summary.itemsBankedCount > 0 && (
-          <li>
-            Auto-banked {summary.itemsBankedCount} item{summary.itemsBankedCount === 1 ? '' : 's'} (+{summary.compositionPointsGained}{' '}
-            Composition Points)
-          </li>
+          <VipAutomationRow
+            label="Auto-Banking"
+            value={`+${summary.compositionPointsGained} Composition Points`}
+            detail={`(${summary.itemsBankedCount} item${summary.itemsBankedCount === 1 ? '' : 's'})`}
+          />
         )}
-      </ul>
+      </div>
     </div>
   )
 }

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.108.2",
+    "date": "2026-10-01",
+    "changes": [
+      "The VIP Automations breakdown in the welcome-back popup now shows each action (Auto-Salvaging, Auto-Selling, Auto-Banking) in its own clear row instead of a single sentence"
+    ]
+  },
+  {
     "version": "1.108.1",
     "date": "2026-10-01",
     "changes": [
