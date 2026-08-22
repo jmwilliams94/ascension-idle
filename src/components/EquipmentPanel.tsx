@@ -4,7 +4,7 @@ import { AscensionCard } from './ui/AscensionCard'
 import { Button } from './ui/Button'
 import {
   buildGearTooltip,
-  computeCharacterGearScore,
+  computeGearScoreFromSnapshots,
   formatBaseStats,
   formatItemDisplayName,
   formatItemLevel,
@@ -16,6 +16,7 @@ import {
 import { useEquipmentStore, type EquipSlot } from '../game/items/useEquipmentStore'
 import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemTemplatesStore'
+import { useGearSnapshotStore } from '../game/items/useGearSnapshotStore'
 import { usePromotionStore } from '../game/items/usePromotionStore'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
@@ -90,7 +91,8 @@ export default function EquipmentPanel() {
   const setEquippedItem = useEquipmentStore((state) => state.setEquippedItem)
   const items = useInventoryStore((state) => state.items)
   const templates = useItemTemplatesStore((state) => state.templates)
-  const gearScore = computeCharacterGearScore(equippedIds, items, templates)
+  const gearSnapshots = useGearSnapshotStore((state) => state.snapshots)
+  const gearScore = computeGearScoreFromSnapshots(gearSnapshots)
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
   const isHunter = selectedClassId === 'hunter'
   const secondHandConfig = SECOND_HAND_BY_CLASS[selectedClassId]

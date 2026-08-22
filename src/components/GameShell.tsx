@@ -23,6 +23,7 @@ import InventoryFullModal from './InventoryFullModal'
 import MarketplacePanel from './MarketplacePanel'
 import OfflineProgressModal from './OfflineProgressModal'
 import MoneyBagRevealModal from './MoneyBagRevealModal'
+import GearSnapshotClaimModal from './GearSnapshotClaimModal'
 import SalvageRevealToast from './SalvageRevealToast'
 import FireworkOverlay from './FireworkOverlay'
 import LevelUpBanner from './LevelUpBanner'
@@ -42,6 +43,7 @@ import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { usePersistGameState } from '../lib/usePersistGameState'
 import { useInventoryStore } from '../game/items/useInventoryStore'
+import { useGearSnapshotStore } from '../game/items/useGearSnapshotStore'
 import { usePotionStore } from '../game/items/usePotionStore'
 import { useBankStore } from '../game/items/useBankStore'
 import { useLootHoldingStore } from '../game/items/useLootHoldingStore'
@@ -117,6 +119,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
         loadLootHolding(characterId),
         loadMyListings(characterId),
         loadMail(characterId),
+        useGearSnapshotStore.getState().loadSnapshots(characterId),
         // Bank Storage is account-wide now (2026-08-03, Bank tab rework), so
         // this needs the account id, not the character id — same
         // conditional-spread pattern loadAchievements below already uses for
@@ -521,6 +524,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <GoldDonationConnection />
       <ChatOverlay characterId={characterId} />
       <CharacterLoadoutModal />
+      <GearSnapshotClaimModal />
 
       {/* pb-24 (was pb-6, matched by py-6 on lg): clearance for
           MobileBottomNav's fixed bar below `lg` — without it, the bar covers

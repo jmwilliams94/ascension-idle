@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.106.0",
+    "date": "2026-08-22",
+    "changes": [
+      "Gear Score now freezes onto a character when you equip a piece of gear, instead of tracking whatever's currently worn — equipping a Pickaxe to mine no longer drops your score",
+      "An item can only count toward one character's Gear Score at a time — equipping gear that's already counted on another character prompts you to confirm before taking over the credit",
+      "The Leaderboard's \"inspect gear\" view now shows each character's claimed gear, which may differ from what they currently have equipped"
+    ]
+  },
+  {
     "version": "1.105.6",
     "date": "2026-08-22",
     "changes": [

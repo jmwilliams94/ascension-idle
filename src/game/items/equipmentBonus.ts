@@ -250,26 +250,20 @@ export function computeItemGearScore(item: Pick<ItemInstance, 'quality_tier' | '
   return qualityScore + socketScore + compositionScore + enchantScore + blessScore
 }
 
-// Sums computeItemGearScore across a character's equipped gear, excluding
-// Quiver-slot_type items (Hunter's stat-less ammo Quiver) per the user's
-// explicit "quiver or off-hand backsword placeholder" exclusion — Twin-soul's
-// real off-hand weapon and Juggernaut's real Shield sit in the same equip
-// slot but have their own real slot_type, so they DO count.
-export function computeCharacterGearScore(
-  equippedIds: Record<EquipSlot, string | null>,
-  items: ItemInstance[],
-  templates: ItemTemplate[],
+// Gear Score Snapshot (2026-09-30, requested by the user — supersedes an
+// earlier "sum whatever's live-equipped" version): equipping a scored piece
+// of gear freezes a copy of its scoring fields onto the character server-side
+// (character_gear_snapshots, claim_gear_snapshot) — see useGearSnapshotStore.ts.
+// This means taking gear off (a Pickaxe swap, bare-handed, whatever) never
+// drops the score by itself, and the same physical item can't inflate more
+// than one character's score by being walked across an account's roster —
+// only one character can hold the claim at a time. Sums computeItemGearScore
+// over the character's own snapshot rows (a snapshot entry has exactly the
+// shape computeItemGearScore needs) rather than live equipped items.
+export function computeGearScoreFromSnapshots(
+  snapshots: Partial<Record<string, Pick<ItemInstance, 'quality_tier' | 'sockets' | 'composition_level' | 'enchant'>>>,
 ): number {
-  let total = 0
-  for (const slot of EQUIP_SLOTS) {
-    const itemId = equippedIds[slot]
-    if (!itemId) continue
-    const item = items.find((entry) => entry.id === itemId)
-    const template = item && templates.find((entry) => entry.id === item.template_id)
-    if (!item || !template || template.slot_type === 'quiver') continue
-    total += computeItemGearScore(item)
-  }
-  return total
+  return Object.values(snapshots).reduce<number>((sum, snapshot) => sum + (snapshot ? computeItemGearScore(snapshot) : 0), 0)
 }
 
 // Client-side mirror of sell_item's SQL formula (see
@@ -719,8 +713,8 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
   // the first thing a player notices on a valuable, protected item.
   const lockedLine: TooltipLine | null = item.locked ? { text: '🔒 Locked', color: LOCKED_LINE_COLOR } : null
 
-  // Gear Score (requested by the user) — omitted for Quiver, which has no
-  // score (see computeCharacterGearScore's own exclusion).
+  // Gear Score (requested by the user) — omitted for Quiver, which is never
+  // scored (see claim_gear_snapshot's own item_family/slot exclusions).
   const gearScoreLine = template?.slot_type !== 'quiver' ? `Gear Score: ${computeItemGearScore(item)}` : undefined
 
   return {

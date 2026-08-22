@@ -62,7 +62,7 @@ import {
   type GemTypeId,
 } from '../game/items/gemTypes'
 import { INVENTORY_SLOT_CAP, useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
-import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
+import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemTemplatesStore'
 import { usePotionStore } from '../game/items/usePotionStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
 import { useMarketplaceStore } from '../game/marketplace/useMarketplaceStore'
@@ -74,6 +74,8 @@ import { POTION_TYPES } from '../game/items/potionTypes'
 import { useBankStore } from '../game/items/useBankStore'
 import { useGainToastStore } from '../game/hud/useGainToastStore'
 import { useMoneyBagRevealStore } from '../game/items/useMoneyBagRevealStore'
+import { useGearSnapshotStore, type ScoredSlot } from '../game/items/useGearSnapshotStore'
+import { useGearClaimPromptStore } from '../game/items/useGearClaimPromptStore'
 
 // A single fixed 40-cell grid shared by gear (item_instances), Composition
 // stones, Comets/Fallen Stars (+ their Scrolls), and HP/Mana potion stacks —
@@ -195,6 +197,8 @@ export default function InventoryPanel({
   const unbundleScroll = useCurrencyStore((state) => state.unbundleScroll)
   const openCometBox = useBankStore((state) => state.openCometBox)
   const characterId = useActiveCharacterStore((state) => state.characterId)
+  const claimGearSnapshot = useGearSnapshotStore((state) => state.claimSnapshot)
+  const showGearClaimPrompt = useGearClaimPromptStore((state) => state.show)
   const potionStacks = usePotionStore((state) => state.stacks)
   const handlePotionUse = usePotionStore((state) => state.usePotion)
   const currentPlayerHp = useCombatStore((state) => state.currentPlayerHp)
@@ -807,6 +811,37 @@ export default function InventoryPanel({
     if (overTarget) {
       onTileDrop?.(overTarget, id)
     }
+  }
+
+  // Every scored equip slot except the weapon slot's Pickaxe placeholder
+  // (never scored — see claim_gear_snapshot's own item_family guard).
+  const SCORED_SLOTS = new Set<string>(['weapon', 'ring', 'necklace', 'boots', 'hat', 'coat'])
+
+  // Gear Score Snapshot (requested by the user) — equipping already happens
+  // unconditionally via setEquippedItem (unchanged); this additionally
+  // tries to claim the Gear Score credit for this character. If the item is
+  // currently snapshotted onto a different character, the RPC refuses
+  // without writing anything and this shows the transfer-confirmation
+  // prompt — declining leaves the equip as-is (the item is genuinely worn
+  // here now) but the credit stays with whoever already had it.
+  const handleEquip = (template: ItemTemplate, item: ItemInstance) => {
+    const slot = template.slot_type as EquipSlot
+    setEquippedItem(slot, item.id)
+
+    if (!characterId || !SCORED_SLOTS.has(slot) || template.item_family === 'pickaxe') {
+      return
+    }
+
+    void claimGearSnapshot(characterId, slot as ScoredSlot, item.id).then((result) => {
+      if (!result.ok && result.error === 'already_claimed') {
+        showGearClaimPrompt({
+          characterId,
+          slot: slot as ScoredSlot,
+          itemId: item.id,
+          claimedByCharacterName: result.claimed_by_character_name ?? 'Another character',
+        })
+      }
+    })
   }
 
   const handleSell = async (item: ItemInstance) => {
@@ -1756,9 +1791,7 @@ export default function InventoryPanel({
                   ? `Requires level ${selectedTemplate?.required_level}`
                   : undefined
             }
-            onClick={() =>
-              selectedTemplate && meetsLevelRequirement && setEquippedItem(selectedTemplate.slot_type as EquipSlot, selectedItem.id)
-            }
+            onClick={() => selectedTemplate && meetsLevelRequirement && handleEquip(selectedTemplate, selectedItem)}
             className="mt-3 w-full"
           >
             {isEquipped(selectedItem.id)
@@ -1807,7 +1840,7 @@ export default function InventoryPanel({
           }
           onEquip={() => {
             if (selectedTemplate && meetsLevelRequirement) {
-              setEquippedItem(selectedTemplate.slot_type as EquipSlot, selectedItem.id)
+              handleEquip(selectedTemplate, selectedItem)
             }
           }}
           onClose={closeGearPopover}
