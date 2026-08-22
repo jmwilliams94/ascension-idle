@@ -220,7 +220,7 @@ export default function EquipmentPanel() {
                     : `${label} — empty`
                 }
                 icon={equipped ? getItemIcon(equipped.template.slot_type) : icon}
-                iconSrc={equipped ? getGearIconSrc(equipped.template.name) : undefined}
+                iconSrc={equipped ? getGearIconSrc(equipped.template.name, equipped.item.quality_tier) : undefined}
                 filled={Boolean(equipped)}
                 qualityColor={equipped ? getQualityColor(glowQualityTier ?? 'normal') : undefined}
                 compositionLevel={equipped?.item.composition_level}
@@ -277,7 +277,7 @@ export default function EquipmentPanel() {
                 <EquipmentSlot
                   label="Off Hand"
                   icon={mainHand ? getItemIcon(mainHand.template.slot_type) : '⚔️'}
-                  iconSrc={mainHand ? getGearIconSrc(mainHand.template.name) : undefined}
+                  iconSrc={mainHand ? getGearIconSrc(mainHand.template.name, mainHand.item.quality_tier) : undefined}
                   filled={Boolean(mainHand)}
                   qualityColor={mainHand ? getQualityColor(mainHand.item.quality_tier) : undefined}
                   sizeClassName={SLOT_SIZE}
@@ -346,9 +346,9 @@ export default function EquipmentPanel() {
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-lg"
               style={{ borderColor: getQualityColor(selected.item.quality_tier) }}
             >
-              {getGearIconSrc(selected.template.name) && !detailIconLoadFailed ? (
+              {getGearIconSrc(selected.template.name, selected.item.quality_tier) && !detailIconLoadFailed ? (
                 <img
-                  src={getGearIconSrc(selected.template.name)}
+                  src={getGearIconSrc(selected.template.name, selected.item.quality_tier)}
                   alt=""
                   className="h-4/5 w-4/5 object-contain"
                   onError={() => setDetailIconLoadFailed(true)}

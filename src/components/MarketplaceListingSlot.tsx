@@ -38,7 +38,7 @@ export default function MarketplaceListingSlot({ target, onRemove }: Marketplace
   const item = target?.kind === 'item' ? target.item : null
   const template = target?.kind === 'item' ? target.template : null
   const icon = item ? getItemIcon(template?.slot_type) : undefined
-  const iconSrc = item ? getGearIconSrc(template?.name) : undefined
+  const iconSrc = item ? getGearIconSrc(template?.name, item.quality_tier) : undefined
   const currencyVisual = target?.kind === 'currency' ? listableCurrencyVisual(target.currencyType) : null
 
   const label = !target

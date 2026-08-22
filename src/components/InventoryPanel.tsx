@@ -1516,7 +1516,7 @@ export default function InventoryPanel({
             const label = template ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level) : 'Unknown item'
             const qualityColor = getQualityColor(item.quality_tier)
             const icon = getItemIcon(template?.slot_type)
-            const iconSrc = getGearIconSrc(template?.name)
+            const iconSrc = getGearIconSrc(template?.name, item.quality_tier)
 
             const isSelected = selectedSlot?.kind === 'item' && selectedSlot.id === item.id
 
@@ -1868,8 +1868,8 @@ export default function InventoryPanel({
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-lg"
               style={{ borderColor: getQualityColor(selectedItem.quality_tier) }}
             >
-              {getGearIconSrc(selectedTemplate?.name) ? (
-                <img src={getGearIconSrc(selectedTemplate?.name)} alt="" className="h-4/5 w-4/5 object-contain" />
+              {getGearIconSrc(selectedTemplate?.name, selectedItem.quality_tier) ? (
+                <img src={getGearIconSrc(selectedTemplate?.name, selectedItem.quality_tier)} alt="" className="h-4/5 w-4/5 object-contain" />
               ) : (
                 getItemIcon(selectedTemplate?.slot_type)
               )}

@@ -15,7 +15,7 @@ import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { previewPickaxeTierUpgradeCost } from '../game/mining/pickaxeCosts'
 import { tierUpgradePickaxe } from '../game/mining/pickaxeActions'
 import { touchMiningLastResolvedAt } from '../game/mining/resolveMining'
-import { formatItemDisplayName } from '../game/items/equipmentBonus'
+import { formatItemDisplayName, getGearIconSrc, getQualityColor } from '../game/items/equipmentBonus'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { useGemStore } from '../game/items/useGemStore'
@@ -165,7 +165,15 @@ export default function MiningModePanel({ characterId }: { characterId: string }
           </p>
         ) : (
           <>
-            <p className="mt-2 text-sm font-medium text-slate-200">{displayName}</p>
+            <div className="mt-2 flex items-center gap-2">
+              <div
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800"
+                style={{ borderColor: getQualityColor(pickaxeItem!.quality_tier) }}
+              >
+                <img src={getGearIconSrc('Pickaxe', pickaxeItem!.quality_tier)} alt="" className="h-4/5 w-4/5 object-contain" />
+              </div>
+              <p className="text-sm font-medium text-slate-200">{displayName}</p>
+            </div>
 
             {cost ? (
               <>

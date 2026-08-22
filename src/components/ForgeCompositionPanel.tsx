@@ -31,7 +31,7 @@ function ResultPreviewTile({ item, template, previewLevel, previewPoints }: { it
           filled
           sizeClassName={SLOT_SIZE_CLASS}
           icon={getItemIcon(template.slot_type)}
-          iconSrc={getGearIconSrc(template.name)}
+          iconSrc={getGearIconSrc(template.name, item.quality_tier)}
           qualityColor={getQualityColor(item.quality_tier)}
           compositionLevel={previewLevel}
           label={formatItemDisplayName(template.name, item.quality_tier, previewLevel)}

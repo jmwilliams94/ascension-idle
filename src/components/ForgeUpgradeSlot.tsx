@@ -31,7 +31,7 @@ interface ForgeUpgradeSlotProps {
 // hover tooltip works here too.
 export default function ForgeUpgradeSlot({ item, template, onRemove, hold, onHoldChange }: ForgeUpgradeSlotProps) {
   const icon = getItemIcon(template?.slot_type)
-  const iconSrc = getGearIconSrc(template?.name)
+  const iconSrc = getGearIconSrc(template?.name, item?.quality_tier)
   const drag = useDraggableTile({
     enabled: Boolean(item),
     payload: item ? { id: item.id, icon, iconSrc, qualityColor: getQualityColor(item.quality_tier) } : null,

@@ -27,7 +27,7 @@ export default function ForgePreviewSlot({ previewItem, previewTemplate, slotId 
             filled
             sizeClassName={SLOT_SIZE_CLASS}
             icon={getItemIcon(previewTemplate?.slot_type)}
-            iconSrc={getGearIconSrc(previewTemplate?.name)}
+            iconSrc={getGearIconSrc(previewTemplate?.name, previewItem.quality_tier)}
             qualityColor={getQualityColor(previewItem.quality_tier)}
             label={
               previewTemplate

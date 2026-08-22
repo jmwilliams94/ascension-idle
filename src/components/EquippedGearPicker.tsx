@@ -59,7 +59,7 @@ export default function EquippedGearPicker({ onSelect }: EquippedGearPickerProps
               filled={Boolean(item)}
               sizeClassName={SLOT_SIZE_CLASS}
               icon={getItemIcon(template?.slot_type)}
-              iconSrc={getGearIconSrc(template?.name)}
+              iconSrc={getGearIconSrc(template?.name, item?.quality_tier)}
               qualityColor={item ? getQualityColor(item.quality_tier) : undefined}
               compositionLevel={item?.composition_level}
               broken={item ? item.durability <= 0 : undefined}

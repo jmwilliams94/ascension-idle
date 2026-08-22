@@ -158,7 +158,7 @@ function ListingTile({ listing, templates }: { listing: MarketplaceListing; temp
   const template = resolved ? templates.find((t) => t.id === resolved.template_id) : undefined
   const label = listingLabel(listing, templates)
   const icon = getItemIcon(template?.slot_type)
-  const iconSrc = getGearIconSrc(template?.name)
+  const iconSrc = getGearIconSrc(template?.name, resolved?.quality_tier)
 
   return (
     <InventorySlot
@@ -679,7 +679,7 @@ function MailEntryTile({
       filled={Boolean(resolved)}
       sizeClassName={SLOT_SIZE_CLASS}
       icon={resolved ? getItemIcon(template?.slot_type) : undefined}
-      iconSrc={resolved ? getGearIconSrc(template?.name) : undefined}
+      iconSrc={resolved ? getGearIconSrc(template?.name, resolved.quality_tier) : undefined}
       qualityColor={resolved ? getQualityColor(resolved.quality_tier) : undefined}
       compositionLevel={resolved?.composition_level}
       // Keyed off the real live item, not `resolved` (which can be

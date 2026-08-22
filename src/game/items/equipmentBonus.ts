@@ -593,7 +593,24 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Random Gem Bag': `${import.meta.env.BASE_URL}item-icons/gem-bag.png`,
 }
 
-export function getGearIconSrc(templateName: string | undefined): string | undefined {
+// Pickaxe is the only item whose icon changes per quality_tier instead of
+// staying fixed per template (every other tier upgrade only recolors via the
+// ember effect, see CLAUDE.md's Tier ember effect note) — 5 tier-specific
+// PNGs instead of one ITEM_ICON_OVERRIDES entry. qualityTier defaults to
+// 'normal' so a caller that doesn't have it yet still gets a valid icon
+// rather than falling through to the ⛏️ emoji.
+const PICKAXE_ICON_BY_TIER: Record<string, string> = {
+  normal: `${import.meta.env.BASE_URL}item-icons/pickaxe-normal.png`,
+  tempered: `${import.meta.env.BASE_URL}item-icons/pickaxe-tempered.png`,
+  infused: `${import.meta.env.BASE_URL}item-icons/pickaxe-infused.png`,
+  radiant: `${import.meta.env.BASE_URL}item-icons/pickaxe-radiant.png`,
+  ascended: `${import.meta.env.BASE_URL}item-icons/pickaxe-ascended.png`,
+}
+
+export function getGearIconSrc(templateName: string | undefined, qualityTier?: string): string | undefined {
+  if (templateName === 'Pickaxe') {
+    return PICKAXE_ICON_BY_TIER[qualityTier ?? 'normal'] ?? PICKAXE_ICON_BY_TIER.normal
+  }
   return templateName ? ITEM_ICON_OVERRIDES[templateName] : undefined
 }
 

@@ -176,7 +176,7 @@ export default function BankGrid({ characterId }: BankGridProps) {
             {bankedItems.map((item) => {
               const template = templates.find((t) => t.id === item.template_id)
               const icon = getItemIcon(template?.slot_type)
-              const iconSrc = getGearIconSrc(template?.name)
+              const iconSrc = getGearIconSrc(template?.name, item.quality_tier)
 
               return (
                 <div

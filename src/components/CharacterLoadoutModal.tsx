@@ -140,7 +140,7 @@ export default function CharacterLoadoutModal() {
                         : `${label} — empty`
                     }
                     icon={equipped ? getItemIcon(equipped.template.slot_type) : icon}
-                    iconSrc={equipped ? getGearIconSrc(equipped.template.name) : undefined}
+                    iconSrc={equipped ? getGearIconSrc(equipped.template.name, equipped.item.quality_tier) : undefined}
                     filled={Boolean(equipped)}
                     qualityColor={equipped ? getQualityColor(glowQualityTier ?? 'normal') : undefined}
                     compositionLevel={equipped?.item.composition_level}
@@ -168,7 +168,7 @@ export default function CharacterLoadoutModal() {
                 <EquipmentSlot
                   label="Off Hand"
                   icon={weaponTemplate ? getItemIcon(weaponTemplate.slot_type) : '⚔️'}
-                  iconSrc={weaponTemplate ? getGearIconSrc(weaponTemplate.name) : undefined}
+                  iconSrc={weaponTemplate ? getGearIconSrc(weaponTemplate.name, weaponLoadoutItem?.quality_tier) : undefined}
                   filled={Boolean(weaponLoadoutItem)}
                   qualityColor={weaponLoadoutItem ? getQualityColor(weaponLoadoutItem.quality_tier) : undefined}
                   sizeClassName={SLOT_SIZE}

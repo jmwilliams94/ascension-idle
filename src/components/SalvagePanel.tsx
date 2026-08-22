@@ -88,7 +88,7 @@ interface SalvageSlotProps {
 // drag and drop box," replacing the earlier bulk-checkbox-select flow.
 function SalvageSlot({ item, template, onRemove }: SalvageSlotProps) {
   const icon = getItemIcon(template?.slot_type)
-  const iconSrc = getGearIconSrc(template?.name)
+  const iconSrc = getGearIconSrc(template?.name, item?.quality_tier)
   const drag = useDraggableTile({
     enabled: Boolean(item),
     payload: item ? { id: item.id, icon, iconSrc, qualityColor: getQualityColor(item.quality_tier) } : null,

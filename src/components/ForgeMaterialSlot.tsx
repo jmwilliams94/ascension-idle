@@ -142,7 +142,7 @@ export default function ForgeMaterialSlot({ entries, templates, onRemoveEntry }:
                 filled
                 sizeClassName={SLOT_SIZE_CLASS}
                 icon={getItemIcon(template?.slot_type)}
-                iconSrc={getGearIconSrc(template?.name)}
+                iconSrc={getGearIconSrc(template?.name, entry.item.quality_tier)}
                 qualityColor={getQualityColor(entry.item.quality_tier)}
                 badge={`${compositionPointValue(entry.item.composition_level)}`}
                 compositionLevel={entry.item.composition_level}

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.107.1",
+    "date": "2026-09-30",
+    "changes": [
+      "The Pickaxe now has real art that visibly changes as you Tier it up, from a plain iron head all the way to a radiant crystalline Ascended pick"
+    ]
+  },
+  {
     "version": "1.107.0",
     "date": "2026-09-30",
     "changes": [
