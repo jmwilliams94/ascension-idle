@@ -11,7 +11,7 @@ import { useIdleModeStore } from '../game/mining/useIdleModeStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
 import { usePickaxeStore } from '../game/mining/usePickaxeStore'
 import { previewPickaxeTierUpgradeCost } from '../game/mining/pickaxeCosts'
-import { tierUpgradePickaxe } from '../game/mining/pickaxeActions'
+import { equipPickaxe, tierUpgradePickaxe, unequipPickaxe } from '../game/mining/pickaxeActions'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useGemStore } from '../game/items/useGemStore'
 import { GEM_TYPES, formatGemTierLabel, gemCount } from '../game/items/gemCatalog'
@@ -48,6 +48,7 @@ export default function MiningModePanel({ characterId }: { characterId: string }
   const stop = useMiningStore((state) => state.stop)
 
   const ownsPickaxe = usePickaxeStore((state) => state.itemId !== null)
+  const equipped = usePickaxeStore((state) => state.equipped)
   const tierName = usePickaxeStore((state) => state.tierName)
   const compositionLevel = usePickaxeStore((state) => state.compositionLevel)
   const ascendedGemType = usePickaxeStore((state) => state.ascendedGemType)
@@ -57,6 +58,7 @@ export default function MiningModePanel({ characterId }: { characterId: string }
 
   const [now, setNow] = useState(0)
   const [tierUpgradeBusy, setTierUpgradeBusy] = useState(false)
+  const [equipBusy, setEquipBusy] = useState(false)
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 200)
@@ -78,7 +80,11 @@ export default function MiningModePanel({ characterId }: { characterId: string }
   const handleToggle = () => {
     if (isMining) {
       stop()
-    } else if (activeMineId) {
+    } else if (activeMineId && equipped) {
+      // Guards the node card's own Resume button the same way the Mine
+      // button above is disabled — without this, unequipping mid-session
+      // (which stops mining) could be bypassed by tapping Resume here
+      // instead of Mine.
       handleMine(activeMineId)
     }
   }
@@ -95,6 +101,23 @@ export default function MiningModePanel({ characterId }: { characterId: string }
       await tierUpgradePickaxe(characterId)
     } finally {
       setTierUpgradeBusy(false)
+    }
+  }
+
+  // Unequipping stops mining immediately if active — handled inside
+  // unequipPickaxe itself (see pickaxeActions.ts), not here, so it happens
+  // regardless of which UI triggered the unequip.
+  const handleEquipToggle = async () => {
+    if (equipBusy) return
+    setEquipBusy(true)
+    try {
+      if (equipped) {
+        await unequipPickaxe(characterId)
+      } else {
+        await equipPickaxe(characterId)
+      }
+    } finally {
+      setEquipBusy(false)
     }
   }
 
@@ -122,8 +145,8 @@ export default function MiningModePanel({ characterId }: { characterId: string }
 
         <Button
           variant="primary"
-          disabled={!ownsPickaxe || (isMining && activeMineId === dropdownMineId)}
-          title={!ownsPickaxe ? 'Buy a Pickaxe from the Shop first' : undefined}
+          disabled={!equipped || (isMining && activeMineId === dropdownMineId)}
+          title={!equipped ? (ownsPickaxe ? 'Equip your Pickaxe first' : 'Buy a Pickaxe from the Shop first') : undefined}
           onClick={() => handleMine(dropdownMineId)}
           className="mt-3 w-full"
         >
@@ -138,10 +161,19 @@ export default function MiningModePanel({ characterId }: { characterId: string }
           </p>
         ) : (
         <>
-        <p className="mt-2 text-sm font-medium text-slate-200">
-          {tierName}
-          {compositionLevel > 0 ? ` (+${compositionLevel})` : ''}
-        </p>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <p className="text-sm font-medium text-slate-200">
+            {tierName}
+            {compositionLevel > 0 ? ` (+${compositionLevel})` : ''}
+            {!equipped && <span className="ml-2 text-xs font-normal text-amber-500">Unequipped</span>}
+          </p>
+          <Button variant="secondary" disabled={equipBusy} onClick={() => void handleEquipToggle()} className="shrink-0 px-2 py-1 text-[11px]">
+            {equipBusy ? '…' : equipped ? 'Unequip' : 'Equip'}
+          </Button>
+        </div>
+        {!equipped && (
+          <p className="mt-1 text-xs text-amber-500">Equip your Pickaxe to start mining — Tier Up still works either way.</p>
+        )}
 
         {cost ? (
           <>
@@ -219,7 +251,13 @@ export default function MiningModePanel({ characterId }: { characterId: string }
             </div>
           </div>
 
-          <Button variant="secondary" onClick={handleToggle} className="mt-4 w-full">
+          <Button
+            variant="secondary"
+            disabled={!isMining && !equipped}
+            title={!isMining && !equipped ? 'Equip your Pickaxe first' : undefined}
+            onClick={handleToggle}
+            className="mt-4 w-full"
+          >
             {isMining ? 'Stop' : 'Resume'}
           </Button>
         </div>

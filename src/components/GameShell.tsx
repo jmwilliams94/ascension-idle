@@ -138,17 +138,22 @@ export default function GameShell({ characterId }: { characterId: string }) {
 
       // Pickaxe is a real item_instances row (see the mining schema
       // migration) but not a normal equipment slot — hydrate its client
-      // snapshot here, once Inventory (loaded above) actually has it, using
-      // the raw ids useCharacterRecordStore's load exposed.
+      // snapshot here, once Inventory (loaded above) actually has it. Looked
+      // up by ownership (item_family === 'pickaxe' among every owned item),
+      // not by equippedPickaxeId directly — owned and equipped can now
+      // genuinely diverge (equip_pickaxe/unequip_pickaxe, 2026-08-22,
+      // requested by the user), so `equipped` is derived separately by
+      // comparing the owned item's id against the persisted pointer.
       const { equippedPickaxeId, pickaxeAscendedGemType } = useCharacterRecordStore.getState()
-      const pickaxeItem = equippedPickaxeId
-        ? useInventoryStore.getState().items.find((item) => item.id === equippedPickaxeId)
-        : undefined
-      const pickaxeTemplate = pickaxeItem
-        ? useItemTemplatesStore.getState().templates.find((t) => t.id === pickaxeItem.template_id)
-        : undefined
+      const pickaxeTemplates = useItemTemplatesStore.getState().templates
+      const pickaxeItem = useInventoryStore.getState().items.find((item) => {
+        const template = pickaxeTemplates.find((t) => t.id === item.template_id)
+        return template?.item_family === 'pickaxe'
+      })
+      const pickaxeTemplate = pickaxeItem ? pickaxeTemplates.find((t) => t.id === pickaxeItem.template_id) : undefined
       usePickaxeStore.getState().hydrate({
-        itemId: equippedPickaxeId,
+        itemId: pickaxeItem?.id ?? null,
+        equipped: pickaxeItem ? pickaxeItem.id === equippedPickaxeId : false,
         tierName: pickaxeTemplate?.name ?? null,
         compositionLevel: pickaxeItem?.composition_level ?? 0,
         ascendedGemType: pickaxeAscendedGemType,

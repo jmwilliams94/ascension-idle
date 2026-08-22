@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.104.0",
+    "date": "2026-08-22",
+    "changes": [
+      "Mining now requires your Pickaxe to be equipped — unequipping it stops an active mining session immediately",
+      "Added an Equip/Unequip button to the Pickaxe panel on the Mining tab"
+    ]
+  },
+  {
     "version": "1.103.7",
     "date": "2026-08-22",
     "changes": [
