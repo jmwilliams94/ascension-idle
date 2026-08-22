@@ -89,7 +89,6 @@ export default function EquipmentPanel() {
   const equippedIds = useEquipmentStore((state) => state.equippedIds)
   const setEquippedItem = useEquipmentStore((state) => state.setEquippedItem)
   const items = useInventoryStore((state) => state.items)
-  const setItemLocked = useInventoryStore((state) => state.setItemLocked)
   const templates = useItemTemplatesStore((state) => state.templates)
   const gearScore = computeCharacterGearScore(equippedIds, items, templates)
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
@@ -118,6 +117,49 @@ export default function EquipmentPanel() {
   }
 
   const selected = selectedSlot ? findEquipped(selectedSlot) : null
+
+  // Lock editing (requested by the user, replacing the earlier per-popover
+  // Lock/Unlock buttons scattered across Inventory/Bank/Forge/Shop — "too
+  // many Lock buttons on gear"): a single small padlock toggle, bottom-left
+  // of this paper-doll card. Toggling it on snapshots every currently-
+  // equipped item's real `locked` value into `pendingLocked`; tapping an
+  // equipped tile while active flips its pending value only (no RPC yet,
+  // and no detail-card/Unequip selection — the tile's onClick is repurposed
+  // for the duration of edit mode). Confirm diffs pendingLocked against each
+  // item's real value and only calls setItemLocked for the ones that
+  // actually changed; Cancel (or toggling the padlock off directly)
+  // discards pendingLocked with no calls at all.
+  const setItemLocked = useInventoryStore((state) => state.setItemLocked)
+  const [lockEditMode, setLockEditMode] = useState(false)
+  const [pendingLocked, setPendingLocked] = useState<Record<string, boolean>>({})
+  const [savingLocks, setSavingLocks] = useState(false)
+
+  const allEquippedItems = (): ItemInstance[] => {
+    const slots: EquipSlot[] = [...SLOTS.map((s) => s.slot), ...(secondHandConfig ? (['quiver'] as EquipSlot[]) : [])]
+    return slots
+      .map((slot) => findEquipped(slot)?.item)
+      .filter((item): item is ItemInstance => Boolean(item))
+  }
+
+  const enterLockEditMode = () => {
+    setSelectedSlot(null)
+    setPendingLocked(Object.fromEntries(allEquippedItems().map((item) => [item.id, item.locked])))
+    setLockEditMode(true)
+  }
+
+  const cancelLockEditMode = () => {
+    setLockEditMode(false)
+    setPendingLocked({})
+  }
+
+  const confirmLockEditMode = async () => {
+    const changed = allEquippedItems().filter((item) => pendingLocked[item.id] !== undefined && pendingLocked[item.id] !== item.locked)
+    setSavingLocks(true)
+    await Promise.all(changed.map((item) => setItemLocked(item.id, pendingLocked[item.id])))
+    setSavingLocks(false)
+    setLockEditMode(false)
+    setPendingLocked({})
+  }
 
   // Same onError-fallback fix as InventorySlot.tsx/EquipmentSlot.tsx (see
   // their comments for the full root cause): this detail card renders its
@@ -181,9 +223,21 @@ export default function EquipmentPanel() {
                 qualityColor={equipped ? getQualityColor(glowQualityTier ?? 'normal') : undefined}
                 compositionLevel={equipped?.item.composition_level}
                 broken={equipped && itemHasDurability(equipped.template.slot_type) ? equipped.item.durability <= 0 : undefined}
-                itemLocked={equipped?.item.locked}
-                selected={selectedSlot === slot}
-                onClick={equipped ? () => setSelectedSlot((current) => (current === slot ? null : slot)) : undefined}
+                itemLocked={
+                  equipped ? (lockEditMode ? (pendingLocked[equipped.item.id] ?? equipped.item.locked) : equipped.item.locked) : undefined
+                }
+                selected={!lockEditMode && selectedSlot === slot}
+                onClick={
+                  !equipped
+                    ? undefined
+                    : lockEditMode
+                      ? () =>
+                          setPendingLocked((current) => ({
+                            ...current,
+                            [equipped.item.id]: !(current[equipped.item.id] ?? equipped.item.locked),
+                          }))
+                      : () => setSelectedSlot((current) => (current === slot ? null : slot))
+                }
                 tooltip={
                   equipped
                     ? buildGearTooltip(
@@ -234,6 +288,30 @@ export default function EquipmentPanel() {
         {!secondHandConfig && selectedClassId !== 'wuxia' && (
           <div style={{ gridArea: 'offhand' }} className="flex items-center justify-center">
             <EquipmentSlot label="Off-hand / Shield" icon="🛡️" locked sizeClassName={SLOT_SIZE} />
+          </div>
+        )}
+      </div>
+
+      {/* Lock editing (requested by the user) — one small padlock toggle,
+          bottom-left of this card, replacing the old per-popover Lock/Unlock
+          buttons scattered across every gear tile's own detail view. */}
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => (lockEditMode ? cancelLockEditMode() : enterLockEditMode())}
+          title={lockEditMode ? 'Cancel' : 'Lock/unlock equipped gear'}
+          className={`rounded-lg border px-2.5 py-1.5 text-sm ${
+            lockEditMode ? 'border-amber-400 bg-amber-500/10 text-amber-300' : 'border-slate-700 text-slate-300 hover:border-amber-500/50'
+          }`}
+        >
+          🔒
+        </button>
+        {lockEditMode && (
+          <div className="flex items-center gap-2">
+            <p className="text-[11px] text-slate-500">Tap gear to toggle Lock</p>
+            <Button variant="primary" disabled={savingLocks} onClick={() => void confirmLockEditMode()}>
+              {savingLocks ? 'Saving…' : 'Confirm'}
+            </Button>
           </div>
         )}
       </div>
@@ -296,18 +374,10 @@ export default function EquipmentPanel() {
           >
             Unequip
           </Button>
-
-          <button
-            type="button"
-            onClick={() => void setItemLocked(selected.item.id, !selected.item.locked)}
-            className="mt-2 w-full rounded-lg border border-amber-600 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/20"
-          >
-            {selected.item.locked ? 'Unlock' : 'Lock'}
-          </button>
         </AscensionCard>
       )}
 
-      {!selected && <p className="text-center text-xs text-slate-500">Equip gear from your Inventory to fill these slots.</p>}
+      {!selected && !lockEditMode && <p className="text-center text-xs text-slate-500">Equip gear from your Inventory to fill these slots.</p>}
     </div>
   )
 }

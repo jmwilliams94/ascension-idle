@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.105.1",
+    "date": "2026-08-22",
+    "changes": [
+      "Fixed the Gear Score Leaderboard failing to load",
+      "Simplified gear Lock/Unlock to a single toggle on the Equipment page — tap the padlock, tap gear to lock/unlock it, then Confirm"
+    ]
+  },
+  {
     "version": "1.105.0",
     "date": "2026-08-22",
     "changes": [

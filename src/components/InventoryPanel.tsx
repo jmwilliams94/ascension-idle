@@ -172,7 +172,6 @@ export default function InventoryPanel({
 }: InventoryPanelProps) {
   const items = useInventoryStore((state) => state.items)
   const sellItem = useInventoryStore((state) => state.sellItem)
-  const setItemLocked = useInventoryStore((state) => state.setItemLocked)
   const openRewardItem = useInventoryStore((state) => state.openRewardItem)
   const showMoneyBagReveal = useMoneyBagRevealStore((state) => state.show)
   const templates = useItemTemplatesStore((state) => state.templates)
@@ -1727,10 +1726,6 @@ export default function InventoryPanel({
               onClick: () => void handleSell(selectedItem),
               disabled: sellBusy || selectedItem.locked,
             },
-            {
-              label: selectedItem.locked ? 'Unlock' : 'Lock',
-              onClick: () => void setItemLocked(selectedItem.id, !selectedItem.locked),
-            },
           ]}
           onClose={closePickaxePopover}
         />
@@ -1856,14 +1851,6 @@ export default function InventoryPanel({
             </Button>
           )}
           {sellError && <p className="mt-2 text-xs text-amber-400">{sellError}</p>}
-
-          <button
-            type="button"
-            onClick={() => void setItemLocked(selectedItem.id, !selectedItem.locked)}
-            className="mt-2 w-full rounded-lg border border-amber-600 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/20"
-          >
-            {selectedItem.locked ? 'Unlock' : 'Lock'}
-          </button>
         </div>
       )}
 
@@ -1890,8 +1877,6 @@ export default function InventoryPanel({
           }}
           onClose={closeGearPopover}
           autoCompare={enableCompareToggle && compareMode}
-          locked={selectedItem.locked}
-          onToggleLock={() => void setItemLocked(selectedItem.id, !selectedItem.locked)}
         />
       )}
 
@@ -1931,13 +1916,6 @@ export default function InventoryPanel({
                   },
                 ]
               : []),
-            {
-              label: selectedItem.locked ? 'Unlock' : 'Lock',
-              onClick: () => {
-                void setItemLocked(selectedItem.id, !selectedItem.locked)
-                closeBankPopover()
-              },
-            },
           ]}
           onClose={closeBankPopover}
         />

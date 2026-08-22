@@ -39,11 +39,6 @@ interface GearEquipPopoverProps {
   equipLabel: string
   onEquip: () => void
   onClose: () => void
-  // Lock/Unlock (requested by the user) — optional so callers that don't
-  // pass it (none currently) just don't render the button, same pattern as
-  // Compare's own conditional rendering below.
-  locked?: boolean
-  onToggleLock?: () => void
   // Equipment tab's page-level Compare toggle (2026-08-13) — when true, this
   // popover always shows the side-by-side compare view (if compareTooltip is
   // available) with no button of its own, since the toggle lives above the
@@ -62,8 +57,6 @@ export default function GearEquipPopover({
   onEquip,
   onClose,
   autoCompare = false,
-  locked,
-  onToggleLock,
 }: GearEquipPopoverProps) {
   const [comparing, setComparing] = useState(false)
   const effectiveComparing = autoCompare ? Boolean(compareTooltip) : comparing
@@ -131,18 +124,6 @@ export default function GearEquipPopover({
             className="flex-1 rounded-md border border-slate-600 px-2 py-1 text-xs font-medium text-slate-300 hover:border-slate-400"
           >
             {comparing ? 'Hide Compare' : 'Compare'}
-          </button>
-        )}
-        {onToggleLock && (
-          <button
-            type="button"
-            onClick={() => {
-              onToggleLock()
-              onClose()
-            }}
-            className="flex-1 rounded-md border border-amber-600 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-300 hover:bg-amber-500/20"
-          >
-            {locked ? 'Unlock' : 'Lock'}
           </button>
         )}
       </div>
