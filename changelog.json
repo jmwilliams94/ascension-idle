@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.103.6",
+    "date": "2026-08-22",
+    "changes": [
+      "Fixed the Unclaimed Rewards popup sometimes staying open and empty after everything in it was claimed"
+    ]
+  },
+  {
     "version": "1.103.5",
     "date": "2026-08-22",
     "changes": [

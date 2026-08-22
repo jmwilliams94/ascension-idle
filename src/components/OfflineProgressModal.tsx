@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import CountUp from './CountUpNumber'
 import LootHoldingCard from './LootHoldingCard'
 import { Button } from './ui/Button'
@@ -62,6 +63,22 @@ export default function OfflineProgressModal() {
   const lootHoldingCount = useLootHoldingStore((state) => state.entries.length)
   const manuallyOpened = useLootHoldingModalStore((state) => state.open)
   const closeManualModal = useLootHoldingModalStore((state) => state.closeModal)
+
+  // Bug fix (reported by the user — an empty "Unclaimed rewards" shell,
+  // just the title and "Got it", with nothing in it): the "Unclaimed
+  // rewards" mode (manuallyOpened, no result/syncFailed) has nothing of its
+  // own to show — its entire content is LootHoldingCard, gated on
+  // lootHoldingCount > 0 further down. Claiming/Storing/Selling everything
+  // while this modal is open drops that count to 0, LootHoldingCard stops
+  // rendering, but nothing previously closed the modal itself — it just sat
+  // there empty until manually dismissed. Auto-close the instant that
+  // happens instead. Doesn't touch the 'result'/'syncFailed' modes, which
+  // always have their own content regardless of Loot Holding's count.
+  useEffect(() => {
+    if (manuallyOpened && !result && !syncFailed && lootHoldingCount === 0) {
+      closeManualModal()
+    }
+  }, [manuallyOpened, result, syncFailed, lootHoldingCount, closeManualModal])
 
   if (!result && !manuallyOpened && !syncFailed) {
     return null
