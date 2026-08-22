@@ -184,9 +184,16 @@ export default function MiningModePanel({ characterId }: { characterId: string }
               />
               {isRespawning && <DeadOverlay seconds={respawnSecondsLeft} label="Depleted" />}
               <AnimatePresence>
-                {log
-                  .filter((entry) => entry.kind === 'damage' && now - entry.timestamp < 800)
-                  .map((entry) => (
+                {(now === 0
+                  ? [] // `now` hasn't been initialized by the interval effect yet (very first
+                    // render after mount) — without this guard, `0 - entry.timestamp` is a huge
+                    // negative number for any past log entry, so every stale 'damage' entry still
+                    // in useMiningStore.log (never cleared between sessions, same as
+                    // useCombatStore's own log) matches `< 800` and flashes on screen for one
+                    // frame every time this panel mounts — e.g. switching to the Mining tab.
+                    // Mirrors CombatPage.tsx's own identical guard on its floatingNumbers.
+                  : log.filter((entry) => entry.kind === 'damage' && now - entry.timestamp < 800)
+                ).map((entry) => (
                     <motion.div
                       key={entry.id}
                       initial={{ opacity: 1, y: 0 }}

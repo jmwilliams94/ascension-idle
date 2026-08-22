@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.103.5",
+    "date": "2026-08-22",
+    "changes": [
+      "Fixed old mining damage numbers flashing on screen every time you open the Mining tab, even while idle"
+    ]
+  },
+  {
     "version": "1.103.4",
     "date": "2026-08-22",
     "changes": [
