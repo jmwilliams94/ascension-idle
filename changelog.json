@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.107.3",
+    "date": "2026-09-30",
+    "changes": [
+      "Fixed the Lottery Ticket icon showing only the top half of the scroll",
+      "The VIP crown badge in the top HUD and next to VIP players' names in Global Chat now uses the real VIP Token art instead of an emoji"
+    ]
+  },
+  {
     "version": "1.107.2",
     "date": "2026-09-30",
     "changes": [

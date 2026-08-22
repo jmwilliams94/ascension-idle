@@ -5,6 +5,7 @@ import { useAnnouncementHistoryStore } from '../game/social/useAnnouncementHisto
 import { useCharacterLoadoutStore } from '../game/social/useCharacterLoadoutStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { ANNOUNCEMENT_ICONS } from './GlobalAnnouncementTicker'
+import { VIP_TOKEN_ICON_SRC } from '../game/items/forgeCosts'
 
 interface FeedItem {
   id: string
@@ -194,9 +195,7 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
                     }`}
                   >
                     {item.isVip && (
-                      <span aria-label="VIP" title="VIP" className="mr-1">
-                        👑
-                      </span>
+                      <img src={VIP_TOKEN_ICON_SRC} alt="VIP" title="VIP" className="mr-1 inline-block h-3 w-3 align-middle object-contain" />
                     )}
                     {item.characterName}
                   </button>
