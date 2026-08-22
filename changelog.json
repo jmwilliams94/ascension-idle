@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.105.3",
+    "date": "2026-08-22",
+    "changes": [
+      "Pickaxe can no longer take weapon sockets"
+    ]
+  },
+  {
     "version": "1.105.2",
     "date": "2026-08-22",
     "changes": [

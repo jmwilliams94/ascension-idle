@@ -26,6 +26,8 @@ function describeUnlockFailure(error?: string): string {
       return 'Already has the max 2 sockets.'
     case 'not_a_weapon':
       return "This item can't take a purchased socket."
+    case 'no_sockets_on_pickaxe':
+      return "Pickaxe can't take sockets."
     default:
       return 'Something went wrong.'
   }
@@ -78,7 +80,11 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
   const selectedTemplate = selectedItem ? (templates.find((t) => t.id === selectedItem.template_id) ?? null) : null
 
   const socketCount = selectedItem?.sockets.length ?? 0
-  const isWeapon = selectedTemplate?.slot_type === 'weapon'
+  // Pickaxe is slot_type 'weapon' (a normal Main Hand weapon) but doesn't get
+  // sockets — requested by the user, progression stays exclusively on the
+  // bespoke Tier Up system (see unlock_weapon_socket's own item_family guard).
+  const isPickaxe = selectedTemplate?.item_family === 'pickaxe'
+  const isWeapon = selectedTemplate?.slot_type === 'weapon' && !isPickaxe
   const isArmor = selectedTemplate ? ARMOR_SLOT_TYPES.includes(selectedTemplate.slot_type) : false
   const maxed = socketCount >= MAX_SOCKETS
   const unlockCost = socketCount === 0 ? 1 : 5
