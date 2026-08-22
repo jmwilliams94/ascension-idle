@@ -56,10 +56,8 @@ import { runOfflineProgressCheck, OFFLINE_SUMMARY_THRESHOLD_MS } from '../game/c
 import { useOfflineProgressStore } from '../game/combat/useOfflineProgressStore'
 import { useMineStore } from '../game/mining/useMineStore'
 import { useMiningStore } from '../game/mining/useMiningStore'
-import { usePickaxeStore } from '../game/mining/usePickaxeStore'
 import { useIdleModeStore } from '../game/mining/useIdleModeStore'
 import { runOfflineMiningProgressCheck } from '../game/mining/offlineMiningProgress'
-import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 
 // Rendered once a character is active (see App.tsx) — everything that was the whole
 // app before the character-slots restructure. Account-level concerns (What's New,
@@ -135,29 +133,6 @@ export default function GameShell({ characterId }: { characterId: string }) {
       if (cancelled) {
         return
       }
-
-      // Pickaxe is a real item_instances row (see the mining schema
-      // migration) but not a normal equipment slot — hydrate its client
-      // snapshot here, once Inventory (loaded above) actually has it. Looked
-      // up by ownership (item_family === 'pickaxe' among every owned item),
-      // not by equippedPickaxeId directly — owned and equipped can now
-      // genuinely diverge (equip_pickaxe/unequip_pickaxe, 2026-08-22,
-      // requested by the user), so `equipped` is derived separately by
-      // comparing the owned item's id against the persisted pointer.
-      const { equippedPickaxeId, pickaxeAscendedGemType } = useCharacterRecordStore.getState()
-      const pickaxeTemplates = useItemTemplatesStore.getState().templates
-      const pickaxeItem = useInventoryStore.getState().items.find((item) => {
-        const template = pickaxeTemplates.find((t) => t.id === item.template_id)
-        return template?.item_family === 'pickaxe'
-      })
-      const pickaxeTemplate = pickaxeItem ? pickaxeTemplates.find((t) => t.id === pickaxeItem.template_id) : undefined
-      usePickaxeStore.getState().hydrate({
-        itemId: pickaxeItem?.id ?? null,
-        equipped: pickaxeItem ? pickaxeItem.id === equippedPickaxeId : false,
-        tierName: pickaxeTemplate?.name ?? null,
-        compositionLevel: pickaxeItem?.composition_level ?? 0,
-        ascendedGemType: pickaxeAscendedGemType,
-      })
 
       // Hunting and Mining can never both accrue offline progress (confirmed
       // by the user) — last_active_idle_mode decides which single check runs.

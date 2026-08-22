@@ -23,8 +23,6 @@ import {
 import { CONSUMABLE_COLOR } from '../game/items/forgeCosts'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
 import { APP_VERSION } from '../version'
-import { usePickaxeStore } from '../game/mining/usePickaxeStore'
-import { purchasePickaxe } from '../game/mining/pickaxeActions'
 
 // A Shop template isn't an owned ItemInstance yet, but buildGearTooltip (the
 // same universal tooltip builder Inventory/Equipment/Forge all use) needs one
@@ -192,75 +190,6 @@ function GearRow({ template, bulkBuy }: { template: ItemTemplate; bulkBuy: boole
   )
 }
 
-// Base Pickaxe purchase (2026-08-22, requested by the user — moved off the
-// original free-auto-grant design). Deliberately bespoke, not a GearRow: a
-// one-time purchase (refused server-side once already owned, so this row
-// just disappears rather than needing a disabled state), no bulk-buy, no
-// level requirement, and it immediately equips itself with no manual
-// Equipment-page step (shop_buy_pickaxe does both in one transaction) —
-// none of which GearRow's generic flow assumes.
-function PickaxeShopRow() {
-  const characterId = useActiveCharacterStore((state) => state.characterId)
-  const gold = useProgressionStore((state) => state.gold)
-  const templates = useItemTemplatesStore((state) => state.templates)
-  const [busy, setBusy] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-
-  const pickaxeTemplate = templates.find((t) => t.item_family === 'pickaxe' && t.required_level === 1)
-  if (!pickaxeTemplate) {
-    return null
-  }
-
-  const canAfford = gold >= pickaxeTemplate.price
-
-  const handleBuy = async () => {
-    if (!characterId || busy) {
-      return
-    }
-    setBusy(true)
-    setErrorMessage(null)
-    const result = await purchasePickaxe(characterId)
-    if (!result.ok) {
-      setErrorMessage(result.error === 'not_enough_gold' ? 'Not enough gold' : 'Something went wrong')
-    }
-    setBusy(false)
-  }
-
-  return (
-    <div className="ascension-chip-frame">
-      <div className="ascension-chip-inner flex items-center justify-between gap-2 p-2 text-xs">
-        <div className="flex min-w-0 items-center gap-2">
-          <InventorySlot
-            slotId={pickaxeTemplate.id}
-            filled
-            sizeClassName={SLOT_SIZE_CLASS}
-            icon={getItemIcon(pickaxeTemplate.slot_type)}
-            qualityColor={getQualityColor('normal')}
-            label={pickaxeTemplate.name}
-          />
-          <div className="min-w-0">
-            <p className="truncate font-medium text-slate-200">{pickaxeTemplate.name}</p>
-            <p className="text-slate-500">{pickaxeTemplate.price}g</p>
-            <p className="text-slate-500">Needed to Mine — see the Idling tab</p>
-          </div>
-        </div>
-
-        <div className="flex shrink-0 flex-col items-end gap-1">
-          <Button
-            variant="primary"
-            disabled={!canAfford || busy}
-            title={!canAfford ? 'Not enough gold' : undefined}
-            onClick={() => void handleBuy()}
-          >
-            {busy ? 'Buying…' : 'Buy'}
-          </Button>
-          {errorMessage && <span className="text-rose-400">{errorMessage}</span>}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // Per distinct slot_type within a tab's already-level-sorted template list,
 // the first entry above level 1 gets the Buy 5/10 buttons — level-1 starter
 // gear is free/trivial and not worth bulk-buying, so it's skipped rather
@@ -300,8 +229,6 @@ export default function ShopPanel() {
 
   const repairBusy = useRepairStore((state) => state.busy)
   const repairAll = useRepairStore((state) => state.repairAll)
-
-  const ownsPickaxe = usePickaxeStore((state) => state.itemId !== null)
 
   const [tab, setTab] = useState<ShopTab>('weapons')
   const [repairResult, setRepairResult] = useState<{ success: boolean; message: string } | null>(null)
@@ -413,7 +340,6 @@ export default function ShopPanel() {
         <AscensionCard>
         {tab === 'weapons' && (
           <div className="max-h-96 space-y-2 overflow-y-auto">
-            {!ownsPickaxe && <PickaxeShopRow />}
             {weaponTemplates.length === 0 ? (
               <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">Nothing available yet</p>
             ) : (

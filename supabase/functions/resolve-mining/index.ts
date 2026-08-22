@@ -145,7 +145,6 @@ interface CharacterSnapshot {
   gems: Record<string, number> | null
   selected_mine_id: string | null
   mining_last_resolved_at: string
-  equipped_pickaxe_id: string | null
 }
 
 interface PickaxeSnapshot {

@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.105.2",
+    "date": "2026-08-22",
+    "changes": [
+      "Pickaxe is now a normal Main Hand weapon — equip/unequip it from Inventory or Equipment like any other weapon, with a normal item tooltip",
+      "Removed the separate Equip/Unequip button from the Mining page",
+      "The Shop no longer stops offering the Pickaxe for sale after you buy one"
+    ]
+  },
+  {
     "version": "1.105.1",
     "date": "2026-08-22",
     "changes": [

@@ -76,14 +76,14 @@ interface CharacterRow {
   // Mining (see supabase/migrations/20260926000000_add_mining_pickaxe.sql) —
   // selected_mine_id/last_active_idle_mode are session/cosmetic, same
   // client-writable treatment as selected_monster_id/current_zone.
-  // equipped_pickaxe_id/pickaxe_ascended_gem_type are server-authoritative
-  // (only ensure_starter_pickaxe/pickaxe_tier_upgrade ever write them) —
-  // exposed via CharacterRecordState below rather than hydrated straight
-  // into a store here, since resolving the pickaxe's own tier name needs
-  // Inventory + item template data this store doesn't load.
+  // pickaxe_ascended_gem_type is server-authoritative (only
+  // pickaxe_tier_upgrade ever writes it) — exposed via CharacterRecordState
+  // below rather than hydrated straight into a store here. Pickaxe equip
+  // state itself is no longer tracked separately (2026-09-30, requested by
+  // the user) — it's a normal Main Hand weapon now, sharing
+  // equipped_weapon_id/useEquipmentStore with the character's real weapon.
   selected_mine_id: string | null
   last_active_idle_mode: string
-  equipped_pickaxe_id: string | null
   pickaxe_ascended_gem_type: string | null
 }
 
@@ -101,11 +101,6 @@ interface CharacterRecordState {
   // creation, see CLAUDE.md's Character naming note), used wherever the UI shows
   // the player by name instead of a generic "Your ___" label.
   characterName: string
-  // See the CharacterRow field comments above — read by GameShell's load
-  // effect once Inventory has also finished loading, to hydrate
-  // usePickaxeStore (needs the item_instances row + its template, which this
-  // store doesn't load itself).
-  equippedPickaxeId: string | null
   pickaxeAscendedGemType: string | null
   loadCharacterRecord: (characterId: string) => Promise<void>
   saveNow: (characterId: string) => Promise<void>
@@ -115,7 +110,6 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
   loaded: false,
   previousLastActiveAt: null,
   characterName: '',
-  equippedPickaxeId: null,
   pickaxeAscendedGemType: null,
 
   loadCharacterRecord: async (characterId) => {
@@ -145,7 +139,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     const { data, error } = await supabase
       .from('characters')
       .select(
-        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, comet_count, fallen_star_count, comet_scroll_count, fallen_star_scroll_count, comet_box_count, lottery_ticket_count, composition_stones, gems, selected_monster_id, last_active_at, lucky_free_ticket_claimed_at, promotion_level, row1_unlocked, row2_unlocked, row_slots, selected_mine_id, last_active_idle_mode, equipped_pickaxe_id, pickaxe_ascended_gem_type',
+        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, comet_count, fallen_star_count, comet_scroll_count, fallen_star_scroll_count, comet_box_count, lottery_ticket_count, composition_stones, gems, selected_monster_id, last_active_at, lucky_free_ticket_claimed_at, promotion_level, row1_unlocked, row2_unlocked, row_slots, selected_mine_id, last_active_idle_mode, pickaxe_ascended_gem_type',
       )
       .eq('id', characterId)
       .maybeSingle<CharacterRow>()
@@ -194,7 +188,6 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
       loaded: true,
       previousLastActiveAt: data.last_active_at,
       characterName: data.name,
-      equippedPickaxeId: data.equipped_pickaxe_id,
       pickaxeAscendedGemType: data.pickaxe_ascended_gem_type,
     })
   },

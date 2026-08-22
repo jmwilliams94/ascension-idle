@@ -9,14 +9,6 @@ import type { GemTypeId } from '../items/gemCatalog'
 export const PICKAXE_TIER_ORDER = ['Pickaxe', 'Tempered Pickaxe', 'Infused Pickaxe', 'Radiant Pickaxe', 'Ascended Pickaxe'] as const
 export type PickaxeTierName = (typeof PICKAXE_TIER_ORDER)[number]
 
-export const PICKAXE_ATTACK_BY_TIER: Record<PickaxeTierName, number> = {
-  Pickaxe: 50,
-  'Tempered Pickaxe': 100,
-  'Infused Pickaxe': 150,
-  'Radiant Pickaxe': 200,
-  'Ascended Pickaxe': 250,
-}
-
 // All 4 coded gem types, all required at Normal/Tempered tier depending on
 // the target — Ascended only requires the character's own rolled type.
 const ALL_CODED_GEMS: GemTypeId[] = ['drake', 'ember', 'bastion', 'iris']

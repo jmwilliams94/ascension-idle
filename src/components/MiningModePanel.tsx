@@ -9,12 +9,15 @@ import { useMineStore } from '../game/mining/useMineStore'
 import { useMiningStore } from '../game/mining/useMiningStore'
 import { useIdleModeStore } from '../game/mining/useIdleModeStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
-import { usePickaxeStore } from '../game/mining/usePickaxeStore'
+import { useEquipmentStore } from '../game/items/useEquipmentStore'
+import { useInventoryStore } from '../game/items/useInventoryStore'
+import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { previewPickaxeTierUpgradeCost } from '../game/mining/pickaxeCosts'
-import { equipPickaxe, tierUpgradePickaxe, unequipPickaxe } from '../game/mining/pickaxeActions'
+import { tierUpgradePickaxe } from '../game/mining/pickaxeActions'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
+import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { useGemStore } from '../game/items/useGemStore'
-import { GEM_TYPES, formatGemTierLabel, gemCount } from '../game/items/gemCatalog'
+import { GEM_TYPES, formatGemTierLabel, gemCount, type GemTypeId } from '../game/items/gemCatalog'
 import { formatGoldAmount } from '../game/stats/formatGold'
 
 // Placeholder swatch color for every node — no real portrait art yet (see
@@ -47,18 +50,25 @@ export default function MiningModePanel({ characterId }: { characterId: string }
   const start = useMiningStore((state) => state.start)
   const stop = useMiningStore((state) => state.stop)
 
-  const ownsPickaxe = usePickaxeStore((state) => state.itemId !== null)
-  const equipped = usePickaxeStore((state) => state.equipped)
-  const tierName = usePickaxeStore((state) => state.tierName)
-  const compositionLevel = usePickaxeStore((state) => state.compositionLevel)
-  const ascendedGemType = usePickaxeStore((state) => state.ascendedGemType)
+  // Pickaxe is a normal Main Hand weapon now (requested by the user) — "is
+  // one equipped" is derived live off the standard equipment/inventory/
+  // template stores (equippedIds.weapon, checked against item_family)
+  // rather than a separate equipped-pickaxe pointer/store.
+  const weaponId = useEquipmentStore((state) => state.equippedIds.weapon)
+  const items = useInventoryStore((state) => state.items)
+  const templates = useItemTemplatesStore((state) => state.templates)
+  const pickaxeItem = weaponId ? items.find((item) => item.id === weaponId) : undefined
+  const pickaxeTemplate = pickaxeItem ? templates.find((t) => t.id === pickaxeItem.template_id) : undefined
+  const equipped = Boolean(pickaxeTemplate && pickaxeTemplate.item_family === 'pickaxe')
+  const tierName = equipped ? pickaxeTemplate!.name : 'Pickaxe'
+  const compositionLevel = equipped ? pickaxeItem!.composition_level : 0
+  const ascendedGemType = useCharacterRecordStore((state) => state.pickaxeAscendedGemType) as GemTypeId | null
 
   const gold = useProgressionStore((state) => state.gold)
   const gems = useGemStore((state) => state.gems)
 
   const [now, setNow] = useState(0)
   const [tierUpgradeBusy, setTierUpgradeBusy] = useState(false)
-  const [equipBusy, setEquipBusy] = useState(false)
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 200)
@@ -104,23 +114,6 @@ export default function MiningModePanel({ characterId }: { characterId: string }
     }
   }
 
-  // Unequipping stops mining immediately if active — handled inside
-  // unequipPickaxe itself (see pickaxeActions.ts), not here, so it happens
-  // regardless of which UI triggered the unequip.
-  const handleEquipToggle = async () => {
-    if (equipBusy) return
-    setEquipBusy(true)
-    try {
-      if (equipped) {
-        await unequipPickaxe(characterId)
-      } else {
-        await equipPickaxe(characterId)
-      }
-    } finally {
-      setEquipBusy(false)
-    }
-  }
-
   const activeNode = activeMineId ? nodeForMine(activeMineId) : null
 
   return (
@@ -146,7 +139,7 @@ export default function MiningModePanel({ characterId }: { characterId: string }
         <Button
           variant="primary"
           disabled={!equipped || (isMining && activeMineId === dropdownMineId)}
-          title={!equipped ? (ownsPickaxe ? 'Equip your Pickaxe first' : 'Buy a Pickaxe from the Shop first') : undefined}
+          title={!equipped ? 'Equip a Pickaxe in your Main Hand slot first' : undefined}
           onClick={() => handleMine(dropdownMineId)}
           className="mt-3 w-full"
         >
@@ -155,53 +148,44 @@ export default function MiningModePanel({ characterId }: { characterId: string }
       </AscensionCard>
 
       <AscensionCard title="Pickaxe">
-        {!ownsPickaxe ? (
+        {!equipped ? (
           <p className="mt-2 text-xs text-slate-500">
-            You don't own a Pickaxe yet — buy one from the Shop's Weapons tab to start mining.
+            Equip a Pickaxe in your Main Hand slot (Inventory or Equipment page) to mine — buy one from the Shop's Weapons tab if you need one.
           </p>
         ) : (
-        <>
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <p className="text-sm font-medium text-slate-200">
-            {tierName}
-            {compositionLevel > 0 ? ` (+${compositionLevel})` : ''}
-            {!equipped && <span className="ml-2 text-xs font-normal text-amber-500">Unequipped</span>}
-          </p>
-          <Button variant="secondary" disabled={equipBusy} onClick={() => void handleEquipToggle()} className="shrink-0 px-2 py-1 text-[11px]">
-            {equipBusy ? '…' : equipped ? 'Unequip' : 'Equip'}
-          </Button>
-        </div>
-        {!equipped && (
-          <p className="mt-1 text-xs text-amber-500">Equip your Pickaxe to start mining — Tier Up still works either way.</p>
-        )}
-
-        {cost ? (
           <>
-            <p className="mt-2 text-xs text-slate-500">
-              Tier up cost: {formatGoldAmount(cost.goldCost)} gold
-              {cost.gemIds.length > 0 && (
-                <>
-                  {' + '}
-                  {cost.gemIds
-                    .map((gemId) => `${cost.gemAmountEach}x ${formatGemTierLabel(cost.gemTier)} ${GEM_TYPES[gemId].displayName}`)
-                    .join(', ')}
-                </>
-              )}
-              {cost.gemIds.length === 0 && cost.gemTier === 'ascended' && ' (revealed on your first Ascended attempt)'}
+            <p className="mt-2 text-sm font-medium text-slate-200">
+              {tierName}
+              {compositionLevel > 0 ? ` (+${compositionLevel})` : ''}
             </p>
-            <Button
-              variant="secondary"
-              disabled={!canAffordTierUp || tierUpgradeBusy}
-              onClick={() => void handleTierUp()}
-              className="mt-3 w-full"
-            >
-              {tierUpgradeBusy ? 'Upgrading…' : 'Tier Up'}
-            </Button>
+
+            {cost ? (
+              <>
+                <p className="mt-2 text-xs text-slate-500">
+                  Tier up cost: {formatGoldAmount(cost.goldCost)} gold
+                  {cost.gemIds.length > 0 && (
+                    <>
+                      {' + '}
+                      {cost.gemIds
+                        .map((gemId) => `${cost.gemAmountEach}x ${formatGemTierLabel(cost.gemTier)} ${GEM_TYPES[gemId].displayName}`)
+                        .join(', ')}
+                    </>
+                  )}
+                  {cost.gemIds.length === 0 && cost.gemTier === 'ascended' && ' (revealed on your first Ascended attempt)'}
+                </p>
+                <Button
+                  variant="secondary"
+                  disabled={!canAffordTierUp || tierUpgradeBusy}
+                  onClick={() => void handleTierUp()}
+                  className="mt-3 w-full"
+                >
+                  {tierUpgradeBusy ? 'Upgrading…' : 'Tier Up'}
+                </Button>
+              </>
+            ) : (
+              <p className="mt-2 text-xs text-emerald-400">Max tier reached.</p>
+            )}
           </>
-        ) : (
-          <p className="mt-2 text-xs text-emerald-400">Max tier reached.</p>
-        )}
-        </>
         )}
       </AscensionCard>
 
@@ -254,7 +238,7 @@ export default function MiningModePanel({ characterId }: { characterId: string }
           <Button
             variant="secondary"
             disabled={!isMining && !equipped}
-            title={!isMining && !equipped ? 'Equip your Pickaxe first' : undefined}
+            title={!isMining && !equipped ? 'Equip a Pickaxe in your Main Hand slot first' : undefined}
             onClick={handleToggle}
             className="mt-4 w-full"
           >

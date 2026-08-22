@@ -1,8 +1,9 @@
 import { create } from 'zustand'
 import { resolvePhysicalDamage, rollDamageInRange } from '../combat/combatResolver'
-import { MINING_ATTACK_INTERVAL_MS, MINING_RESPAWN_GAP_MS, pickaxeAttackMidpoint } from './miningResolver'
+import { QUALITY_STAT_MULTIPLIERS, computeCompositionBonusStats } from '../items/equipmentBonus'
+import { MINING_ATTACK_INTERVAL_MS, MINING_RESPAWN_GAP_MS } from './miningResolver'
 import { nodeForMine, type MineId } from './mineData'
-import { currentPickaxeBaseAttack, usePickaxeStore } from './usePickaxeStore'
+import { getEquippedPickaxe } from './equippedPickaxe'
 
 // Live tick-gated store, sibling to useCombatStore.ts — much simpler, since a
 // mining node has no dodge/hit-chance/attack-back/player-HP concept. Only
@@ -11,7 +12,7 @@ import { currentPickaxeBaseAttack, usePickaxeStore } from './usePickaxeStore'
 // actually grants Ore/Gems, same "fast local loop + slow authoritative
 // reconcile" split combat uses.
 
-export type MiningLogKind = 'engage' | 'damage' | 'kill' | 'ore' | 'gem' | 'inventory-full'
+export type MiningLogKind = 'engage' | 'damage' | 'kill' | 'ore' | 'gem' | 'inventory-full' | 'unequipped'
 
 export interface MiningLogEntry {
   id: string
@@ -107,8 +108,26 @@ export const useMiningStore = create<MiningState>((set, get) => ({
 
     if (nowMs - state.lastAttackAt < MINING_ATTACK_INTERVAL_MS) return
 
-    const pickaxe = usePickaxeStore.getState()
-    const attackMidpoint = pickaxeAttackMidpoint(currentPickaxeBaseAttack(pickaxe.tierName), pickaxe.compositionLevel)
+    // Pickaxe is a normal Main Hand weapon now (requested by the user) — if
+    // the weapon slot no longer holds a pickaxe-family item (unequipped,
+    // swapped back to a real combat weapon, or swapped to anything else),
+    // mining stops right here instead of computing damage. This replaces the
+    // old dedicated "unequip stops mining" hook with a general per-tick
+    // check, so it also covers e.g. re-equipping the real weapon directly.
+    const pickaxe = getEquippedPickaxe()
+    if (!pickaxe) {
+      set((s) => ({
+        isMining: false,
+        log: appendLog(s.log, { kind: 'unequipped', message: 'Pickaxe unequipped — mining stopped.' }),
+      }))
+      return
+    }
+
+    const rawAttack = pickaxe.template.base_stats.physical_attack ?? 0
+    const scaledAttack = Math.round(rawAttack * (QUALITY_STAT_MULTIPLIERS[pickaxe.item.quality_tier] ?? 1))
+    const compositionBonus =
+      computeCompositionBonusStats(pickaxe.template.base_stats, pickaxe.template.slot_type, pickaxe.item.composition_level).physical_attack ?? 0
+    const attackMidpoint = scaledAttack + compositionBonus
     const damage = resolvePhysicalDamage(rollDamageInRange(attackMidpoint), node.defense)
     const nextHp = Math.max(0, state.currentHp - damage)
 
