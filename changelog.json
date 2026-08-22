@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.105.0",
+    "date": "2026-08-22",
+    "changes": [
+      "Added gear Lock — locked items can't be sold, salvaged, listed on the Marketplace, liquidated at the Bank, or fed into the Forge as Composition fuel",
+      "Added Gear Score, a single number summarizing a character's gear (quality, sockets, composition, enchants, and Bless), shown on the Equipment page and in gear tooltips",
+      "Added a Gear Score Leaderboard (Achievements tab) — see the top-scoring characters per class and inspect their loadout"
+    ]
+  },
+  {
     "version": "1.104.0",
     "date": "2026-08-22",
     "changes": [

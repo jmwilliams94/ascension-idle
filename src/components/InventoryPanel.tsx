@@ -172,6 +172,7 @@ export default function InventoryPanel({
 }: InventoryPanelProps) {
   const items = useInventoryStore((state) => state.items)
   const sellItem = useInventoryStore((state) => state.sellItem)
+  const setItemLocked = useInventoryStore((state) => state.setItemLocked)
   const openRewardItem = useInventoryStore((state) => state.openRewardItem)
   const showMoneyBagReveal = useMoneyBagRevealStore((state) => state.show)
   const templates = useItemTemplatesStore((state) => state.templates)
@@ -579,7 +580,7 @@ export default function InventoryPanel({
     let failures = 0
 
     for (const item of visibleItems) {
-      if (reservedItemIds.includes(item.id) || item.composition_level <= 0) {
+      if (reservedItemIds.includes(item.id) || item.composition_level <= 0 || item.locked) {
         continue
       }
       const result = await depositItemAsComposition(item.id)
@@ -912,7 +913,7 @@ export default function InventoryPanel({
   // composition progress over; it must only ever be sold deliberately, via
   // its own popover below.
   const normalJunkItems = visibleItems.filter((item) => {
-    if (item.quality_tier !== 'normal' || item.composition_level !== 0 || item.sockets.length !== 0) {
+    if (item.quality_tier !== 'normal' || item.composition_level !== 0 || item.sockets.length !== 0 || item.locked) {
       return false
     }
     const template = templates.find((entry) => entry.id === item.template_id)
@@ -1444,6 +1445,7 @@ export default function InventoryPanel({
               label,
               compositionLevel: item.composition_level,
               broken: itemHasDurability(template?.slot_type) ? item.durability <= 0 : undefined,
+              locked: item.locked,
               // Hover/long-press peek works normally (2026-08-04 fix: "plain
               // mouseover should still show the normal tooltip") except while
               // this exact tile's own popover is open, where it would just
@@ -1721,9 +1723,13 @@ export default function InventoryPanel({
           tooltip={buildGearTooltip(selectedItem, selectedTemplate)}
           actions={[
             {
-              label: sellBusy ? 'Selling…' : `Sell (${previewSellPrice(selectedTemplate.price, selectedItem.quality_tier)} gold)`,
+              label: selectedItem.locked ? 'Locked' : sellBusy ? 'Selling…' : `Sell (${previewSellPrice(selectedTemplate.price, selectedItem.quality_tier)} gold)`,
               onClick: () => void handleSell(selectedItem),
-              disabled: sellBusy,
+              disabled: sellBusy || selectedItem.locked,
+            },
+            {
+              label: selectedItem.locked ? 'Unlock' : 'Lock',
+              onClick: () => void setItemLocked(selectedItem.id, !selectedItem.locked),
             },
           ]}
           onClose={closePickaxePopover}
@@ -1835,13 +1841,29 @@ export default function InventoryPanel({
           </Button>
 
           {enableSelling && (
-            <Button variant="primary" disabled={isEquipped(selectedItem.id) || sellBusy} onClick={() => void handleSell(selectedItem)} className="mt-2 w-full">
-              {sellBusy
-                ? 'Selling…'
-                : `Sell (${previewSellPrice(selectedTemplate?.price ?? 0, selectedItem.quality_tier)} gold)`}
+            <Button
+              variant="primary"
+              disabled={isEquipped(selectedItem.id) || sellBusy || selectedItem.locked}
+              title={selectedItem.locked ? 'This item is locked — unlock it first.' : undefined}
+              onClick={() => void handleSell(selectedItem)}
+              className="mt-2 w-full"
+            >
+              {selectedItem.locked
+                ? 'Locked'
+                : sellBusy
+                  ? 'Selling…'
+                  : `Sell (${previewSellPrice(selectedTemplate?.price ?? 0, selectedItem.quality_tier)} gold)`}
             </Button>
           )}
           {sellError && <p className="mt-2 text-xs text-amber-400">{sellError}</p>}
+
+          <button
+            type="button"
+            onClick={() => void setItemLocked(selectedItem.id, !selectedItem.locked)}
+            className="mt-2 w-full rounded-lg border border-amber-600 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/20"
+          >
+            {selectedItem.locked ? 'Unlock' : 'Lock'}
+          </button>
         </div>
       )}
 
@@ -1868,6 +1890,8 @@ export default function InventoryPanel({
           }}
           onClose={closeGearPopover}
           autoCompare={enableCompareToggle && compareMode}
+          locked={selectedItem.locked}
+          onToggleLock={() => void setItemLocked(selectedItem.id, !selectedItem.locked)}
         />
       )}
 
@@ -1889,8 +1913,11 @@ export default function InventoryPanel({
             // Bank (liquidate composition into gear_composition_points) only
             // makes sense once the item actually has a composition level —
             // a still-Normal item is rejected server-side as worthless, so
-            // it's hidden here rather than shown-then-erroring.
-            ...(selectedItem.composition_level > 0
+            // it's hidden here rather than shown-then-erroring. Also hidden
+            // for a locked item (requested by the user) — deposit_item_as_composition
+            // refuses it server-side anyway, but this avoids offering a
+            // button that would just error.
+            ...(selectedItem.composition_level > 0 && !selectedItem.locked
               ? [
                   {
                     label: bankDepositBusy ? 'Banking…' : 'Bank',
@@ -1904,6 +1931,13 @@ export default function InventoryPanel({
                   },
                 ]
               : []),
+            {
+              label: selectedItem.locked ? 'Unlock' : 'Lock',
+              onClick: () => {
+                void setItemLocked(selectedItem.id, !selectedItem.locked)
+                closeBankPopover()
+              },
+            },
           ]}
           onClose={closeBankPopover}
         />

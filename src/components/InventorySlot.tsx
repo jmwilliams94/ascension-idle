@@ -76,6 +76,11 @@ interface InventorySlotProps {
   // compositionLevel, bottom-right is badge). Omit/false for anything that
   // doesn't have a durability concept at all (Quiver, non-gear tiles).
   broken?: boolean
+  // Lock (requested by the user) — a small 🔒 badge, bottom-left (the one
+  // remaining free corner). Blocks Sell/Salvage/Marketplace-listing/Bank
+  // "Deposit as Composition"/Composition-feed fuel-consumption for this item
+  // (see set_item_locked's SQL guards).
+  locked?: boolean
   selected?: boolean
   // Native event is passed through (rather than a bare `() => void`) so a
   // caller can inspect event.shiftKey — used by InventoryPanel's gear/Comet/
@@ -130,6 +135,7 @@ export default function InventorySlot({
   badge,
   compositionLevel,
   broken,
+  locked,
   selected,
   onClick,
   onContextMenu,
@@ -241,6 +247,11 @@ export default function InventorySlot({
         </span>
       )}
       {badge && <span className="absolute bottom-0.5 right-1 z-10 text-[9px] font-semibold text-slate-200">{badge}</span>}
+      {locked && (
+        <span className="absolute bottom-0.5 left-1 z-10 text-[13px] leading-none" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}>
+          🔒
+        </span>
+      )}
     </button>
   )
 

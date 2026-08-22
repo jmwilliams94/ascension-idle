@@ -5,7 +5,7 @@ import type { ItemInstance } from './useInventoryStore'
 import type { ItemTemplate } from './useItemTemplatesStore'
 import { EQUIP_SLOTS, type EquipSlot } from './useEquipmentStore'
 import { damageRangeFromMidpoint } from '../combat/combatResolver'
-import { describeSocketedGem, SOCKETED_GEM_COLOR, sumSocketedGemBonusPct } from './gemCatalog'
+import { describeSocketedGem, SOCKETED_GEM_COLOR, sumSocketedGemBonusPct, ENCHANT_HP_RANGE_BY_TIER, BLESS_PCT_STEPS } from './gemCatalog'
 
 // Plain white, used for a handful of gear tooltip lines that should read as
 // neutral/informational rather than tinted (Lvl, Class, the "Sockets"
@@ -14,6 +14,11 @@ import { describeSocketedGem, SOCKETED_GEM_COLOR, sumSocketedGemBonusPct } from 
 // tooltip color passes. Magic Attack/Defense are deliberately left at the
 // block's own default blue.
 const TOOLTIP_WHITE = '#FFFFFF'
+
+// Lock (requested by the user) — amber, matching the app's existing
+// "claimable"/attention-worthy amber accent (#f59e0b, see AchievementsPanel's
+// CHIP_STATE_COLOR) rather than inventing a new color for this.
+const LOCKED_LINE_COLOR = '#f59e0b'
 
 // Stat keys that get the white override above instead of the default stat
 // block color (sky blue) — everything else in base_stats keeps that default.
@@ -214,6 +219,57 @@ export function computeEquipmentBonus(
   }
 
   return bonus
+}
+
+// Gear Score (requested by the user) — client mirror of the SQL
+// compute_item_gear_score function (20260930010000_gear_lock_and_gear_score.sql)
+// — must stay in sync. Quality tier worth its QUALITY_ORDER index (0-4, same
+// battle-power weighting already documented in CLAUDE.md), each unlocked
+// socket worth 1 (filled or empty, 0-2), composition_level worth 1 per point
+// (0-12), Enchant HP worth 1 point per tier range reached (0-3, ranges from
+// ENCHANT_HP_RANGE_BY_TIER), Bless worth 1 point per ladder step reached (0-4,
+// BLESS_PCT_STEPS) — matches the user's own worked example (1% -> 1pt, 5% ->
+// 3pts) exactly.
+export function computeItemGearScore(item: Pick<ItemInstance, 'quality_tier' | 'sockets' | 'composition_level' | 'enchant'>): number {
+  const qualityScore = Math.max(0, QUALITY_ORDER.indexOf(item.quality_tier))
+  const socketScore = item.sockets.length
+  const compositionScore = item.composition_level
+
+  const enchant = item.enchant as { hp?: number; blessPct?: number } | null
+  const enchantScore = !enchant?.hp
+    ? 0
+    : enchant.hp >= ENCHANT_HP_RANGE_BY_TIER.ascended.min
+      ? 3
+      : enchant.hp >= ENCHANT_HP_RANGE_BY_TIER.tempered.min
+        ? 2
+        : enchant.hp >= ENCHANT_HP_RANGE_BY_TIER.normal.min
+          ? 1
+          : 0
+  const blessScore = enchant?.blessPct ? BLESS_PCT_STEPS.filter((step) => enchant.blessPct! >= step).length : 0
+
+  return qualityScore + socketScore + compositionScore + enchantScore + blessScore
+}
+
+// Sums computeItemGearScore across a character's equipped gear, excluding
+// Quiver-slot_type items (Hunter's stat-less ammo Quiver) per the user's
+// explicit "quiver or off-hand backsword placeholder" exclusion — Twin-soul's
+// real off-hand weapon and Juggernaut's real Shield sit in the same equip
+// slot but have their own real slot_type, so they DO count.
+export function computeCharacterGearScore(
+  equippedIds: Record<EquipSlot, string | null>,
+  items: ItemInstance[],
+  templates: ItemTemplate[],
+): number {
+  let total = 0
+  for (const slot of EQUIP_SLOTS) {
+    const itemId = equippedIds[slot]
+    if (!itemId) continue
+    const item = items.find((entry) => entry.id === itemId)
+    const template = item && templates.find((entry) => entry.id === item.template_id)
+    if (!item || !template || template.slot_type === 'quiver') continue
+    total += computeItemGearScore(item)
+  }
+  return total
 }
 
 // Client-side mirror of sell_item's SQL formula (see
@@ -657,6 +713,16 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
       ? { text: `Dura: ${Math.ceil(item.durability)}/${maxDurability}`, color: item.durability <= 0 ? QUALITY_COLORS.ascended : TOOLTIP_WHITE }
       : null
 
+  // Lock (requested by the user) — a locked item can't be Sold/Salvaged/
+  // Marketplace-listed/Bank-liquidated-for-composition/fed as Composition
+  // fuel (see set_item_locked's SQL guards). Shown first in `lines` so it's
+  // the first thing a player notices on a valuable, protected item.
+  const lockedLine: TooltipLine | null = item.locked ? { text: '🔒 Locked', color: LOCKED_LINE_COLOR } : null
+
+  // Gear Score (requested by the user) — omitted for Quiver, which has no
+  // score (see computeCharacterGearScore's own exclusion).
+  const gearScoreLine = template?.slot_type !== 'quiver' ? `Gear Score: ${computeItemGearScore(item)}` : undefined
+
   return {
     title: template
       ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level)
@@ -672,6 +738,7 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
     // a separately-bordered `stats` block below everything. See
     // buildStatTooltipLines' own comment for the white-then-blue ordering.
     lines: [
+      ...(lockedLine ? [lockedLine] : []),
       { text: formatItemLevel(item.level), color: TOOLTIP_WHITE },
       ...(classLine ? [classLine] : []),
       ...(template ? buildStatTooltipLines(template.base_stats, item.quality_tier) : []),
@@ -682,5 +749,6 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
     enchantLine: enchantHp ? `Enchanted HP: ${enchantHp}` : undefined,
     blessLine: blessPct ? `Damage: -${blessPct}%` : undefined,
     progressionLine,
+    gearScoreLine,
   }
 }

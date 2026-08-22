@@ -46,6 +46,7 @@ function previewInstance(template: ItemTemplate): ItemInstance {
     durability: computeMaxDurability(template.slot_type, template.required_level) ?? 0,
     created_at: '',
     location: 'inventory',
+    locked: false,
   }
 }
 

@@ -96,6 +96,7 @@ function previewInstanceForEntry(entry: LootHoldingEntry, template: ItemTemplate
     durability: computeMaxDurability(template.slot_type, template.required_level) ?? 0,
     created_at: entry.created_at,
     location: 'inventory',
+    locked: false,
   }
 }
 

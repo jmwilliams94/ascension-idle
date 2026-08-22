@@ -117,6 +117,7 @@ function snapshotPreviewItem(listing: MarketplaceListing): ItemInstance | null {
     durability: 0,
     created_at: listing.created_at,
     location: 'inventory',
+    locked: false,
   }
 }
 
@@ -362,7 +363,11 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
       setError(null)
       return
     }
-    if (items.some((item) => item.id === dragId)) {
+    // Locked gear can't be listed (requested by the user) — create_marketplace_listing
+    // refuses it server-side too, but this avoids staging something the List
+    // button would just error on.
+    const item = items.find((entry) => entry.id === dragId)
+    if (item && !item.locked) {
       setDraft({ kind: 'item', itemId: dragId })
       setError(null)
     }
@@ -610,6 +615,7 @@ function mailSnapshotItem(entry: MailEntry): ItemInstance | null {
     durability: 0,
     created_at: entry.created_at,
     location: 'inventory',
+    locked: false,
   }
 }
 

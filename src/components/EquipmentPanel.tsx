@@ -4,6 +4,7 @@ import { AscensionCard } from './ui/AscensionCard'
 import { Button } from './ui/Button'
 import {
   buildGearTooltip,
+  computeCharacterGearScore,
   formatBaseStats,
   formatItemDisplayName,
   formatItemLevel,
@@ -88,7 +89,9 @@ export default function EquipmentPanel() {
   const equippedIds = useEquipmentStore((state) => state.equippedIds)
   const setEquippedItem = useEquipmentStore((state) => state.setEquippedItem)
   const items = useInventoryStore((state) => state.items)
+  const setItemLocked = useInventoryStore((state) => state.setItemLocked)
   const templates = useItemTemplatesStore((state) => state.templates)
+  const gearScore = computeCharacterGearScore(equippedIds, items, templates)
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
   const isHunter = selectedClassId === 'hunter'
   const secondHandConfig = SECOND_HAND_BY_CLASS[selectedClassId]
@@ -178,6 +181,7 @@ export default function EquipmentPanel() {
                 qualityColor={equipped ? getQualityColor(glowQualityTier ?? 'normal') : undefined}
                 compositionLevel={equipped?.item.composition_level}
                 broken={equipped && itemHasDurability(equipped.template.slot_type) ? equipped.item.durability <= 0 : undefined}
+                itemLocked={equipped?.item.locked}
                 selected={selectedSlot === slot}
                 onClick={equipped ? () => setSelectedSlot((current) => (current === slot ? null : slot)) : undefined}
                 tooltip={
@@ -237,9 +241,12 @@ export default function EquipmentPanel() {
 
       <AscensionCard contentClassName="p-3">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-slate-300">
-            Title: <span className="font-medium text-amber-300">{currentTitle}</span>
-          </p>
+          <div>
+            <p className="text-sm text-slate-300">
+              Title: <span className="font-medium text-amber-300">{currentTitle}</span>
+            </p>
+            <p className="text-xs text-amber-300">Gear Score: {gearScore}</p>
+          </div>
           {nextPromotionTier && characterLevel >= nextPromotionTier.level && (
             <Button variant="primary" onClick={() => setPromotionModalOpen(true)}>
               Promote
@@ -289,6 +296,14 @@ export default function EquipmentPanel() {
           >
             Unequip
           </Button>
+
+          <button
+            type="button"
+            onClick={() => void setItemLocked(selected.item.id, !selected.item.locked)}
+            className="mt-2 w-full rounded-lg border border-amber-600 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/20"
+          >
+            {selected.item.locked ? 'Unlock' : 'Lock'}
+          </button>
         </AscensionCard>
       )}
 

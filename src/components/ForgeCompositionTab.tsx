@@ -115,7 +115,12 @@ export default function ForgeCompositionTab({ onBack }: ForgeCompositionTabProps
     }
 
     const item = items.find((entry) => entry.id === id)
-    if (!item) {
+    // Locked gear can't be fed as Composition fuel (requested by the user,
+    // confirmed as an extension of the same "can't be destroyed" rule
+    // Sell/Salvage/Marketplace/Bank-liquidate already follow — composition_feed
+    // destroys every fuel item it consumes). The feed *target* (selectedItem,
+    // dropped into the Upgrade Slot above) is unaffected — it's never consumed.
+    if (!item || item.locked) {
       return
     }
 

@@ -189,6 +189,7 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
       !equippedItemIds.has(item.id) &&
       !listedItemIds.has(item.id) &&
       !mailItemIds.has(item.id) &&
+      !item.locked &&
       item.id !== selectedItemId,
   )
 
@@ -211,7 +212,8 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
   })
 
   const handleDropItemId = (itemId: string) => {
-    if (!items.some((item) => item.id === itemId) || phase !== 'idle') {
+    const item = items.find((entry) => entry.id === itemId)
+    if (!item || item.locked || phase !== 'idle') {
       return
     }
     setSelectedItemId(itemId)

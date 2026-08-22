@@ -22,6 +22,7 @@ export type LoadoutSlot = 'weapon' | 'ring' | 'necklace' | 'boots' | 'hat' | 'co
 export interface CharacterLoadout {
   character: { name: string; level: number; class: string | null }
   equipment: Record<LoadoutSlot, LoadoutItem | null>
+  gearScore: number
 }
 
 interface ViewLoadoutResult {
@@ -29,6 +30,7 @@ interface ViewLoadoutResult {
   error?: string
   character?: CharacterLoadout['character']
   equipment?: CharacterLoadout['equipment']
+  gear_score?: number
 }
 
 interface CharacterLoadoutState {
@@ -65,7 +67,7 @@ export const useCharacterLoadoutStore = create<CharacterLoadoutState>((set) => (
       return
     }
 
-    set({ loading: false, loadout: { character: result.character, equipment: result.equipment } })
+    set({ loading: false, loadout: { character: result.character, equipment: result.equipment, gearScore: result.gear_score ?? 0 } })
   },
 
   close: () => set({ open: false }),

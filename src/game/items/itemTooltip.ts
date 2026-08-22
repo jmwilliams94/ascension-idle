@@ -68,4 +68,8 @@ export interface ItemTooltipData {
   // the bonusStats/enchantLine/blessLine block is present. Omitted entirely
   // below +1 or once maxed (see that function's own comment).
   progressionLine?: string
+  // Gear Score (see equipmentBonus.ts's computeItemGearScore) — "Gear Score:
+  // N", rendered as the last line in `lines` for real gear. Omitted for
+  // non-gear tooltips (stones/gems/currency) and for Quiver (no score).
+  gearScoreLine?: string
 }

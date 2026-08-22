@@ -51,6 +51,7 @@ function previewLoadoutItem(loadoutItem: LoadoutItem, template: ItemTemplate): I
     durability: loadoutItem.durability,
     created_at: '',
     location: 'inventory',
+    locked: false,
   }
 }
 
@@ -86,9 +87,12 @@ export default function CharacterLoadoutModal() {
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white">
-            {loadout ? `${loadout.character.name} — Lv ${loadout.character.level}` : characterName}
-          </h2>
+          <div>
+            <h2 className="text-lg font-semibold text-white">
+              {loadout ? `${loadout.character.name} — Lv ${loadout.character.level}` : characterName}
+            </h2>
+            {loadout && <p className="text-xs text-amber-300">Gear Score: {loadout.gearScore}</p>}
+          </div>
           <button type="button" onClick={close} aria-label="Close" className="text-slate-400 hover:text-slate-200">
             ✕
           </button>

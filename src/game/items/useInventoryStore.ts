@@ -57,6 +57,12 @@ export interface ItemInstance {
   // embedding (see occupiedSlotCount below and InventoryPanel's
   // visibleItems), same as an equipped item is.
   location: 'inventory' | 'bank'
+  // Lock (requested by the user, see set_item_locked's SQL) — blocks Sell/
+  // Salvage/Marketplace-listing/Bank "Deposit as Composition"/Composition-feed
+  // fuel-consumption for this item. Never blocks non-destructive actions
+  // (Level/Quality Upgrade, physical Bank Storage deposit, being the *target*
+  // of a Composition feed). Only ever changed via setItemLocked/set_item_locked.
+  locked: boolean
 }
 
 // Mirrors supabase/functions/resolve-combat's own DROP_CHANCE (confirmed
@@ -212,6 +218,9 @@ interface InventoryState {
   // this just keeps the client's copy in sync without a full refetch, same
   // spirit as patchItem above.
   setItemLocation: (itemId: string, location: 'inventory' | 'bank') => void
+  // Lock/unlock toggle (see set_item_locked) — ownership-checked server-side,
+  // no other side effects. Patches the local copy on success.
+  setItemLocked: (itemId: string, locked: boolean) => Promise<{ ok: boolean; error?: string }>
   // Sells a gear item for gold from the Shop tab (see sell_item — item_instances
   // has no client-side delete grant, so this has to go through a SECURITY
   // DEFINER function even though gold itself is otherwise client-authoritative).
@@ -358,6 +367,23 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
 
   setItemLocation: (itemId, location) => {
     set((state) => ({ items: state.items.map((item) => (item.id === itemId ? { ...item, location } : item)) }))
+  },
+
+  setItemLocked: async (itemId, locked) => {
+    const { data, error } = await supabase.rpc('set_item_locked', { p_item_id: itemId, p_locked: locked })
+
+    if (error) {
+      console.error('Set item locked call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as { ok: boolean; error?: string; locked?: boolean }
+
+    if (result.ok && typeof result.locked === 'boolean') {
+      set((state) => ({ items: state.items.map((item) => (item.id === itemId ? { ...item, locked: result.locked! } : item)) }))
+    }
+
+    return { ok: result.ok, error: result.error }
   },
 
   sellItem: async (itemId) => {

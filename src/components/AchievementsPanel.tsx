@@ -8,6 +8,7 @@ import ItemTooltip from './ItemTooltip'
 import { SLOT_SIZE_CLASS } from './InventorySlot'
 import { AscensionCard } from './ui/AscensionCard'
 import { Button } from './ui/Button'
+import GearScoreLeaderboardPanel from './GearScoreLeaderboardPanel'
 import {
   ACHIEVEMENT_TIERS,
   ACCOUNT_TIER_THRESHOLDS,
@@ -36,7 +37,7 @@ import {
 //     slots), same shape, claiming grants a small permanent combat buff
 //     instead of an item/currency bundle.
 //   - Pets: unchanged from before this rework.
-type AchievementsTab = 'player' | 'account' | 'pets'
+type AchievementsTab = 'player' | 'account' | 'pets' | 'leaderboard'
 
 type ChipState = 'claimed' | 'claimable' | 'locked'
 
@@ -680,6 +681,7 @@ const TAB_DESCRIPTIONS: Record<AchievementsTab, string> = {
   player: 'This character’s own Kill Count achievements.',
   account: 'Progress shared across every character on this account.',
   pets: `Every monster has a 1 in ${(1 / PET_DROP_CHANCE).toLocaleString()} chance per kill to drop its pet — account-wide, one per monster, forever.`,
+  leaderboard: 'See who has the top Gear Score for each class, and inspect their loadout.',
 }
 
 export default function AchievementsPanel({ characterId, accountId }: { characterId: string; accountId?: string }) {
@@ -697,6 +699,7 @@ export default function AchievementsPanel({ characterId, accountId }: { characte
     { id: 'player', label: characterName || 'Character', badge: characterClaimable },
     { id: 'account', label: 'Account', badge: accountClaimable },
     { id: 'pets', label: 'Pets', badge: 0 },
+    { id: 'leaderboard', label: 'Leaderboard', badge: 0 },
   ]
 
   return (
@@ -738,6 +741,8 @@ export default function AchievementsPanel({ characterId, accountId }: { characte
       {tab === 'account' && <AccountTabContent accountId={accountId} />}
 
       {tab === 'pets' && <PetZoneGroups renderMonster={(monsterId, displayName) => <PetTile monsterId={monsterId} displayName={displayName} />} />}
+
+      {tab === 'leaderboard' && <GearScoreLeaderboardPanel characterId={characterId} />}
     </div>
   )
 }

@@ -23,6 +23,12 @@ interface EquipmentSlotProps {
   // Gear Durability (2026-08-14) — mirrors InventorySlot's own top-left
   // broken badge, same reasoning as compositionLevel above.
   broken?: boolean
+  // Lock (requested by the user) — mirrors InventorySlot's own bottom-left
+  // 🔒 badge, same reasoning as compositionLevel/broken above. Named
+  // `itemLocked` (not `locked`) to avoid colliding with this component's
+  // pre-existing `locked` prop, which means something unrelated (an
+  // inert not-yet-implemented placeholder slot).
+  itemLocked?: boolean
   selected?: boolean
   onClick?: () => void
   // Universal Diablo/PoE-style hover tooltip (see ItemTooltip.tsx) — only Weapon
@@ -46,6 +52,7 @@ export default function EquipmentSlot({
   qualityColor,
   compositionLevel,
   broken,
+  itemLocked,
   selected,
   onClick,
   tooltip,
@@ -121,6 +128,11 @@ export default function EquipmentSlot({
           style={{ textShadow: '0 1px 2px rgba(0,0,0,0.9), 0 -1px 0 rgba(255,255,255,0.35)' }}
         >
           +{compositionLevel}
+        </span>
+      )}
+      {filled && itemLocked && (
+        <span className="absolute bottom-0.5 left-1.5 z-10 text-[13px] leading-none" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}>
+          🔒
         </span>
       )}
     </button>
