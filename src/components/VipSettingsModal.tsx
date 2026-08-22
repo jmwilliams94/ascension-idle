@@ -18,13 +18,18 @@ function ToggleSwitch({ checked, onChange, label }: { checked: boolean; onChange
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className={`relative h-6 w-11 shrink-0 rounded-full border transition ${
+      className={`relative h-6 w-11 shrink-0 rounded-full border p-0 transition ${
         checked ? 'border-amber-500 bg-amber-500/80' : 'border-slate-700 bg-slate-800'
       }`}
       aria-label={label}
     >
+      {/* Anchored with an explicit left-0.5, not left as an implicit static
+          position — a bare <button> keeps the browser's default padding
+          unless zeroed (see p-0 above), which throws off an unanchored
+          absolute + translate-x child. translate-x then layers on top of
+          this fixed anchor for the "on" position instead of assuming 0. */}
       <span
-        className={`absolute top-0.5 h-4.5 w-4.5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-[22px]' : 'translate-x-0.5'}`}
+        className={`absolute left-0.5 top-0.5 h-4.5 w-4.5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-[20px]' : ''}`}
       />
     </button>
   )
