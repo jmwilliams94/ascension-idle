@@ -72,6 +72,8 @@ Gem upgrade costs: 15 Normal + 10,000 gold → 1 Tempered. 15 Tempered + 800,000
 
 ## Forge
 
+**Quality Upgrade is locked out entirely for two `slot_type`s**: `'promotion-material'` (Lunar Chest/Jade Shard/Umbrite Ore) and `'material'` (Mining's Iron/Silver/Gold Ore) — `quality_upgrade`/`quality_upgrade_scroll`/`master_forge_upgrade`'s quality branch all refuse upfront (`no_quality_upgrade_path`), client-side `ForgeStandardPanel`/`MasterForgePanel` also refuse to accept either into their upgrade slot. **The `promotion-material` half of this silently regressed to zero effect for ~3 weeks** (a later migration redefined all three functions from bodies that predated the lock, per the "diff against latest, not a stale copy" lesson elsewhere in this file) — restored + broadened to cover Ore too in `20260929010000`/`20260929020000`, see `CLAUDE.accounts-and-classes.md`'s Item acquisition section for the full story.
+
 **Six large tiles** (`ForgeHub.tsx`, 2026-08-13 redesign — supersedes the earlier 4-button toggle row with Composition folded invisibly into the main Forge tile's own drag-detection): Forge, Master Forge, Composition, Salvage, Sockets, Enchantress. `ForgePanel.tsx` is just the hub/router now (`useState<ForgeMode | null>`) — picking a tile routes into its own screen built on `ForgeTwoColumnLayout.tsx` (a Back button + title, then the reused `InventoryPanel` grid on the left and that tile's own upgrade slots/controls on the right, stacking vertically below `lg`), with a Back button returning to the hub.
 
 - **Costs**: flat 1 Comet (Level) / 1 Fallen Star (Quality) per attempt, spent regardless of outcome.

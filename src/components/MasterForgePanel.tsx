@@ -95,12 +95,12 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
 
   const handleSelectItem = (id: string) => {
     // Promotion materials (Lunar Chest, Umbrite Ore, Jade Shard, Opaline
-    // Gem) have no stats and no upgrade chain — same exclusion as the
-    // regular Forge's Quiver check (ForgeStandardPanel.tsx), extended to
-    // this slot_type since the backend now rejects a Quality Upgrade on
-    // them too.
+    // Gem) and Mining Ore (Iron/Silver/Gold) have no stats and no upgrade
+    // chain — same exclusion as the regular Forge's Quiver check
+    // (ForgeStandardPanel.tsx), extended to both slot_types since the
+    // backend now rejects a Quality Upgrade on either.
     const template = templates.find((entry) => entry.id === items.find((item) => item.id === id)?.template_id)
-    if (template?.slot_type === 'promotion-material') {
+    if (template?.slot_type === 'promotion-material' || template?.slot_type === 'material') {
       return
     }
     setSelectedItemId(id)

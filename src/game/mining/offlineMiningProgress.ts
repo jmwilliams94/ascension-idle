@@ -17,6 +17,7 @@ export interface OfflineMiningProgressResult {
   elapsedMs: number
   kills: number
   ore: number
+  umbriteOre: number
   gems: number
   nodeDisplayName: string | null
 }
@@ -50,6 +51,7 @@ export async function runOfflineMiningProgressCheck(characterId: string): Promis
       elapsedMs: result.elapsedMs ?? 0,
       kills: result.gained.kills,
       ore: result.gained.ore,
+      umbriteOre: result.gained.umbriteOre,
       gems: result.gained.gems,
       nodeDisplayName: result.nodeDisplayName ?? null,
     },

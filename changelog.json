@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.103.3",
+    "date": "2026-08-22",
+    "changes": [
+      "Cinderleaf's mine now has a rare chance to yield Umbrite Ore, needed for the Falcon Hunter promotion",
+      "Ore can no longer be fed into the Forge's Quality Upgrade (fixes a bug that also let some quest materials be upgraded)"
+    ]
+  },
+  {
     "version": "1.103.2",
     "date": "2026-08-22",
     "changes": [

@@ -137,11 +137,12 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
     // has nowhere to go, and Quality Upgrade would just burn Fallen Stars
     // for a cosmetic tier with nothing to scale. Excluded from this tile
     // entirely rather than left to fail silently once dropped. Promotion
-    // materials (Lunar Chest, Umbrite Ore, Jade Shard, Opaline Gem) are
-    // excluded for the same reason — they're plain quest/cost items, not
-    // gear, and the backend now rejects a Quality Upgrade on them anyway.
+    // materials (Lunar Chest, Umbrite Ore, Jade Shard, Opaline Gem) and
+    // Mining Ore (Iron/Silver/Gold) are excluded for the same reason —
+    // they're plain quest/currency items, not gear, and the backend now
+    // rejects a Quality Upgrade on either slot_type anyway.
     const template = templates.find((entry) => entry.id === item.template_id)
-    if (template?.slot_type === 'quiver' || template?.slot_type === 'promotion-material') {
+    if (template?.slot_type === 'quiver' || template?.slot_type === 'promotion-material' || template?.slot_type === 'material') {
       return
     }
 

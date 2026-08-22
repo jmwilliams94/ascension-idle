@@ -17,7 +17,7 @@ export interface ResolveMiningResult {
   ok: boolean
   error?: string
   elapsedMs?: number
-  gained?: { kills: number; ore: number; gems: number }
+  gained?: { kills: number; ore: number; umbriteOre: number; gems: number }
   itemsGranted?: ItemInstance[]
   itemsHeld?: number
   gemsGranted?: Record<string, number>
@@ -56,9 +56,16 @@ export async function resolveMining(characterId: string, mode: ResolveMiningMode
   }
 
   const oreCount = result.gained?.ore ?? 0
+  const umbriteOreCount = result.gained?.umbriteOre ?? 0
   const gemCount = result.gained?.gems ?? 0
   if (oreCount > 0) {
     useMiningStore.getState().logGrant(`Found ${oreCount} ore.`, 'ore')
+  }
+  if (umbriteOreCount > 0) {
+    // Rare, promotion-material-tier drop (Cinderleaf only) — its own
+    // callout, same "special find" treatment as the Gem line below rather
+    // than folding into the generic ore message.
+    useMiningStore.getState().logGrant(`Found ${umbriteOreCount} Umbrite Ore!`, 'ore')
   }
   if (gemCount > 0) {
     useMiningStore.getState().logGrant(`Found ${gemCount} gem${gemCount === 1 ? '' : 's'}!`, 'gem')

@@ -106,6 +106,25 @@ function rollMiningGemTier(): string | null {
 
 const ORE_TYPES = ['Iron', 'Silver', 'Gold'] as const
 
+// Umbrite Ore (2026-08-22, requested by the user) — a real, pre-existing
+// item_templates row (item_family/slot_type 'promotion-material',
+// required_level 40, price 0), used as Falcon Hunter's tier-40 promotion
+// cost (see CLAUDE.accounts-and-classes.md). Documented since 2026-09-01 as
+// "intended as a future Mining drop... no acquisition path exists yet" —
+// this closes that gap. Scoped to Cinderleaf only, per the user — checked
+// against node.mine_id, not a DB column (same plain-constant shape
+// combatResolver.ts's own JADE_SHARD_MONSTER_IDS uses for its own
+// single-material-scoped-to-specific-sources drop). Placeholder rate,
+// matching Jade Shard's own precedent for a promotion-tier-gating special
+// material (JADE_SHARD_DROP_CHANCE = 1/300). Quality-locked already by its
+// slot_type (Forge's quality_upgrade/master_forge_upgrade both explicitly
+// reject 'promotion-material') — granted the same way regular Ore is
+// (quality_tier 'normal', composition_level 0), so "no ore can have a
+// quality" holds for this one too with no extra code.
+const UMBRITE_ORE_NAME = 'Umbrite Ore'
+const UMBRITE_ORE_DROP_CHANCE = 1 / 300
+const UMBRITE_ORE_MINE_ID = 'cinderleaf'
+
 // P(rank = N) proportional to (11 - N) -- low ranks common, Rank 10 rare.
 // Placeholder weighting, tunable.
 function rollOreRank(): number {
@@ -161,6 +180,7 @@ interface GatherStateResult {
 interface OreTemplateRow {
   id: string
   name: string
+  required_level: number
 }
 
 async function handleResolveMining(req: Request): Promise<Response> {
@@ -237,11 +257,11 @@ async function handleResolveMining(req: Request): Promise<Response> {
   try {
     if (!gathered.claimed) {
       // Another concurrent call already claimed this window.
-      return json({ ok: true, elapsedMs: 0, gained: { kills: 0, ore: 0, gems: 0 } })
+      return json({ ok: true, elapsedMs: 0, gained: { kills: 0, ore: 0, umbriteOre: 0, gems: 0 } })
     }
 
     if (!character.selected_mine_id) {
-      return json({ ok: true, elapsedMs: 0, gained: { kills: 0, ore: 0, gems: 0 } })
+      return json({ ok: true, elapsedMs: 0, gained: { kills: 0, ore: 0, umbriteOre: 0, gems: 0 } })
     }
 
     const node = gathered.node
@@ -284,10 +304,12 @@ async function handleResolveMining(req: Request): Promise<Response> {
     let holdingCount = gathered.holding_count ?? 0
 
     let oreGrantedThisWindow = 0
+    let umbriteOreGrantedThisWindow = 0
     let gemsGrantedThisWindow = 0
     let inventoryFull = false
     const oreRolls: { type: (typeof ORE_TYPES)[number]; rank: number }[] = []
     const gemGrants: Record<string, number> = {}
+    const isUmbriteMine = node.mine_id === UMBRITE_ORE_MINE_ID
 
     for (let i = 0; i < wholeKillsThisWindow; i += 1) {
       const gemTier = rollMiningGemTier()
@@ -310,10 +332,15 @@ async function handleResolveMining(req: Request): Promise<Response> {
         break
       }
 
-      const oreType = ORE_TYPES[Math.floor(Math.random() * ORE_TYPES.length)]
-      const rank = rollOreRank()
-      oreRolls.push({ type: oreType, rank })
-      oreGrantedThisWindow += 1
+      if (isUmbriteMine && Math.random() < UMBRITE_ORE_DROP_CHANCE) {
+        umbriteOreGrantedThisWindow += 1
+      } else {
+        const oreType = ORE_TYPES[Math.floor(Math.random() * ORE_TYPES.length)]
+        const rank = rollOreRank()
+        oreRolls.push({ type: oreType, rank })
+        oreGrantedThisWindow += 1
+      }
+
       if (mode === 'live') {
         gearCount += 1
       } else {
@@ -321,26 +348,34 @@ async function handleResolveMining(req: Request): Promise<Response> {
       }
     }
 
-    // One lookup query for the (up to 30) Ore templates actually needed this
-    // window, rather than one query per roll.
-    let oreTemplateByKey = new Map<string, string>()
-    if (oreRolls.length > 0) {
+    // One lookup query for whichever ore/Umbrite templates are actually
+    // needed this window, rather than one query per roll.
+    let templateByName = new Map<string, { id: string; requiredLevel: number }>()
+    const neededNames = oreRolls.map(({ type, rank }) => `${type} Ore (Rank ${rank})`)
+    if (umbriteOreGrantedThisWindow > 0) {
+      neededNames.push(UMBRITE_ORE_NAME)
+    }
+    if (neededNames.length > 0) {
       const { data: oreTemplates, error: oreError } = await db
         .from('item_templates')
-        .select('id, name')
-        .eq('item_family', 'ore')
+        .select('id, name, required_level')
+        .in('name', Array.from(new Set(neededNames)))
 
       if (oreError) {
         console.error('resolve-mining ore template lookup failed:', oreError.message)
       } else {
-        oreTemplateByKey = new Map((oreTemplates as OreTemplateRow[]).map((t) => [t.name, t.id]))
+        templateByName = new Map(
+          (oreTemplates as OreTemplateRow[]).map((t) => [t.name, { id: t.id, requiredLevel: t.required_level }]),
+        )
       }
     }
 
-    const oreDrops = oreRolls
-      .map(({ type, rank }) => oreTemplateByKey.get(`${type} Ore (Rank ${rank})`))
-      .filter((templateId): templateId is string => Boolean(templateId))
-      .map((templateId) => ({ template_id: templateId }))
+    const oreDrops = [
+      ...oreRolls.map(({ type, rank }) => templateByName.get(`${type} Ore (Rank ${rank})`)),
+      ...Array.from({ length: umbriteOreGrantedThisWindow }, () => templateByName.get(UMBRITE_ORE_NAME)),
+    ]
+      .filter((t): t is { id: string; requiredLevel: number } => Boolean(t))
+      .map((t) => ({ template_id: t.id, required_level: t.requiredLevel }))
 
     const gemDrops = Object.entries(gemGrants).map(([gemKey, amount]) => ({ gem_key: gemKey, amount }))
 
@@ -360,9 +395,14 @@ async function handleResolveMining(req: Request): Promise<Response> {
     return json({
       ok: true,
       elapsedMs,
-      gained: { kills: wholeKillsThisWindow, ore: oreGrantedThisWindow, gems: gemsGrantedThisWindow },
+      gained: {
+        kills: wholeKillsThisWindow,
+        ore: oreGrantedThisWindow,
+        umbriteOre: umbriteOreGrantedThisWindow,
+        gems: gemsGrantedThisWindow,
+      },
       itemsGranted: mode === 'live' ? applyData.granted_items : [],
-      itemsHeld: mode === 'offline' ? oreGrantedThisWindow : 0,
+      itemsHeld: mode === 'offline' ? oreGrantedThisWindow + umbriteOreGrantedThisWindow : 0,
       gemsGranted: gemGrants,
       gems: applyData.gems,
       inventoryFull,
