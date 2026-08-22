@@ -614,7 +614,10 @@ export function getGearIconSrc(templateName: string | undefined, qualityTier?: s
   return templateName ? ITEM_ICON_OVERRIDES[templateName] : undefined
 }
 
-const QUALITY_ORDER = ['normal', 'tempered', 'infused', 'radiant', 'ascended']
+// Exported so other systems needing a tier-rank comparison (e.g. VIP
+// auto-salvage's minimum-tier threshold) reuse this instead of redefining
+// their own copy of the ladder.
+export const QUALITY_ORDER = ['normal', 'tempered', 'infused', 'radiant', 'ascended']
 
 // Mirrors the quality_upgrade Postgres function's tier progression exactly (see
 // supabase/migrations/20260803110000_rename_quality_tiers.sql's v_next_tier

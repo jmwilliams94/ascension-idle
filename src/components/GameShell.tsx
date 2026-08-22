@@ -25,6 +25,8 @@ import MarketplacePanel from './MarketplacePanel'
 import OfflineProgressModal from './OfflineProgressModal'
 import MoneyBagRevealModal from './MoneyBagRevealModal'
 import GearSnapshotClaimModal from './GearSnapshotClaimModal'
+import VipSettingsModal from './VipSettingsModal'
+import VipAutomationEngine from '../game/vip/VipAutomationEngine'
 import SalvageRevealToast from './SalvageRevealToast'
 import FireworkOverlay from './FireworkOverlay'
 import LevelUpBanner from './LevelUpBanner'
@@ -526,6 +528,8 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <ChatOverlay characterId={characterId} />
       <CharacterLoadoutModal />
       <GearSnapshotClaimModal />
+      <VipSettingsModal />
+      <VipAutomationEngine />
 
       {/* pb-24 (was pb-6, matched by py-6 on lg): clearance for
           MobileBottomNav's fixed bar below `lg` — without it, the bar covers

@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.108.0",
+    "date": "2026-10-01",
+    "changes": [
+      "VIP status now does something! Click the VIP badge in the top HUD to open new automation settings: Auto-Sell Ore, Auto-Salvage quality gear, and Auto-Bank +N gear into Gear Points, with your own priority order for items that qualify for more than one",
+      "VIP players can also tick an Auto-Repeat box in the Forge when Level Upgrading with a Comet, which keeps repeating the upgrade once per second against every other matching item until you run out of Comets or matching gear"
+    ]
+  },
+  {
     "version": "1.107.4",
     "date": "2026-09-30",
     "changes": [

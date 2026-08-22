@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import EquippedGearPicker from './EquippedGearPicker'
 import ForgeMaterialSlot, { type MaterialEntry } from './ForgeMaterialSlot'
 import ForgePreviewSlot from './ForgePreviewSlot'
@@ -7,6 +7,7 @@ import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import { DragDropProvider } from './dragDrop'
 import InventoryPanel from './InventoryPanel'
 import { Button } from './ui/Button'
+import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { nextQualityTier } from '../game/items/equipmentBonus'
@@ -26,8 +27,14 @@ import { useEquipmentStore } from '../game/items/useEquipmentStore'
 import { useForgeStore } from '../game/items/useForgeStore'
 import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
+import { useMarketplaceStore } from '../game/marketplace/useMarketplaceStore'
+import { useMailStore } from '../game/marketplace/useMailStore'
 
 const RESULT_DISPLAY_MS = 2600
+
+// VIP Auto-Forge repeat (v1.108.0, Level Upgrade only) — paced one attempt
+// per second, matching the user's own description of the feature.
+const AUTO_FORGE_TICK_MS = 1000
 
 type MaterialMode = 'quality' | 'level'
 
@@ -97,6 +104,16 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
   const [attemptResult, setAttemptResult] = useState<AttemptResult | null>(null)
   const [hold, setHold] = useState(false)
 
+  // VIP Auto-Forge repeat (Level Upgrade only) — once ticked, keeps calling
+  // levelUpgrade once/sec against whichever same-slot-type/same-level item in
+  // Inventory is next eligible, until Comets or matching items run out.
+  const vipExpiresAt = useCharacterStore((state) => state.vipExpiresAt)
+  const isVipActive = Boolean(vipExpiresAt && new Date(vipExpiresAt).getTime() > Date.now())
+  const [autoRepeat, setAutoRepeat] = useState(false)
+  const [autoRepeatSummary, setAutoRepeatSummary] = useState<string | null>(null)
+  const autoRepeatTargetRef = useRef<{ slotType: string; level: number } | null>(null)
+  const autoRepeatStatsRef = useRef({ attempts: 0, successes: 0 })
+
   const selectedItem = items.find((item) => item.id === selectedItemId) ?? null
   const selectedTemplate = selectedItem ? (templates.find((t) => t.id === selectedItem.template_id) ?? null) : null
 
@@ -120,6 +137,100 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
     const timeout = setTimeout(() => setAttemptResult(null), RESULT_DISPLAY_MS)
     return () => clearTimeout(timeout)
   }, [attemptResult])
+
+  useEffect(() => {
+    if (!autoRepeat) {
+      return undefined
+    }
+    if (!isVipActive || !selectedItem || !selectedTemplate || materialMode !== 'level') {
+      setAutoRepeat(false)
+      return undefined
+    }
+
+    autoRepeatTargetRef.current = { slotType: selectedTemplate.slot_type, level: selectedItem.level }
+    autoRepeatStatsRef.current = { attempts: 0, successes: 0 }
+    setAutoRepeatSummary(null)
+
+    let cancelled = false
+    let timeoutId: number | undefined
+
+    const stop = (reason: string) => {
+      if (cancelled) {
+        return
+      }
+      cancelled = true
+      const { attempts, successes } = autoRepeatStatsRef.current
+      setAutoRepeatSummary(attempts === 0 ? reason : `${reason} (${successes}/${attempts} upgrades succeeded)`)
+      setAutoRepeat(false)
+    }
+
+    const tick = async () => {
+      if (cancelled) {
+        return
+      }
+      const target = autoRepeatTargetRef.current
+      if (!target) {
+        return
+      }
+
+      const currentVipExpiresAt = useCharacterStore.getState().vipExpiresAt
+      const stillVip = Boolean(currentVipExpiresAt && new Date(currentVipExpiresAt).getTime() > Date.now())
+      if (!stillVip) {
+        stop('Auto-Forge stopped: VIP expired.')
+        return
+      }
+      if (useCurrencyStore.getState().comets < 1) {
+        stop('Auto-Forge stopped: out of Comets.')
+        return
+      }
+
+      const currentItems = useInventoryStore.getState().items
+      const currentTemplates = useItemTemplatesStore.getState().templates
+      const checkEquipped = useEquipmentStore.getState().isEquipped
+      const myListings = useMarketplaceStore.getState().myListings
+      const checkListed = (itemId: string) => myListings.some((listing) => listing.status === 'active' && listing.item_id === itemId)
+      const mailEntries = useMailStore.getState().entries
+      const checkUnclaimedMail = (itemId: string) => mailEntries.some((entry) => entry.item_id === itemId && entry.claimed_at === null)
+
+      const nextItem = currentItems.find((item) => {
+        if (item.location === 'bank' || item.locked || item.level !== target.level) {
+          return false
+        }
+        if (checkEquipped(item.id) || checkListed(item.id) || checkUnclaimedMail(item.id)) {
+          return false
+        }
+        return currentTemplates.find((entry) => entry.id === item.template_id)?.slot_type === target.slotType
+      })
+
+      if (!nextItem) {
+        stop('Auto-Forge stopped: no more matching items.')
+        return
+      }
+
+      autoRepeatStatsRef.current.attempts += 1
+      const result = await levelUpgrade(nextItem.id)
+      if (result.ok && result.upgraded) {
+        autoRepeatStatsRef.current.successes += 1
+      }
+
+      if (!cancelled) {
+        timeoutId = window.setTimeout(() => void tick(), AUTO_FORGE_TICK_MS)
+      }
+    }
+
+    timeoutId = window.setTimeout(() => void tick(), AUTO_FORGE_TICK_MS)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timeoutId)
+    }
+    // Deliberately keyed on autoRepeat alone — once started, the loop commits
+    // to the target captured above and keeps running independent of further
+    // changes to the currently-staged item/material in the UI (see the
+    // checkbox's own render condition below, which stays visible/toggleable
+    // even after the Upgrade Slot is cleared).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRepeat])
 
   const handleDropItemId = (itemId: string) => {
     const item = items.find((entry) => entry.id === itemId)
@@ -359,6 +470,24 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
             </>
           )}
         </div>
+
+        {(autoRepeat || (materialMode === 'level' && Boolean(selectedItem) && !blockedByEquipLevel && !weaponNeedsMasterForge)) && (
+          <div className="flex w-full max-w-xs flex-col items-center gap-1">
+            <label
+              className={`flex items-center gap-2 text-xs ${isVipActive ? 'cursor-pointer text-slate-300' : 'cursor-not-allowed text-slate-600'}`}
+              title={isVipActive ? undefined : 'VIP only'}
+            >
+              <input
+                type="checkbox"
+                checked={autoRepeat}
+                disabled={!isVipActive}
+                onChange={(event) => setAutoRepeat(event.target.checked)}
+              />
+              Auto-repeat (VIP) — 1 Level Upgrade/sec across every other matching item
+            </label>
+            {autoRepeatSummary && <p className="text-center text-[11px] text-amber-400/80">{autoRepeatSummary}</p>}
+          </div>
+        )}
       </ForgeTwoColumnLayout>
     </DragDropProvider>
   )
