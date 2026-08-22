@@ -118,7 +118,11 @@ function describeBuyError(error?: string): string {
     case 'not_owner':
       return "Couldn't find that item."
     default:
-      return 'Something went wrong.'
+      // Falls through here for a genuine RPC-level failure (network error,
+      // an actual SQL exception, etc.) — useInventoryStore.buyShopItem now
+      // passes the raw message through instead of swallowing it, so showing
+      // it beats a flat "Something went wrong" with nothing to diagnose from.
+      return error ? `Something went wrong: ${error}` : 'Something went wrong.'
   }
 }
 

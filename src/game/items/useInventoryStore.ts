@@ -293,7 +293,14 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     if (error) {
       console.error('Shop item purchase failed', error)
       set({ pendingFullDrop: null })
-      return { ok: false }
+      // Previously returned no `error` at all here, so a genuine RPC-level
+      // failure (as opposed to an ordinary {ok:false} business rejection)
+      // showed the caller nothing to go on — reported by the user (a
+      // Pickaxe purchase that "did nothing"; GearRow's own error display,
+      // added right before this, still just said "Something went wrong"
+      // with no detail). Surfacing the raw message here at least makes that
+      // detail visible instead of only ever hitting the browser console.
+      return { ok: false, error: error.message }
     }
 
     const result = data as { ok: boolean; error?: string; item?: ItemInstance; gold?: number }
