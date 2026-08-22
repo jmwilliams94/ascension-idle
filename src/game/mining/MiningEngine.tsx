@@ -48,9 +48,17 @@ export default function MiningEngine() {
         resolve()
       }
     })
+    // Deliberately bypasses resolve()'s own isMining guard above — see
+    // CombatEngine.tsx's identical fix/comment (2026-08-22 bug): by the time
+    // this fires, isMining has already flipped to false, so resolve() would
+    // always no-op, leaving mining_last_resolved_at stale and causing a full
+    // catch-up replay of the away window when Mining resumes later.
     const unsubscribeMining = useMiningStore.subscribe((state, prevState) => {
       if (prevState.isMining && !state.isMining) {
-        resolve()
+        const characterId = useActiveCharacterStore.getState().characterId
+        if (characterId) {
+          void resolveMining(characterId, 'live')
+        }
       }
     })
 

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.106.3",
+    "date": "2026-08-22",
+    "changes": [
+      "Fixed switching between Hunting and Mining dumping a pile of rewards into your Inventory for the mode you'd just left, as if you'd been doing it the whole time you were actually doing the other one"
+    ]
+  },
+  {
     "version": "1.106.2",
     "date": "2026-08-22",
     "changes": [

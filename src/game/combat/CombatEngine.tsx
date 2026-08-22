@@ -74,9 +74,19 @@ export default function CombatEngine() {
         resolve()
       }
     })
+    // Deliberately bypasses resolve()'s own isFighting guard above — by the
+    // time this fires, isFighting has already flipped to false, so resolve()
+    // would always no-op here (bug, fixed 2026-08-22: this "final resolve"
+    // silently never ran, leaving combat_last_resolved_at stale at whatever
+    // the last periodic tick stamped — switching to Mining and back later
+    // then replayed that entire away window as a Hunting catch-up, since the
+    // server only ever sees now - combat_last_resolved_at).
     const unsubscribeCombat = useCombatStore.subscribe((state, prevState) => {
       if (prevState.isFighting && !state.isFighting) {
-        resolve()
+        const characterId = useActiveCharacterStore.getState().characterId
+        if (characterId) {
+          void resolveCombat(characterId, 'live')
+        }
       }
     })
 
