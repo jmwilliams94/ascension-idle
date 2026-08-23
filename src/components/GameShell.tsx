@@ -314,6 +314,22 @@ export default function GameShell({ characterId }: { characterId: string }) {
     // only after the spinner had already appeared).
     let lastAliveAt = Date.now()
 
+    // Popup cooldown (reported by the user — a second near-identical "Welcome
+    // back" splash appeared right after dismissing the first, each covering
+    // its own small slice of the same real resume). The three triggers above
+    // only guard against firing *simultaneously* (checkInFlight) — they don't
+    // stop a later, genuinely separate trigger (e.g. a stray second `focus`
+    // event, or just the player taking >60s to read/dismiss the first popup)
+    // from finding its own fresh ≥60s-old gap and showing a second full splash
+    // moments after the first. Rewards still resolve normally either way —
+    // this only suppresses showing another full-screen popup too soon after
+    // one was just shown; anything it grants silently still surfaces via
+    // UnclaimedLootBadge if left unclaimed. Not persisted (module-level would
+    // survive a remount, but a fresh mount already implies enough time has
+    // passed that suppressing further is pointless).
+    const POPUP_COOLDOWN_MS = 20000
+    let lastShownAt: number | null = null
+
     const checkOfflineProgressOnResume = async () => {
       const offlineProgressState = useOfflineProgressStore.getState()
       if (checkInFlight || offlineProgressState.result !== null || offlineProgressState.miningResult !== null) {
@@ -324,22 +340,25 @@ export default function GameShell({ characterId }: { characterId: string }) {
       const awayMs = hiddenAt !== null ? now - hiddenAt : now - lastAliveAt
       hiddenAt = null
       const worthShowing = awayMs >= OFFLINE_SUMMARY_THRESHOLD_MS
+      const canShowPopup = lastShownAt === null || now - lastShownAt >= POPUP_COOLDOWN_MS
       try {
         // Mirrors the load effect's own branch — Hunting and Mining can
         // never both accrue offline progress.
         if (useIdleModeStore.getState().lastActiveIdleMode === 'mining') {
           const miningOutcome = await runOfflineMiningProgressCheck(characterId)
-          if (miningOutcome.status === 'shown') {
+          if (miningOutcome.status === 'shown' && canShowPopup) {
+            lastShownAt = Date.now()
             useOfflineProgressStore.getState().showMining(miningOutcome.result)
-          } else if (miningOutcome.status === 'error' && worthShowing) {
+          } else if (miningOutcome.status === 'error' && worthShowing && canShowPopup) {
             useOfflineProgressStore.getState().showSyncFailed()
           }
           return
         }
         const outcome = await runOfflineProgressCheck(characterId)
-        if (outcome.status === 'shown') {
+        if (outcome.status === 'shown' && canShowPopup) {
+          lastShownAt = Date.now()
           useOfflineProgressStore.getState().show(outcome.result)
-        } else if (outcome.status === 'error' && worthShowing) {
+        } else if (outcome.status === 'error' && worthShowing && canShowPopup) {
           // Only surface the "couldn't sync" state for a gap that would have
           // been worth showing in the first place — a resolve blip on a
           // trivial few-second tab switch isn't worth an error popup (see

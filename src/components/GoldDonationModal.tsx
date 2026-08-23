@@ -27,9 +27,19 @@ export default function GoldDonationModal({ characterId, onClose }: { characterI
   const busy = useGoldDonationStore((state) => state.busy)
   const donate = useGoldDonationStore((state) => state.donate)
 
-  // Slider max is the player's Gold balance, rounded down to the nearest
-  // step — never above what they can actually afford.
-  const maxAmount = Math.max(0, Math.floor(gold / DONATION_STEP) * DONATION_STEP)
+  // Slider max is capped by both what the player can afford AND what the
+  // pool still needs to hit its target (requested by the user — donate_gold
+  // itself doesn't clamp an over-target donation, it just adds the full
+  // amount to total_donated, so nothing server-side stops the slider from
+  // inviting more Gold than the event could ever use). The remaining-needed
+  // half is rounded UP to the nearest step rather than left un-stepped, so a
+  // remaining gap smaller than one step (e.g. 180k left) still allows one
+  // step's worth of donation to finish it, instead of a maxAmount below
+  // DONATION_STEP wrongly tripping the "need at least 250,000 Gold" message.
+  const affordableMax = Math.max(0, Math.floor(gold / DONATION_STEP) * DONATION_STEP)
+  const remainingToFulfill = pool ? Math.max(0, pool.targetAmount - pool.totalDonated) : Infinity
+  const remainingStepAligned = remainingToFulfill > 0 ? Math.ceil(remainingToFulfill / DONATION_STEP) * DONATION_STEP : affordableMax
+  const maxAmount = Math.max(0, Math.min(affordableMax, remainingStepAligned))
   const canAffordStep = maxAmount >= DONATION_STEP
 
   const [amount, setAmount] = useState(DONATION_STEP)

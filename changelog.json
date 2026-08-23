@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.108.13",
+    "date": "2026-08-23",
+    "changes": [
+      "Fixed the welcome-back popup showing a found Comet as its own tile when it was actually the same Comet already shown in Loot Holding below",
+      "The welcome-back popup no longer shows a second near-duplicate popup right after you dismiss the first one",
+      "The Gold Donation Event's donate slider now caps at whatever's left to reach the event's goal, instead of letting you donate more than it needs"
+    ]
+  },
+  {
     "version": "1.108.12",
     "date": "2026-08-23",
     "changes": [

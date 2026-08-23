@@ -10,7 +10,6 @@ import { useZoneStore } from '../game/zones/useZoneStore'
 import { ENEMY_TYPES } from '../game/zones/zoneData'
 import type { VipAutomationSummary } from '../game/vip/vipAutomationSummary'
 import { formatGoldAmount } from '../game/stats/formatGold'
-import { COMET_ICON_SRC, FALLEN_STAR_ICON_SRC, FALLEN_STAR_COLOR, MATERIAL_COLOR } from '../game/items/forgeCosts'
 import { GEM_TIERS, GEM_TYPE_ORDER, GEM_TYPES, formatGemTierLabel, getGemIconSrc, getGemTierColor, parseGemStorageKey } from '../game/items/gemTypes'
 
 // One real-icon tile + count, for a "what currency/materials did I actually
@@ -262,20 +261,12 @@ export default function OfflineProgressModal() {
             )}
 
             {result && result.fallenStars > 0 && (
-              <div className="relative flex items-center justify-center gap-3 rounded-xl border border-violet-400 bg-violet-500/10 p-3 text-center shadow-lg shadow-violet-500/20">
+              <div className="relative rounded-xl border border-violet-400 bg-violet-500/10 p-3 text-center shadow-lg shadow-violet-500/20">
                 <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-violet-500 px-1.5 py-0.5 text-[9px] font-bold text-slate-950">
                   RARE DROP
                 </span>
-                <InventorySlot
-                  slotId="find-fallen-star"
-                  filled
-                  iconSrc={FALLEN_STAR_ICON_SRC}
-                  qualityColor={FALLEN_STAR_COLOR}
-                  sizeClassName="h-10 w-10"
-                  label="Fallen Star"
-                />
-                <p className="text-sm font-semibold text-violet-300">
-                  A Fallen Star dropped while you were away! (+{result.fallenStars})
+                <p className="mt-1 text-sm font-semibold text-violet-300">
+                  ✨ A Fallen Star dropped while you were away! (+{result.fallenStars})
                 </p>
               </div>
             )}
@@ -310,11 +301,13 @@ export default function OfflineProgressModal() {
                     <dd>{result.itemsFoundCount}</dd>
                   </div>
                 )}
+                {result.comets > 0 && (
+                  <div className="flex justify-between">
+                    <dt className="text-slate-400">Comets</dt>
+                    <dd className="font-semibold text-slate-200">+{result.comets}</dd>
+                  </div>
+                )}
               </dl>
-            )}
-
-            {result && result.comets > 0 && (
-              <FindTileRow tiles={[{ key: 'comet', iconSrc: COMET_ICON_SRC, color: MATERIAL_COLOR, label: 'Comet', count: result.comets }]} />
             )}
 
             {miningResult && (
