@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.108.9",
+    "date": "2026-08-23",
+    "changes": [
+      "Sword weapons now have unique artwork for every quality tier from Squire Sword through Crown Sword, replacing the generic sword icon"
+    ]
+  },
+  {
     "version": "1.108.8",
     "date": "2026-08-23",
     "changes": [
