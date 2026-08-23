@@ -3,6 +3,7 @@ import { useVipAutomationStore, type LiquidationPriority, type SalvageTier } fro
 import { Button } from './ui/Button'
 
 const SALVAGE_TIER_OPTIONS: { value: SalvageTier; label: string }[] = [
+  { value: 'normal', label: 'Normal' },
   { value: 'tempered', label: 'Tempered' },
   { value: 'infused', label: 'Infused' },
   { value: 'radiant', label: 'Radiant' },

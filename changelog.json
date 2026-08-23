@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.108.10",
+    "date": "2026-08-23",
+    "changes": [
+      "VIP Auto-Salvage can now be set to include Normal-quality gear, not just Tempered and above"
+    ]
+  },
+  {
     "version": "1.108.9",
     "date": "2026-08-23",
     "changes": [

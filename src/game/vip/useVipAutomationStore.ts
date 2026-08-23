@@ -9,7 +9,7 @@ import { useActiveCharacterStore } from '../../lib/useActiveCharacterStore'
 // this column sits outside characters' authenticated column-level UPDATE
 // grant, same "RPC past the allowlist" precedent every column added since
 // 20260821000000_lock_down_direct_table_writes.sql follows).
-export type SalvageTier = 'tempered' | 'infused' | 'radiant' | 'ascended'
+export type SalvageTier = 'normal' | 'tempered' | 'infused' | 'radiant' | 'ascended'
 export type LiquidationPriority = 'bank_first' | 'salvage_first'
 
 export interface VipAutomationSettings {
@@ -19,7 +19,7 @@ export interface VipAutomationSettings {
   priority: LiquidationPriority
 }
 
-const SALVAGE_TIERS: SalvageTier[] = ['tempered', 'infused', 'radiant', 'ascended']
+const SALVAGE_TIERS: SalvageTier[] = ['normal', 'tempered', 'infused', 'radiant', 'ascended']
 
 export const DEFAULT_VIP_AUTOMATION_SETTINGS: VipAutomationSettings = {
   autoSellOre: false,
