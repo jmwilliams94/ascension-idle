@@ -91,12 +91,12 @@ function availableToClass(template: ItemTemplate, classId: string): boolean {
   return template.required_class === null || template.required_class === classId
 }
 
-// Buy 5 / Buy 10 just call buyShopItem in a sequential loop client-side —
-// there's no bulk-quantity RPC, and each call already re-validates
-// gold/level/room server-side, so the loop simply stops the moment one
-// attempt comes back !ok (including 'inventory_full', which leaves the
-// existing InventoryFullModal's pendingFullDrop state for the player to
-// resolve rather than the loop trying to push through it).
+// Buy 5 / Buy 10 call buyShopItemBulk, which runs the whole purchase loop
+// server-side in a single round-trip (shop_buy_item_bulk RPC) instead of one
+// request per item — previously a sequential client-side loop, visibly
+// trickling items in one at a time. Still stops early on gold/room same as
+// before, including 'inventory_full' leaving the existing InventoryFullModal's
+// pendingFullDrop state for the player to resolve.
 // Surfaces a purchase failure reason (2026-09-30, reported by the user —
 // buying a Pickaxe appeared to silently do nothing; turned out GearRow never
 // showed *any* buy failure for *any* item, it just quietly stopped the
@@ -131,6 +131,7 @@ function GearRow({ template, bulkBuy }: { template: ItemTemplate; bulkBuy: boole
   const level = useProgressionStore((state) => state.level)
   const gold = useProgressionStore((state) => state.gold)
   const buyShopItem = useInventoryStore((state) => state.buyShopItem)
+  const buyShopItemBulk = useInventoryStore((state) => state.buyShopItemBulk)
   const [bulkBusy, setBulkBusy] = useState(false)
   const [buyError, setBuyError] = useState<string | null>(null)
 
@@ -138,9 +139,9 @@ function GearRow({ template, bulkBuy }: { template: ItemTemplate; bulkBuy: boole
   const canAfford = gold >= template.price
   const canBuy = meetsLevel && canAfford
 
-  // Gold is deducted server-side (shop_buy_item RPC) only once the purchase
-  // actually succeeds — no local spendGold pre-deduction, so an
-  // 'inventory_full' response never costs the player gold they didn't
+  // Gold is deducted server-side (shop_buy_item/shop_buy_item_bulk RPCs) only
+  // once the purchase actually succeeds — no local spendGold pre-deduction, so
+  // an 'inventory_full' response never costs the player gold they didn't
   // actually spend (see InventoryFullModal for how that gets resolved).
   const handleBuyMany = async (count: number) => {
     if (!characterId || !canBuy || bulkBusy) {
@@ -148,11 +149,17 @@ function GearRow({ template, bulkBuy }: { template: ItemTemplate; bulkBuy: boole
     }
     setBulkBusy(true)
     setBuyError(null)
-    for (let i = 0; i < count; i++) {
+    if (count === 1) {
       const result = await buyShopItem(template)
       if (!result.ok) {
         setBuyError(describeBuyError(result.error))
-        break
+      }
+    } else {
+      const result = await buyShopItemBulk(template, count)
+      if (!result.ok) {
+        setBuyError(describeBuyError(result.error))
+      } else if (result.error && result.purchased) {
+        setBuyError(`Bought ${result.purchased} of ${count}: ${describeBuyError(result.error)}`)
       }
     }
     setBulkBusy(false)

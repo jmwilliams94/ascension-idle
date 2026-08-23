@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.108.5",
+    "date": "2026-08-23",
+    "changes": [
+      "Buy 5 / Buy 10 in the Shop now purchase all at once instead of trickling in one item at a time"
+    ]
+  },
+  {
     "version": "1.108.4",
     "date": "2026-08-23",
     "changes": [

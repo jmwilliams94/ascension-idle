@@ -195,6 +195,15 @@ interface InventoryState {
     template: ItemTemplate,
     discard?: { kind: 'item' | 'potion'; id: string },
   ) => Promise<{ ok: boolean; error?: string; item?: ItemInstance }>
+  // Buy 5 / Buy 10 — the shop_buy_item_bulk RPC does the whole purchase loop
+  // server-side in one round-trip (stopping early on gold/room, same as the
+  // old client-side loop did). No discard support here — an 'inventory_full'
+  // stop just leaves pendingFullDrop set so the existing single-item discard
+  // flow (buyShopItem) still resolves the one that didn't fit.
+  buyShopItemBulk: (
+    template: ItemTemplate,
+    quantity: number,
+  ) => Promise<{ ok: boolean; error?: string; items?: ItemInstance[]; purchased?: number }>
   // Cancels a pending 'inventory_full' purchase decision without spending
   // anything — gold is only ever deducted server-side once the purchase (or
   // its discard-and-retry) actually succeeds, so there's nothing to refund.
@@ -337,6 +346,55 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     }
 
     return { ok: true, item: result.item }
+  },
+
+  buyShopItemBulk: async (template, quantity) => {
+    const characterId = useActiveCharacterStore.getState().characterId
+
+    if (!characterId) {
+      return { ok: false }
+    }
+
+    const { data, error } = await supabase.rpc('shop_buy_item_bulk', {
+      p_character_id: characterId,
+      p_template_id: template.id,
+      p_quantity: quantity,
+    })
+
+    if (error) {
+      console.error('Bulk shop item purchase failed', error)
+      set({ pendingFullDrop: null })
+      return { ok: false, error: error.message }
+    }
+
+    const result = data as {
+      ok: boolean
+      error?: string
+      items?: ItemInstance[]
+      purchased?: number
+      gold?: number
+      stopped_reason?: string | null
+    }
+
+    if (!result.ok) {
+      if (result.error === 'inventory_full') {
+        set({ pendingFullDrop: { template } })
+      } else {
+        set({ pendingFullDrop: null })
+      }
+      return { ok: false, error: result.error }
+    }
+
+    if (typeof result.gold === 'number') {
+      useProgressionStore.getState().setGold(result.gold)
+    }
+
+    set((state) => ({
+      items: [...state.items, ...(result.items ?? [])],
+      pendingFullDrop: result.stopped_reason === 'inventory_full' ? { template } : null,
+    }))
+
+    return { ok: true, items: result.items, purchased: result.purchased, error: result.stopped_reason ?? undefined }
   },
 
   patchItem: (itemId, patch) => {
