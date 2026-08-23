@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.108.16",
+    "date": "2026-08-24",
+    "changes": [
+      "Renamed 17 higher-tier Club/Sword/Wand items to their correct names (e.g. Thunderhead Club, Oath Sword, Monarch Wand) that had drifted out of sync"
+    ]
+  },
+  {
     "version": "1.108.15",
     "date": "2026-08-24",
     "changes": [
