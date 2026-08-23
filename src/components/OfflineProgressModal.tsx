@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import CountUp from './CountUpNumber'
+import InventorySlot from './InventorySlot'
 import LootHoldingCard from './LootHoldingCard'
 import { Button } from './ui/Button'
 import { useOfflineProgressStore } from '../game/combat/useOfflineProgressStore'
@@ -9,6 +10,62 @@ import { useZoneStore } from '../game/zones/useZoneStore'
 import { ENEMY_TYPES } from '../game/zones/zoneData'
 import type { VipAutomationSummary } from '../game/vip/vipAutomationSummary'
 import { formatGoldAmount } from '../game/stats/formatGold'
+import { COMET_ICON_SRC, FALLEN_STAR_ICON_SRC, FALLEN_STAR_COLOR, MATERIAL_COLOR } from '../game/items/forgeCosts'
+import { GEM_TIERS, GEM_TYPE_ORDER, GEM_TYPES, formatGemTierLabel, getGemIconSrc, getGemTierColor, parseGemStorageKey } from '../game/items/gemTypes'
+
+// One real-icon tile + count, for a "what currency/materials did I actually
+// find" row — reuses the same InventorySlot tile every other grid in the
+// game renders items with, rather than a plain "+N" text line. Used for
+// Hunting's Comet find and Mining's per-gem-type/tier finds.
+function FindTile({ iconSrc, color, label, count }: { iconSrc: string; color: string; label: string; count: number }) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <InventorySlot slotId={`find-${label}`} filled iconSrc={iconSrc} qualityColor={color} badge={`${count}`} sizeClassName="h-10 w-10" label={label} />
+      <p className="text-[10px] text-slate-500">{label}</p>
+    </div>
+  )
+}
+
+function FindTileRow({ tiles }: { tiles: { key: string; iconSrc: string; color: string; label: string; count: number }[] }) {
+  if (tiles.length === 0) {
+    return null
+  }
+  return (
+    <div className="flex flex-wrap items-start gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+      {tiles.map((tile) => (
+        <FindTile key={tile.key} iconSrc={tile.iconSrc} color={tile.color} label={tile.label} count={tile.count} />
+      ))}
+    </div>
+  )
+}
+
+// Groups Mining's per-gemKey ("drake_normal") breakdown into displayable
+// tiles, sorted by tier then gem type so the row reads consistently across
+// away-sessions rather than shuffling with object key order.
+function buildGemTiles(gemsGranted: Record<string, number> | undefined): { key: string; iconSrc: string; color: string; label: string; count: number }[] {
+  if (!gemsGranted) {
+    return []
+  }
+  return Object.entries(gemsGranted)
+    .map(([key, count]) => {
+      const parsed = parseGemStorageKey(key)
+      if (!parsed || count <= 0) {
+        return null
+      }
+      const { gemId, tier } = parsed
+      return {
+        key,
+        iconSrc: getGemIconSrc(gemId, tier),
+        color: getGemTierColor(tier),
+        label: `${formatGemTierLabel(tier)} ${GEM_TYPES[gemId].displayName}`,
+        count,
+        tierRank: GEM_TIERS.indexOf(tier),
+        typeRank: GEM_TYPE_ORDER.indexOf(gemId),
+      }
+    })
+    .filter((tile): tile is NonNullable<typeof tile> => tile !== null)
+    .sort((a, b) => a.tierRank - b.tierRank || a.typeRank - b.typeRank)
+}
 
 function formatDuration(ms: number): string {
   const totalMinutes = Math.round(ms / 60000)
@@ -138,6 +195,7 @@ export default function OfflineProgressModal() {
 
   const type = result && selectedMonsterId ? ENEMY_TYPES[selectedMonsterId] : null
   const vipSummary = result?.vipSummary ?? miningResult?.vipSummary
+  const gemTiles = miningResult ? buildGemTiles(miningResult.gemsGranted) : []
 
   const handleClose = () => {
     dismissResult()
@@ -197,12 +255,20 @@ export default function OfflineProgressModal() {
             )}
 
             {result && result.fallenStars > 0 && (
-              <div className="relative rounded-xl border border-violet-400 bg-violet-500/10 p-3 text-center shadow-lg shadow-violet-500/20">
+              <div className="relative flex items-center justify-center gap-3 rounded-xl border border-violet-400 bg-violet-500/10 p-3 text-center shadow-lg shadow-violet-500/20">
                 <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-violet-500 px-1.5 py-0.5 text-[9px] font-bold text-slate-950">
                   RARE DROP
                 </span>
-                <p className="mt-1 text-sm font-semibold text-violet-300">
-                  ✨ A Fallen Star dropped while you were away! (+{result.fallenStars})
+                <InventorySlot
+                  slotId="find-fallen-star"
+                  filled
+                  iconSrc={FALLEN_STAR_ICON_SRC}
+                  qualityColor={FALLEN_STAR_COLOR}
+                  sizeClassName="h-10 w-10"
+                  label="Fallen Star"
+                />
+                <p className="text-sm font-semibold text-violet-300">
+                  A Fallen Star dropped while you were away! (+{result.fallenStars})
                 </p>
               </div>
             )}
@@ -237,13 +303,11 @@ export default function OfflineProgressModal() {
                     <dd>{result.itemsFoundCount}</dd>
                   </div>
                 )}
-                {result.comets > 0 && (
-                  <div className="flex justify-between">
-                    <dt className="text-slate-400">Comets</dt>
-                    <dd className="font-semibold text-slate-200">+{result.comets}</dd>
-                  </div>
-                )}
               </dl>
+            )}
+
+            {result && result.comets > 0 && (
+              <FindTileRow tiles={[{ key: 'comet', iconSrc: COMET_ICON_SRC, color: MATERIAL_COLOR, label: 'Comet', count: result.comets }]} />
             )}
 
             {miningResult && (
@@ -262,13 +326,15 @@ export default function OfflineProgressModal() {
                     <dd className="font-semibold text-amber-300">+{miningResult.umbriteOre}</dd>
                   </div>
                 )}
-                {miningResult.gems > 0 && (
-                  <div className="flex justify-between">
-                    <dt className="text-slate-400">Gems</dt>
-                    <dd className="font-semibold text-sky-300">+{miningResult.gems}</dd>
-                  </div>
-                )}
               </dl>
+            )}
+
+            {miningResult && miningResult.gems > 0 && (
+              gemTiles.length > 0 ? (
+                <FindTileRow tiles={gemTiles} />
+              ) : (
+                <p className="text-sm text-sky-300">💎 +{miningResult.gems} Gem{miningResult.gems === 1 ? '' : 's'} found</p>
+              )
             )}
 
             {vipSummary && <VipAutomationSummarySection summary={vipSummary} />}

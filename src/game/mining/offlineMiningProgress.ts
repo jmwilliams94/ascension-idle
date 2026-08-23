@@ -22,6 +22,11 @@ export interface OfflineMiningProgressResult {
   ore: number
   umbriteOre: number
   gems: number
+  // Per-gemKey ("drake_normal", etc.) breakdown of the gems counted in `gems`
+  // above — lets OfflineProgressModal render a real icon tile per gem
+  // type/tier found, instead of just the aggregate count. Straight passthrough
+  // of resolve-mining's own gemGrants (see its index.ts).
+  gemsGranted?: Record<string, number>
   nodeDisplayName: string | null
   vipSummary?: VipAutomationSummary
 }
@@ -72,6 +77,7 @@ export async function runOfflineMiningProgressCheck(characterId: string): Promis
       ore: result.gained.ore,
       umbriteOre: result.gained.umbriteOre,
       gems: result.gained.gems,
+      gemsGranted: result.gemsGranted,
       nodeDisplayName: result.nodeDisplayName ?? null,
       vipSummary: isVipAutomationSummaryEmpty(vipSummary) ? undefined : vipSummary,
     },
