@@ -3,7 +3,14 @@ import { useGlobalActivityStore } from '../game/social/useGlobalActivityStore'
 import { useAnnouncementHistoryStore } from '../game/social/useAnnouncementHistoryStore'
 import { getGearIconSrc } from '../game/items/equipmentBonus'
 import { getGemIconSrc, type GemTier, type GemTypeId } from '../game/items/gemCatalog'
-import { COMET_SCROLL_ICON_SRC, FALLEN_STAR_SCROLL_ICON_SRC, FALLEN_STAR_ICON_SRC, COMET_BOX_ICON_SRC, VIP_TOKEN_ICON_SRC } from '../game/items/forgeCosts'
+import {
+  COMET_SCROLL_ICON_SRC,
+  FALLEN_STAR_SCROLL_ICON_SRC,
+  FALLEN_STAR_ICON_SRC,
+  COMET_BOX_ICON_SRC,
+  VIP_TOKEN_ICON_SRC,
+  getStoneIconSrc,
+} from '../game/items/forgeCosts'
 
 // Emoji fallback, kept for any kind resolveAnnouncementIconSrc can't turn
 // into a real icon (an unrecognized future kind, or a gear name that isn't
@@ -21,6 +28,8 @@ export const ANNOUNCEMENT_ICONS: Record<string, string> = {
   lucky_gear_radiant_coat: '🥋',
   lucky_gear_ascended_random: '🗡️',
   lucky_vip_token: '👑',
+  lucky_money_bag: '💰',
+  lucky_stone: '🔷',
   level_130: '🏆',
   socket_dry_streak_end: '🎲',
   pet_obtained: '🐾',
@@ -73,6 +82,15 @@ function resolveAnnouncementIconSrc(kind: string, message: string): string | und
     case 'lucky_gear_ascended_random': {
       const match = message.match(/won an Ascended (.+) from LL!$/)
       return match ? getGearIconSrc(match[1]) : undefined
+    }
+    case 'lucky_money_bag': {
+      const match = message.match(/won a (Class \d+ Money Bag) from LL!$/)
+      return match ? getGearIconSrc(match[1]) : undefined
+    }
+    case 'lucky_stone': {
+      const match = message.match(/won a \+(\d+) Stone from LL!$/)
+      const tier = match ? Number(match[1]) : undefined
+      return tier ? getStoneIconSrc(tier) : undefined
     }
     default:
       return undefined

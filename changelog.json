@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.108.8",
+    "date": "2026-08-23",
+    "changes": [
+      "Lucky Lad announcements are now based on how rare a reward is: higher-class Money Bags and higher-tier Composition Stones can now trigger an announcement, while Comet Scroll no longer does"
+    ]
+  },
+  {
     "version": "1.108.7",
     "date": "2026-08-23",
     "changes": [
