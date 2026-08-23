@@ -2,7 +2,7 @@ import { useCharacterStore } from '../stats/useCharacterStore'
 import { useVipAutomationStore } from './useVipAutomationStore'
 import { useInventoryStore } from '../items/useInventoryStore'
 import { useItemTemplatesStore } from '../items/useItemTemplatesStore'
-import { useEquipmentStore } from '../items/useEquipmentStore'
+import { useEquipmentStore, EQUIP_SLOTS, type EquipSlot } from '../items/useEquipmentStore'
 import { useMarketplaceStore } from '../marketplace/useMarketplaceStore'
 import { useMailStore } from '../marketplace/useMailStore'
 import { useBankStore } from '../items/useBankStore'
@@ -37,7 +37,7 @@ export async function runVipAutomationPass(): Promise<VipAutomationSummary> {
   }
 
   const settings = useVipAutomationStore.getState().settings
-  if (!settings.autoSellOre && !settings.autoSalvage.enabled && !settings.autoBank.enabled) {
+  if (!settings.autoSellOre && !settings.autoSellGear && !settings.autoSalvage.enabled && !settings.autoBank.enabled) {
     return summary
   }
 
@@ -56,6 +56,19 @@ export async function runVipAutomationPass(): Promise<VipAutomationSummary> {
     const qualifiesSalvage = (qualityTier: string) =>
       settings.autoSalvage.enabled && salvageMinRank >= 0 && QUALITY_ORDER.indexOf(qualityTier) >= salvageMinRank
     const qualifiesBank = (compositionLevel: number) => settings.autoBank.enabled && compositionLevel >= settings.autoBank.minLevel
+    // Normal-quality gear only (0 AP means it can never qualify for Salvage —
+    // see qualifiesSalvage above) and only real equip-slot gear, never Ore
+    // (also always quality_tier 'normal', but that's autoSellOre's own
+    // territory) or materials/consumables that happen to default to 'normal'.
+    // Composed Normal gear (composition_level > 0) still prefers Auto-Bank
+    // over a flat gold sale when both are enabled.
+    const qualifiesSellGear = (item: { quality_tier: string; composition_level: number; template_id: string }) => {
+      if (!settings.autoSellGear || item.quality_tier !== 'normal' || qualifiesBank(item.composition_level)) {
+        return false
+      }
+      const slotType = templateById.get(item.template_id)?.slot_type
+      return EQUIP_SLOTS.includes(slotType as EquipSlot)
+    }
 
     const salvageItemAndTally = async (itemId: string) => {
       const result = await useInventoryStore.getState().salvageItem(itemId)
@@ -69,6 +82,13 @@ export async function runVipAutomationPass(): Promise<VipAutomationSummary> {
       if (result.ok) {
         summary.itemsBankedCount += 1
         summary.compositionPointsGained += result.points_gained ?? 0
+      }
+    }
+    const sellGearItemAndTally = async (itemId: string) => {
+      const result = await useInventoryStore.getState().sellItem(itemId)
+      if (result.ok) {
+        summary.itemsSoldCount += 1
+        summary.gearGoldGained += result.goldGained ?? 0
       }
     }
 
@@ -99,13 +119,14 @@ export async function runVipAutomationPass(): Promise<VipAutomationSummary> {
       for (const result of sellResults) {
         if (result.ok) {
           summary.oreSoldCount += 1
-          summary.goldGained += result.goldGained ?? 0
+          summary.oreGoldGained += result.goldGained ?? 0
         }
       }
     }
 
     const toSalvage: string[] = []
     const toBank: string[] = []
+    const toSellGear: string[] = []
     for (const item of eligibleInventoryItems) {
       if (!templateById.has(item.template_id)) {
         continue
@@ -118,9 +139,11 @@ export async function runVipAutomationPass(): Promise<VipAutomationSummary> {
         toSalvage.push(item.id)
       } else if (bankOk) {
         toBank.push(item.id)
+      } else if (qualifiesSellGear(item)) {
+        toSellGear.push(item.id)
       }
     }
-    await Promise.all([...toSalvage.map(salvageItemAndTally), ...toBank.map(bankItemAndTally)])
+    await Promise.all([...toSalvage.map(salvageItemAndTally), ...toBank.map(bankItemAndTally), ...toSellGear.map(sellGearItemAndTally)])
 
     // 2. Loot Holding entries. Ore is sold directly out of holding via
     // sell_loot_holding — no need to claim it into Inventory first. Currency
@@ -136,7 +159,7 @@ export async function runVipAutomationPass(): Promise<VipAutomationSummary> {
       for (const result of sellResults) {
         if (result.ok) {
           summary.oreSoldCount += 1
-          summary.goldGained += result.gold_gained ?? 0
+          summary.oreGoldGained += result.gold_gained ?? 0
         }
       }
     }
@@ -149,9 +172,20 @@ export async function runVipAutomationPass(): Promise<VipAutomationSummary> {
     // in the same pass.
     const nonOreHoldingEntries = holdingEntries.filter((entry) => templateById.get(entry.template_id!)?.item_family !== 'ore')
     for (const entry of nonOreHoldingEntries) {
-      const salvageOk = qualifiesSalvage(entry.quality_tier ?? 'normal')
+      const qualityTier = entry.quality_tier ?? 'normal'
+      const salvageOk = qualifiesSalvage(qualityTier)
       const bankOk = qualifiesBank(entry.composition_level)
+
       if (!salvageOk && !bankOk) {
+        // Normal-tier gear sells straight out of holding, same as Ore —
+        // no need to claim into Inventory first just to sell it right back out.
+        if (qualifiesSellGear({ quality_tier: qualityTier, composition_level: entry.composition_level, template_id: entry.template_id! })) {
+          const result = await useLootHoldingStore.getState().sell(entry.id)
+          if (result.ok) {
+            summary.itemsSoldCount += 1
+            summary.gearGoldGained += result.gold_gained ?? 0
+          }
+        }
         continue
       }
 

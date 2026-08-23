@@ -3,7 +3,6 @@ import { useVipAutomationStore, type LiquidationPriority, type SalvageTier } fro
 import { Button } from './ui/Button'
 
 const SALVAGE_TIER_OPTIONS: { value: SalvageTier; label: string }[] = [
-  { value: 'normal', label: 'Normal' },
   { value: 'tempered', label: 'Tempered' },
   { value: 'infused', label: 'Infused' },
   { value: 'radiant', label: 'Radiant' },
@@ -73,6 +72,21 @@ export default function VipSettingsModal() {
               <ToggleSwitch checked={settings.autoSellOre} onChange={(checked) => void updateSettings({ autoSellOre: checked })} label="Auto-Sell Ore" />
             </div>
             <p className="text-[11px] text-slate-500">Sells Ore for gold as it's mined, so it never fills up your Inventory.</p>
+          </div>
+
+          <div className="space-y-1 rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-medium text-slate-100">Auto-Sell Normal Gear</p>
+              <ToggleSwitch
+                checked={settings.autoSellGear}
+                onChange={(checked) => void updateSettings({ autoSellGear: checked })}
+                label="Auto-Sell Normal Gear"
+              />
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Sells dropped Normal-quality gear for gold. Salvage gives 0 AP for Normal gear, so this is the only way to auto-clear it
+              (Composed Normal gear is Auto-Banked instead, if that's enabled).
+            </p>
           </div>
 
           <div className="space-y-2 rounded-xl border border-slate-800 bg-slate-950/40 p-3">

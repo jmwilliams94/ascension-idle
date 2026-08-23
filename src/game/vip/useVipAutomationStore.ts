@@ -9,20 +9,27 @@ import { useActiveCharacterStore } from '../../lib/useActiveCharacterStore'
 // this column sits outside characters' authenticated column-level UPDATE
 // grant, same "RPC past the allowlist" precedent every column added since
 // 20260821000000_lock_down_direct_table_writes.sql follows).
-export type SalvageTier = 'normal' | 'tempered' | 'infused' | 'radiant' | 'ascended'
+export type SalvageTier = 'tempered' | 'infused' | 'radiant' | 'ascended'
 export type LiquidationPriority = 'bank_first' | 'salvage_first'
 
 export interface VipAutomationSettings {
   autoSellOre: boolean
+  // Normal-quality gear has no Salvage value (0 AP) and can't be Auto-Banked
+  // unless it's separately been Composed above +0 — its only automatable fate
+  // is a plain gold sale, so this is its own boolean rather than a minTier on
+  // autoSalvage (which structurally excludes 'normal' — see qualifiesSalvage
+  // in runVipAutomationPass.ts).
+  autoSellGear: boolean
   autoSalvage: { enabled: boolean; minTier: SalvageTier }
   autoBank: { enabled: boolean; minLevel: number }
   priority: LiquidationPriority
 }
 
-const SALVAGE_TIERS: SalvageTier[] = ['normal', 'tempered', 'infused', 'radiant', 'ascended']
+const SALVAGE_TIERS: SalvageTier[] = ['tempered', 'infused', 'radiant', 'ascended']
 
 export const DEFAULT_VIP_AUTOMATION_SETTINGS: VipAutomationSettings = {
   autoSellOre: false,
+  autoSellGear: false,
   autoSalvage: { enabled: false, minTier: 'tempered' },
   autoBank: { enabled: false, minLevel: 1 },
   priority: 'bank_first',
@@ -42,6 +49,7 @@ function normalize(saved: unknown): VipAutomationSettings {
 
   return {
     autoSellOre: raw.autoSellOre === true,
+    autoSellGear: raw.autoSellGear === true,
     autoSalvage: {
       enabled: autoSalvage.enabled === true,
       minTier: SALVAGE_TIERS.includes(autoSalvage.minTier as SalvageTier) ? (autoSalvage.minTier as SalvageTier) : 'tempered',

@@ -107,8 +107,15 @@ function VipAutomationSummarySection({ summary }: { summary: VipAutomationSummar
         {summary.oreSoldCount > 0 && (
           <VipAutomationRow
             label="Auto-Selling"
-            value={`${formatGoldAmount(summary.goldGained)} gold`}
+            value={`${formatGoldAmount(summary.oreGoldGained)} gold`}
             detail={`(${summary.oreSoldCount} Ore)`}
+          />
+        )}
+        {summary.itemsSoldCount > 0 && (
+          <VipAutomationRow
+            label="Auto-Selling Gear"
+            value={`${formatGoldAmount(summary.gearGoldGained)} gold`}
+            detail={`(${summary.itemsSoldCount} item${summary.itemsSoldCount === 1 ? '' : 's'})`}
           />
         )}
         {summary.itemsBankedCount > 0 && (

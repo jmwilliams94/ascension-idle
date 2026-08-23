@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.108.12",
+    "date": "2026-08-23",
+    "changes": [
+      "Replaced VIP Auto-Salvage's Normal-quality option (which earned 0 AP) with a new Auto-Sell Normal Gear toggle that sells Normal-quality gear for gold instead"
+    ]
+  },
+  {
     "version": "1.108.11",
     "date": "2026-08-23",
     "changes": [
