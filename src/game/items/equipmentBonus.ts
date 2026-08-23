@@ -649,6 +649,37 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Regal Sword': `${import.meta.env.BASE_URL}item-icons/regal-sword.png`,
   'Ruin Sword': `${import.meta.env.BASE_URL}item-icons/ruin-sword.png`,
   'Crown Sword': `${import.meta.env.BASE_URL}item-icons/crown-sword.png`,
+  // Blade (Twin-soul/Juggernaut). Same names cover the blade-twinsoul,
+  // blade-juggernaut, and blade-offhand-twinsoul item_family chains. Blade is
+  // the only weapon category with a sub-5 starter tier (Fortune Blade at
+  // level 1). All 27 tiers have art.
+  'Fortune Blade': `${import.meta.env.BASE_URL}item-icons/fortune-blade.png`,
+  'Bronze Blade': `${import.meta.env.BASE_URL}item-icons/bronze-blade.png`,
+  'Vine Blade': `${import.meta.env.BASE_URL}item-icons/vine-blade.png`,
+  'Fiend Blade': `${import.meta.env.BASE_URL}item-icons/fiend-blade.png`,
+  'Glint Blade': `${import.meta.env.BASE_URL}item-icons/glint-blade.png`,
+  'Scimitar': `${import.meta.env.BASE_URL}item-icons/scimitar.png`,
+  'Wide Blade': `${import.meta.env.BASE_URL}item-icons/wide-blade.png`,
+  'Warped Blade': `${import.meta.env.BASE_URL}item-icons/warped-blade.png`,
+  'Saber': `${import.meta.env.BASE_URL}item-icons/saber.png`,
+  'Garnet Blade': `${import.meta.env.BASE_URL}item-icons/garnet-blade.png`,
+  'Crescent Blade': `${import.meta.env.BASE_URL}item-icons/crescent-blade.png`,
+  'Chill Blade': `${import.meta.env.BASE_URL}item-icons/chill-blade.png`,
+  'Khopesh': `${import.meta.env.BASE_URL}item-icons/khopesh.png`,
+  'Stag Blade': `${import.meta.env.BASE_URL}item-icons/stag-blade.png`,
+  'Wren Blade': `${import.meta.env.BASE_URL}item-icons/wren-blade.png`,
+  'Wyvern Blade': `${import.meta.env.BASE_URL}item-icons/wyvern-blade.png`,
+  'Hefty Blade': `${import.meta.env.BASE_URL}item-icons/hefty-blade.png`,
+  'Kilij': `${import.meta.env.BASE_URL}item-icons/kilij.png`,
+  'Divine Blade': `${import.meta.env.BASE_URL}item-icons/divine-blade.png`,
+  'Keen Blade': `${import.meta.env.BASE_URL}item-icons/keen-blade.png`,
+  'Prism Blade': `${import.meta.env.BASE_URL}item-icons/prism-blade.png`,
+  'Solar Blade': `${import.meta.env.BASE_URL}item-icons/solar-blade.png`,
+  'Legend Blade': `${import.meta.env.BASE_URL}item-icons/legend-blade.png`,
+  'Triumph Blade': `${import.meta.env.BASE_URL}item-icons/triumph-blade.png`,
+  'Rime Blade': `${import.meta.env.BASE_URL}item-icons/rime-blade.png`,
+  'Blaze Blade': `${import.meta.env.BASE_URL}item-icons/blaze-blade.png`,
+  'Grave Blade': `${import.meta.env.BASE_URL}item-icons/grave-blade.png`,
 }
 
 // Pickaxe is the only item whose icon changes per quality_tier instead of

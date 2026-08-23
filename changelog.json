@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.108.14",
+    "date": "2026-08-24",
+    "changes": [
+      "Blade weapons now have unique artwork for every quality tier from Fortune Blade through Grave Blade, replacing the generic sword icon"
+    ]
+  },
+  {
     "version": "1.108.13",
     "date": "2026-08-23",
     "changes": [
