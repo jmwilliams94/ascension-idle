@@ -4,6 +4,7 @@ import {
   useLuckyStore,
   LUCKY_TICKET_AP_COST,
   LUCKY_BULK_AP_COST,
+  LUCKY_BULK_TICKET_COST,
   LUCKY_CARD_COUNT,
   LUCKYLAD_ICON_SRC,
   CHEST_CLOSED_ICON_SRC,
@@ -355,6 +356,7 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   // ones the player has actually tapped open so far; the reveal itself is
   // purely a local animation gate, not another server round-trip.
   const [isBulk, setIsBulk] = useState(false)
+  const [bulkPayment, setBulkPayment] = useState<'ascension_points' | 'lottery_ticket' | null>(null)
   const [revealedIndices, setRevealedIndices] = useState<Set<number>>(new Set())
   const [error, setError] = useState<string | null>(null)
   // Free-ticket countdown only needs to be roughly live, not to-the-second —
@@ -374,6 +376,7 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   const canAffordTicket = lotteryTickets >= 1
   const canAffordPoints = freeAvailable || ascensionPoints >= LUCKY_TICKET_AP_COST
   const canAffordBulk = ascensionPoints >= LUCKY_BULK_AP_COST
+  const canAffordBulkTickets = lotteryTickets >= LUCKY_BULK_TICKET_COST
 
   const handleOpen = async (index: number) => {
     if (board || busy || !paymentChoice) return
@@ -403,26 +406,30 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   // Bulk draw: payment happens the moment this fires (no card pick needed —
   // every card gets a real reward), then the board sits fully-granted but
   // face-down until handleRevealBulkCard flips each one open on tap.
-  const handleBulkDraw = async () => {
+  // useTickets picks the 8-Lottery-Ticket path instead of the default 160 AP.
+  const handleBulkDraw = async (useTickets: boolean) => {
     if (board || busy) return
     setError(null)
-    const result = await drawBulk(characterId)
+    const result = await drawBulk(characterId, useTickets)
 
     if (!result.ok || !result.board) {
       setError(
         result.error === 'not_enough_ap'
           ? `Not enough Ascension Points (need ${LUCKY_BULK_AP_COST}).`
-          : result.error === 'not_owner'
-            ? "Couldn't verify this character owns that — try reloading the page."
-            : result.error === 'not_enough_room'
-              ? 'Your Inventory needs at least 9 free slots — free some up and try again.'
-              : "Couldn't draw — try again.",
+          : result.error === 'not_enough_lottery_tickets'
+            ? `Not enough Lottery Tickets (need ${LUCKY_BULK_TICKET_COST}).`
+            : result.error === 'not_owner'
+              ? "Couldn't verify this character owns that — try reloading the page."
+              : result.error === 'not_enough_room'
+                ? 'Your Inventory needs at least 9 free slots — free some up and try again.'
+                : "Couldn't draw — try again.",
       )
       return
     }
 
     setBoard(result.board)
     setIsBulk(true)
+    setBulkPayment(useTickets ? 'lottery_ticket' : 'ascension_points')
     setRevealedIndices(new Set())
   }
 
@@ -438,6 +445,7 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
     setError(null)
     setPaymentChoice(null)
     setIsBulk(false)
+    setBulkPayment(null)
     setRevealedIndices(new Set())
   }
 
@@ -484,19 +492,23 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
       {!paymentChoice && !board && (
         <AscensionCard contentClassName="p-3">
           <p className="text-xs text-slate-400">Choose how to pay for a draw:</p>
-          {/* Three equal-size buttons, all sharing the primary Button's own
-              shape/typography (rounded-lg, font-heading font-bold uppercase
-              tracking) so they read as one button family — only the color
-              differs, and only because it's semantic (purple = Ascension
-              Points, emerald = the app's existing "extra value" accent),
-              per CLAUDE.visual-design.md's guardrail against repainting
-              established currency/state colors gold. */}
-          <div className="mt-2 flex items-stretch gap-2">
+          {/* 2x2 grid of square buttons (2026-08-23, requested by the user —
+              a 4th option needed room without stretching the button row into
+              a cluttered 4-across line). max-w-[220px] + mx-auto keeps the
+              grid narrower than the card, leaving visible spacing on both
+              sides rather than filling the container edge to edge. Left
+              column pays with Lottery Tickets (both gold, same Button
+              primary treatment — same currency, same color, per
+              CLAUDE.visual-design.md's guardrail); right column pays with
+              Ascension Points (purple = single entry, emerald = bulk,
+              unchanged from before). Top row = single draw, bottom row =
+              9-for-8 bulk. */}
+          <div className="mx-auto mt-2 grid max-w-[220px] grid-cols-2 gap-2">
             <Button
               variant="primary"
               disabled={busy || !canAffordTicket}
               onClick={() => setPaymentChoice('lottery_ticket')}
-              className="flex flex-1 flex-col items-center justify-center gap-0.5 text-center leading-tight"
+              className="flex aspect-square flex-col items-center justify-center gap-0.5 text-center leading-tight"
             >
               <span>Lottery</span>
               <span>Ticket</span>
@@ -507,7 +519,7 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
               disabled={busy || !canAffordPoints}
               onClick={() => setPaymentChoice('ascension_points')}
               style={{ '--glow-bright': '#c084fc', '--glow-base': '#a855f7', '--glow-dark': '#7e22ce' } as CSSProperties}
-              className="btn-glow flex flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-4 py-2.5 text-center font-heading text-sm font-bold uppercase leading-tight tracking-[0.12em] disabled:cursor-not-allowed"
+              className="btn-glow flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-2.5 text-center font-heading text-sm font-bold uppercase leading-tight tracking-[0.12em] disabled:cursor-not-allowed"
             >
               <span>One</span>
               <span>Entry</span>
@@ -515,17 +527,27 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
                 {pointsCost === 0 ? 'Free' : `${pointsCost} AP`}
               </span>
             </button>
-            {/* Bulk draw — pay LUCKY_BULK_AP_COST AP (8x the single-card AP
-                cost) up front and every one of the 9 chests holds a real
-                reward, opened one at a time afterward. Fires immediately on
-                click rather than going through paymentChoice, since it skips
-                the "pick a chest" step entirely. */}
+            {/* Bulk draws — pay 8 Lottery Tickets or LUCKY_BULK_AP_COST AP
+                (both "9 chests for the price of 8") up front and every one of
+                the 9 chests holds a real reward, opened one at a time
+                afterward. Fire immediately on click rather than going through
+                paymentChoice, since both skip the "pick a chest" step
+                entirely. */}
+            <button
+              type="button"
+              disabled={busy || !canAffordBulkTickets}
+              onClick={() => void handleBulkDraw(true)}
+              className="btn-gold flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-2.5 text-center font-heading text-sm font-bold uppercase leading-tight tracking-[0.12em] disabled:cursor-not-allowed"
+            >
+              <span>9 for 8</span>
+              <span className="text-[10px] font-normal normal-case tracking-normal text-amber-200/70">{LUCKY_BULK_TICKET_COST} Tickets</span>
+            </button>
             <button
               type="button"
               disabled={busy || !canAffordBulk}
-              onClick={() => void handleBulkDraw()}
+              onClick={() => void handleBulkDraw(false)}
               style={{ '--glow-bright': '#34d399', '--glow-base': '#10b981', '--glow-dark': '#047857' } as CSSProperties}
-              className="btn-glow flex flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-4 py-2.5 text-center font-heading text-sm font-bold uppercase leading-tight tracking-[0.12em] disabled:cursor-not-allowed"
+              className="btn-glow flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-2.5 text-center font-heading text-sm font-bold uppercase leading-tight tracking-[0.12em] disabled:cursor-not-allowed"
             >
               <span>9 for 8</span>
               <span className="text-[10px] font-normal normal-case tracking-normal text-emerald-300/70">{LUCKY_BULK_AP_COST} AP</span>
@@ -579,7 +601,10 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
       {board && isBulk && revealedIndices.size === LUCKY_CARD_COUNT && (
         <div className="rounded-xl border border-amber-600 bg-amber-500/10 p-3 text-center">
           <p className="text-xs text-slate-300">
-            All 9 opened <span className="font-semibold text-amber-300">(paid {LUCKY_BULK_AP_COST} AP)</span>
+            All 9 opened{' '}
+            <span className="font-semibold text-amber-300">
+              (paid {bulkPayment === 'lottery_ticket' ? `${LUCKY_BULK_TICKET_COST} Lottery Tickets` : `${LUCKY_BULK_AP_COST} AP`})
+            </span>
           </p>
           <Button variant="secondary" onClick={handleReset} className="mt-2">
             Draw Again

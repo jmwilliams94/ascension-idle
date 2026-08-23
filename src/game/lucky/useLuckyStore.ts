@@ -33,6 +33,12 @@ export const LUCKY_CARD_COUNT = 9
 // 9 are already decided and paid for by the time the board comes back).
 export const LUCKY_BULK_AP_COST = 160
 
+// Lottery-Ticket bulk payment (requested by the user, mirrors the free/
+// 1-ticket/20-AP single-draw choice) — same 9-cards-for-8 pricing as the AP
+// path above, just 8 Lottery Tickets instead of 160 AP. See
+// draw_lucky_ticket_bulk's own p_use_tickets parameter.
+export const LUCKY_BULK_TICKET_COST = 8
+
 // Real art (2026-08-03), user-supplied, same trim/pad/resize-to-160
 // convention as every other icon this session — all three already had real
 // transparency, so no flood-fill background removal was needed this time.
@@ -157,8 +163,9 @@ interface LuckyState {
   // entirely. See draw_lucky_ticket's own p_use_ticket parameter.
   draw: (characterId: string, cardIndex: number, useTicket?: boolean) => Promise<DrawLuckyTicketResult>
   // Bulk draw (draw_lucky_ticket_bulk) — no card index, since every one of
-  // the 9 cards is granted at once.
-  drawBulk: (characterId: string) => Promise<DrawLuckyTicketResult>
+  // the 9 cards is granted at once. useTickets picks the 8-Lottery-Ticket
+  // payment path instead of the default 160-AP one.
+  drawBulk: (characterId: string, useTickets?: boolean) => Promise<DrawLuckyTicketResult>
 }
 
 export const useLuckyStore = create<LuckyState>((set, get) => ({
@@ -231,7 +238,7 @@ export const useLuckyStore = create<LuckyState>((set, get) => ({
     return result
   },
 
-  drawBulk: async (characterId) => {
+  drawBulk: async (characterId, useTickets = false) => {
     if (get().busy) {
       return { ok: false, error: 'rpc_failed' }
     }
@@ -239,6 +246,7 @@ export const useLuckyStore = create<LuckyState>((set, get) => ({
     set({ busy: true })
     const { data, error } = await supabase.rpc('draw_lucky_ticket_bulk', {
       p_character_id: characterId,
+      p_use_tickets: useTickets,
     })
     set({ busy: false })
 
