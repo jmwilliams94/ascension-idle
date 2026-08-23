@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.108.6",
+    "date": "2026-08-23",
+    "changes": [
+      "Rebalanced Lucky Lad reward odds: Gem Bag is now much more common, Comet Box is now much rarer (matching Fallen Star Scroll), Fallen Star is a bit rarer, and three new higher-tier Composition Stones can now drop"
+    ]
+  },
+  {
     "version": "1.108.5",
     "date": "2026-08-23",
     "changes": [
