@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.108.15",
+    "date": "2026-08-24",
+    "changes": [
+      "Wand weapons now have unique artwork for every quality tier from Pebble Wand through Crown Wand, replacing the generic sword icon"
+    ]
+  },
+  {
     "version": "1.108.14",
     "date": "2026-08-24",
     "changes": [
