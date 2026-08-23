@@ -7,6 +7,7 @@ import { useMarketplaceStore } from '../marketplace/useMarketplaceStore'
 import { useMailStore } from '../marketplace/useMailStore'
 import { useBankStore } from '../items/useBankStore'
 import { useLootHoldingStore } from '../items/useLootHoldingStore'
+import { isDropSourced } from '../items/dropSourceTracking'
 import { QUALITY_ORDER } from '../items/equipmentBonus'
 import { emptyVipAutomationSummary, type VipAutomationSummary } from './vipAutomationSummary'
 
@@ -72,9 +73,22 @@ export async function runVipAutomationPass(): Promise<VipAutomationSummary> {
     }
 
     // 1. Real Inventory items (live play, or anything already claimed).
+    // isDropSourced restricts this to items that actually came from a
+    // combat/mining drop (or a Loot Holding claim of one) — VIP automation
+    // must never touch an item the player brought into Inventory themselves
+    // (Bank withdraw, Mail claim, Marketplace, Lucky Lad, achievement/
+    // Promotion rewards). Reported bug: withdrawing from Bank Storage got the
+    // withdrawn item auto-salvaged within the same second. See
+    // dropSourceTracking.ts.
     const inventoryItems = useInventoryStore.getState().items
     const eligibleInventoryItems = inventoryItems.filter(
-      (item) => item.location !== 'bank' && !item.locked && !isEquipped(item.id) && !isListed(item.id) && !hasUnclaimedMail(item.id),
+      (item) =>
+        item.location !== 'bank' &&
+        !item.locked &&
+        !isEquipped(item.id) &&
+        !isListed(item.id) &&
+        !hasUnclaimedMail(item.id) &&
+        isDropSourced(item.id),
     )
 
     if (settings.autoSellOre) {

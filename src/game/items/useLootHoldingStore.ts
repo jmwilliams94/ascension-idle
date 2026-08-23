@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '../../lib/supabaseClient'
 import { useInventoryStore, occupiedSlotCount, INVENTORY_SLOT_CAP, type ItemInstance } from './useInventoryStore'
+import { markDropSourced } from './dropSourceTracking'
 import { useBankStore, BANK_SLOT_CAP } from './useBankStore'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
@@ -147,6 +148,7 @@ export const useLootHoldingStore = create<LootHoldingState>((set) => ({
 
     if (result.ok && result.item) {
       useInventoryStore.getState().addItem(result.item)
+      markDropSourced(result.item.id)
       set((state) => ({ entries: state.entries.filter((entry) => entry.id !== holdingId) }))
     } else if (result.ok && result.currency_type && typeof result.new_count === 'number') {
       if (result.currency_type === 'comet') {

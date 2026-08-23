@@ -3,6 +3,7 @@ import { useProgressionStore } from '../stats/useProgressionStore'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { useInventoryStore, type ItemInstance } from '../items/useInventoryStore'
 import { useInventoryFullWarningStore } from '../items/useInventoryFullWarningStore'
+import { markDropSourced } from '../items/dropSourceTracking'
 import { useAchievementsStore } from '../achievements/useAchievementsStore'
 import { usePetToastStore } from '../achievements/usePetToastStore'
 import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
@@ -61,6 +62,7 @@ export async function resolveRowCombat(
 
   for (const item of result.itemsGranted ?? []) {
     useInventoryStore.getState().addItem(item)
+    markDropSourced(item.id)
   }
 
   if (result.rowSlots) {

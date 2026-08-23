@@ -12,6 +12,7 @@ import { useCharacterStore } from '../stats/useCharacterStore'
 import { useGemStore } from './useGemStore'
 import { useMarketplaceStore } from '../marketplace/useMarketplaceStore'
 import { useMailStore } from '../marketplace/useMailStore'
+import { clearDropSourced } from './dropSourceTracking'
 import type { GemCounts, GemTier, GemTypeId } from './gemTypes'
 
 // Mirrors the item_instances table. sockets is real (2026-08-02, see
@@ -351,6 +352,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       return
     }
 
+    itemIds.forEach(clearDropSourced)
     set((state) => ({ items: state.items.filter((item) => !itemIds.includes(item.id)) }))
   },
 

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.108.4",
+    "date": "2026-08-23",
+    "changes": [
+      "Fixed VIP Auto-Salvage/Auto-Bank/Auto-Sell Ore immediately consuming items right after withdrawing them from Bank Storage, claiming Mail, or other non-drop sources — it now only ever acts on fresh enemy/mining drops"
+    ]
+  },
+  {
     "version": "1.108.3",
     "date": "2026-10-01",
     "changes": [

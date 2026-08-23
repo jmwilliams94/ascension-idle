@@ -4,6 +4,7 @@ import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { useInventoryStore, type ItemInstance } from '../items/useInventoryStore'
 import { useInventoryFullWarningStore } from '../items/useInventoryFullWarningStore'
 import { useLootHoldingStore } from '../items/useLootHoldingStore'
+import { markDropSourced } from '../items/dropSourceTracking'
 import { useAchievementsStore } from '../achievements/useAchievementsStore'
 import { usePetToastStore } from '../achievements/usePetToastStore'
 import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
@@ -78,6 +79,7 @@ export async function resolveCombat(characterId: string, mode: ResolveCombatMode
 
   for (const item of result.itemsGranted ?? []) {
     useInventoryStore.getState().addItem(item)
+    markDropSourced(item.id)
   }
 
   for (const { id, durability } of result.durabilityUpdates ?? []) {

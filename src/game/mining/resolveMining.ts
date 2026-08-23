@@ -1,6 +1,7 @@
 import { supabase } from '../../lib/supabaseClient'
 import { useInventoryStore, type ItemInstance } from '../items/useInventoryStore'
 import { useInventoryFullWarningStore } from '../items/useInventoryFullWarningStore'
+import { markDropSourced } from '../items/dropSourceTracking'
 import { useLootHoldingStore } from '../items/useLootHoldingStore'
 import { useGemStore } from '../items/useGemStore'
 import { useMiningStore } from './useMiningStore'
@@ -42,6 +43,7 @@ export async function resolveMining(characterId: string, mode: ResolveMiningMode
 
   for (const item of result.itemsGranted ?? []) {
     useInventoryStore.getState().addItem(item)
+    markDropSourced(item.id)
   }
 
   if (result.gems) {
