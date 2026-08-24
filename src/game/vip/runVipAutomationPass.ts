@@ -53,8 +53,18 @@ export async function runVipAutomationPass(): Promise<VipAutomationSummary> {
     const hasUnclaimedMail = (itemId: string) => mailEntries.some((entry) => entry.item_id === itemId && entry.claimed_at === null)
     const salvageMinRank = QUALITY_ORDER.indexOf(settings.autoSalvage.minTier)
 
-    const qualifiesSalvage = (qualityTier: string) =>
-      settings.autoSalvage.enabled && salvageMinRank >= 0 && QUALITY_ORDER.indexOf(qualityTier) >= salvageMinRank
+    // Never auto-salvage a socketed item (sockets are a deliberate player
+    // investment, same reasoning SalvagePanel's own bulk-salvage sweep
+    // already applies) or anything above +1 composition (a hard cap, not
+    // tied to settings.autoBank.minLevel — a +2 piece must never be
+    // salvaged by automation even if Auto-Bank is disabled or its threshold
+    // is set above +2).
+    const qualifiesSalvage = (item: { quality_tier: string; composition_level: number; sockets?: unknown[] }) =>
+      settings.autoSalvage.enabled &&
+      salvageMinRank >= 0 &&
+      QUALITY_ORDER.indexOf(item.quality_tier) >= salvageMinRank &&
+      item.composition_level <= 1 &&
+      (item.sockets?.length ?? 0) === 0
     const qualifiesBank = (compositionLevel: number) => settings.autoBank.enabled && compositionLevel >= settings.autoBank.minLevel
     // Normal-quality gear only (0 AP means it can never qualify for Salvage —
     // see qualifiesSalvage above) and only real equip-slot gear, never Ore
@@ -131,7 +141,7 @@ export async function runVipAutomationPass(): Promise<VipAutomationSummary> {
       if (!templateById.has(item.template_id)) {
         continue
       }
-      const salvageOk = qualifiesSalvage(item.quality_tier)
+      const salvageOk = qualifiesSalvage(item)
       const bankOk = qualifiesBank(item.composition_level)
       if (salvageOk && bankOk) {
         ;(settings.priority === 'salvage_first' ? toSalvage : toBank).push(item.id)
@@ -173,7 +183,10 @@ export async function runVipAutomationPass(): Promise<VipAutomationSummary> {
     const nonOreHoldingEntries = holdingEntries.filter((entry) => templateById.get(entry.template_id!)?.item_family !== 'ore')
     for (const entry of nonOreHoldingEntries) {
       const qualityTier = entry.quality_tier ?? 'normal'
-      const salvageOk = qualifiesSalvage(qualityTier)
+      // Loot Holding entries are unclaimed drops — never pre-socketed
+      // (socket unlock is a Forge action on a claimed item_instances row),
+      // so no sockets field to check here.
+      const salvageOk = qualifiesSalvage({ quality_tier: qualityTier, composition_level: entry.composition_level })
       const bankOk = qualifiesBank(entry.composition_level)
 
       if (!salvageOk && !bankOk) {

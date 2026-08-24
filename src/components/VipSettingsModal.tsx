@@ -98,7 +98,9 @@ export default function VipSettingsModal() {
                 label="Auto-Salvage Quality Gear"
               />
             </div>
-            <p className="text-[11px] text-slate-500">Salvages dropped gear at or above the chosen quality for Ascension Points.</p>
+            <p className="text-[11px] text-slate-500">
+              Salvages dropped gear at or above the chosen quality for Ascension Points. Never touches socketed gear or anything above +1.
+            </p>
             {settings.autoSalvage.enabled && (
               <label className="flex items-center gap-2 text-xs text-slate-400">
                 Minimum quality:

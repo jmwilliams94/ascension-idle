@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.108.19",
+    "date": "2026-08-24",
+    "changes": [
+      "VIP Auto-Salvage now never touches socketed gear or anything above +1 composition, regardless of your quality/Auto-Bank settings"
+    ]
+  },
+  {
     "version": "1.108.18",
     "date": "2026-08-24",
     "changes": [
