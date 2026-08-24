@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.109.1",
+    "date": "2026-08-24",
+    "changes": [
+      "Fixed the welcome-back recap sometimes claiming you collected a Comet or Fallen Star that hadn't actually been saved, if Loot Holding filled up with other items during a very long time away"
+    ]
+  },
+  {
     "version": "1.109.0",
     "date": "2026-08-24",
     "changes": [

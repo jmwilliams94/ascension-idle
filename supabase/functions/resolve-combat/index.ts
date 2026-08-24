@@ -1401,27 +1401,44 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // roll time — see the mirror-image reasoning above for gear); offline mode
   // always routes to Loot Holding instead, same "never silently rearrange
   // the bag while the player's away" rule the gear loop above now follows.
+  // cometsActuallyGranted/fallenStarsActuallyGranted (bug fix, reported by
+  // the user — recap showed a Fallen Star "collected" that was nowhere to be
+  // found on the claim screen): the response's `gained` field used to echo
+  // back the raw cometsGained/fallenStarsGained roll count even when the
+  // Loot Holding cap was hit and the unit was silently dropped in the
+  // "genuinely lost" branch below — unlike itemsFoundCount, which already
+  // only counts what actually landed in itemsGranted/itemsHeld. Gear drops
+  // fill heldCount first (the loop above), so a long-enough AFK window can
+  // hit LOOT_HOLDING_CAP on gear alone before currency's turn — not the
+  // "extreme edge case" the old comment assumed at ~8 gear drops/hour
+  // against a 100-slot cap.
   let cometsToGrant = 0
+  let cometsActuallyGranted = 0
   for (let i = 0; i < cometsGained; i += 1) {
     if (mode === 'live') {
       cometsToGrant += 1
       occupied += 1
+      cometsActuallyGranted += 1
     } else if (heldCount < LOOT_HOLDING_CAP) {
       currencyDropsPayload.push({ currency_type: 'comet' })
       heldCount += 1
       currencyHeld.push({ currency_type: 'comet' })
+      cometsActuallyGranted += 1
     }
   }
 
   let fallenStarsToGrant = 0
+  let fallenStarsActuallyGranted = 0
   for (let i = 0; i < fallenStarsGained; i += 1) {
     if (mode === 'live') {
       fallenStarsToGrant += 1
       occupied += 1
+      fallenStarsActuallyGranted += 1
     } else if (heldCount < LOOT_HOLDING_CAP) {
       currencyDropsPayload.push({ currency_type: 'fallen_star' })
       heldCount += 1
       currencyHeld.push({ currency_type: 'fallen_star' })
+      fallenStarsActuallyGranted += 1
     }
   }
 
@@ -1474,10 +1491,18 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     ok: true,
     elapsedMs,
     // Deltas — for display/toast purposes only (combat-log flavor text).
-    // Deliberately the full rolled amount (cometsGained/fallenStarsGained),
-    // not just what actually fit in Inventory — matches how gear drops'
-    // flavor text isn't reduced either when a drop overflows to Loot Holding.
-    gained: { kills, rareKills, gold: goldGained, exp: expGained, comets: cometsGained, fallenStars: fallenStarsGained },
+    // comets/fallenStars are the actually-granted amount (cometsActuallyGranted/
+    // fallenStarsActuallyGranted), not the raw roll — see that variable's own
+    // comment for why (bug: recap used to claim a Fallen Star was "collected"
+    // when it had actually been silently lost to a full Loot Holding).
+    gained: {
+      kills,
+      rareKills,
+      gold: goldGained,
+      exp: expGained,
+      comets: cometsActuallyGranted,
+      fallenStars: fallenStarsActuallyGranted,
+    },
     // Absolute, authoritative new totals — this is what the client reconciles
     // its local state to (replace, not add — see useProgressionStore's
     // applyServerCombatResult).
