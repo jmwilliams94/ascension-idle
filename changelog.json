@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.108.17",
+    "date": "2026-08-24",
+    "changes": [
+      "Backsword weapons now have unique artwork for every quality tier from Plum Backsword through Eternity Backsword, replacing the generic sword icon — Club, Sword, Blade, Wand, and Backsword weapons all now have full custom artwork"
+    ]
+  },
+  {
     "version": "1.108.16",
     "date": "2026-08-24",
     "changes": [
