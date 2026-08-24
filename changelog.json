@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.108.20",
+    "date": "2026-08-24",
+    "changes": [
+      "Lucky Lad's 9-for-8 bulk draw now announces a rare win to global chat only when you actually flip that card open, instead of the moment you pay"
+    ]
+  },
+  {
     "version": "1.108.19",
     "date": "2026-08-24",
     "changes": [

@@ -166,6 +166,13 @@ interface LuckyState {
   // the 9 cards is granted at once. useTickets picks the 8-Lottery-Ticket
   // payment path instead of the default 160-AP one.
   drawBulk: (characterId: string, useTickets?: boolean) => Promise<DrawLuckyTicketResult>
+  // Fires the global announcement (if any) for one bulk-draw card, the
+  // instant the player taps it open (2026-10-10, requested by the user —
+  // previously drawBulk announced every qualifying card immediately, before
+  // any were revealed). Fire-and-forget: the reveal animation is already
+  // purely local, this just tells the server which index just got flipped so
+  // it can release that card's pending announcement, if it has one.
+  revealBulkCard: (characterId: string, cardIndex: number) => void
 }
 
 export const useLuckyStore = create<LuckyState>((set, get) => ({
@@ -286,5 +293,13 @@ export const useLuckyStore = create<LuckyState>((set, get) => ({
     }
 
     return result
+  },
+
+  revealBulkCard: (characterId, cardIndex) => {
+    void supabase
+      .rpc('reveal_lucky_bulk_card', { p_character_id: characterId, p_card_index: cardIndex })
+      .then(({ error }) => {
+        if (error) console.error('reveal_lucky_bulk_card call failed', error)
+      })
   },
 }))

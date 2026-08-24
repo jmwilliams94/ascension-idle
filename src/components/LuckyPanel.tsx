@@ -343,6 +343,7 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   const busy = useLuckyStore((state) => state.busy)
   const draw = useLuckyStore((state) => state.draw)
   const drawBulk = useLuckyStore((state) => state.drawBulk)
+  const revealBulkCard = useLuckyStore((state) => state.revealBulkCard)
   const ascensionPoints = usePlayerRecordStore((state) => state.ascensionPoints)
   const lotteryTickets = useCurrencyStore((state) => state.lotteryTickets)
 
@@ -436,6 +437,7 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   const handleRevealBulkCard = (index: number) => {
     if (!board || busy || revealedIndices.has(index)) return
     setRevealedIndices((prev) => new Set(prev).add(index))
+    revealBulkCard(characterId, index)
   }
 
   const handleReset = () => {
