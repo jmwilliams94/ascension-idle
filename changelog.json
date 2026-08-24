@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.108.21",
+    "date": "2026-08-24",
+    "changes": [
+      "Bank tab now shows your Account card above your Inventory/Storage card on mobile, so deposits and withdrawals are visible without scrolling"
+    ]
+  },
+  {
     "version": "1.108.20",
     "date": "2026-08-24",
     "changes": [

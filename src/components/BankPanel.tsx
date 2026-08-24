@@ -69,9 +69,17 @@ export default function BankPanel({ characterId }: { characterId: string }) {
       {/* min-w-0 on both columns: grid items default to min-width:auto
           (content-based), so without it a wide unwrapped row inside
           BankSquares grows the whole grid track — and the whole page —
-          wider than the viewport instead of actually wrapping. */}
+          wider than the viewport instead of actually wrapping.
+
+          Mobile stacks Account (BankSquares) above Inventory/Storage
+          (requested by the user, mobile only — deposits/withdraws land
+          there, so it should be the first thing visible without scrolling).
+          order-1/order-2 below control stacking order directly on mobile;
+          the lg:order-1/lg:order-2 overrides restore the original left
+          (Inventory)/right (BankSquares) placement on desktop, independent
+          of DOM order. */}
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
-        <div className="min-w-0">
+        <div className="min-w-0 order-2 lg:order-1">
           {view === 'inventory' ? (
             <AscensionCard>
               <InventoryPanel columns={5} enableBankDeposit />
@@ -81,7 +89,7 @@ export default function BankPanel({ characterId }: { characterId: string }) {
           )}
         </div>
 
-        <div className="min-w-0">
+        <div className="min-w-0 order-1 lg:order-2">
           {/* Reported by a user as "I withdrew 40 Comets and have no idea
               what happened to them" — they were almost certainly still on
               the Account/Storage toggle (which never shows currency at all,
