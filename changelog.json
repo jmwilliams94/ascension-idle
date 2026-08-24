@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.109.0",
+    "date": "2026-08-24",
+    "changes": [
+      "Gold Donation Event now has its own full card in the Events tab, just like World Boss",
+      "Whichever event (World Boss or Gold Donation) is currently active now appears above the other",
+      "The active event's card border now sparkles with embers, matching the Idling nav button's effect",
+      "World Boss and Gold Donation Event reward mail now lists the top 5 contributors and their totals"
+    ]
+  },
+  {
     "version": "1.108.21",
     "date": "2026-08-24",
     "changes": [

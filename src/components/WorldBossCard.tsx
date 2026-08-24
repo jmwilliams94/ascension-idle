@@ -4,6 +4,7 @@ import { Button } from './ui/Button'
 import { HpBar } from './CombatPage'
 import { useWorldBossStore, type WorldBossAttackResult } from '../game/worldboss/useWorldBossStore'
 import WorldBossLeaderboardModal from './WorldBossLeaderboardModal'
+import type { EventEmberColor } from '../game/hud/useEventEmberColor'
 
 const FREE_ATTEMPT_CAP = 10
 const PAID_ATTEMPT_CAP = 10
@@ -30,7 +31,7 @@ function formatCountdown(msRemaining: number): string {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
-export default function WorldBossCard({ characterId }: { characterId: string }) {
+export default function WorldBossCard({ characterId, emberColor = null }: { characterId: string; emberColor?: EventEmberColor | null }) {
   const spawn = useWorldBossStore((state) => state.spawn)
   const participation = useWorldBossStore((state) => state.participation)
   const busy = useWorldBossStore((state) => state.busy)
@@ -81,7 +82,7 @@ export default function WorldBossCard({ characterId }: { characterId: string }) 
   }
 
   return (
-    <AscensionCard>
+    <AscensionCard activeEventColor={emberColor}>
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-heading-label" style={{ fontSize: '1.4rem' }}>

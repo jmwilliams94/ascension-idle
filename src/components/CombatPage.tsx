@@ -14,8 +14,7 @@ import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { usePotionStore } from '../game/items/usePotionStore'
 import { POTION_TYPES, HP_POTION_ORDER } from '../game/items/potionTypes'
-import WorldBossEventsCard from './WorldBossEventsCard'
-import WorldBossCard from './WorldBossCard'
+import EventsCardStack from './EventsCardStack'
 import RowCombatPanel from './RowCombatPanel'
 import { useRowCombatStore } from '../game/combat/useRowCombatStore'
 import { supabase } from '../lib/supabaseClient'
@@ -419,7 +418,7 @@ export default function CombatPage() {
           </div>
         )}
 
-        {mode === 'events' && characterId && <WorldBossCard characterId={characterId} />}
+        {mode === 'events' && <EventsCardStack characterId={characterId} />}
 
         {mode === 'hunting' && activeType && (
           <AscensionCard>
@@ -479,8 +478,6 @@ export default function CombatPage() {
             </div>
           </AscensionCard>
         )}
-
-        {mode === 'events' && <WorldBossEventsCard characterId={characterId} />}
 
         {mode === 'hunting' && (
         <AscensionCard title="Zone & Monster">
@@ -631,9 +628,12 @@ export default function CombatPage() {
             {isFighting && monsterTypeId === dropdownMonsterId ? 'Fighting' : 'Fight'}
           </Button>
         </AscensionCard>
-        ) : (
-          <WorldBossEventsCard characterId={characterId} />
-        )}
+        ) : mode === 'events' ? (
+          // Explicit mode check (was a bare hunting?A:B ternary, which leaked
+          // this into Mining mode too, stacked below MiningModePanel above —
+          // fixed while restructuring this branch for the two-card stack).
+          <EventsCardStack characterId={characterId} />
+        ) : null}
 
         {mode === 'hunting' && activeType && (
           <AscensionCard>
@@ -761,8 +761,6 @@ export default function CombatPage() {
             </div>
           </div>
         )}
-
-        {mode === 'events' && characterId && <WorldBossCard characterId={characterId} />}
       </div>
 
       <div className="space-y-4">

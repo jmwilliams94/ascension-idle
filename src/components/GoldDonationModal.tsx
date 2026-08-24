@@ -16,10 +16,10 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 const DONATION_STEP = 250_000
 
-// Opened from WorldBossEventsCard's Gold Donation Event summary block. Not a
-// third permanent card — the Events sub-mode only has two slots (top card,
-// fight card), both already used by WorldBossEventsCard/WorldBossCard, so a
-// modal is the cleanest fit for one donate input. Shell mirrors
+// Opened from GoldDonationCard's Donate button — the slider stays a modal
+// rather than moving inline onto the card, since a mid-slider donation is a
+// deliberate one-shot action, not something to leave half-adjusted on a card
+// the player might navigate away from. Shell mirrors
 // WorldBossLeaderboardModal.tsx's backdrop/click-outside pattern.
 export default function GoldDonationModal({ characterId, onClose }: { characterId: string; onClose: () => void }) {
   const gold = useProgressionStore((state) => state.gold)
