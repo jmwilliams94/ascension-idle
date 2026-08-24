@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.109.2",
+    "date": "2026-08-24",
+    "changes": [
+      "Lucky Lad global announcements: raised the Composition Stone threshold to +5 and higher, and Moon Box / Tempered Gem wins no longer announce"
+    ]
+  },
+  {
     "version": "1.109.1",
     "date": "2026-08-24",
     "changes": [
