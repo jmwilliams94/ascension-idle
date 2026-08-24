@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.108.18",
+    "date": "2026-08-24",
+    "changes": [
+      "Gear Score now awards 3 points for a 2-socket item instead of 2 (1-socket items are unchanged at 1 point)",
+      "Salvaging a socketed piece of gear now grants bonus Ascension Points on top of its quality tier — +20 AP for 1 socket, +160 AP for 2"
+    ]
+  },
+  {
     "version": "1.108.17",
     "date": "2026-08-24",
     "changes": [

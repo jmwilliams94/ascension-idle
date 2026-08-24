@@ -177,8 +177,8 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
 
   const selectedItem = items.find((item) => item.id === selectedItemId) ?? null
   const selectedTemplate = selectedItem ? templates.find((t) => t.id === selectedItem.template_id) : undefined
-  const apValue = selectedItem ? previewSalvageApValue(selectedItem.quality_tier) : 0
-  const isWorthless = selectedItem?.quality_tier === 'normal'
+  const apValue = selectedItem ? previewSalvageApValue(selectedItem.quality_tier, selectedItem.sockets.length) : 0
+  const isWorthless = apValue === 0
 
   const equippedItemIds = new Set(Object.values(equippedIds).filter((id): id is string => Boolean(id)))
   const listedItemIds = new Set(myListings.filter((listing) => listing.status === 'active').map((listing) => listing.item_id))

@@ -222,17 +222,20 @@ export function computeEquipmentBonus(
 }
 
 // Gear Score (requested by the user) — client mirror of the SQL
-// compute_item_gear_score function (20260930010000_gear_lock_and_gear_score.sql)
-// — must stay in sync. Quality tier worth its QUALITY_ORDER index (0-4, same
-// battle-power weighting already documented in CLAUDE.md), each unlocked
-// socket worth 1 (filled or empty, 0-2), composition_level worth 1 per point
-// (0-12), Enchant HP worth 1 point per tier range reached (0-3, ranges from
-// ENCHANT_HP_RANGE_BY_TIER), Bless worth 1 point per ladder step reached (0-4,
-// BLESS_PCT_STEPS) — matches the user's own worked example (1% -> 1pt, 5% ->
-// 3pts) exactly.
+// compute_item_gear_score function (20260930010000_gear_lock_and_gear_score.sql,
+// socket table updated 20260824000000) — must stay in sync. Quality tier
+// worth its QUALITY_ORDER index (0-4, same battle-power weighting already
+// documented in CLAUDE.md), sockets worth 0/1/3 for 0/1/2 unlocked sockets
+// (filled or empty — 2 sockets is a deliberate non-linear jump, not 2x),
+// composition_level worth 1 per point (0-12), Enchant HP worth 1 point per
+// tier range reached (0-3, ranges from ENCHANT_HP_RANGE_BY_TIER), Bless worth
+// 1 point per ladder step reached (0-4, BLESS_PCT_STEPS) — matches the user's
+// own worked example (1% -> 1pt, 5% -> 3pts) exactly.
+const SOCKET_GEAR_SCORE_BY_COUNT: Record<number, number> = { 0: 0, 1: 1, 2: 3 }
+
 export function computeItemGearScore(item: Pick<ItemInstance, 'quality_tier' | 'sockets' | 'composition_level' | 'enchant'>): number {
   const qualityScore = Math.max(0, QUALITY_ORDER.indexOf(item.quality_tier))
-  const socketScore = item.sockets.length
+  const socketScore = SOCKET_GEAR_SCORE_BY_COUNT[item.sockets.length] ?? item.sockets.length
   const compositionScore = item.composition_level
 
   const enchant = item.enchant as { hp?: number; blessPct?: number } | null
@@ -277,9 +280,12 @@ export function previewSellPrice(price: number, qualityTier: string): number {
 }
 
 // Client-side mirror of salvage_item's SQL case statement (see
-// 20260807060000_salvage_ap_table_and_bonus_rebalance.sql) — must stay in
-// sync. Forge's Salvage tab: no gold, exactly the same per-tier AP as
-// sell_item (Salvage's only difference from Sell is forfeiting the gold).
+// 20260807060000_salvage_ap_table_and_bonus_rebalance.sql, socket bonus added
+// 20260824000000) — must stay in sync. Forge's Salvage tab: no gold, same
+// per-tier AP as sell_item's gold payout (Salvage's only difference from Sell
+// is forfeiting the gold), plus a flat socket bonus — 20 AP for 1 unlocked
+// socket, 160 AP for 2 (gems/composition/enchant on the item are not
+// refunded in any way, same as everything else lost on salvage).
 const SALVAGE_AP_BY_QUALITY: Record<string, number> = {
   normal: 0,
   tempered: 1,
@@ -288,8 +294,10 @@ const SALVAGE_AP_BY_QUALITY: Record<string, number> = {
   ascended: 4,
 }
 
-export function previewSalvageApValue(qualityTier: string): number {
-  return SALVAGE_AP_BY_QUALITY[qualityTier] ?? 0
+const SALVAGE_AP_SOCKET_BONUS_BY_COUNT: Record<number, number> = { 0: 0, 1: 20, 2: 160 }
+
+export function previewSalvageApValue(qualityTier: string, socketCount = 0): number {
+  return (SALVAGE_AP_BY_QUALITY[qualityTier] ?? 0) + (SALVAGE_AP_SOCKET_BONUS_BY_COUNT[socketCount] ?? 0)
 }
 
 // Gear Durability (2026-08-14) — client mirror of the SQL compute_max_durability
