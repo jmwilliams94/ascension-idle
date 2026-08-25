@@ -5,6 +5,10 @@ import { HpBar } from './CombatPage'
 import { useWorldBossStore, type WorldBossAttackResult } from '../game/worldboss/useWorldBossStore'
 import WorldBossLeaderboardModal from './WorldBossLeaderboardModal'
 import type { EventEmberColor } from '../game/hud/useEventEmberColor'
+import { useEquipmentStore, EQUIP_SLOTS } from '../game/items/useEquipmentStore'
+import { useInventoryStore } from '../game/items/useInventoryStore'
+import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
+import { itemHasDurability } from '../game/items/equipmentBonus'
 
 const FREE_ATTEMPT_CAP = 10
 const PAID_ATTEMPT_CAP = 10
@@ -38,8 +42,13 @@ export default function WorldBossCard({ characterId, emberColor = null }: { char
   const loadParticipation = useWorldBossStore((state) => state.loadParticipation)
   const attack = useWorldBossStore((state) => state.attack)
 
+  const equippedIds = useEquipmentStore((state) => state.equippedIds)
+  const items = useInventoryStore((state) => state.items)
+  const templates = useItemTemplatesStore((state) => state.templates)
+
   const [lastResult, setLastResult] = useState<WorldBossAttackResult | null>(null)
   const [leaderboardOpen, setLeaderboardOpen] = useState(false)
+  const [showRepairAlert, setShowRepairAlert] = useState(false)
   // Own 1s tick for the cooldown countdown — independent of CombatPage's
   // own 200ms floating-number tick, which this card doesn't use.
   const [now, setNow] = useState(() => Date.now())
@@ -76,7 +85,22 @@ export default function WorldBossCard({ characterId, emberColor = null }: { char
   const bossDefeated = spawn.currentHp <= 0
   const canAttack = spawn.status === 'active' && !windowEnded && !bossDefeated && !outOfAttempts && !onCooldown && !busy
 
+  // Broken (0-durability) gear contributes nothing to combat stats (see
+  // equipmentBonus.ts) — attacking the World Boss with it equipped would
+  // just burn a limited attempt for a weak hit, so warn before spending one.
+  const hasBrokenGear = EQUIP_SLOTS.some((slot) => {
+    const itemId = equippedIds[slot]
+    const item = itemId ? items.find((entry) => entry.id === itemId) : null
+    if (!item) return false
+    const template = templates.find((entry) => entry.id === item.template_id)
+    return itemHasDurability(template?.slot_type) && item.durability <= 0
+  })
+
   const handleAttack = async () => {
+    if (hasBrokenGear) {
+      setShowRepairAlert(true)
+      return
+    }
     const result = await attack(characterId)
     setLastResult(result)
   }
@@ -136,6 +160,8 @@ export default function WorldBossCard({ characterId, emberColor = null }: { char
 
       {onCooldown && <p className="mt-2 text-center text-xs text-slate-500">Next attempt in {formatCountdown(cooldownEndsAtMs - now)}</p>}
 
+      {hasBrokenGear && <p className="mt-2 text-center text-xs text-rose-400">Some of your gear is broken — repair it before fighting.</p>}
+
       <Button variant="primary" disabled={!canAttack} onClick={() => void handleAttack()} className="mt-3 w-full">
         {busy ? 'Attacking…' : freeRemaining > 0 ? 'Attack' : `Attack (${PAID_ATTEMPT_AP_COST} AP)`}
       </Button>
@@ -154,6 +180,27 @@ export default function WorldBossCard({ characterId, emberColor = null }: { char
 
       {leaderboardOpen && (
         <WorldBossLeaderboardModal characterId={characterId} spawnId={spawn.id} onClose={() => setLeaderboardOpen(false)} />
+      )}
+
+      {showRepairAlert && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4"
+          onClick={() => setShowRepairAlert(false)}
+        >
+          <div
+            className="w-full max-w-xs space-y-3 rounded-2xl border border-rose-500/40 bg-slate-900 p-4 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="text-sm font-semibold text-rose-300">Gear needs repair</p>
+            <p className="text-xs text-slate-400">
+              One or more of your equipped items is at 0 durability and won't fight effectively. Repair your gear in the Shop before
+              attacking the World Boss.
+            </p>
+            <Button variant="primary" onClick={() => setShowRepairAlert(false)} className="w-full">
+              Got it
+            </Button>
+          </div>
+        </div>
       )}
     </AscensionCard>
   )

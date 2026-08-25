@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.109.3",
+    "date": "2026-08-25",
+    "changes": [
+      "World Boss: added a warning if you try to attack while wearing broken (0 durability) gear, so you don't waste an attempt"
+    ]
+  },
+  {
     "version": "1.109.2",
     "date": "2026-08-24",
     "changes": [
