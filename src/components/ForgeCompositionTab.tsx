@@ -28,6 +28,10 @@ function describeFeedFailure(error?: string): string {
       return "One of those fuel items couldn't be found."
     case 'fuel_is_target_item':
       return "An item can't be fed into itself."
+    case 'fuel_locked':
+      return "One of those fuel items is locked — unlock it first."
+    case 'invalid_stone_tier':
+      return 'One of those stones has an invalid tier.'
     case 'no_points_contributed':
       return 'Place at least one stone or item in the Fuel slot.'
     case 'already_max_composition':

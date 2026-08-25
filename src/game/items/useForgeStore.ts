@@ -143,6 +143,7 @@ interface CompositionFeedResult {
     | 'not_enough_stones'
     | 'fuel_not_owned'
     | 'fuel_is_target_item'
+    | 'fuel_locked'
     | 'no_points_contributed'
     | 'already_max_composition'
   composition_level?: number

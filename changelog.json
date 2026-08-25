@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.110.6",
+    "date": "2026-08-25",
+    "changes": [
+      "Fixed Composition feeding failing with \"Something went wrong\" whenever it would push an item across a tier (e.g. +6 into +7)"
+    ]
+  },
+  {
     "version": "1.110.5",
     "date": "2026-08-25",
     "changes": [
