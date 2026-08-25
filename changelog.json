@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.110.10",
+    "date": "2026-08-26",
+    "changes": [
+      "Fixed Wuxia's Backsword and Bracelet gear: removed an incorrect Dexterity stat from both, and Bracelet now correctly grants Magic Attack instead of Physical Attack, matching real reference data"
+    ]
+  },
+  {
     "version": "1.110.9",
     "date": "2026-08-26",
     "changes": [

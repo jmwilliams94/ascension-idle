@@ -80,13 +80,17 @@ function scaledStat(baseStats: Record<string, number>, key: string, qualityTier:
 // Slot -> stat key mapping mirrors the sourced per-slot-type table in
 // CLAUDE.md; only the base_stats keys this codebase actually reads today are
 // included (Max HP portions of Necklace/Bag aren't itemized on any template
-// yet, and Shield/Bag/Bracelet/Heavy Ring/Taoist Cap/Magic Sword have no
-// implemented slot_type to key off of).
+// yet). Ring lists both attack keys because Wuxia's Bracelet (item_family
+// 'bracelet', also slot_type 'ring') carries magic_attack instead of Hunter's
+// Ring's physical_attack — computeCompositionBonusStats below only awards a
+// bonus for a key actually present on that item's own base_stats, so this is
+// a no-op for whichever of the two an item doesn't have (2026-08-26, see
+// 20261016000000_fix_wuxia_backsword_bracelet_stats.sql).
 export const COMPOSITION_BONUS_PCT_PER_TIER = 0.05
 
 export const COMPOSITION_BONUS_STAT_KEYS: Record<string, string[]> = {
   weapon: ['physical_attack', 'magic_attack'],
-  ring: ['physical_attack'],
+  ring: ['physical_attack', 'magic_attack'],
   necklace: ['physical_defense'],
   hat: ['physical_defense'],
   coat: ['physical_defense', 'magic_defense'],
