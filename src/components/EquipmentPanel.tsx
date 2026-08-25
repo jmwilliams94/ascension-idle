@@ -280,6 +280,7 @@ export default function EquipmentPanel() {
                   label="Off Hand"
                   icon={mainHand ? getItemIcon(mainHand.template.slot_type) : '⚔️'}
                   iconSrc={mainHand ? getGearIconSrc(mainHand.template.name, mainHand.item.quality_tier) : undefined}
+                  placeholderIconSrc={mainHand ? undefined : getMaxLevelPlaceholderIconSrc(templates, 'wuxia', 'weapon')}
                   filled={Boolean(mainHand)}
                   qualityColor={mainHand ? getQualityColor(mainHand.item.quality_tier) : undefined}
                   sizeClassName={SLOT_SIZE}

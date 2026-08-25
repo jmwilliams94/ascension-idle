@@ -831,31 +831,55 @@ export function getGearIconSrc(templateName: string | undefined, qualityTier?: s
 }
 
 // Empty-slot silhouette placeholder (2026-08-26, requested by the user) —
-// looks up the current class's own highest-`required_level` template for a
-// given slot_type, so EquipmentPanel can show a faint silhouette of "what
-// you're working toward" instead of a generic emoji on an empty slot.
-// `required_class` is null on shared catalogs (Boots today) rather than
-// naming every class, so those match regardless of `classId`. Where a class
-// has multiple weapon families tied for the top level (e.g. Juggernaut's
-// Club/Sword/Blade/Wand all cap at 130), this deterministically picks
-// whichever comes first in `templates` — fine for a decorative silhouette,
-// no need to prefer one family over another. Returns undefined (falls back
-// to the emoji icon) when the class has no gear at all for that slot yet
-// (e.g. Twin-soul/Juggernaut's necklace/ring, which don't exist in the
-// catalog).
+// looks up the current class's own highest-`required_level` template *that
+// actually has icon art* for a given slot_type, so EquipmentPanel can show a
+// faint silhouette of "what you're working toward" instead of a generic
+// emoji on an empty slot. Deliberately walks candidates highest-level-first
+// and skips any without art, rather than just taking the single max-level
+// template — a chain's true top tier can still be un-iconified (e.g. Cap
+// stops at Skysworn (Lv120) art-wise, but Heavensent (Lv126) is the real max
+// level), which would otherwise silently fall through to the emoji even
+// though a perfectly good lower-tier icon exists (bit Wuxia's Head slot,
+// 2026-08-26). `required_class` is null on shared catalogs (Boots today)
+// rather than naming every class, so those match regardless of `classId`.
+// Where a class has multiple weapon families tied for the top level (e.g.
+// Juggernaut's Club/Sword/Blade/Wand all cap at 130), this deterministically
+// picks whichever comes first in `templates` — fine for a decorative
+// silhouette, no need to prefer one family over another. Returns undefined
+// (falls back to the emoji icon) when the class has no gear with art for
+// that slot at all (e.g. Twin-soul/Juggernaut's necklace/ring, which don't
+// exist in the catalog).
+//
+// `required_class` gotcha (bit Wuxia's Necklace/Ring/Weapon, 2026-08-26):
+// Hunter's *original* Bow/Necklace/Ring/Boots predate the multi-class system
+// and were never backfilled with `required_class` — they're `null`, same as
+// Boots. But only Boots is actually meant to be shared across every class
+// (confirmed design, "the existing shared boots catalog is reused as-is");
+// Bow/Necklace/Ring are Hunter-exclusive in practice, just untagged. So a
+// bare `required_class === null` fallback isn't safe — it correctly picks up
+// Boots but wrongly leaked Hunter's Bow/Necklace into Wuxia's own lookup
+// (both outrank Wuxia's real Lv126/127 gear at Lv130). Null now only matches
+// when `classId === 'hunter'` (i.e. it really is that legacy Hunter catalog)
+// or the slot is Boots specifically (the one deliberately shared exception).
 export function getMaxLevelPlaceholderIconSrc(
   templates: ItemTemplate[],
   classId: ClassId,
   slotType: string,
 ): string | undefined {
-  const candidates = templates.filter(
-    (template) => template.slot_type === slotType && (template.required_class === classId || template.required_class === null),
-  )
-  const maxLevelTemplate = candidates.reduce<ItemTemplate | undefined>(
-    (best, current) => (!best || current.required_level > best.required_level ? current : best),
-    undefined,
-  )
-  return maxLevelTemplate ? getGearIconSrc(maxLevelTemplate.name) : undefined
+  const candidates = templates
+    .filter(
+      (template) =>
+        template.slot_type === slotType &&
+        (template.required_class === classId || (template.required_class === null && (classId === 'hunter' || slotType === 'boots'))),
+    )
+    .sort((a, b) => b.required_level - a.required_level)
+  for (const template of candidates) {
+    const iconSrc = getGearIconSrc(template.name)
+    if (iconSrc) {
+      return iconSrc
+    }
+  }
+  return undefined
 }
 
 // Exported so other systems needing a tier-rank comparison (e.g. VIP

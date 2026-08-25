@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.111.4",
+    "date": "2026-08-26",
+    "changes": [
+      "Fixed empty equipment slot silhouettes: made them a low-opacity white (was too faint to see), fixed a bug where they'd disappear on classes whose top-tier item for that slot has no art yet, fixed Wuxia's Necklace/Ring/Weapon silhouettes wrongly showing Hunter gear, and extended the silhouette to the Wuxia Off Hand slot"
+    ]
+  },
+  {
     "version": "1.111.3",
     "date": "2026-08-26",
     "changes": [

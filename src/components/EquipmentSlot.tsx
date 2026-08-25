@@ -133,8 +133,8 @@ export default function EquipmentSlot({
         <img
           src={placeholderIconSrc}
           alt=""
-          className="relative z-10 h-4/5 w-4/5 object-contain opacity-20"
-          style={{ filter: 'brightness(0)' }}
+          className="relative z-10 h-4/5 w-4/5 object-contain opacity-30"
+          style={{ filter: 'brightness(0) invert(1)' }}
           onError={() => setPlaceholderLoadFailed(true)}
         />
       ) : (
