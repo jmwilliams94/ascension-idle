@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.111.3",
+    "date": "2026-08-26",
+    "changes": [
+      "Empty Equipment slots now show a faint silhouette of your class's max-level item for that slot, instead of a plain placeholder icon"
+    ]
+  },
+  {
     "version": "1.111.2",
     "date": "2026-08-26",
     "changes": [

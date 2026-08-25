@@ -830,6 +830,34 @@ export function getGearIconSrc(templateName: string | undefined, qualityTier?: s
   return templateName ? ITEM_ICON_OVERRIDES[templateName] : undefined
 }
 
+// Empty-slot silhouette placeholder (2026-08-26, requested by the user) —
+// looks up the current class's own highest-`required_level` template for a
+// given slot_type, so EquipmentPanel can show a faint silhouette of "what
+// you're working toward" instead of a generic emoji on an empty slot.
+// `required_class` is null on shared catalogs (Boots today) rather than
+// naming every class, so those match regardless of `classId`. Where a class
+// has multiple weapon families tied for the top level (e.g. Juggernaut's
+// Club/Sword/Blade/Wand all cap at 130), this deterministically picks
+// whichever comes first in `templates` — fine for a decorative silhouette,
+// no need to prefer one family over another. Returns undefined (falls back
+// to the emoji icon) when the class has no gear at all for that slot yet
+// (e.g. Twin-soul/Juggernaut's necklace/ring, which don't exist in the
+// catalog).
+export function getMaxLevelPlaceholderIconSrc(
+  templates: ItemTemplate[],
+  classId: ClassId,
+  slotType: string,
+): string | undefined {
+  const candidates = templates.filter(
+    (template) => template.slot_type === slotType && (template.required_class === classId || template.required_class === null),
+  )
+  const maxLevelTemplate = candidates.reduce<ItemTemplate | undefined>(
+    (best, current) => (!best || current.required_level > best.required_level ? current : best),
+    undefined,
+  )
+  return maxLevelTemplate ? getGearIconSrc(maxLevelTemplate.name) : undefined
+}
+
 // Exported so other systems needing a tier-rank comparison (e.g. VIP
 // auto-salvage's minimum-tier threshold) reuse this instead of redefining
 // their own copy of the ladder.

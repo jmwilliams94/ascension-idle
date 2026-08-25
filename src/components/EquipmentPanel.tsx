@@ -10,6 +10,7 @@ import {
   formatItemLevel,
   getGearIconSrc,
   getItemIcon,
+  getMaxLevelPlaceholderIconSrc,
   getQualityColor,
   itemHasDurability,
 } from '../game/items/equipmentBonus'
@@ -221,6 +222,7 @@ export default function EquipmentPanel() {
                 }
                 icon={equipped ? getItemIcon(equipped.template.slot_type) : icon}
                 iconSrc={equipped ? getGearIconSrc(equipped.template.name, equipped.item.quality_tier) : undefined}
+                placeholderIconSrc={equipped ? undefined : getMaxLevelPlaceholderIconSrc(templates, selectedClassId, slot)}
                 filled={Boolean(equipped)}
                 qualityColor={equipped ? getQualityColor(glowQualityTier ?? 'normal') : undefined}
                 compositionLevel={equipped?.item.composition_level}

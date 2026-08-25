@@ -12,6 +12,12 @@ interface EquipmentSlotProps {
   // iconSrc-over-icon priority InventorySlot already established (see
   // getGearIconSrc in equipmentBonus.ts).
   iconSrc?: string
+  // Empty-slot silhouette (2026-08-26) — the current class's own max-level
+  // item for this slot (see getMaxLevelPlaceholderIconSrc in
+  // equipmentBonus.ts), shown as a faint black silhouette instead of the
+  // generic emoji when the slot is empty. Ignored entirely when `filled` or
+  // `iconSrc` is set — a real equipped item always wins.
+  placeholderIconSrc?: string
   // Non-interactive placeholder for a gear type that doesn't exist yet — shows a
   // faint icon hinting at the slot type, never clickable.
   locked?: boolean
@@ -47,6 +53,7 @@ export default function EquipmentSlot({
   label,
   icon,
   iconSrc,
+  placeholderIconSrc,
   locked,
   filled,
   qualityColor,
@@ -70,6 +77,14 @@ export default function EquipmentSlot({
     setIconLoadFailed(false)
   }, [iconSrc])
   const showIconImage = Boolean(iconSrc) && !iconLoadFailed
+
+  // Same onError-fallback pattern, own independent state since this is a
+  // different <img> src than iconSrc above (only ever rendered when empty).
+  const [placeholderLoadFailed, setPlaceholderLoadFailed] = useState(false)
+  useEffect(() => {
+    setPlaceholderLoadFailed(false)
+  }, [placeholderIconSrc])
+  const showPlaceholderImage = !filled && !showIconImage && Boolean(placeholderIconSrc) && !placeholderLoadFailed
   // Fixed pixel size rather than aspect-square/w-full — this tile sits inside a
   // grid cell whose column can be much wider than the tile itself (the columns are
   // percentage-based so the paper-doll's positions stay proportional), so sizing
@@ -113,6 +128,14 @@ export default function EquipmentSlot({
           alt=""
           className="relative z-10 h-4/5 w-4/5 object-contain"
           onError={() => setIconLoadFailed(true)}
+        />
+      ) : showPlaceholderImage ? (
+        <img
+          src={placeholderIconSrc}
+          alt=""
+          className="relative z-10 h-4/5 w-4/5 object-contain opacity-20"
+          style={{ filter: 'brightness(0)' }}
+          onError={() => setPlaceholderLoadFailed(true)}
         />
       ) : (
         <span className="relative z-10">{icon}</span>
