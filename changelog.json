@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.110.7",
+    "date": "2026-08-25",
+    "changes": [
+      "Robe now has unique artwork for every quality tier from Hemp Robe through Silkbound Robe, replacing the generic sword icon"
+    ]
+  },
+  {
     "version": "1.110.6",
     "date": "2026-08-25",
     "changes": [

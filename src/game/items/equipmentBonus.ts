@@ -774,6 +774,18 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Jadeleaf Cap': `${import.meta.env.BASE_URL}item-icons/jadeleaf-cap.png`,
   'Snowveil Cap': `${import.meta.env.BASE_URL}item-icons/snowveil-cap.png`,
   'Skysworn Cap': `${import.meta.env.BASE_URL}item-icons/skysworn-cap.png`,
+  // Robe (Wuxia exclusive — coat slot). All 11 tiers have art.
+  'Hemp Robe': `${import.meta.env.BASE_URL}item-icons/hemp-robe.png`,
+  'Sable Robe': `${import.meta.env.BASE_URL}item-icons/sable-robe.png`,
+  'Linen Robe': `${import.meta.env.BASE_URL}item-icons/linen-robe.png`,
+  'Gossamer Robe': `${import.meta.env.BASE_URL}item-icons/gossamer-robe.png`,
+  'Saffron Robe': `${import.meta.env.BASE_URL}item-icons/saffron-robe.png`,
+  'Cloudspun Robe': `${import.meta.env.BASE_URL}item-icons/cloudspun-robe.png`,
+  'Jadefall Robe': `${import.meta.env.BASE_URL}item-icons/jadefall-robe.png`,
+  'Duskbound Robe': `${import.meta.env.BASE_URL}item-icons/duskbound-robe.png`,
+  'Phoenixdown Robe': `${import.meta.env.BASE_URL}item-icons/phoenixdown-robe.png`,
+  'Ashweave Robe': `${import.meta.env.BASE_URL}item-icons/ashweave-robe.png`,
+  'Silkbound Robe': `${import.meta.env.BASE_URL}item-icons/silkbound-robe.png`,
 }
 
 // Pickaxe is the only item whose icon changes per quality_tier instead of
