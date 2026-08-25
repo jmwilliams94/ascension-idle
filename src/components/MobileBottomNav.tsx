@@ -6,6 +6,7 @@ import NavIconGlyph from './NavIconGlyph'
 import { useAchievementsStore, totalClaimableCount } from '../game/achievements/useAchievementsStore'
 import { useMailStore, countUnreadMail } from '../game/marketplace/useMailStore'
 import { useActiveEventEmberColor } from '../game/hud/useEventEmberColor'
+import { useLuckyFreeEmberColor } from '../game/hud/useLuckyFreeEmberColor'
 import { EventEmberBorder } from '../game/hud/eventEmberBorder'
 import { eventBorderTintStyle } from '../game/hud/eventEmberBorderData'
 import { APP_VERSION } from '../version'
@@ -68,18 +69,11 @@ function NavButton({
   label,
   badge,
   outerCorner,
-  compact,
 }: {
   id: TabId
   label: string
   badge?: number
   outerCorner?: 'bl' | 'br'
-  // compact (2026-08-16, requested by the user) — LuckyLad/Tavern, the two
-  // buttons flanking Idling, should read slightly smaller than the edge
-  // buttons (Equip/Achiev). flex-[0.85] vs flex-1 on otherwise-identical
-  // siblings; the leftover width isn't wasted, it flows to whichever
-  // siblings keep flex-1 since they all share flex-basis 0.
-  compact?: boolean
 }) {
   const activeTab = useTabStore((state) => state.activeTab)
   const setActiveTab = useTabStore((state) => state.setActiveTab)
@@ -96,7 +90,7 @@ function NavButton({
     <button
       type="button"
       onClick={() => setActiveTab(id)}
-      className={`relative flex ${compact ? 'flex-[0.85]' : 'flex-1'} flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-medium leading-tight ${cornerClass} ${
+      className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-medium leading-tight ${cornerClass} ${
         active ? 'btn-gold-active' : 'btn-gold'
       }`}
     >
@@ -107,6 +101,33 @@ function NavButton({
           {badge! > 99 ? '99+' : badge}
         </span>
       )}
+    </button>
+  )
+}
+
+// Same compact flex-[0.85] sizing as NavButton's `compact` prop (LuckyLad
+// was already the sole user of that prop), plus the World-Boss-button's own
+// border-ember/outline-ring effect, retriggered here by the free 4h ticket
+// cooldown instead of a server event (2026-08-25, requested by the user).
+function LuckyNavButton({ label }: { label: string }) {
+  const activeTab = useTabStore((state) => state.activeTab)
+  const setActiveTab = useTabStore((state) => state.setActiveTab)
+  const active = activeTab === 'lucky'
+  const icon = TAB_ICONS.lucky
+  const emberColor = useLuckyFreeEmberColor()
+
+  return (
+    <button
+      type="button"
+      onClick={() => setActiveTab('lucky')}
+      className={`relative flex flex-[0.85] flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[10px] font-medium leading-tight ${
+        active ? 'btn-gold-active' : 'btn-gold'
+      }`}
+      style={eventBorderTintStyle(emberColor)}
+    >
+      {icon && <NavIconGlyph icon={icon} />}
+      <span className="truncate">{label}</span>
+      <EventEmberBorder color={emberColor} count={20} />
     </button>
   )
 }
@@ -194,8 +215,8 @@ function TavernNavButton({ badges }: { badges: Partial<Record<TabId, number>> })
 
   return (
     // flex-[0.85], not flex-1 (2026-08-16, requested by the user) — Tavern
-    // flanks Idling the same way LuckyLad does, see NavButton's `compact`
-    // doc comment for why it's sized down to match.
+    // flanks Idling the same way LuckyLad does (see LuckyNavButton), both
+    // sized down slightly relative to the edge buttons (Equip/Achiev).
     <div data-tavern-rollup className="relative flex flex-[0.85] flex-col items-center justify-center">
       <AnimatePresence>
         {expanded && (
@@ -320,9 +341,13 @@ export default function MobileBottomNav() {
       style={{ paddingBottom: 'env(safe-area-inset-bottom)', transform: 'translateZ(0)' }}
     >
       <div className="mx-auto flex max-w-md items-stretch gap-1 px-2 py-1">
-        {LEFT_ITEMS.map((item, index) => (
-          <NavButton key={item.id} {...item} outerCorner={index === 0 ? 'bl' : undefined} compact={item.id === 'lucky'} />
-        ))}
+        {LEFT_ITEMS.map((item, index) =>
+          item.id === 'lucky' ? (
+            <LuckyNavButton key={item.id} label={item.label} />
+          ) : (
+            <NavButton key={item.id} {...item} outerCorner={index === 0 ? 'bl' : undefined} />
+          ),
+        )}
         <IdlingNavButton />
         <TavernNavButton badges={{ marketplace: mailBadge }} />
         {RIGHT_ITEMS.map((item) => (

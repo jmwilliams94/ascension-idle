@@ -11,6 +11,7 @@ export const EVENT_EMBER_HEX: Record<EventEmberColor, string> = {
   boss: '#EF4444', // World Boss fight live
   buffActive: '#34D399', // Gold Donation buff triggered and live
   collecting: '#D4AF37', // Gold Donation pool open, buff not triggered yet
+  luckyFree: '#FBBF24', // LuckyLad free 4h ticket ready — brighter than `collecting`'s gold so the two read as distinct
 }
 
 // A slight colored ring around the button itself, on top of the floating

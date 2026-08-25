@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useWorldBossStore } from '../worldboss/useWorldBossStore'
 import { useGoldDonationStore, getActiveGoldDonationEvent } from '../goldDonation/useGoldDonationStore'
 
-export type EventEmberColor = 'boss' | 'buffActive' | 'collecting'
+export type EventEmberColor = 'boss' | 'buffActive' | 'collecting' | 'luckyFree'
 
 // Idling nav button embers (CLAUDE.server-events.md's World Boss + Gold
 // Donation Event). World Boss and Gold Donation run on independent random

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.110.1",
+    "date": "2026-08-25",
+    "changes": [
+      "Lucky Lad button now glows with the same ember effect as the Idling button whenever your free ticket is ready to claim"
+    ]
+  },
+  {
     "version": "1.110.0",
     "date": "2026-08-25",
     "changes": [

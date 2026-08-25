@@ -4,6 +4,7 @@ import NavIconGlyph from './NavIconGlyph'
 import { useAchievementsStore, totalClaimableCount } from '../game/achievements/useAchievementsStore'
 import { useMailStore, countUnreadMail } from '../game/marketplace/useMailStore'
 import { useActiveEventEmberColor } from '../game/hud/useEventEmberColor'
+import { useLuckyFreeEmberColor } from '../game/hud/useLuckyFreeEmberColor'
 import { EventEmberBorder } from '../game/hud/eventEmberBorder'
 import { eventBorderTintStyle } from '../game/hud/eventEmberBorderData'
 
@@ -80,6 +81,31 @@ function IdlingTabButton({ label }: { label: string }) {
   )
 }
 
+// Same split-out treatment as IdlingTabButton above, so only the LuckyLad
+// tab subscribes to useLuckyStore's nextFreeTicketAt — lights up with the
+// same border-ember/outline-ring effect once the free 4h ticket is ready
+// (2026-08-25, requested by the user).
+function LuckyTabButton({ label }: { label: string }) {
+  const activeTab = useTabStore((state) => state.activeTab)
+  const setActiveTab = useTabStore((state) => state.setActiveTab)
+  const active = activeTab === 'lucky'
+  const icon = TAB_ICONS.lucky
+  const emberColor = useLuckyFreeEmberColor()
+
+  return (
+    <button
+      type="button"
+      onClick={() => setActiveTab('lucky')}
+      className={`relative ${TAB_BUTTON_CLASS} ${active ? 'btn-gold-active' : 'btn-gold'}`}
+      style={eventBorderTintStyle(emberColor)}
+    >
+      {icon && <NavIconGlyph icon={icon} sizeClassName="h-8 w-8" />}
+      <span>{label}</span>
+      <EventEmberBorder color={emberColor} />
+    </button>
+  )
+}
+
 // Desktop-only (`hidden lg:grid` — mobile has its own fixed bottom nav bar
 // entirely, MobileBottomNav.tsx). Desktopified version of that bar (2026-08-03,
 // confirmed with the user): same icon art, but all 8 tabs shown flat rather
@@ -111,6 +137,8 @@ export default function TabNav() {
       {TAB_ITEMS.map((item) =>
         item.id === 'combat' ? (
           <IdlingTabButton key={item.id} label={item.label} />
+        ) : item.id === 'lucky' ? (
+          <LuckyTabButton key={item.id} label={item.label} />
         ) : (
           <TabButton
             key={item.id}
