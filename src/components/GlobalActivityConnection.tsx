@@ -1,8 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useGlobalActivityStore, type GlobalAnnouncement } from '../game/social/useGlobalActivityStore'
 import { useAnnouncementHistoryStore } from '../game/social/useAnnouncementHistoryStore'
 import { useChatStore, toChatMessage } from '../game/social/useChatStore'
+import { useSessionConflictStore } from '../game/social/useSessionConflictStore'
 
 function toAnnouncement(row: Record<string, unknown>): GlobalAnnouncement {
   return {
@@ -37,6 +38,10 @@ export default function GlobalActivityConnection({ accountId }: { accountId: str
   const addAnnouncementHistoryEntry = useAnnouncementHistoryStore((state) => state.addEntry)
   const addMilestoneEntry = useAnnouncementHistoryStore((state) => state.addMilestoneEntry)
   const addChatMessage = useChatStore((state) => state.addMessage)
+  // Identifies this tab within its own account's presence entries, so a
+  // second session for the same account can be told apart from this one --
+  // see the session-conflict handling below and useSessionConflictStore.ts.
+  const sessionIdRef = useRef(crypto.randomUUID())
 
   useEffect(() => {
     if (!accountId) {
@@ -45,6 +50,7 @@ export default function GlobalActivityConnection({ accountId }: { accountId: str
 
     let cancelled = false
     let subscribed = false
+    let hasCheckedConflict = false
 
     // Seed with whatever the most recent announcement already was, so a
     // client that connects between events isn't stuck showing nothing until
@@ -64,10 +70,17 @@ export default function GlobalActivityConnection({ accountId }: { accountId: str
       config: { presence: { key: accountId } },
     })
 
+    // Lets SessionConflictModal (which has no access to this closure's
+    // channel) ask this tab to broadcast an eviction on its behalf.
+    useSessionConflictStore.getState().setRequestEvictOthers((targetSessionIds) => {
+      void channel.send({ type: 'broadcast', event: 'session-evicted', payload: { targetSessionIds } })
+    })
+
     const trackPresence = () => {
       void channel.track({
         online_at: new Date().toISOString(),
         active: document.visibilityState !== 'hidden',
+        session_id: sessionIdRef.current,
       })
     }
 
@@ -93,11 +106,32 @@ export default function GlobalActivityConnection({ accountId }: { accountId: str
 
     channel
       .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState() as Record<string, Array<{ active?: boolean }>>
+        const state = channel.presenceState() as Record<string, Array<{ active?: boolean; session_id?: string }>>
         const activeCount = Object.values(state).filter((entries) =>
           entries.some((entry) => entry.active !== false),
         ).length
         setOnlineCount(activeCount)
+
+        // One-shot: only the first sync after this tab connects reflects
+        // whatever was already present for this account, so this only ever
+        // fires for a session that predates this one -- later syncs are
+        // driven by unrelated players elsewhere on the same shared channel
+        // and shouldn't re-open a prompt the player already resolved.
+        if (!hasCheckedConflict) {
+          hasCheckedConflict = true
+          const otherSessionIds = (state[accountId] ?? [])
+            .map((entry) => entry.session_id)
+            .filter((id): id is string => !!id && id !== sessionIdRef.current)
+          if (otherSessionIds.length > 0) {
+            useSessionConflictStore.getState().setOtherSessions(otherSessionIds)
+          }
+        }
+      })
+      .on('broadcast', { event: 'session-evicted' }, ({ payload }) => {
+        const targetSessionIds = (payload?.targetSessionIds ?? []) as string[]
+        if (targetSessionIds.includes(sessionIdRef.current)) {
+          useSessionConflictStore.getState().setEvictedByOther()
+        }
       })
       .on(
         'postgres_changes',
@@ -130,6 +164,7 @@ export default function GlobalActivityConnection({ accountId }: { accountId: str
     return () => {
       cancelled = true
       subscribed = false
+      useSessionConflictStore.getState().setRequestEvictOthers(null)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('pagehide', handlePageHide)
       void supabase.removeChannel(channel)

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.110.0",
+    "date": "2026-08-25",
+    "changes": [
+      "Added a prompt to sign out other active sessions when logging in from a new device or tab, so you're not accidentally running two sessions for the same account at once"
+    ]
+  },
+  {
     "version": "1.109.3",
     "date": "2026-08-25",
     "changes": [

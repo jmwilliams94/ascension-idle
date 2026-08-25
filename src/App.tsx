@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react'
 import AuthGate from './components/AuthGate'
 import CharacterSelectScreen from './components/CharacterSelectScreen'
 import GameShell from './components/GameShell'
+import SessionConflictModal from './components/SessionConflictModal'
+import SessionEvictedToast from './components/SessionEvictedToast'
 import UpdateBanner from './components/UpdateBanner'
 import WhatsNewModal from './components/WhatsNewModal'
 import { useAuthStore } from './lib/useAuthStore'
@@ -9,6 +11,7 @@ import { useActiveCharacterStore, getStoredCharacterId, setStoredCharacterId } f
 import { usePlayerRecordStore } from './lib/usePlayerRecordStore'
 import { useItemTemplatesStore } from './game/items/useItemTemplatesStore'
 import { usePromotionStore } from './game/items/usePromotionStore'
+import { useSessionConflictStore } from './game/social/useSessionConflictStore'
 
 function App() {
   const session = useAuthStore((state) => state.session)
@@ -22,6 +25,8 @@ function App() {
 
   const characterId = useActiveCharacterStore((state) => state.characterId)
   const setActiveCharacterId = useActiveCharacterStore((state) => state.setActiveCharacterId)
+
+  const evictedByOther = useSessionConflictStore((state) => state.evictedByOther)
 
   // Guards the one-time "resume last-played character" attempt below so it only
   // fires once per fresh mount (i.e. a real page load) — not every time
@@ -52,6 +57,17 @@ function App() {
     }
   }, [session, setActiveCharacterId])
 
+  // Another tab/device confirmed the "sign out other session" prompt (see
+  // GlobalActivityConnection.tsx's broadcast listener and
+  // SessionConflictModal.tsx) -- sign this session out so it stops polling
+  // combat. SessionEvictedToast (mounted below, outside GameShell) stays up
+  // through the resulting unmount to explain why.
+  useEffect(() => {
+    if (evictedByOther) {
+      void useAuthStore.getState().signOut()
+    }
+  }, [evictedByOther])
+
   // Resumes the last-played character on a fresh page load (once per mount), then
   // keeps localStorage in sync with every subsequent change — selecting a different
   // character, or clearing it via "Switch Character". The guard ref matters here:
@@ -78,6 +94,8 @@ function App() {
   return (
     <>
       <UpdateBanner />
+      <SessionConflictModal />
+      <SessionEvictedToast />
 
       <AuthGate>
         {userId && whatsNewEntries && whatsNewEntries.length > 0 && (
