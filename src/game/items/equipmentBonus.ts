@@ -786,6 +786,21 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Phoenixdown Robe': `${import.meta.env.BASE_URL}item-icons/phoenixdown-robe.png`,
   'Ashweave Robe': `${import.meta.env.BASE_URL}item-icons/ashweave-robe.png`,
   'Silkbound Robe': `${import.meta.env.BASE_URL}item-icons/silkbound-robe.png`,
+  // Bag (Wuxia exclusive — necklace slot, ornamental hanging pillow charm).
+  // All 13 tiers have art.
+  'Cotton Bag': `${import.meta.env.BASE_URL}item-icons/cotton-bag.png`,
+  'Woven Bag': `${import.meta.env.BASE_URL}item-icons/woven-bag.png`,
+  'Tassel Bag': `${import.meta.env.BASE_URL}item-icons/tassel-bag.png`,
+  'Cord Bag': `${import.meta.env.BASE_URL}item-icons/cord-bag.png`,
+  'Pouch Bag': `${import.meta.env.BASE_URL}item-icons/pouch-bag.png`,
+  'Cloth Bag': `${import.meta.env.BASE_URL}item-icons/cloth-bag.png`,
+  'Rope Bag': `${import.meta.env.BASE_URL}item-icons/rope-bag.png`,
+  'Satchel Bag': `${import.meta.env.BASE_URL}item-icons/satchel-bag.png`,
+  'Plume Bag': `${import.meta.env.BASE_URL}item-icons/plume-bag.png`,
+  'Charm Bag': `${import.meta.env.BASE_URL}item-icons/charm-bag.png`,
+  'Silksworn Bag': `${import.meta.env.BASE_URL}item-icons/silksworn-bag.png`,
+  'Moonlit Bag': `${import.meta.env.BASE_URL}item-icons/moonlit-bag.png`,
+  'Threadgold Bag': `${import.meta.env.BASE_URL}item-icons/threadgold-bag.png`,
 }
 
 // Pickaxe is the only item whose icon changes per quality_tier instead of

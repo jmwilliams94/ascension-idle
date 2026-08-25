@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.110.8",
+    "date": "2026-08-26",
+    "changes": [
+      "Bag now has unique artwork for every quality tier from Cotton Bag through Threadgold Bag, replacing the generic sword icon"
+    ]
+  },
+  {
     "version": "1.110.7",
     "date": "2026-08-25",
     "changes": [
