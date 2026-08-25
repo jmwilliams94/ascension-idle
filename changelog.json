@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.110.2",
+    "date": "2026-08-25",
+    "changes": [
+      "Fixed refreshing the page sometimes wrongly prompting you to sign out \"another session\", when it was actually the same tab reloading"
+    ]
+  },
+  {
     "version": "1.110.1",
     "date": "2026-08-25",
     "changes": [

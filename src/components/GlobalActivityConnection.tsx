@@ -15,6 +15,25 @@ function toAnnouncement(row: Record<string, unknown>): GlobalAnnouncement {
   }
 }
 
+const TAB_SESSION_ID_KEY = 'ascension-tab-session-id'
+
+// sessionStorage (not localStorage) is scoped to this one tab and survives a
+// reload/navigation within it, but a genuinely different tab or device always
+// gets a fresh sessionStorage of its own. That's exactly the distinction the
+// session-conflict check below needs: a refresh must recognize its own
+// leftover presence entry as itself, even though that old connection's leave
+// can lag behind the new one's first sync (see the pagehide comment below) --
+// a random id per mount was treating every refresh as a second session.
+function getTabSessionId(): string {
+  const existing = sessionStorage.getItem(TAB_SESSION_ID_KEY)
+  if (existing) {
+    return existing
+  }
+  const id = crypto.randomUUID()
+  sessionStorage.setItem(TAB_SESSION_ID_KEY, id)
+  return id
+}
+
 // Non-visual, mounted unconditionally in GameShell alongside CombatEngine --
 // owns the single Realtime channel behind "Players Online", the global
 // announcement ticker, and (2026-08-18) Global Chat (see CLAUDE.md's Global
@@ -41,7 +60,7 @@ export default function GlobalActivityConnection({ accountId }: { accountId: str
   // Identifies this tab within its own account's presence entries, so a
   // second session for the same account can be told apart from this one --
   // see the session-conflict handling below and useSessionConflictStore.ts.
-  const sessionIdRef = useRef(crypto.randomUUID())
+  const sessionIdRef = useRef(getTabSessionId())
 
   useEffect(() => {
     if (!accountId) {
