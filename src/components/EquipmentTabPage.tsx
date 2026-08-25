@@ -1,5 +1,6 @@
 import EquipmentPanel from './EquipmentPanel'
 import StatsPanel from './StatsPanel'
+import SkillsPanel from './SkillsPanel'
 import InventoryPanel from './InventoryPanel'
 import { AscensionCard } from './ui/AscensionCard'
 
@@ -36,6 +37,7 @@ export default function EquipmentTabPage() {
       <div className="space-y-4">
         <EquipmentPanel />
         <StatsPanel />
+        <SkillsPanel />
       </div>
       <AscensionCard>
         <InventoryPanel columns={5} equipPopoverEnabled enableCompareToggle />

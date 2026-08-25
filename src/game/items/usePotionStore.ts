@@ -31,11 +31,10 @@ interface PotionState {
   // direct client INSERT/UPDATE grant anymore, so cost/level validation and
   // the actual stack top-up/creation happen server-side in one transaction.
   buyPotions: (characterId: string, type: PotionTypeId, quantity: number) => Promise<{ ok: boolean; error?: string }>
-  // Consumes one potion from the stack. For an 'hp' potion, also heals the
-  // player via useCombatStore.healPlayerHp. 'mp' potions have nothing to
-  // restore into yet (no ability/skill system exists) — the UI disables Use
-  // for them entirely, so this is never called with an 'mp' stack in
-  // practice, but stays honest (no-op heal) if it ever were.
+  // Consumes one potion from the stack. For an 'hp' potion, heals the player
+  // via useCombatStore.healPlayerHp; for an 'mp' potion, restores MP via
+  // useCombatStore.restorePlayerMp (real as of the skill-equip system, see
+  // CLAUDE.combat-and-loot.md — Mana potions were shipped inert ahead of it).
   usePotion: (stackId: string) => Promise<void>
 }
 
@@ -112,6 +111,8 @@ export const usePotionStore = create<PotionState>((set, get) => ({
 
     if (type.kind === 'hp') {
       useCombatStore.getState().healPlayerHp(type.healAmount)
+    } else {
+      useCombatStore.getState().restorePlayerMp(type.healAmount)
     }
 
     const { data, error } = await supabase.rpc('use_potion_stack', { p_stack_id: stackId, p_character_id: characterId })

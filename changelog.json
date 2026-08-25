@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.111.0",
+    "date": "2026-08-26",
+    "changes": [
+      "Added Wuxia's first Skill, Thunder — equip it from a new Skills tab on the Equipment page to replace your regular attack with a Spirit-scaled lightning strike",
+      "Mana potions now actually restore MP, since Thunder is the first thing that spends it"
+    ]
+  },
+  {
     "version": "1.110.11",
     "date": "2026-08-26",
     "changes": [

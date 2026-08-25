@@ -277,8 +277,11 @@ export default function CombatPage() {
   // "Best available" HP potion (confirmed with the user, 2026-07-31) — the
   // highest-tier owned stack with any left, so the strongest potion is
   // always the one surfaced here rather than whichever happens to sit first
-  // in Inventory. Mana potions are deliberately skipped — they're inert
-  // (nothing consumes MP yet), so there's nothing useful to surface here.
+  // in Inventory. Mana potions are still skipped here — MP is real now (see
+  // src/game/skills/skillData.ts) but only Wuxia's Thunder spends any yet;
+  // an equivalent quick-use MP surface is a straightforward follow-up, not
+  // done in this first pass. The Inventory tab's own potion detail card
+  // already has a working Mana potion Use button.
   let bestHpPotionStack: (typeof potionStacks)[number] | null = null
   for (let i = HP_POTION_ORDER.length - 1; i >= 0; i -= 1) {
     const found = potionStacks.find((stack) => stack.potionType === HP_POTION_ORDER[i] && stack.count > 0)

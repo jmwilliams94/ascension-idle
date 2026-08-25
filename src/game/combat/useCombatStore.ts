@@ -10,6 +10,8 @@ import { useNoQuiverWarningStore } from '../items/useNoQuiverWarningStore'
 import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 import { getActiveGoldDonationEvent, useGoldDonationStore } from '../goldDonation/useGoldDonationStore'
 import { ENEMY_TYPES, zoneIdForMonster, type EnemyTypeId } from '../zones/zoneData'
+import { SKILL_TYPES } from '../skills/skillData'
+import { useSkillsStore } from '../skills/useSkillsStore'
 import {
   MONSTER_ATTACK_INTERVAL_MS,
   applyDamageReduction,
@@ -41,6 +43,7 @@ export type CombatLogKind =
   | 'item'
   | 'currency'
   | 'no-quiver'
+  | 'no-mana'
   | 'knockout'
   | 'inventory-full'
   | 'pet'
@@ -100,6 +103,15 @@ interface CombatState {
   // runTick lazily fills both in from derived.hp the first time it ticks.
   currentPlayerHp: number
   maxPlayerHp: number
+  // The player's own MP pool (2026-10, first real consumer — see
+  // src/game/skills/skillData.ts) — same lazy-init-from-derived-stats/
+  // continuous-across-respawns shape as currentPlayerHp/maxPlayerHp above,
+  // except only an equipped skill's own mpCost ever drains it (no incoming-
+  // damage equivalent). Restored only by Mana potions (restorePlayerMp) —
+  // no passive regen, matching this game's existing "HP never regens on its
+  // own either" precedent.
+  currentPlayerMp: number
+  maxPlayerMp: number
   // Death timer (confirmed with the user, 2026-08-05, replaces the earlier
   // "instant full heal, fight stops" placeholder). Nonzero while the player
   // is incapacitated after a knockout: the nowMs timestamp when they can act
@@ -137,6 +149,9 @@ interface CombatState {
   // since there's nothing meaningful to clamp against before combat has
   // ticked at least once.
   healPlayerHp: (amount: number) => void
+  // Called by usePotionStore.usePotion for a Mana potion — same clamp-to-max/
+  // no-op-before-lazy-init shape as healPlayerHp above.
+  restorePlayerMp: (amount: number) => void
   // Called by resolveCombat.ts when a live (not offline) resolve-combat
   // response reports inventoryFull — a kill rolled a drop that had nowhere
   // to go, so the fight stops outright rather than silently discarding it or
@@ -176,6 +191,8 @@ export const useCombatStore = create<CombatState>((set, get) => ({
   isRareInstance: false,
   currentPlayerHp: 0,
   maxPlayerHp: 0,
+  currentPlayerMp: 0,
+  maxPlayerMp: 0,
   reviveAt: 0,
   respawnReadyAt: 0,
   log: [],
@@ -293,7 +310,23 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       useItemTemplatesStore.getState().templates,
     )
     const derived = computeDerivedStats(attributes, equipmentBonus)
-    const attackIntervalMs = 1000 / derived.attackSpeed
+
+    // Active skill (2026-10, see src/game/skills/skillData.ts) — replaces the
+    // regular auto-attack entirely while equipped: its own attack-interval
+    // (not derived.attackSpeed) and a magic-only damage formula (see
+    // attackMidpoint below), per CLAUDE.combat-and-loot.md's "Confirmed
+    // future design" note. Class-revalidated here rather than trusting
+    // useSkillsStore's own equippedSkillId at face value — mirrors the
+    // "server never trusts client params" doctrine even though this
+    // particular check is itself client-side (resolve-combat re-derives its
+    // own copy independently, see that file).
+    const equippedSkillId = useSkillsStore.getState().equippedSkillId
+    const candidateSkill = equippedSkillId ? SKILL_TYPES[equippedSkillId] : null
+    const activeSkill =
+      candidateSkill && candidateSkill.classId === selectedClassId && characterLevel >= candidateSkill.requiredLevel
+        ? candidateSkill
+        : null
+    const attackIntervalMs = activeSkill ? activeSkill.attackIntervalMs : 1000 / derived.attackSpeed
 
     // Account-wide Achievements combat buffs (2026-08-06, Achievements
     // rework; both made per-zone/quality-only 2026-08-07 — attack bonus was
@@ -329,15 +362,33 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     // composition are both already folded in — per the user's explicit
     // ordering request.
     const physicalSubtotal = derived.physicalAttack * (1 + accountAttackBonusPct / 100) + derived.compositionPhysicalAttackBonus
-    const magicSubtotal = derived.magicAttack * (1 + accountAttackBonusPct / 100) + derived.compositionMagicAttackBonus
-    const attackMidpoint =
-      physicalSubtotal * (1 + derived.drakeBonusPct / 100) + magicSubtotal * (1 + derived.emberBonusPct / 100)
+    // The active skill's own flat effectDamage folds in here (before Ember's
+    // multiplier, same treatment as compositionMagicAttackBonus) rather than
+    // being added to attackMidpoint afterward, so a socketed Ember gem still
+    // boosts it like any other magic damage.
+    const magicSubtotal =
+      derived.magicAttack * (1 + accountAttackBonusPct / 100) +
+      derived.compositionMagicAttackBonus +
+      (activeSkill?.effectDamage ?? 0)
+    // While a skill is active, damage is magic-only (drops physicalSubtotal
+    // entirely) — see activeSkill's own comment above. With no skill
+    // equipped, every class (including a skill-less Wuxia) keeps the
+    // original uniform physical+magic sum unchanged, deliberately not the
+    // "physicalAttack only" fallback CLAUDE.combat-and-loot.md's design note
+    // describes as the eventual final state — that would nerf existing
+    // skill-less Wuxia characters and wasn't asked for in this first pass.
+    const attackMidpoint = activeSkill
+      ? magicSubtotal * (1 + derived.emberBonusPct / 100)
+      : physicalSubtotal * (1 + derived.drakeBonusPct / 100) + magicSubtotal * (1 + derived.emberBonusPct / 100)
 
     // Lazy-init the player's HP the first time combat ever ticks (0/0 sentinel —
     // see the CombatState field comments) rather than resetting it on every
     // start(), so it stays continuous across monster respawns/zone switches.
     const maxPlayerHp = derived.hp
     const currentPlayerHp = state.maxPlayerHp <= 0 ? maxPlayerHp : Math.min(state.currentPlayerHp, maxPlayerHp)
+    // Same lazy-init shape for MP (see the CombatState.currentPlayerMp comment).
+    const maxPlayerMp = derived.mp
+    const currentPlayerMp = state.maxPlayerMp <= 0 ? maxPlayerMp : Math.min(state.currentPlayerMp, maxPlayerMp)
 
     // Monster attack-back — independent cooldown/cadence from the player's own
     // attack below (PLACEHOLDER: fixed once-per-second, no monster "attack speed"
@@ -354,6 +405,8 @@ export const useCombatStore = create<CombatState>((set, get) => ({
           lastMonsterAttackAt: nowMs,
           currentPlayerHp,
           maxPlayerHp,
+          currentPlayerMp,
+          maxPlayerMp,
           log: appendLog(s.log, { kind: 'dodge', message: `You dodge ${type.displayName}'s attack!` }),
         }))
       } else {
@@ -378,6 +431,8 @@ export const useCombatStore = create<CombatState>((set, get) => ({
           lastMonsterAttackAt: nowMs,
           currentPlayerHp: nextPlayerHp,
           maxPlayerHp,
+          currentPlayerMp,
+          maxPlayerMp,
           log: appendLog(s.log, {
             kind: 'player-damage',
             message: `${type.displayName} hits you for ${damage}.`,
@@ -400,12 +455,18 @@ export const useCombatStore = create<CombatState>((set, get) => ({
           return
         }
       }
-    } else if (state.maxPlayerHp !== maxPlayerHp || state.currentPlayerHp !== currentPlayerHp) {
-      // Only write when something actually changed (lazy-init, or maxPlayerHp
-      // shifting from a level-up/gear change) — avoids re-rendering every 100ms
-      // tick for no reason, preserving the "on-cooldown ticks are simply dropped"
-      // behavior the player's own attack-cooldown check below relies on.
-      set({ currentPlayerHp, maxPlayerHp })
+    } else if (
+      state.maxPlayerHp !== maxPlayerHp ||
+      state.currentPlayerHp !== currentPlayerHp ||
+      state.maxPlayerMp !== maxPlayerMp ||
+      state.currentPlayerMp !== currentPlayerMp
+    ) {
+      // Only write when something actually changed (lazy-init, or maxPlayerHp/
+      // maxPlayerMp shifting from a level-up/gear change) — avoids re-rendering
+      // every 100ms tick for no reason, preserving the "on-cooldown ticks are
+      // simply dropped" behavior the player's own attack-cooldown check below
+      // relies on.
+      set({ currentPlayerHp, maxPlayerHp, currentPlayerMp, maxPlayerMp })
     }
 
     // On-cooldown ticks are simply dropped, not queued — same behavior as the old
@@ -428,6 +489,26 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       }))
       return
     }
+
+    // An active skill needs enough MP to cast — same "blocked attempt still
+    // advances lastAttackAt" shape as the Quiver gate above (respects the
+    // cooldown instead of re-checking, and re-logging, every 100ms tick).
+    // No fallback to a plain physical attack when out of MP — the attack is
+    // simply skipped until a Mana potion restores enough (see
+    // restorePlayerMp), matching this game's existing "no auto-resolution,
+    // the player deals with it" precedent (no-quiver works the same way).
+    if (activeSkill && currentPlayerMp < activeSkill.mpCost) {
+      set((s) => ({
+        lastAttackAt: nowMs,
+        log: appendLog(s.log, { kind: 'no-mana', message: `Not enough Mana to cast ${activeSkill.displayName}!` }),
+      }))
+      return
+    }
+
+    // Mana is spent on the cast attempt itself (hit or miss), not only on a
+    // landed hit — matches how the wiki's own "Cost" column reads (a cast
+    // cost, not a per-damage cost).
+    const nextPlayerMp = activeSkill ? currentPlayerMp - activeSkill.mpCost : currentPlayerMp
 
     // Deterministic expected-value reward accrual (2026-08-11 rewrite, see
     // combatResolver.ts's expectedRewardPerAttack and CLAUDE.md's Combat
@@ -463,6 +544,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     if (!rollAttackLands(derived.dexterity, monsterDodge(type))) {
       set((s) => ({
         lastAttackAt: nowMs,
+        currentPlayerMp: nextPlayerMp,
         log: appendLog(s.log, { kind: 'miss', message: `Your attack misses ${type.displayName}!` }),
       }))
       return
@@ -481,6 +563,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     set((s) => ({
       lastAttackAt: nowMs,
       currentHp: nextHp,
+      currentPlayerMp: nextPlayerMp,
       log: appendLog(s.log, { kind: 'damage', message: `You hit ${type.displayName} for ${damage}.`, amount: damage }),
     }))
 
@@ -549,6 +632,15 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         return {}
       }
       return { currentPlayerHp: Math.min(state.maxPlayerHp, state.currentPlayerHp + amount) }
+    })
+  },
+
+  restorePlayerMp: (amount) => {
+    set((state) => {
+      if (state.maxPlayerMp <= 0) {
+        return {}
+      }
+      return { currentPlayerMp: Math.min(state.maxPlayerMp, state.currentPlayerMp + amount) }
     })
   },
 

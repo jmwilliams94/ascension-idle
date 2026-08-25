@@ -29,10 +29,10 @@ export interface PotionTypeDef {
   id: PotionTypeId
   displayName: string
   kind: 'hp' | 'mp'
-  // Flat amount restored on Use. For 'mp' potions this is currently inert —
-  // nothing in the game consumes MP yet (no ability/skill system exists), so
-  // Use is disabled in the UI rather than faking an effect — see
-  // usePotionStore.usePotion and InventoryPanel's potion detail card.
+  // Flat amount restored on Use. 'mp' potions restore MP (see
+  // useCombatStore.restorePlayerMp) — real as of the skill-equip system
+  // (src/game/skills/skillData.ts), which is the first thing to ever drain
+  // MP; previously Use was disabled entirely for these.
   healAmount: number
   price: number
   description: string

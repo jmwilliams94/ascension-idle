@@ -5,6 +5,7 @@ import { useZoneStore } from '../game/zones/useZoneStore'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
 import { useMineStore } from '../game/mining/useMineStore'
 import { useIdleModeStore } from '../game/mining/useIdleModeStore'
+import { useSkillsStore } from '../game/skills/useSkillsStore'
 import { useCharacterRecordStore } from './useCharacterRecordStore'
 
 const AUTOSAVE_DEBOUNCE_MS = 2000
@@ -86,6 +87,7 @@ export function usePersistGameState(characterId: string | undefined, loaded: boo
     // looking at the Mining page.
     const unsubscribeMine = useMineStore.subscribe(() => scheduleSave())
     const unsubscribeIdleMode = useIdleModeStore.subscribe(() => scheduleSave())
+    const unsubscribeSkills = useSkillsStore.subscribe(() => scheduleSave())
 
     // beforeunload isn't reliable (browsers may not wait for the fetch to complete),
     // and visibilitychange 'hidden' fires on tab switch/backgrounding too, giving the
@@ -113,6 +115,7 @@ export function usePersistGameState(characterId: string | undefined, loaded: boo
       unsubscribeEquipment()
       unsubscribeMine()
       unsubscribeIdleMode()
+      unsubscribeSkills()
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('beforeunload', handleBeforeUnload)
     }

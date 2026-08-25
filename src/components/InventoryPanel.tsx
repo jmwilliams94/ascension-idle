@@ -214,6 +214,8 @@ export default function InventoryPanel({
   const handlePotionUse = usePotionStore((state) => state.usePotion)
   const currentPlayerHp = useCombatStore((state) => state.currentPlayerHp)
   const maxPlayerHp = useCombatStore((state) => state.maxPlayerHp)
+  const currentPlayerMp = useCombatStore((state) => state.currentPlayerMp)
+  const maxPlayerMp = useCombatStore((state) => state.maxPlayerMp)
   // Same "subscribe to the reactive data, not a stable selector-function
   // reference" fix as equippedIds above — myListings/mail entries, not
   // isListed/hasUnclaimedMail themselves.
@@ -1835,16 +1837,16 @@ export default function InventoryPanel({
 
           {(() => {
             const type = POTION_TYPES[selectedPotionStack.potionType]
-            const isMana = type.kind === 'mp'
             const hpFull = type.kind === 'hp' && maxPlayerHp > 0 && currentPlayerHp >= maxPlayerHp
-            const disabled = isMana || hpFull
-            const label = isMana ? 'Nothing to restore yet' : hpFull ? 'HP already full' : 'Use'
+            const mpFull = type.kind === 'mp' && maxPlayerMp > 0 && currentPlayerMp >= maxPlayerMp
+            const disabled = hpFull || mpFull
+            const label = hpFull ? 'HP already full' : mpFull ? 'MP already full' : 'Use'
 
             return (
               <button
                 type="button"
                 disabled={disabled}
-                title={isMana ? 'No ability/skill system exists yet to spend MP on' : hpFull ? 'HP already full' : undefined}
+                title={hpFull ? 'HP already full' : mpFull ? 'MP already full' : undefined}
                 onClick={() => void handlePotionUse(selectedPotionStack.id)}
                 className={`mt-3 w-full rounded-lg border px-3 py-1.5 text-xs font-medium ${
                   disabled

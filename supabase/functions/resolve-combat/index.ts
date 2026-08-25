@@ -171,6 +171,24 @@ function computeDerivedStats(
   return { hp, physicalAttack, magicAttack, attackSpeed: BASE_ATTACK_SPEED, dexterity }
 }
 
+// Mirrors src/game/skills/skillData.ts — must stay in sync. See
+// CLAUDE.combat-and-loot.md's "Confirmed future design" note this
+// implements (skill equipped -> magic-only damage, own attack interval).
+// MP-cost gating is deliberately NOT enforced here — player MP, like player
+// HP, has never been simulated server-side (see the equipmentBonus comment
+// above), so this mirrors that existing accepted gap rather than building a
+// second MP simulation just for this.
+interface SkillDefinition {
+  classId: string
+  requiredLevel: number
+  effectDamage: number
+  attackIntervalMs: number
+}
+
+const SKILL_TYPES: Record<string, SkillDefinition> = {
+  thunder: { classId: 'wuxia', requiredLevel: 1, effectDamage: 7, attackIntervalMs: 1000 },
+}
+
 // Mirrors src/game/items/equipmentBonus.ts (recalibrated 2026-07-31 — 1 + weight/4
 // using the confirmed battle-power weighting, was a stale 1/1.1/1.2/1.35/1.5 that
 // never got updated here when the client-side constant changed).
@@ -650,6 +668,7 @@ interface CharacterSnapshot {
   equipped_hat_id: string | null
   equipped_coat_id: string | null
   equipped_quiver_id: string | null
+  equipped_skill_id: string | null
   selected_monster_id: string | null
   combat_last_resolved_at: string
   composition_stones: Record<string, number> | null
@@ -985,7 +1004,18 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   }
 
   const derived = computeDerivedStats(attributes, equipmentBonus)
-  const attackIntervalMs = 1000 / derived.attackSpeed
+
+  // Active skill (see SKILL_TYPES above) — class- and level-revalidated here
+  // rather than trusting character.equipped_skill_id at face value, same
+  // "server never trusts client-set columns for combat math" doctrine as
+  // equipped_weapon_id's own ownership trigger.
+  const candidateSkill = character.equipped_skill_id ? SKILL_TYPES[character.equipped_skill_id] : undefined
+  const activeSkill =
+    candidateSkill && candidateSkill.classId === character.class && character.level >= candidateSkill.requiredLevel
+      ? candidateSkill
+      : null
+
+  const attackIntervalMs = activeSkill ? activeSkill.attackIntervalMs : 1000 / derived.attackSpeed
   // attackMidpoint itself is computed further down, once accountAttackBonusPct
   // is available (see the comment there) — declared as a mutable `let` here
   // so the rest of the function can keep reading it from one place.
@@ -1041,8 +1071,15 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // Drake/Ember's own socketed gem bonus % applied last, per the user's
   // explicit ordering (2026-08-26) — mirrors useCombatStore.runTick exactly.
   const physicalSubtotal = derived.physicalAttack * (1 + accountAttackBonusPct / 100) + compositionPhysicalAttackBonus
-  const magicSubtotal = derived.magicAttack * (1 + accountAttackBonusPct / 100) + compositionMagicAttackBonus
-  attackMidpoint = physicalSubtotal * (1 + drakeBonusPct / 100) + magicSubtotal * (1 + emberBonusPct / 100)
+  const magicSubtotal =
+    derived.magicAttack * (1 + accountAttackBonusPct / 100) + compositionMagicAttackBonus + (activeSkill?.effectDamage ?? 0)
+  // Magic-only while a skill is active (drops physicalSubtotal entirely) —
+  // mirrors useCombatStore.runTick exactly, including deliberately NOT
+  // falling back to physical-only for a skill-less Wuxia (see that file's
+  // own comment on why).
+  attackMidpoint = activeSkill
+    ? magicSubtotal * (1 + emberBonusPct / 100)
+    : physicalSubtotal * (1 + drakeBonusPct / 100) + magicSubtotal * (1 + emberBonusPct / 100)
   // Same White/Green/Red/Black level-diff EXP multiplier applied to both
   // kill EXP and damage-dealt EXP below (see EXP_MULTIPLIER_BY_COLOR/
   // getLevelDiffColor), precomputed once here.
