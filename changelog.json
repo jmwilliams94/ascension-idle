@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.110.11",
+    "date": "2026-08-26",
+    "changes": [
+      "Re-tuned Wuxia's Backsword and Bracelet attack stats directly from real reference data, and Backsword weapons now also grant Physical Attack alongside Magic Attack"
+    ]
+  },
+  {
     "version": "1.110.10",
     "date": "2026-08-26",
     "changes": [
