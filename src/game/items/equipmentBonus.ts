@@ -720,7 +720,9 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Warlord Wand': `${import.meta.env.BASE_URL}item-icons/warlord-wand.png`,
   'Overlord Wand': `${import.meta.env.BASE_URL}item-icons/overlord-wand.png`,
   'Monarch Wand': `${import.meta.env.BASE_URL}item-icons/crown-wand.png`,
-  // Backsword (Wuxia exclusive). All 26 tiers have art.
+  // Backsword (Wuxia exclusive). All 27 tiers have art, including the
+  // Level 1 Lucky Backsword starter (mirrors Blade's own Fortune Blade).
+  'Lucky Backsword': `${import.meta.env.BASE_URL}item-icons/lucky-backsword.png`,
   'Plum Backsword': `${import.meta.env.BASE_URL}item-icons/plum-backsword.png`,
   'Charm Backsword': `${import.meta.env.BASE_URL}item-icons/charm-backsword.png`,
   'Honest Backsword': `${import.meta.env.BASE_URL}item-icons/honest-backsword.png`,

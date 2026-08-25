@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.111.2",
+    "date": "2026-08-26",
+    "changes": [
+      "Lucky Backsword now has unique artwork, replacing the generic sword icon"
+    ]
+  },
+  {
     "version": "1.111.1",
     "date": "2026-08-26",
     "changes": [
