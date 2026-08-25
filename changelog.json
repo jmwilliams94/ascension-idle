@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.111.1",
+    "date": "2026-08-26",
+    "changes": [
+      "Toned down Thunder's damage — it was hitting far harder than intended against early Windhollow monsters"
+    ]
+  },
+  {
     "version": "1.111.0",
     "date": "2026-08-26",
     "changes": [

@@ -186,7 +186,9 @@ interface SkillDefinition {
 }
 
 const SKILL_TYPES: Record<string, SkillDefinition> = {
-  thunder: { classId: 'wuxia', requiredLevel: 1, effectDamage: 7, attackIntervalMs: 1000 },
+  // effectDamage recalibrated 7 -> 1, 2026-08-27 (see skillData.ts) — was
+  // 2-hit-killing a level-1 Quailwing, now a reliable 3-hit kill.
+  thunder: { classId: 'wuxia', requiredLevel: 1, effectDamage: 1, attackIntervalMs: 1000 },
 }
 
 // Mirrors src/game/items/equipmentBonus.ts (recalibrated 2026-07-31 — 1 + weight/4
