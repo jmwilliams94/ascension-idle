@@ -743,6 +743,22 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Astral Backsword': `${import.meta.env.BASE_URL}item-icons/astral-backsword.png`,
   'Celestial Backsword': `${import.meta.env.BASE_URL}item-icons/celestial-backsword.png`,
   'Eternity Backsword': `${import.meta.env.BASE_URL}item-icons/eternity-backsword.png`,
+  // Bracelet (Wuxia exclusive — ring slot, displayed as two stacked bangles).
+  // All 14 tiers have art.
+  'Bead Bracelet': `${import.meta.env.BASE_URL}item-icons/bead-bracelet.png`,
+  'Jasper Bracelet': `${import.meta.env.BASE_URL}item-icons/jasper-bracelet.png`,
+  'Coral Bracelet': `${import.meta.env.BASE_URL}item-icons/coral-bracelet.png`,
+  'Onyx Bracelet': `${import.meta.env.BASE_URL}item-icons/onyx-bracelet.png`,
+  'Amberwood Bracelet': `${import.meta.env.BASE_URL}item-icons/amberwood-bracelet.png`,
+  'Serpentine Bracelet': `${import.meta.env.BASE_URL}item-icons/serpentine-bracelet.png`,
+  'Moonstone Bracelet': `${import.meta.env.BASE_URL}item-icons/moonstone-bracelet.png`,
+  'Garnet Bracelet': `${import.meta.env.BASE_URL}item-icons/garnet-bracelet.png`,
+  'Crystal Bracelet': `${import.meta.env.BASE_URL}item-icons/crystal-bracelet.png`,
+  'Forgedwire Bracelet': `${import.meta.env.BASE_URL}item-icons/forgedwire-bracelet.png`,
+  'Filigree Bracelet': `${import.meta.env.BASE_URL}item-icons/filigree-bracelet.png`,
+  'Beryl Bracelet': `${import.meta.env.BASE_URL}item-icons/beryl-bracelet.png`,
+  'Radiant Bracelet': `${import.meta.env.BASE_URL}item-icons/radiant-bracelet.png`,
+  'Prismatic Bracelet': `${import.meta.env.BASE_URL}item-icons/prismatic-bracelet.png`,
 }
 
 // Pickaxe is the only item whose icon changes per quality_tier instead of

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.110.3",
+    "date": "2026-08-25",
+    "changes": [
+      "Bracelet now has unique artwork for every quality tier from Bead Bracelet through Prismatic Bracelet, replacing the generic sword icon"
+    ]
+  },
+  {
     "version": "1.110.2",
     "date": "2026-08-25",
     "changes": [
