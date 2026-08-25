@@ -759,6 +759,21 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Beryl Bracelet': `${import.meta.env.BASE_URL}item-icons/beryl-bracelet.png`,
   'Luminous Bracelet': `${import.meta.env.BASE_URL}item-icons/radiant-bracelet.png`,
   'Prismatic Bracelet': `${import.meta.env.BASE_URL}item-icons/prismatic-bracelet.png`,
+  // Cap (Wuxia exclusive — hat slot). 11 of 13 tiers have art; stopping here
+  // per user 2026-08-25 — Moonbound Cap (121) and Heavensent Cap (126) stay
+  // unprocessed/emoji-fallback indefinitely, same as any other not-yet-
+  // reachable Wuxia tier (Wuxia is still class-locked, Hunter-only).
+  'Reed Cap': `${import.meta.env.BASE_URL}item-icons/reed-cap.png`,
+  'Silk Cap': `${import.meta.env.BASE_URL}item-icons/silk-cap.png`,
+  'Dawn Cap': `${import.meta.env.BASE_URL}item-icons/dawn-cap.png`,
+  'Crane Cap': `${import.meta.env.BASE_URL}item-icons/crane-cap.png`,
+  'Weave Cap': `${import.meta.env.BASE_URL}item-icons/weave-cap.png`,
+  'Frostpetal Cap': `${import.meta.env.BASE_URL}item-icons/frostpetal-cap.png`,
+  'Moonpetal Cap': `${import.meta.env.BASE_URL}item-icons/moonpetal-cap.png`,
+  'Cloudsilk Cap': `${import.meta.env.BASE_URL}item-icons/cloudsilk-cap.png`,
+  'Jadeleaf Cap': `${import.meta.env.BASE_URL}item-icons/jadeleaf-cap.png`,
+  'Snowveil Cap': `${import.meta.env.BASE_URL}item-icons/snowveil-cap.png`,
+  'Skysworn Cap': `${import.meta.env.BASE_URL}item-icons/skysworn-cap.png`,
 }
 
 // Pickaxe is the only item whose icon changes per quality_tier instead of

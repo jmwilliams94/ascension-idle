@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.110.5",
+    "date": "2026-08-25",
+    "changes": [
+      "Cap now has unique artwork for every currently-reachable quality tier from Reed Cap through Skysworn Cap, replacing the generic sword icon"
+    ]
+  },
+  {
     "version": "1.110.4",
     "date": "2026-08-25",
     "changes": [
