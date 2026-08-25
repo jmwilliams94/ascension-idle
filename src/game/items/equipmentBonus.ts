@@ -757,7 +757,7 @@ const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Forgedwire Bracelet': `${import.meta.env.BASE_URL}item-icons/forgedwire-bracelet.png`,
   'Filigree Bracelet': `${import.meta.env.BASE_URL}item-icons/filigree-bracelet.png`,
   'Beryl Bracelet': `${import.meta.env.BASE_URL}item-icons/beryl-bracelet.png`,
-  'Radiant Bracelet': `${import.meta.env.BASE_URL}item-icons/radiant-bracelet.png`,
+  'Luminous Bracelet': `${import.meta.env.BASE_URL}item-icons/radiant-bracelet.png`,
   'Prismatic Bracelet': `${import.meta.env.BASE_URL}item-icons/prismatic-bracelet.png`,
 }
 

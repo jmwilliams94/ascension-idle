@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.110.4",
+    "date": "2026-08-25",
+    "changes": [
+      "Renamed the Level 122 Bracelet from Radiant Bracelet to Luminous Bracelet, so it no longer reads as \"Radiant Radiant Bracelet\" once upgraded to Radiant quality"
+    ]
+  },
+  {
     "version": "1.110.3",
     "date": "2026-08-25",
     "changes": [
