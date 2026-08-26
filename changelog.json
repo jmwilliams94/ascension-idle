@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.111.8",
+    "date": "2026-08-26",
+    "changes": [
+      "The \"inspect player\" gear popup from Global Chat now also shows the class max-level item silhouette on empty equipment slots, matching your own Equipment page"
+    ]
+  },
+  {
     "version": "1.111.7",
     "date": "2026-08-26",
     "changes": [

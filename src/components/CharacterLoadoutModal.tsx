@@ -4,12 +4,14 @@ import {
   formatItemDisplayName,
   getGearIconSrc,
   getItemIcon,
+  getMaxLevelPlaceholderIconSrc,
   getQualityColor,
   itemHasDurability,
 } from '../game/items/equipmentBonus'
 import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemTemplatesStore'
 import type { ItemInstance } from '../game/items/useInventoryStore'
 import { useCharacterLoadoutStore, type LoadoutItem, type LoadoutSlot } from '../game/social/useCharacterLoadoutStore'
+import type { ClassId } from '../game/stats/classes'
 
 // Same paper-doll size/grid EquipmentPanel.tsx uses (see that file's own
 // comment for the layout's history) -- kept in sync deliberately so
@@ -132,7 +134,7 @@ export default function CharacterLoadoutModal() {
                 slot === 'quiver' && isHunter ? weaponLoadoutItem?.quality_tier : equipped?.item.quality_tier
 
               return (
-                <div key={slot} style={{ gridArea }} className="flex items-center justify-center">
+                <div key={slot} style={{ gridArea }} className={`flex items-center justify-center ${equipped ? '' : 'opacity-40'}`}>
                   <EquipmentSlot
                     label={
                       equipped
@@ -141,6 +143,9 @@ export default function CharacterLoadoutModal() {
                     }
                     icon={equipped ? getItemIcon(equipped.template.slot_type) : icon}
                     iconSrc={equipped ? getGearIconSrc(equipped.template.name, equipped.item.quality_tier) : undefined}
+                    placeholderIconSrc={
+                      equipped || !loadoutClassId ? undefined : getMaxLevelPlaceholderIconSrc(templates, loadoutClassId as ClassId, slot)
+                    }
                     filled={Boolean(equipped)}
                     qualityColor={equipped ? getQualityColor(glowQualityTier ?? 'normal') : undefined}
                     compositionLevel={equipped?.item.composition_level}
@@ -169,6 +174,7 @@ export default function CharacterLoadoutModal() {
                   label="Off Hand"
                   icon={weaponTemplate ? getItemIcon(weaponTemplate.slot_type) : '⚔️'}
                   iconSrc={weaponTemplate ? getGearIconSrc(weaponTemplate.name, weaponLoadoutItem?.quality_tier) : undefined}
+                  placeholderIconSrc={weaponTemplate ? undefined : getMaxLevelPlaceholderIconSrc(templates, 'wuxia', 'weapon')}
                   filled={Boolean(weaponLoadoutItem)}
                   qualityColor={weaponLoadoutItem ? getQualityColor(weaponLoadoutItem.quality_tier) : undefined}
                   sizeClassName={SLOT_SIZE}
