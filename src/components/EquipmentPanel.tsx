@@ -213,7 +213,7 @@ export default function EquipmentPanel() {
             slot === 'quiver' && isHunter ? findEquipped('weapon')?.item.quality_tier : equipped?.item.quality_tier
 
           return (
-            <div key={slot} style={{ gridArea }} className="flex items-center justify-center">
+            <div key={slot} style={{ gridArea }} className={`flex items-center justify-center ${equipped ? '' : 'opacity-40'}`}>
               <EquipmentSlot
                 label={
                   equipped

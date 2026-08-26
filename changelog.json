@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.111.6",
+    "date": "2026-08-26",
+    "changes": [
+      "Empty equipment slot tiles now all match the dimmed look the Wuxia Off Hand slot already used, instead of just the placeholder icon being faint"
+    ]
+  },
+  {
     "version": "1.111.5",
     "date": "2026-08-26",
     "changes": [
