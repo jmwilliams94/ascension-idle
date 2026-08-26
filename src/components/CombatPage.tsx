@@ -10,6 +10,7 @@ import { useCombatStore } from '../game/combat/useCombatStore'
 import { touchCombatLastResolvedAt } from '../game/combat/resolveCombat'
 import { getLevelDiffColor } from '../game/combat/combatResolver'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
+import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { usePotionStore } from '../game/items/usePotionStore'
@@ -218,6 +219,18 @@ export default function CombatPage() {
   const characterLevel = useProgressionStore((state) => state.level)
   const characterName = useCharacterRecordStore((state) => state.characterName)
   const characterId = useActiveCharacterStore((state) => state.characterId)
+  // Outgoing damage color (2026-08-26, requested by the user): white for
+  // physical, light blue for magic. Damage is one combined attackMidpoint
+  // number (physicalAttack + magicAttack summed, see combatResolver.ts), not
+  // separately tagged per hit — but per that same file's own comment, every
+  // class so far only ever puts starting attribute points into one of
+  // Strength or Spirit, so exactly one of the two is ever nonzero in
+  // practice. Wuxia is the sole Spirit/magic-attack class today, so class
+  // alone is a reliable proxy without needing to thread derived stats
+  // through here.
+  const selectedClassId = useCharacterStore((state) => state.selectedClassId)
+  const dealsMagicDamage = selectedClassId === 'wuxia'
+  const outgoingDamageColorClass = dealsMagicDamage ? 'text-sky-300' : 'text-white'
 
   const potionStacks = usePotionStore((state) => state.stacks)
   const handleUsePotion = usePotionStore((state) => state.usePotion)
@@ -388,9 +401,18 @@ export default function CombatPage() {
                       animate={{ opacity: 0, y: -32 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.8, ease: 'easeOut' }}
-                      className={`pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 text-sm font-bold ${
-                        entry.kind === 'miss' ? 'text-slate-300' : 'text-amber-300'
+                      className={`pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 font-heading font-bold ${
+                        entry.kind === 'miss' ? 'text-slate-300' : outgoingDamageColorClass
                       }`}
+                      // Nicer-looking damage numbers (2026-08-26, requested by
+                      // the user): the game's own Cinzel `.font-heading` font
+                      // instead of the default sans-serif, ~50% larger than
+                      // the prior text-sm (0.875rem * 1.5 = 1.3125rem) via
+                      // inline style so it reliably wins over the class's own
+                      // font-size (same convention as this page's character-
+                      // name label above), plus a drop shadow so white/light-
+                      // blue text still pops against light monster art.
+                      style={{ fontSize: '1.3125rem', textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
                     >
                       {entry.kind === 'miss' ? 'Miss' : `-${entry.amount}`}
                     </motion.div>
@@ -732,9 +754,18 @@ export default function CombatPage() {
                       animate={{ opacity: 0, y: -32 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.8, ease: 'easeOut' }}
-                      className={`pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 text-sm font-bold ${
-                        entry.kind === 'miss' ? 'text-slate-300' : 'text-amber-300'
+                      className={`pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 font-heading font-bold ${
+                        entry.kind === 'miss' ? 'text-slate-300' : outgoingDamageColorClass
                       }`}
+                      // Nicer-looking damage numbers (2026-08-26, requested by
+                      // the user): the game's own Cinzel `.font-heading` font
+                      // instead of the default sans-serif, ~50% larger than
+                      // the prior text-sm (0.875rem * 1.5 = 1.3125rem) via
+                      // inline style so it reliably wins over the class's own
+                      // font-size (same convention as this page's character-
+                      // name label above), plus a drop shadow so white/light-
+                      // blue text still pops against light monster art.
+                      style={{ fontSize: '1.3125rem', textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
                     >
                       {entry.kind === 'miss' ? 'Miss' : `-${entry.amount}`}
                     </motion.div>

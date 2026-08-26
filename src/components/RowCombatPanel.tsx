@@ -95,6 +95,11 @@ function RowSlotTile({ characterId, slotIndex }: { characterId: string; slotInde
   const now = useTickingNow(200)
   const multiShotHits = useRowCombatStore((state) => state.multiShotHits)
   const floatingHits = multiShotHits.filter((h) => h.slotIndex === slotIndex && now - h.timestamp < FLOATING_NUMBER_LIFETIME_MS)
+  // Same white/light-blue physical/magic split as CombatPage.tsx's own
+  // outgoing damage numbers (2026-08-26, requested by the user) — see that
+  // file's comment for why class alone is a reliable proxy.
+  const selectedClassId = useCharacterStore((state) => state.selectedClassId)
+  const outgoingDamageColorClass = selectedClassId === 'wuxia' ? 'text-sky-300' : 'text-white'
 
   const isDead = slot.enabled && slot.deadAt !== 0
 
@@ -174,9 +179,12 @@ function RowSlotTile({ characterId, slotIndex }: { characterId: string; slotInde
             animate={{ opacity: 0, y: -16 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.8, ease: 'easeOut' }}
-            className={`pointer-events-none absolute left-1/2 top-1 -translate-x-1/2 text-[11px] font-bold ${
-              entry.hit ? 'text-amber-300' : 'text-slate-300'
+            className={`pointer-events-none absolute left-1/2 top-1 -translate-x-1/2 font-heading font-bold ${
+              entry.hit ? outgoingDamageColorClass : 'text-slate-300'
             }`}
+            // Same nicer-looking/50%-larger/drop-shadow treatment as
+            // CombatPage.tsx's own damage numbers (11px * 1.5 = 16.5px).
+            style={{ fontSize: '16.5px', textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
           >
             {entry.hit ? `-${entry.damage}` : 'Miss'}
           </motion.div>

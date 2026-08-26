@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.111.9",
+    "date": "2026-08-26",
+    "changes": [
+      "Outgoing damage numbers are now ~50% larger, use the game's own stylized heading font, and are colored by damage type — white for physical, light blue for magic"
+    ]
+  },
+  {
     "version": "1.111.8",
     "date": "2026-08-26",
     "changes": [
