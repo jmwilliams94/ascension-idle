@@ -23,14 +23,17 @@ export type CreateCharacterResult =
   | { ok: false; error: 'duplicate_name' | 'invalid_name' | 'unknown' }
 
 // Hunters start with a Quiver + a real Bow already equipped (confirmed with
-// the user, 2026-07-31). Used to be two direct client-side item_instances
-// inserts + equip updates — only worked because of a since-revoked blanket
-// INSERT grant (see migration 20260821000000_lock_down_direct_table_writes.sql,
-// which also closed the same grant for the Shop-purchase path). Now a single
-// SECURITY DEFINER RPC that creates + equips both in one transaction and
-// refuses to run twice for the same character. Best-effort: a failure here
-// logs but doesn't fail character creation — missing starter items are
-// recoverable (buyable in the Shop), unlike the character row itself.
+// the user, 2026-07-31); Wuxia starts with the Level 1 Lucky Backsword
+// equipped (20261019000000_wuxia_starter_weapon.sql), no second item since
+// its off-hand slot is a non-interactive echo of Main Hand. Used to be two
+// direct client-side item_instances inserts + equip updates — only worked
+// because of a since-revoked blanket INSERT grant (see migration
+// 20260821000000_lock_down_direct_table_writes.sql, which also closed the
+// same grant for the Shop-purchase path). Now a single SECURITY DEFINER RPC
+// that creates + equips in one transaction and refuses to run twice for the
+// same character. Best-effort: a failure here logs but doesn't fail
+// character creation — missing starter items are recoverable (buyable in
+// the Shop), unlike the character row itself.
 async function grantStarterItems(characterId: string): Promise<void> {
   const { error } = await supabase.rpc('grant_starter_items', { p_character_id: characterId })
 
@@ -98,7 +101,7 @@ export const useCharacterRosterStore = create<CharacterRosterState>((set) => ({
       return { ok: false, error: 'unknown' }
     }
 
-    if (classId === 'hunter') {
+    if (classId === 'hunter' || classId === 'wuxia') {
       await grantStarterItems(data.id)
     }
 

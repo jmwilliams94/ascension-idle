@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.111.10",
+    "date": "2026-08-26",
+    "changes": [
+      "Wuxia characters now start with the Lucky Backsword already equipped, matching Hunter's starting weapon"
+    ]
+  },
+  {
     "version": "1.111.9",
     "date": "2026-08-26",
     "changes": [
