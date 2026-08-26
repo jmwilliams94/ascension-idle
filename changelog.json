@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.112.0",
+    "date": "2026-08-26",
+    "changes": [
+      "Only one character per account can Hunt at a time now — starting to Hunt on one character automatically switches any other currently-hunting character to Mining. Mining still has no such limit."
+    ]
+  },
+  {
+    "version": "1.111.13",
+    "date": "2026-08-26",
+    "changes": [
+      "Fixed a bug where deleting and recreating a character could be used to repeatedly claim LuckyLad's free ticket"
+    ]
+  },
+  {
     "version": "1.111.12",
     "date": "2026-08-26",
     "changes": [

@@ -10,7 +10,6 @@ import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useCompositionStore, type CompositionStones } from '../game/items/useCompositionStore'
 import { useGemStore } from '../game/items/useGemStore'
 import type { GemCounts } from '../game/items/gemTypes'
-import { useLuckyStore } from '../game/lucky/useLuckyStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
 import { useRowCombatStore, type ServerRowSlot } from '../game/combat/useRowCombatStore'
 import { useMineStore } from '../game/mining/useMineStore'
@@ -67,10 +66,6 @@ interface CharacterRow {
   gems: GemCounts
   selected_monster_id: string | null
   last_active_at: string
-  // Server-authoritative, same trust model as comet_count/fallen_star_count
-  // above — only ever written by draw_lucky_ticket, never the generic
-  // autosave (see saveNow below).
-  lucky_free_ticket_claimed_at: string | null
   // Class Promotion (2026-09-01) — same trust model as above, only ever
   // written by promote_character, never the generic autosave.
   promotion_level: number
@@ -155,7 +150,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     const { data, error } = await supabase
       .from('characters')
       .select(
-        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, comet_count, fallen_star_count, comet_scroll_count, fallen_star_scroll_count, comet_box_count, lottery_ticket_count, vip_token_count, vip_expires_at, composition_stones, gems, selected_monster_id, last_active_at, lucky_free_ticket_claimed_at, promotion_level, row1_unlocked, row2_unlocked, row_slots, selected_mine_id, last_active_idle_mode, pickaxe_ascended_gem_type, vip_automation_settings, equipped_skill_id',
+        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, comet_count, fallen_star_count, comet_scroll_count, fallen_star_scroll_count, comet_box_count, lottery_ticket_count, vip_token_count, vip_expires_at, composition_stones, gems, selected_monster_id, last_active_at, promotion_level, row1_unlocked, row2_unlocked, row_slots, selected_mine_id, last_active_idle_mode, pickaxe_ascended_gem_type, vip_automation_settings, equipped_skill_id',
       )
       .eq('id', characterId)
       .maybeSingle<CharacterRow>()
@@ -196,7 +191,6 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     })
     useCompositionStore.getState().hydrate(data.composition_stones)
     useGemStore.getState().hydrate(data.gems)
-    useLuckyStore.getState().hydrate(data.lucky_free_ticket_claimed_at)
     useRowCombatStore.getState().setUnlocked(data.row1_unlocked, data.row2_unlocked)
     useRowCombatStore.getState().applyServerSlots(data.row_slots ?? [])
     useMineStore.getState().hydrate({ mineId: data.selected_mine_id })

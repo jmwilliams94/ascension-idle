@@ -132,3 +132,41 @@ export async function touchCombatLastResolvedAt(characterId: string): Promise<vo
     console.error('touch_combat_last_resolved_at failed', error)
   }
 }
+
+export interface ClaimHuntingSlotResult {
+  ok: boolean
+  previous_hunter_id?: string | null
+  previous_hunter_name?: string | null
+}
+
+// Hunting Slot exclusivity (2026-10-23, reported by the user) — only one
+// character per account may hold a live Hunting session at a time, since
+// offline catch-up is resolved independently per character (see
+// CLAUDE.persistence.md's AFK/offline simulation note) and several
+// characters all parked on Hunting could otherwise each claim the same
+// real-world elapsed away-time. Called from CombatPage.tsx's handleFight
+// whenever Hunting is entered/resumed — auto-takeover, no confirmation
+// (confirmed by the user): always succeeds for the caller's own character,
+// silently displacing whoever held the slot before (clearing their
+// selected_monster_id server-side, which is what actually stops their own
+// future resolve-combat calls from accruing anything). See the migration
+// (20261023000000_hunting_slot_exclusivity.sql) for the full mechanism.
+export async function claimHuntingSlot(characterId: string): Promise<ClaimHuntingSlotResult> {
+  const { data, error } = await supabase.rpc('claim_hunting_slot', { p_character_id: characterId })
+  if (error) {
+    console.error('claim_hunting_slot failed', error)
+    return { ok: false }
+  }
+  return data as ClaimHuntingSlotResult
+}
+
+// Called when a character that currently holds the Hunting slot voluntarily
+// switches itself to Mining (MiningModePanel.tsx's handleMine) — frees the
+// slot immediately instead of leaving it pointed at a character that isn't
+// actually hunting anymore until someone else claims it.
+export async function releaseHuntingSlot(characterId: string): Promise<void> {
+  const { error } = await supabase.rpc('release_hunting_slot', { p_character_id: characterId })
+  if (error) {
+    console.error('release_hunting_slot failed', error)
+  }
+}

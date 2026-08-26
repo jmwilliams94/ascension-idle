@@ -15,6 +15,7 @@ import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { previewPickaxeTierUpgradeCost } from '../game/mining/pickaxeCosts'
 import { tierUpgradePickaxe } from '../game/mining/pickaxeActions'
 import { touchMiningLastResolvedAt } from '../game/mining/resolveMining'
+import { releaseHuntingSlot } from '../game/combat/resolveCombat'
 import { formatItemDisplayName, getGearIconSrc, getQualityColor } from '../game/items/equipmentBonus'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
@@ -93,6 +94,10 @@ export default function MiningModePanel({ characterId }: { characterId: string }
 
   const handleMine = (mineId: MineId) => {
     stopHuntingIfActive(characterId)
+    // Hunting Slot exclusivity (see resolveCombat.ts's own comment) — frees
+    // the account-wide slot immediately if this character held it, rather
+    // than leaving it pointed at a character that isn't hunting anymore.
+    void releaseHuntingSlot(characterId)
     useIdleModeStore.getState().setLastActiveIdleMode('mining')
     setCurrentMineId(mineId)
     start(mineId)

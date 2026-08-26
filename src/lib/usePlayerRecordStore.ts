@@ -6,6 +6,7 @@ import { APP_VERSION } from '../version'
 import { DEFAULT_GEAR_COMPOSITION_POINTS, type GearCompositionPoints } from '../game/items/forgeCosts'
 import type { CompositionStones } from '../game/items/useCompositionStore'
 import type { GemCounts } from '../game/items/gemTypes'
+import { useLuckyStore } from '../game/lucky/useLuckyStore'
 
 const DEFAULT_STONES_BANKED: CompositionStones = { '1': 0, '2': 0, '3': 0, '4': 0 }
 const DEFAULT_GEMS_BANKED: GemCounts = {}
@@ -20,6 +21,12 @@ interface PlayerRow {
   bank_comets: number
   bank_fallen_stars: number
   unlocked_classes: string[]
+  // Lucky Lad's free-ticket cooldown (2026-10-22, moved from characters —
+  // was per-character, so deleting+recreating a character reset it into an
+  // unlimited free-ticket farm; see CLAUDE.md's Lucky section). Same trust
+  // model as ascension_points: server-authoritative, only ever written by
+  // draw_lucky_ticket.
+  lucky_free_ticket_claimed_at: string | null
   ascension_points: number
   bank_points: number
   gear_composition_points: GearCompositionPoints
@@ -128,7 +135,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
     const { data, error } = await supabase
       .from('players')
       .select(
-        'last_seen_version, bank_gold, bank_comets, bank_fallen_stars, unlocked_classes, ascension_points, bank_points, gear_composition_points, comet_bank_count, fallen_star_bank_count, composition_stones_banked, gems_banked, account_zone_attack_bonus_pct, account_zone_drop_bonus_pct',
+        'last_seen_version, bank_gold, bank_comets, bank_fallen_stars, unlocked_classes, lucky_free_ticket_claimed_at, ascension_points, bank_points, gear_composition_points, comet_bank_count, fallen_star_bank_count, composition_stones_banked, gems_banked, account_zone_attack_bonus_pct, account_zone_drop_bonus_pct',
       )
       .eq('id', userId)
       .maybeSingle<PlayerRow>()
@@ -149,6 +156,8 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
         console.error('Failed to create new player record', insertError)
       }
 
+      useLuckyStore.getState().hydrate(null)
+
       set({
         loaded: true,
         whatsNewEntries: null,
@@ -168,6 +177,8 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
       })
       return
     }
+
+    useLuckyStore.getState().hydrate(data.lucky_free_ticket_claimed_at)
 
     set({
       bankGold: data.bank_gold,

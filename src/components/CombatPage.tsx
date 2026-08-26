@@ -7,7 +7,8 @@ import { Select } from './ui/Select'
 import { ENEMY_TYPES, ZONES, ZONE_ORDER, type EnemyTypeId, type ZoneId } from '../game/zones/zoneData'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
-import { touchCombatLastResolvedAt } from '../game/combat/resolveCombat'
+import { touchCombatLastResolvedAt, claimHuntingSlot } from '../game/combat/resolveCombat'
+import { useHuntingTakeoverToastStore } from '../game/combat/useHuntingTakeoverToastStore'
 import { getLevelDiffColor } from '../game/combat/combatResolver'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
@@ -324,6 +325,16 @@ export default function CombatPage() {
       if (characterId) {
         void touchCombatLastResolvedAt(characterId)
       }
+    }
+    // Hunting Slot exclusivity (see resolveCombat.ts's own comment) — claims
+    // the account-wide slot for this character, silently displacing whoever
+    // held it before.
+    if (characterId) {
+      void claimHuntingSlot(characterId).then((result) => {
+        if (result.ok && result.previous_hunter_name) {
+          useHuntingTakeoverToastStore.getState().show(result.previous_hunter_name)
+        }
+      })
     }
     useIdleModeStore.getState().setLastActiveIdleMode('hunting')
     setSelectedMonsterId(typeId)

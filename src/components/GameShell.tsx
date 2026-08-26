@@ -18,6 +18,7 @@ import CombatPage from './CombatPage'
 import EquipmentTabPage from './EquipmentTabPage'
 import ExpBar from './ExpBar'
 import PetToast from './PetToast'
+import HuntingTakeoverToast from './HuntingTakeoverToast'
 import GainToastHost from './GainToastHost'
 import ForgePanel from './ForgePanel'
 import InventoryFullModal from './InventoryFullModal'
@@ -590,6 +591,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
         {/* Renders nothing when there's no pet to celebrate — safe to mount
             unconditionally, same as every other HUD element here. */}
         <PetToast />
+        <HuntingTakeoverToast />
 
         <TabNav />
 
