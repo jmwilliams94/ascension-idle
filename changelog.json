@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.111.5",
+    "date": "2026-08-26",
+    "changes": [
+      "Fixed all 14 Bracelet icons being cropped on both sides — they're a wide landscape shape, unlike other item icons, so they now fit the full image instead of zooming/cropping to fill the frame"
+    ]
+  },
+  {
     "version": "1.111.4",
     "date": "2026-08-26",
     "changes": [
