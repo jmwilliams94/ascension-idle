@@ -80,13 +80,16 @@ interface CharacterRow {
   // client-writable treatment as selected_monster_id/current_zone.
   // pickaxe_ascended_gem_type is server-authoritative (only
   // pickaxe_tier_upgrade ever writes it) — exposed via CharacterRecordState
-  // below rather than hydrated straight into a store here. Pickaxe equip
-  // state itself is no longer tracked separately (2026-09-30, requested by
-  // the user) — it's a normal Main Hand weapon now, sharing
-  // equipped_weapon_id/useEquipmentStore with the character's real weapon.
+  // below rather than hydrated straight into a store here. equipped_pickaxe_id
+  // (2026-10-24, requested by the user) — back to its own dedicated equip
+  // pointer, independent of equipped_weapon_id/useEquipmentStore, so a
+  // character can wear a real weapon and a Pickaxe at the same time. Same
+  // trust tier as pickaxe_ascended_gem_type: RPC-only (equip_pickaxe/
+  // unequip_pickaxe), never part of saveNow's plain UPDATE below.
   selected_mine_id: string | null
   last_active_idle_mode: string
   pickaxe_ascended_gem_type: string | null
+  equipped_pickaxe_id: string | null
   // VIP automation settings (v1.108.0) — RPC-only writes (see
   // set_vip_automation_settings), same trust model as composition_stones/gems
   // above; excluded from saveNow below.
@@ -113,6 +116,7 @@ interface CharacterRecordState {
   // the player by name instead of a generic "Your ___" label.
   characterName: string
   pickaxeAscendedGemType: string | null
+  equippedPickaxeId: string | null
   loadCharacterRecord: (characterId: string) => Promise<void>
   saveNow: (characterId: string) => Promise<void>
 }
@@ -122,6 +126,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
   previousLastActiveAt: null,
   characterName: '',
   pickaxeAscendedGemType: null,
+  equippedPickaxeId: null,
 
   loadCharacterRecord: async (characterId) => {
     set({ loaded: false })
@@ -150,7 +155,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     const { data, error } = await supabase
       .from('characters')
       .select(
-        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, comet_count, fallen_star_count, comet_scroll_count, fallen_star_scroll_count, comet_box_count, lottery_ticket_count, vip_token_count, vip_expires_at, composition_stones, gems, selected_monster_id, last_active_at, promotion_level, row1_unlocked, row2_unlocked, row_slots, selected_mine_id, last_active_idle_mode, pickaxe_ascended_gem_type, vip_automation_settings, equipped_skill_id',
+        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, comet_count, fallen_star_count, comet_scroll_count, fallen_star_scroll_count, comet_box_count, lottery_ticket_count, vip_token_count, vip_expires_at, composition_stones, gems, selected_monster_id, last_active_at, promotion_level, row1_unlocked, row2_unlocked, row_slots, selected_mine_id, last_active_idle_mode, pickaxe_ascended_gem_type, equipped_pickaxe_id, vip_automation_settings, equipped_skill_id',
       )
       .eq('id', characterId)
       .maybeSingle<CharacterRow>()
@@ -203,6 +208,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
       previousLastActiveAt: data.last_active_at,
       characterName: data.name,
       pickaxeAscendedGemType: data.pickaxe_ascended_gem_type,
+      equippedPickaxeId: data.equipped_pickaxe_id,
     })
   },
 

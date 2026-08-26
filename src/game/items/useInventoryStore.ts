@@ -4,6 +4,7 @@ import { useActiveCharacterStore } from '../../lib/useActiveCharacterStore'
 import { useCompositionStore } from './useCompositionStore'
 import { usePotionStore } from './usePotionStore'
 import { useEquipmentStore } from './useEquipmentStore'
+import { useCharacterRecordStore } from '../../lib/useCharacterRecordStore'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 import { useItemTemplatesStore, type ItemTemplate } from './useItemTemplatesStore'
@@ -128,6 +129,11 @@ export const INVENTORY_SLOT_CAP = 40
 // than reimplementing it.
 export function occupiedSlotCount(items: ItemInstance[]): number {
   const isEquipped = useEquipmentStore.getState().isEquipped
+  // Equipped Pickaxe (2026-10-24) frees its Inventory slot exactly like the
+  // 7 useEquipmentStore slots do, but lives on its own pointer
+  // (equippedPickaxeId) since it's no longer part of equipped_weapon_id —
+  // must stay in sync with occupied_inventory_slots' own SQL exclusion array.
+  const equippedPickaxeId = useCharacterRecordStore.getState().equippedPickaxeId
   // Actively-listed (Marketplace escrow) and unclaimed-Mail items are real
   // item_instances rows still owned by this character, but InventoryPanel's
   // own visibleItems filter already hides both from the grid (see the Bank/
@@ -142,7 +148,12 @@ export function occupiedSlotCount(items: ItemInstance[]): number {
   // Banked gear (location === 'bank') frees its Inventory slot exactly like
   // an equipped item does — see the Bank Storage note on ItemInstance above.
   const gearCount = items.filter(
-    (item) => !isEquipped(item.id) && item.location !== 'bank' && !isListed(item.id) && !hasUnclaimedMail(item.id),
+    (item) =>
+      !isEquipped(item.id) &&
+      item.id !== equippedPickaxeId &&
+      item.location !== 'bank' &&
+      !isListed(item.id) &&
+      !hasUnclaimedMail(item.id),
   ).length
   const totalStoneCount = Object.values(useCompositionStore.getState().stones).reduce((sum, count) => sum + count, 0)
   // Gems are real, physical, non-stacking Inventory tiles now (2026-08-09) —

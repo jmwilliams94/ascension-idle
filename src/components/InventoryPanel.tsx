@@ -75,6 +75,8 @@ import { useMailStore } from '../game/marketplace/useMailStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
+import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
+import { equipPickaxe } from '../game/mining/pickaxeEquipActions'
 import { POTION_TYPES } from '../game/items/potionTypes'
 import { useBankStore } from '../game/items/useBankStore'
 import { useGainToastStore } from '../game/hud/useGainToastStore'
@@ -189,7 +191,14 @@ export default function InventoryPanel({
   // directly never re-renders this component when equipment actually changes,
   // only whenever something else forces a re-render (e.g. selecting a tile).
   const equippedIds = useEquipmentStore((state) => state.equippedIds)
-  const isEquipped = (itemId: string) => Object.values(equippedIds).includes(itemId)
+  // Pickaxe (2026-10-24) has its own equip pointer, independent of the 7
+  // useEquipmentStore slots — folded into this same isEquipped check so
+  // every existing call site (visibleItems' hide-from-grid filter, the
+  // Equip button's disabled/label state, GearEquipPopover's
+  // alreadyEquipped/canEquip) treats an equipped Pickaxe consistently with
+  // every other equipped item, with no separate branching needed downstream.
+  const equippedPickaxeId = useCharacterRecordStore((state) => state.equippedPickaxeId)
+  const isEquipped = (itemId: string) => Object.values(equippedIds).includes(itemId) || itemId === equippedPickaxeId
   const characterLevel = useProgressionStore((state) => state.level)
 
   const stones = useCompositionStore((state) => state.stones)
@@ -864,10 +873,21 @@ export default function InventoryPanel({
   // prompt — declining leaves the equip as-is (the item is genuinely worn
   // here now) but the credit stays with whoever already had it.
   const handleEquip = (template: ItemTemplate, item: ItemInstance) => {
+    // Pickaxe (2026-10-24) never goes into the weapon slot anymore — it has
+    // its own dedicated equip pointer (equipped_pickaxe_id), reached from
+    // this same Equip button as the guaranteed non-drag fallback to the
+    // Mining tab's drag-and-drop slot (PickaxeEquipSlot). Gear Score doesn't
+    // apply to it either way (see the guard below), so this branch returns
+    // before ever reaching that logic.
+    if (template.item_family === 'pickaxe') {
+      if (characterId) void equipPickaxe(characterId, item.id)
+      return
+    }
+
     const slot = template.slot_type as EquipSlot
     setEquippedItem(slot, item.id)
 
-    if (!characterId || !SCORED_SLOTS.has(slot) || template.item_family === 'pickaxe') {
+    if (!characterId || !SCORED_SLOTS.has(slot)) {
       return
     }
 

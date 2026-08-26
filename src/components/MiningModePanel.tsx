@@ -9,19 +9,20 @@ import { useMineStore } from '../game/mining/useMineStore'
 import { useMiningStore } from '../game/mining/useMiningStore'
 import { useIdleModeStore } from '../game/mining/useIdleModeStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
-import { useEquipmentStore } from '../game/items/useEquipmentStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { previewPickaxeTierUpgradeCost } from '../game/mining/pickaxeCosts'
 import { tierUpgradePickaxe } from '../game/mining/pickaxeActions'
+import { unequipPickaxe } from '../game/mining/pickaxeEquipActions'
 import { touchMiningLastResolvedAt } from '../game/mining/resolveMining'
 import { releaseHuntingSlot } from '../game/combat/resolveCombat'
-import { formatItemDisplayName, getGearIconSrc, getQualityColor } from '../game/items/equipmentBonus'
+import { formatItemDisplayName } from '../game/items/equipmentBonus'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { useGemStore } from '../game/items/useGemStore'
 import { GEM_TYPES, formatGemTierLabel, gemCount, type GemTypeId } from '../game/items/gemCatalog'
 import { formatGoldAmount } from '../game/stats/formatGold'
+import PickaxeEquipSlot from './PickaxeEquipSlot'
 
 // Placeholder swatch color for every node — no real portrait art yet (see
 // zoneData.ts's own hexColor(color) fallback precedent). A stony grey fits
@@ -58,14 +59,14 @@ export default function MiningModePanel({ characterId }: { characterId: string }
   const start = useMiningStore((state) => state.start)
   const stop = useMiningStore((state) => state.stop)
 
-  // Pickaxe is a normal Main Hand weapon now (requested by the user) — "is
-  // one equipped" is derived live off the standard equipment/inventory/
-  // template stores (equippedIds.weapon, checked against item_family)
-  // rather than a separate equipped-pickaxe pointer/store.
-  const weaponId = useEquipmentStore((state) => state.equippedIds.weapon)
+  // Pickaxe has its own dedicated equip pointer again (2026-10-24, requested
+  // by the user) — independent of equipped_weapon_id/useEquipmentStore, so a
+  // character can wear a real weapon and a Pickaxe simultaneously. "Is one
+  // equipped" now reads equippedPickaxeId off useCharacterRecordStore.
+  const equippedPickaxeId = useCharacterRecordStore((state) => state.equippedPickaxeId)
   const items = useInventoryStore((state) => state.items)
   const templates = useItemTemplatesStore((state) => state.templates)
-  const pickaxeItem = weaponId ? items.find((item) => item.id === weaponId) : undefined
+  const pickaxeItem = equippedPickaxeId ? items.find((item) => item.id === equippedPickaxeId) : undefined
   const pickaxeTemplate = pickaxeItem ? templates.find((t) => t.id === pickaxeItem.template_id) : undefined
   const equipped = Boolean(pickaxeTemplate && pickaxeTemplate.item_family === 'pickaxe')
   // Tier Up bumps quality_tier directly now (2026-09-30, requested by the
@@ -155,7 +156,7 @@ export default function MiningModePanel({ characterId }: { characterId: string }
         <Button
           variant="primary"
           disabled={!equipped || (isMining && activeMineId === dropdownMineId)}
-          title={!equipped ? 'Equip a Pickaxe in your Main Hand slot first' : undefined}
+          title={!equipped ? 'Equip a Pickaxe in the Pickaxe slot below first' : undefined}
           onClick={() => handleMine(dropdownMineId)}
           className="mt-3 w-full"
         >
@@ -164,22 +165,26 @@ export default function MiningModePanel({ characterId }: { characterId: string }
       </AscensionCard>
 
       <AscensionCard title="Pickaxe">
-        {!equipped ? (
-          <p className="mt-2 text-xs text-slate-500">
-            Equip a Pickaxe in your Main Hand slot (Inventory or Equipment page) to mine — buy one from the Shop's Weapons tab if you need one.
-          </p>
-        ) : (
-          <>
-            <div className="mt-2 flex items-center gap-2">
-              <div
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800"
-                style={{ borderColor: getQualityColor(pickaxeItem!.quality_tier) }}
-              >
-                <img src={getGearIconSrc('Pickaxe', pickaxeItem!.quality_tier)} alt="" className="h-4/5 w-4/5 object-contain" />
-              </div>
+        <div className="mt-2 flex items-start gap-3">
+          <PickaxeEquipSlot
+            item={pickaxeItem ?? null}
+            template={pickaxeTemplate ?? null}
+            onUnequip={() => void unequipPickaxe(characterId)}
+          />
+          <div className="min-w-0 flex-1">
+            {!equipped ? (
+              <p className="text-xs text-slate-500">
+                Drag a Pickaxe from your Inventory into the slot, or hit Equip on it there — buy one from the Shop's Weapons tab if you need one.
+                Independent of your weapon slot, so your real weapon stays equipped too.
+              </p>
+            ) : (
               <p className="text-sm font-medium text-slate-200">{displayName}</p>
-            </div>
+            )}
+          </div>
+        </div>
 
+        {equipped && (
+          <>
             {cost ? (
               <>
                 <p className="mt-2 text-xs text-slate-500">
@@ -259,7 +264,7 @@ export default function MiningModePanel({ characterId }: { characterId: string }
           <Button
             variant="secondary"
             disabled={!isMining && !equipped}
-            title={!isMining && !equipped ? 'Equip a Pickaxe in your Main Hand slot first' : undefined}
+            title={!isMining && !equipped ? 'Equip a Pickaxe in the Pickaxe slot first' : undefined}
             onClick={handleToggle}
             className="mt-4 w-full"
           >

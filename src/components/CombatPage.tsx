@@ -24,8 +24,13 @@ import { useActiveEventEmberColor } from '../game/hud/useEventEmberColor'
 import { EventEmberBorder } from '../game/hud/eventEmberBorder'
 import { eventBorderTintStyle } from '../game/hud/eventEmberBorderData'
 import MiningModePanel from './MiningModePanel'
+import { MINING_PICKAXE_DROP_ZONE } from './PickaxeEquipSlot'
 import { useMiningStore } from '../game/mining/useMiningStore'
 import { useIdleModeStore } from '../game/mining/useIdleModeStore'
+import { equipPickaxe } from '../game/mining/pickaxeEquipActions'
+import { useInventoryStore } from '../game/items/useInventoryStore'
+import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
+import { DragDropProvider } from './dragDrop'
 
 // Matches getLevelDiffColor's tiers — White is an even match, Green means the
 // character comfortably outlevels the monster (reduced EXP), Red/Black mean
@@ -241,6 +246,22 @@ export default function CombatPage() {
   // CombatModeSwitcher above).
   const [mode, setMode] = useState<CombatMode>('hunting')
 
+  // Mining tab's drag-and-drop equip slot (2026-10-24, requested by the
+  // user) — dragging an Inventory tile onto PickaxeEquipSlot resolves here
+  // via InventoryPanel's onTileDrop, the same mechanism Forge's own
+  // drag-driven material slots use (see dragDropContext.ts). Only wired up
+  // while mode === 'mining' (see the InventoryPanel props below), so tiles
+  // aren't needlessly draggable during Hunting.
+  const inventoryItems = useInventoryStore((state) => state.items)
+  const itemTemplates = useItemTemplatesStore((state) => state.templates)
+  const handleMiningTileDrop = (overTarget: string, itemId: string) => {
+    if (overTarget !== MINING_PICKAXE_DROP_ZONE || !characterId) return
+    const item = inventoryItems.find((entry) => entry.id === itemId)
+    const template = item && itemTemplates.find((entry) => entry.id === item.template_id)
+    if (!template || template.item_family !== 'pickaxe') return
+    void equipPickaxe(characterId, itemId)
+  }
+
   // Mobile-only (see the lg:hidden layout below) — Inventory defaults collapsed
   // there so the action area (monster/player HP, Fight/Stop) is what's visible
   // without scrolling.
@@ -359,7 +380,7 @@ export default function CombatPage() {
   }
 
   return (
-    <>
+    <DragDropProvider>
       {/* Mobile-only layout (below `lg`) — action area (monster/player HP,
           Fight/Stop, Consumable) prioritized at the top since that's what's
           looked at moment-to-moment; Zone/Monster picker below it (still
@@ -591,7 +612,7 @@ export default function CombatPage() {
 
           {inventoryExpanded && (
             <div className="mt-3">
-              <InventoryPanel columns={5} equipPopoverEnabled />
+              <InventoryPanel columns={5} equipPopoverEnabled onTileDrop={mode === 'mining' ? handleMiningTileDrop : undefined} />
             </div>
           )}
         </AscensionCard>
@@ -815,10 +836,10 @@ export default function CombatPage() {
             redundant with ExpBar in GameShell's persistent top strip, same
             reasoning the mobile layout above already used to skip it. */}
         <AscensionCard>
-          <InventoryPanel columns={5} equipPopoverEnabled />
+          <InventoryPanel columns={5} equipPopoverEnabled onTileDrop={mode === 'mining' ? handleMiningTileDrop : undefined} />
         </AscensionCard>
       </div>
       </div>
-    </>
+    </DragDropProvider>
   )
 }

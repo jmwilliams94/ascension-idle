@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.113.0",
+    "date": "2026-08-26",
+    "changes": [
+      "Pickaxes no longer take up your weapon slot — equip one from a new dedicated slot on the Mining tab instead (drag it in from your Inventory, or use the Equip button), and keep your real weapon equipped at the same time"
+    ]
+  },
+  {
     "version": "1.112.0",
     "date": "2026-08-26",
     "changes": [
