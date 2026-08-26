@@ -82,13 +82,35 @@ const SHOP_TABS: { id: ShopTab; label: string; icon: string }[] = [
 ]
 
 // A template is available to the current class if it has no class restriction
-// at all (required_class null — bows/rings/necklaces/boots today) or matches
-// the character's own class exactly (required_class 'hunter' — Archer Hats/
-// Coats today). This is what makes the Weapons/Armor tabs "dynamic": the same
-// component just renders a different filtered slice per class, with no
-// per-class branching needed here.
+// at all (required_class null — Boots/Wooden Sword/Pickaxe today, genuinely
+// shared across every class — see the backfill migration
+// 20261020000000_backfill_hunter_required_class.sql for why nothing else is
+// null anymore) or matches the character's own class exactly. This is what
+// makes the Weapons/Armor tabs "dynamic": the same component just renders a
+// different filtered slice per class, with no per-class branching needed
+// here.
 function availableToClass(template: ItemTemplate, classId: string): boolean {
   return template.required_class === null || template.required_class === classId
+}
+
+// Shop only carries the first few rungs of each weapon/armor line (2026-08-27,
+// requested by the user) — it's meant for early/starter gear, not a mirror of
+// the entire level-1-130 progression (that's what kill-drops/Forge upgrades
+// are for). Groups by item_family (falling back to the template's own id for
+// the rare standalone item with none, e.g. Wooden Sword) so a class with
+// several distinct weapon families — Twin-soul/Juggernaut's Club/Sword/Blade —
+// still shows a few of *each* rather than 3 total across all of them.
+// Templates must already be sorted by required_level ascending.
+const SHOP_ITEMS_PER_FAMILY = 3
+
+function capFirstPerFamily(sortedTemplates: ItemTemplate[]): ItemTemplate[] {
+  const seenCounts = new Map<string, number>()
+  return sortedTemplates.filter((template) => {
+    const key = template.item_family ?? template.id
+    const count = seenCounts.get(key) ?? 0
+    seenCounts.set(key, count + 1)
+    return count < SHOP_ITEMS_PER_FAMILY
+  })
 }
 
 // Buy 5 / Buy 10 call buyShopItemBulk, which runs the whole purchase loop
@@ -288,21 +310,27 @@ export default function ShopPanel() {
   // Lucky Bow (auto-granted/auto-equipped) and the full Bow chain, so it
   // never needs to appear in a Hunter's Shop (confirmed with the user,
   // 2026-08-07).
-  const weaponTemplates = templates
-    .filter((t) => t.slot_type === 'weapon' && availableToClass(t, selectedClassId))
-    .filter((t) => !(selectedClassId === 'hunter' && t.name === 'Wooden Sword'))
-    .filter((t) => t.required_level <= SHOP_MAX_LEVEL)
-    .sort((a, b) => a.required_level - b.required_level)
+  const weaponTemplates = capFirstPerFamily(
+    templates
+      .filter((t) => t.slot_type === 'weapon' && availableToClass(t, selectedClassId))
+      .filter((t) => !(selectedClassId === 'hunter' && t.name === 'Wooden Sword'))
+      .filter((t) => t.required_level <= SHOP_MAX_LEVEL)
+      .sort((a, b) => a.required_level - b.required_level),
+  )
 
-  const armorTemplates = templates
-    .filter((t) => ARMOR_SLOTS.includes(t.slot_type) && availableToClass(t, selectedClassId))
-    .filter((t) => t.required_level <= SHOP_MAX_LEVEL)
-    .sort((a, b) => a.required_level - b.required_level)
+  const armorTemplates = capFirstPerFamily(
+    templates
+      .filter((t) => ARMOR_SLOTS.includes(t.slot_type) && availableToClass(t, selectedClassId))
+      .filter((t) => t.required_level <= SHOP_MAX_LEVEL)
+      .sort((a, b) => a.required_level - b.required_level),
+  )
 
-  const jewellerTemplates = templates
-    .filter((t) => JEWELLER_SLOTS.includes(t.slot_type) && availableToClass(t, selectedClassId))
-    .filter((t) => t.required_level <= SHOP_MAX_LEVEL)
-    .sort((a, b) => a.required_level - b.required_level)
+  const jewellerTemplates = capFirstPerFamily(
+    templates
+      .filter((t) => JEWELLER_SLOTS.includes(t.slot_type) && availableToClass(t, selectedClassId))
+      .filter((t) => t.required_level <= SHOP_MAX_LEVEL)
+      .sort((a, b) => a.required_level - b.required_level),
+  )
 
   const bulkBuyWeaponIds = bulkBuyEligibleIds(weaponTemplates)
   const bulkBuyArmorIds = bulkBuyEligibleIds(armorTemplates)

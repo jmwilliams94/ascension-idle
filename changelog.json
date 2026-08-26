@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.111.11",
+    "date": "2026-08-26",
+    "changes": [
+      "Shop now only shows gear for your own class, and only the first few tiers of each weapon/armor line instead of the entire level 1-130 progression",
+      "Fixed a bug where non-Hunter classes could see, and even receive as kill-drops, Hunter's Bow/Ring/Necklace gear"
+    ]
+  },
+  {
     "version": "1.111.10",
     "date": "2026-08-26",
     "changes": [
