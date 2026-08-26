@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.111.12",
+    "date": "2026-08-26",
+    "changes": [
+      "Wuxia is now available to select at character creation, no longer locked"
+    ]
+  },
+  {
     "version": "1.111.11",
     "date": "2026-08-26",
     "changes": [

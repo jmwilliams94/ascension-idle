@@ -58,7 +58,8 @@ interface PlayerRecordState {
   bankComets: number
   bankFallenStars: number
   // Account-wide class-unlock milestones (e.g. a Hunter reaching max level), not
-  // per-character. Only 'hunter' by default until a real unlock mechanic exists.
+  // per-character. 'hunter'/'wuxia' unlocked by default; twin-soul/juggernaut
+  // still have no unlock mechanic (their gear catalogs are prep-only).
   unlockedClasses: string[]
   // Ascension Points (2026-08-03) — a premium currency, account-wide by design
   // (confirmed with the user, corrects an earlier per-character version):
@@ -112,7 +113,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
   bankGold: 0,
   bankComets: 0,
   bankFallenStars: 0,
-  unlockedClasses: ['hunter'],
+  unlockedClasses: ['hunter', 'wuxia'],
   ascensionPoints: 0,
   bankPoints: 0,
   gearCompositionPoints: DEFAULT_GEAR_COMPOSITION_POINTS,
@@ -154,7 +155,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
         bankGold: 0,
         bankComets: 0,
         bankFallenStars: 0,
-        unlockedClasses: ['hunter'],
+        unlockedClasses: ['hunter', 'wuxia'],
         ascensionPoints: 0,
         bankPoints: 0,
         gearCompositionPoints: DEFAULT_GEAR_COMPOSITION_POINTS,
