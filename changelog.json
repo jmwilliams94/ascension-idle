@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.111.7",
+    "date": "2026-08-26",
+    "changes": [
+      "Fixed all Cap, Robe, and Bag icons being cropped (hat peaks and bag hanging loops/tassels were getting cut off) — same fix as the Bracelet icons, they now fit the full image instead of zooming/cropping to fill the frame"
+    ]
+  },
+  {
     "version": "1.111.6",
     "date": "2026-08-26",
     "changes": [
