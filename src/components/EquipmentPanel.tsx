@@ -365,7 +365,7 @@ export default function EquipmentPanel() {
                 {formatItemDisplayName(selected.template.name, selected.item.quality_tier, selected.item.composition_level)}
               </p>
               <p className="text-xs text-slate-500">{formatItemLevel(selected.item.level)}</p>
-              <p className="text-xs text-slate-500">{formatBaseStats(selected.template.base_stats, selected.item.quality_tier)}</p>
+              <p className="text-xs text-slate-500">{formatBaseStats(selected.template.base_stats, selected.item.quality_tier, selected.template.item_family)}</p>
             </div>
           </div>
 

@@ -1906,7 +1906,7 @@ export default function InventoryPanel({
               </p>
               <p className="text-xs text-slate-500">{formatItemLevel(selectedItem.level)}</p>
               {selectedTemplate && (
-                <p className="text-xs text-slate-500">{formatBaseStats(selectedTemplate.base_stats, selectedItem.quality_tier)}</p>
+                <p className="text-xs text-slate-500">{formatBaseStats(selectedTemplate.base_stats, selectedItem.quality_tier, selectedTemplate.item_family)}</p>
               )}
               {selectedTemplate && selectedTemplate.required_level > 1 && (
                 <p className={meetsLevelRequirement ? 'text-xs text-slate-500' : 'text-xs text-amber-500'}>

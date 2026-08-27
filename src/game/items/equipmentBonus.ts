@@ -58,12 +58,28 @@ export const QUALITY_STAT_MULTIPLIERS: Record<string, number> = {
   ascended: 2,
 }
 
-function scaledStat(baseStats: Record<string, number>, key: string, qualityTier: string): number | undefined {
+// Pickaxe-only quality curve (2026-08-27, requested by the user) — a flat
+// 1/2/3/4/5x ladder, deliberately steeper than every other gear slot's
+// QUALITY_STAT_MULTIPLIERS above. Scoped to the Pickaxe specifically (not a
+// global rebalance): Pickaxe never enters computeEquipmentBonus at all (not
+// in EQUIP_SLOTS, has its own dedicated equip slot since v1.113.0), so this
+// only affects mining damage (useMiningStore.ts, mirrored server-side in
+// resolve-mining/index.ts) and this file's own tooltip-stat display below.
+export const PICKAXE_QUALITY_MULTIPLIERS: Record<string, number> = {
+  normal: 1,
+  tempered: 2,
+  infused: 3,
+  radiant: 4,
+  ascended: 5,
+}
+
+function scaledStat(baseStats: Record<string, number>, key: string, qualityTier: string, itemFamily?: string | null): number | undefined {
   const base = baseStats[key]
   if (typeof base !== 'number') {
     return undefined
   }
-  const multiplier = QUALITY_STAT_MULTIPLIERS[qualityTier] ?? 1
+  const table = itemFamily === 'pickaxe' ? PICKAXE_QUALITY_MULTIPLIERS : QUALITY_STAT_MULTIPLIERS
+  const multiplier = table[qualityTier] ?? 1
   return Math.round(base * multiplier)
 }
 
@@ -375,10 +391,10 @@ export function computeRepairCost(requiredLevel: number, qualityTier: string, cu
 // ranged and keep showing a flat "+N".
 const RANGED_STAT_KEYS = ['physical_attack', 'magic_attack']
 
-export function formatBaseStats(baseStats: Record<string, number>, qualityTier: string): string {
+export function formatBaseStats(baseStats: Record<string, number>, qualityTier: string, itemFamily?: string | null): string {
   return Object.entries(baseStats)
     .map(([key]) => {
-      const value = scaledStat(baseStats, key, qualityTier)
+      const value = scaledStat(baseStats, key, qualityTier, itemFamily)
       if (RANGED_STAT_KEYS.includes(key)) {
         const { min, max } = damageRangeFromMidpoint(value ?? 0)
         return `${min}-${max} ${key.replace(/_/g, ' ')}`
@@ -399,9 +415,9 @@ export function formatBaseStats(baseStats: Record<string, number>, qualityTier: 
 // white-first, then blue — a fixed, deliberate order rather than whatever
 // key order base_stats happens to store, per the user's "white stats after
 // Class before Sockets, blue stats after white" layout.
-export function buildStatTooltipLines(baseStats: Record<string, number>, qualityTier: string): TooltipLine[] {
+export function buildStatTooltipLines(baseStats: Record<string, number>, qualityTier: string, itemFamily?: string | null): TooltipLine[] {
   const toLine = (key: string): TooltipLine => {
-    const value = scaledStat(baseStats, key, qualityTier)
+    const value = scaledStat(baseStats, key, qualityTier, itemFamily)
     const text = RANGED_STAT_KEYS.includes(key)
       ? (() => {
           const { min, max } = damageRangeFromMidpoint(value ?? 0)
@@ -1023,7 +1039,7 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
       ...(lockedLine ? [lockedLine] : []),
       { text: formatItemLevel(item.level), color: TOOLTIP_WHITE },
       ...(classLine ? [classLine] : []),
-      ...(template ? buildStatTooltipLines(template.base_stats, item.quality_tier) : []),
+      ...(template ? buildStatTooltipLines(template.base_stats, item.quality_tier, template.item_family) : []),
       ...socketLines,
       ...(durabilityLine ? [durabilityLine] : []),
     ],

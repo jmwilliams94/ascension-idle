@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { resolvePhysicalDamage, rollDamageInRange } from '../combat/combatResolver'
-import { QUALITY_STAT_MULTIPLIERS, computeCompositionBonusStats } from '../items/equipmentBonus'
+import { PICKAXE_QUALITY_MULTIPLIERS, computeCompositionBonusStats } from '../items/equipmentBonus'
 import { MINING_ATTACK_INTERVAL_MS, MINING_RESPAWN_GAP_MS } from './miningResolver'
 import { nodeForMine, type MineId } from './mineData'
 import { getEquippedPickaxe } from './equippedPickaxe'
@@ -124,7 +124,7 @@ export const useMiningStore = create<MiningState>((set, get) => ({
     }
 
     const rawAttack = pickaxe.template.base_stats.physical_attack ?? 0
-    const scaledAttack = Math.round(rawAttack * (QUALITY_STAT_MULTIPLIERS[pickaxe.item.quality_tier] ?? 1))
+    const scaledAttack = Math.round(rawAttack * (PICKAXE_QUALITY_MULTIPLIERS[pickaxe.item.quality_tier] ?? 1))
     const compositionBonus =
       computeCompositionBonusStats(pickaxe.template.base_stats, pickaxe.template.slot_type, pickaxe.item.composition_level).physical_attack ?? 0
     const attackMidpoint = scaledAttack + compositionBonus

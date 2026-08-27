@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.113.1",
+    "date": "2026-08-27",
+    "changes": [
+      "Pickaxe quality now scales mining attack much more steeply — Normal 1x, Tempered 2x, Infused 3x, Radiant 4x, Ascended 5x"
+    ]
+  },
+  {
     "version": "1.113.0",
     "date": "2026-08-26",
     "changes": [

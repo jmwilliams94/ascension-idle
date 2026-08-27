@@ -55,16 +55,17 @@ Deno.serve(async (req) => {
 })
 
 // ---------------------------------------------------------------------------
-// Mirrors src/game/items/equipmentBonus.ts — pickaxe_tier_upgrade (SQL) bumps
-// a Pickaxe's real quality_tier directly (2026-09-30, requested by the user),
-// so this actually scales attack now, same as any other gear's quality tier.
+// Mirrors src/game/items/equipmentBonus.ts's PICKAXE_QUALITY_MULTIPLIERS
+// (2026-08-27, requested by the user) — Pickaxe-only, deliberately steeper
+// than every other gear slot's own QUALITY_STAT_MULTIPLIERS curve, since the
+// Pickaxe never enters combat's shared multiplier math at all.
 // ---------------------------------------------------------------------------
-const QUALITY_STAT_MULTIPLIERS: Record<string, number> = {
+const PICKAXE_QUALITY_MULTIPLIERS: Record<string, number> = {
   normal: 1,
-  tempered: 1.25,
-  infused: 1.5,
-  radiant: 1.75,
-  ascended: 2,
+  tempered: 2,
+  infused: 3,
+  radiant: 4,
+  ascended: 5,
 }
 
 const COMPOSITION_BONUS_PCT_PER_TIER = 0.05
@@ -290,7 +291,7 @@ async function handleResolveMining(req: Request): Promise<Response> {
     // real equipped item rather than assumed 'normal'. Composition bonus
     // uses the same flat 5%/tier-of-raw-base-stat formula every other gear
     // slot uses.
-    const scaledAttack = Math.round(pickaxe.physical_attack * (QUALITY_STAT_MULTIPLIERS[pickaxe.quality_tier] ?? 1))
+    const scaledAttack = Math.round(pickaxe.physical_attack * (PICKAXE_QUALITY_MULTIPLIERS[pickaxe.quality_tier] ?? 1))
     const compositionBonus = Math.round(pickaxe.physical_attack * COMPOSITION_BONUS_PCT_PER_TIER * pickaxe.composition_level)
     const attackMidpoint = scaledAttack + compositionBonus
 
