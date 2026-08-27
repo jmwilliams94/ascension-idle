@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.113.2",
+    "date": "2026-08-28",
+    "changes": [
+      "Fixed a bug where the big Kill Count milestone reward (and Lucky Lad's rare Ascended gear prize) could roll Ore or a promotion material instead of real gear — affected rewards already handed out were converted to proper gear"
+    ]
+  },
+  {
     "version": "1.113.1",
     "date": "2026-08-27",
     "changes": [
