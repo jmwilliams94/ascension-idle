@@ -2,10 +2,10 @@ import { useEffect } from 'react'
 import { useTabActivityStore } from '../lib/useTabActivityStore'
 
 const ORIGINAL_TITLE = document.title
-const FAVICON_HREF = '/favicon.svg'
+const FAVICON_HREF = '/favicon.png'
 const BADGE_SIZE = 32
 
-// Rasterizing favicon.svg + drawing a badge dot onto it is genuinely async
+// Rasterizing favicon.png + drawing a badge dot onto it is genuinely async
 // (Image.onload) and only ever needs doing once — cached at module scope so
 // flipping pending on/off/on again doesn't redo the work.
 let badgeIconPromise: Promise<string> | null = null
@@ -33,7 +33,7 @@ function loadBadgeIcon(): Promise<string> {
         ctx.stroke()
         resolve(canvas.toDataURL('image/png'))
       }
-      // SVG failed to rasterize (unlikely, but favicon.svg is same-origin) —
+      // Image failed to rasterize (unlikely, but favicon.png is same-origin) —
       // fall back to the plain unbadged icon rather than leaving the tab with
       // a broken favicon.
       image.onerror = () => resolve(FAVICON_HREF)

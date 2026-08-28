@@ -48,7 +48,7 @@ export default defineConfig({
       // precache match). item-icons/ is NOT included here — 23MB across
       // 140+ files, far too large to bundle into every SW install; see
       // sw.ts's CacheFirst route instead.
-      includeAssets: ['favicon.svg', 'lucky-icons/**/*.png', 'nav-icons/**/*.png'],
+      includeAssets: ['favicon.png', 'lucky-icons/**/*.png', 'nav-icons/**/*.png'],
       manifest: {
         name: 'Ascension Idle',
         short_name: 'Ascension Idle',

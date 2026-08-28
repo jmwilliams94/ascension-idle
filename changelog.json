@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.17",
+    "date": "2026-08-28",
+    "changes": [
+      "Updated the app icon and browser tab icon to a cleaner version of the gold \"A\" logo"
+    ]
+  },
+  {
     "version": "1.116.16",
     "date": "2026-08-28",
     "changes": [
