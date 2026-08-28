@@ -1,8 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import ItemTooltip from './ItemTooltip'
 import { Button } from './ui/Button'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
+import { clampTooltipLeft, clampTooltipVertical, guessTooltipVertical } from '../lib/tooltipViewportClamp'
 
 // Generic click-opened, portaled action popover — the same shell
 // GearEquipPopover established (click a tile → an actionable card anchored
@@ -14,8 +15,6 @@ import type { ItemTooltipData } from '../game/items/itemTooltip'
 // way), unlike Bank Storage tiles, which already open a detail card
 // defaulting to a one-click free-tier Withdraw.
 const POPOVER_CARD_WIDTH = 256 // matches ItemTooltip's own w-64 (256px)
-const VIEWPORT_MARGIN = 8
-const FLIP_BELOW_THRESHOLD = 160
 
 export interface TooltipActionPopoverAction {
   label: string
@@ -85,12 +84,21 @@ export default function TooltipActionPopover({ anchorRect, tooltip, actions, onC
     }
   }, [onClose])
 
-  const showBelow = anchorRect.top < FLIP_BELOW_THRESHOLD
-  const left = Math.min(
-    Math.max(anchorRect.left + anchorRect.width / 2, POPOVER_CARD_WIDTH / 2 + VIEWPORT_MARGIN),
-    window.innerWidth - POPOVER_CARD_WIDTH / 2 - VIEWPORT_MARGIN,
-  )
-  const top = showBelow ? anchorRect.bottom + 6 : anchorRect.top - 6
+  const measureRef = useRef<HTMLDivElement>(null)
+  const [vertical, setVertical] = useState(() => guessTooltipVertical(anchorRect))
+
+  // Corrects the above/below guess to this popover's real rendered height
+  // (tooltip card + button bar) before the browser paints — see
+  // tooltipViewportClamp.ts. A tall gear tooltip no longer overflows off the
+  // top of the screen just because the anchor tile wasn't close to the edge.
+  useLayoutEffect(() => {
+    const height = measureRef.current?.getBoundingClientRect().height
+    if (height) {
+      setVertical(clampTooltipVertical(anchorRect, height))
+    }
+  }, [anchorRect])
+
+  const left = clampTooltipLeft(anchorRect, POPOVER_CARD_WIDTH)
 
   // 3-action lists (Bundle/Open + Bank + Bank All, Claim/Store/Sell, ...) put
   // the first action on its own full-width row and split the rest below it
@@ -105,9 +113,10 @@ export default function TooltipActionPopover({ anchorRect, tooltip, actions, onC
 
   return createPortal(
     <div
+      ref={measureRef}
       data-tooltip-action-popover
       className="fixed z-50"
-      style={{ left, top, transform: `translate(-50%, ${showBelow ? '0' : '-100%'})` }}
+      style={{ left, top: vertical.top, transform: vertical.transform }}
       onPointerDown={(event) => event.stopPropagation()}
     >
       <ItemTooltip {...tooltip} />

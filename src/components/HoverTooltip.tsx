@@ -1,15 +1,11 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { clampTooltipLeft, clampTooltipVertical, guessTooltipVertical } from '../lib/tooltipViewportClamp'
 
 // Matches ItemTooltip's own w-64 (256px, widened 2026-08-04 alongside the
 // doubled tooltip icon to keep the text column's width unchanged) — used
 // only for horizontal clamping math below, not for sizing the tooltip itself.
 const TOOLTIP_WIDTH = 256
-const VIEWPORT_MARGIN = 8
-// Heuristic, not a real measurement (the tooltip's height varies with content and
-// measuring it would need an extra render pass) — if there's less than this much
-// room above the trigger, flip the tooltip below it instead of clipping upward.
-const FLIP_BELOW_THRESHOLD = 160
 
 // Touch has no "hover" — long-press is the fallback (confirmed with the user,
 // 2026-07-31), not tap-to-toggle: a plain tap already means "select" on nearly
@@ -174,17 +170,27 @@ export default function HoverTooltip({ content, children, disableTouchPeek = fal
 }
 
 function TooltipPositioner({ rect, children }: { rect: DOMRect; children: ReactNode }) {
-  const showBelow = rect.top < FLIP_BELOW_THRESHOLD
-  const left = Math.min(
-    Math.max(rect.left + rect.width / 2, TOOLTIP_WIDTH / 2 + VIEWPORT_MARGIN),
-    window.innerWidth - TOOLTIP_WIDTH / 2 - VIEWPORT_MARGIN,
-  )
-  const top = showBelow ? rect.bottom + 6 : rect.top - 6
+  const measureRef = useRef<HTMLDivElement>(null)
+  const [vertical, setVertical] = useState(() => guessTooltipVertical(rect))
+
+  // Corrects the above/below guess to the tooltip's real rendered height
+  // before the browser paints (see tooltipViewportClamp.ts) — a tall gear
+  // tooltip (sockets/gems/enchant lines) no longer overflows off the top of
+  // the screen just because the trigger itself wasn't close to the edge.
+  useLayoutEffect(() => {
+    const height = measureRef.current?.getBoundingClientRect().height
+    if (height) {
+      setVertical(clampTooltipVertical(rect, height))
+    }
+  }, [rect])
+
+  const left = clampTooltipLeft(rect, TOOLTIP_WIDTH)
 
   return (
     <div
+      ref={measureRef}
       className="pointer-events-none fixed z-50"
-      style={{ left, top, transform: `translate(-50%, ${showBelow ? '0' : '-100%'})` }}
+      style={{ left, top: vertical.top, transform: vertical.transform }}
     >
       {children}
     </div>

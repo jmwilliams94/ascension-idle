@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.16",
+    "date": "2026-08-28",
+    "changes": [
+      "Fixed large item tooltips (gear with lots of sockets/gems/bonuses) sometimes overflowing off the top of the screen — they now reposition to actually fit"
+    ]
+  },
+  {
     "version": "1.116.15",
     "date": "2026-08-28",
     "changes": [

@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import CompareTooltipRow from './CompareTooltipRow'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
+import { clampTooltipLeft, clampTooltipVertical, guessTooltipVertical } from '../lib/tooltipViewportClamp'
 
 // Inventory-grid-only (confirmed with the user, 2026-08-03 — scoped away from
 // Forge/Bank/Shop/Equipment's own gear tiles, which all keep today's
@@ -20,8 +21,6 @@ import type { ItemTooltipData } from '../game/items/itemTooltip'
 // mouseleave-based dismissal here would close it the instant the pointer
 // left the trigger, before a tap on Equip/Compare could ever land.
 const POPOVER_CARD_WIDTH = 256 // matches ItemTooltip's own w-64 (256px)
-const VIEWPORT_MARGIN = 8
-const FLIP_BELOW_THRESHOLD = 160
 // Below this viewport width, two 256px cards plus their gap won't fit
 // side by side — Compare stacks vertically instead (see the render below).
 const SIDE_BY_SIDE_MIN_VIEWPORT = 640
@@ -87,18 +86,30 @@ export default function GearEquipPopover({
 
   const sideBySide = effectiveComparing && Boolean(compareTooltip) && window.innerWidth >= SIDE_BY_SIDE_MIN_VIEWPORT
   const width = sideBySide ? POPOVER_CARD_WIDTH * 2 + 8 : POPOVER_CARD_WIDTH
-  const showBelow = anchorRect.top < FLIP_BELOW_THRESHOLD
-  const left = Math.min(
-    Math.max(anchorRect.left + anchorRect.width / 2, width / 2 + VIEWPORT_MARGIN),
-    window.innerWidth - width / 2 - VIEWPORT_MARGIN,
-  )
-  const top = showBelow ? anchorRect.bottom + 6 : anchorRect.top - 6
+
+  const measureRef = useRef<HTMLDivElement>(null)
+  const [vertical, setVertical] = useState(() => guessTooltipVertical(anchorRect))
+
+  // Corrects the above/below guess to this popover's real rendered height
+  // before the browser paints — see tooltipViewportClamp.ts. Re-measures
+  // whenever the content that affects height changes (toggling Compare adds
+  // a second tooltip card / stacks vertically below SIDE_BY_SIDE_MIN_VIEWPORT),
+  // not just when the anchor itself moves.
+  useLayoutEffect(() => {
+    const height = measureRef.current?.getBoundingClientRect().height
+    if (height) {
+      setVertical(clampTooltipVertical(anchorRect, height))
+    }
+  }, [anchorRect, effectiveComparing, sideBySide])
+
+  const left = clampTooltipLeft(anchorRect, width)
 
   return createPortal(
     <div
+      ref={measureRef}
       data-gear-popover
       className="fixed z-50"
-      style={{ left, top, transform: `translate(-50%, ${showBelow ? '0' : '-100%'})` }}
+      style={{ left, top: vertical.top, transform: vertical.transform }}
       // Stops a tap on the popover's own content (e.g. its background padding,
       // not one of its buttons) from bubbling up to the window pointerdown
       // listener above and self-dismissing.
