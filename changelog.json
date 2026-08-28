@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.117.1",
+    "date": "2026-08-29",
+    "changes": [
+      "Added a Mana bar to the Combat page for classes with an equipped skill, plus a quick-use Mana potion button — it was previously invisible even though it was being spent",
+      "Fixed running out of Mana still granting experience/gold as if you were attacking — rewards now correctly stop while you're unable to cast"
+    ]
+  },
+  {
     "version": "1.117.0",
     "date": "2026-08-29",
     "changes": [

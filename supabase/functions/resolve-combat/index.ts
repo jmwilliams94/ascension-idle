@@ -153,6 +153,10 @@ function getAttributesForLevel(classId: string, level: number): Attributes {
 const BASE_HP = 50
 const PHYSICAL_ATTACK_PER_STRENGTH = 2
 const MAGIC_ATTACK_PER_SPIRIT = 2
+// Mirrors derivedStats.ts's BASE_MP/mp formula — used only for the MP-gating
+// fix below (see SkillDefinition's own comment).
+const BASE_MP = 20
+const MP_PER_SPIRIT = 5
 const BASE_ATTACK_SPEED = 1.0
 
 function computeDerivedStats(
@@ -174,21 +178,28 @@ function computeDerivedStats(
 // Mirrors src/game/skills/skillData.ts — must stay in sync. See
 // CLAUDE.combat-and-loot.md's "Confirmed future design" note this
 // implements (skill equipped -> magic-only damage, own attack interval).
-// MP-cost gating is deliberately NOT enforced here — player MP, like player
-// HP, has never been simulated server-side (see the equipmentBonus comment
-// above), so this mirrors that existing accepted gap rather than building a
-// second MP simulation just for this.
+// MP-cost gating IS now enforced here (2026-11, fixed a real bug reported by
+// the user: an out-of-mana Wuxia stopped actually attacking client-side, but
+// this function kept crediting kills/gold/EXP for the full elapsed window
+// regardless, since it had no idea MP existed) — see mpCost's own comment
+// and the totalAttacks-capping block below.
 interface SkillDefinition {
   classId: string
   requiredLevel: number
   effectDamage: number
   attackIntervalMs: number
+  // Mana cost per cast — mirrors skillData.ts's own field. No passive MP
+  // regen exists (matches player HP's own "never regens" precedent), so
+  // once a character's persisted characters.current_mp hits 0, every
+  // subsequent resolve credits nothing for this skill until a Mana potion
+  // (use_potion_stack) tops it back up.
+  mpCost: number
 }
 
 const SKILL_TYPES: Record<string, SkillDefinition> = {
   // effectDamage recalibrated 7 -> 1, 2026-08-27 (see skillData.ts) — was
   // 2-hit-killing a level-1 Quailwing, now a reliable 3-hit kill.
-  thunder: { classId: 'wuxia', requiredLevel: 1, effectDamage: 1, attackIntervalMs: 1000 },
+  thunder: { classId: 'wuxia', requiredLevel: 1, effectDamage: 1, attackIntervalMs: 1000, mpCost: 1 },
 }
 
 // Mirrors src/game/items/equipmentBonus.ts (recalibrated 2026-07-31 — 1 + weight/4
@@ -657,6 +668,10 @@ interface CharacterSnapshot {
   selected_monster_id: string | null
   combat_last_resolved_at: string
   composition_stones: Record<string, number> | null
+  // Persisted MP pool (2026-11, see SkillDefinition.mpCost's own comment) —
+  // null means never tracked yet, lazy-initialized to a full pool the same
+  // way the client's own currentPlayerMp does.
+  current_mp: number | null
 }
 
 interface EquippedItemRow {
@@ -1016,6 +1031,31 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     totalAttacks = 0
   }
 
+  // MP gating (2026-11 fix) — mirrors useCombatStore.runTick's 'no-mana'
+  // block, which blocks the attack outright with no fallback once MP runs
+  // out. No regen exists, so startingMp lazy-inits to a full pool only the
+  // first time (character.current_mp is null), then persists for real.
+  // effectiveElapsedMs only diverges from elapsedMs when MP genuinely ran
+  // dry mid-window — kept at full elapsedMs precision otherwise, rather than
+  // always rounding to attack-interval boundaries.
+  let effectiveElapsedMs = elapsedMs
+  let newCurrentMp: number | null = null
+  if (activeSkill && activeSkill.mpCost > 0) {
+    const maxMp = BASE_MP + attributes.spirit * MP_PER_SPIRIT
+    // Clamped to maxMp — use_potion_stack adds a potion's flat restore
+    // amount without knowing this character's true max (computing it there
+    // would mean duplicating the whole attribute-interpolation table into
+    // SQL just for this), so an over-full persisted value is possible and
+    // corrected here rather than there.
+    const startingMp = Math.min(character.current_mp ?? maxMp, maxMp)
+    const castsAffordable = Math.floor(startingMp / activeSkill.mpCost)
+    if (castsAffordable < totalAttacks) {
+      totalAttacks = castsAffordable
+      effectiveElapsedMs = totalAttacks * attackIntervalMs
+    }
+    newCurrentMp = Math.max(0, startingMp - totalAttacks * activeSkill.mpCost)
+  }
+
   let kills = 0
   let rareKills = 0
   let goldGained = 0
@@ -1139,7 +1179,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     const dps = (hitChance * expectedDamagePerHit) / attackIntervalMs
     const timeToKillMs = effectiveHp / dps
     const cycleTimeMs = timeToKillMs + RESPAWN_GAP_MS
-    const expectedKillsThisWindow = elapsedMs / cycleTimeMs
+    const expectedKillsThisWindow = effectiveElapsedMs / cycleTimeMs
 
     // How many WHOLE kills this window actually crosses, combining the
     // fractional running total already on the row (characterKillsBefore,
@@ -1472,6 +1512,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     p_pet_obtained: petObtained,
     p_item_drops: itemDropsPayload,
     p_currency_drops: currencyDropsPayload,
+    p_current_mp: newCurrentMp,
   })
 
   if (applyError || !applyData) {

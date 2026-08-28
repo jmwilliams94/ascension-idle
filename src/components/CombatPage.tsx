@@ -15,7 +15,9 @@ import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { usePotionStore } from '../game/items/usePotionStore'
-import { POTION_TYPES, HP_POTION_ORDER } from '../game/items/potionTypes'
+import { POTION_TYPES, HP_POTION_ORDER, MP_POTION_ORDER } from '../game/items/potionTypes'
+import { useSkillsStore } from '../game/skills/useSkillsStore'
+import { SKILL_TYPES } from '../game/skills/skillData'
 import EventsCardStack from './EventsCardStack'
 import RowCombatPanel from './RowCombatPanel'
 import { useRowCombatStore } from '../game/combat/useRowCombatStore'
@@ -221,6 +223,9 @@ export default function CombatPage() {
   const maxHp = useCombatStore((state) => state.maxHp)
   const currentPlayerHp = useCombatStore((state) => state.currentPlayerHp)
   const maxPlayerHp = useCombatStore((state) => state.maxPlayerHp)
+  const currentPlayerMp = useCombatStore((state) => state.currentPlayerMp)
+  const maxPlayerMp = useCombatStore((state) => state.maxPlayerMp)
+  const equippedSkillId = useSkillsStore((state) => state.equippedSkillId)
   const isRareInstance = useCombatStore((state) => state.isRareInstance)
   const respawnReadyAt = useCombatStore((state) => state.respawnReadyAt)
   const log = useCombatStore((state) => state.log)
@@ -242,6 +247,18 @@ export default function CombatPage() {
   // through here.
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
   const dealsMagicDamage = selectedClassId === 'wuxia'
+
+  // Mirrors useCombatStore.runTick's own activeSkill re-derivation (class +
+  // level re-validated, never trusts equippedSkillId at face value) — used
+  // only to gate the MP bar's visibility below. MP itself is a real pool for
+  // every class (BASE_MP=20 regardless of Strength/Spirit split), but only
+  // shown when there's an actual MP-costing skill equipped and usable, since
+  // it's otherwise never spent and would just be confusing clutter.
+  const candidateSkill = equippedSkillId ? SKILL_TYPES[equippedSkillId] : null
+  const activeSkill =
+    candidateSkill && candidateSkill.classId === selectedClassId && characterLevel >= candidateSkill.requiredLevel
+      ? candidateSkill
+      : null
   const outgoingDamageColorClass = dealsMagicDamage ? 'text-sky-300' : 'text-white'
 
   const potionStacks = usePotionStore((state) => state.stacks)
@@ -315,19 +332,23 @@ export default function CombatPage() {
   const respawnSecondsLeft = respawnReadyAt > 0 ? Math.max(0, Math.ceil((respawnReadyAt - now) / 1000)) : 0
   const isRespawning = respawnSecondsLeft > 0
 
-  // "Best available" HP potion (confirmed with the user, 2026-07-31) — the
-  // highest-tier owned stack with any left, so the strongest potion is
-  // always the one surfaced here rather than whichever happens to sit first
-  // in Inventory. Mana potions are still skipped here — MP is real now (see
-  // src/game/skills/skillData.ts) but only Wuxia's Thunder spends any yet;
-  // an equivalent quick-use MP surface is a straightforward follow-up, not
-  // done in this first pass. The Inventory tab's own potion detail card
-  // already has a working Mana potion Use button.
+  // "Best available" HP/Mana potion (confirmed with the user, 2026-07-31 for
+  // HP; Mana quick-use added alongside the MP bar itself) — the highest-tier
+  // owned stack with any left, so the strongest potion is always the one
+  // surfaced here rather than whichever happens to sit first in Inventory.
   let bestHpPotionStack: (typeof potionStacks)[number] | null = null
   for (let i = HP_POTION_ORDER.length - 1; i >= 0; i -= 1) {
     const found = potionStacks.find((stack) => stack.potionType === HP_POTION_ORDER[i] && stack.count > 0)
     if (found) {
       bestHpPotionStack = found
+      break
+    }
+  }
+  let bestMpPotionStack: (typeof potionStacks)[number] | null = null
+  for (let i = MP_POTION_ORDER.length - 1; i >= 0; i -= 1) {
+    const found = potionStacks.find((stack) => stack.potionType === MP_POTION_ORDER[i] && stack.count > 0)
+    if (found) {
+      bestMpPotionStack = found
       break
     }
   }
@@ -517,6 +538,23 @@ export default function CombatPage() {
               </AnimatePresence>
             </div>
 
+            {/* MP bar (2026-11) — MP was already a real, drained resource for
+                Wuxia's Thunder skill (see useCombatStore.runTick's 'no-mana'
+                gate) but had no visible bar anywhere, so a Wuxia player had no
+                warning before Thunder started silently failing. Gated on
+                activeSkill so classes with nothing that spends MP don't show
+                an irrelevant bar. */}
+            {activeSkill && (
+              <div className="relative mt-2">
+                <p className="text-xs text-slate-500">
+                  {currentPlayerMp} / {maxPlayerMp} MP
+                </p>
+                <div className="mt-1">
+                  <HpBar current={currentPlayerMp} max={maxPlayerMp} barColorClass="bg-sky-500" />
+                </div>
+              </div>
+            )}
+
             <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs">
               {bestHpPotionStack ? (
                 <>
@@ -539,6 +577,31 @@ export default function CombatPage() {
                 <span className="text-slate-600">No HP potions — visit the Shop</span>
               )}
             </div>
+
+            {activeSkill && (
+              <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs">
+                {bestMpPotionStack ? (
+                  <>
+                    <span className="flex min-w-0 items-center gap-2 text-slate-200">
+                      <span className="shrink-0 text-base">💧</span>
+                      <span className="truncate">
+                        {POTION_TYPES[bestMpPotionStack.potionType].displayName} ({bestMpPotionStack.count})
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      disabled={maxPlayerMp > 0 && currentPlayerMp >= maxPlayerMp}
+                      onClick={() => void handleUsePotion(bestMpPotionStack!.id)}
+                      className="shrink-0 rounded border border-sky-500 bg-sky-500/10 px-3 py-1.5 font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-transparent disabled:text-slate-600"
+                    >
+                      {maxPlayerMp > 0 && currentPlayerMp >= maxPlayerMp ? 'MP full' : 'Use'}
+                    </button>
+                  </>
+                ) : (
+                  <span className="text-slate-600">No Mana potions — visit the Shop</span>
+                )}
+              </div>
+            )}
           </AscensionCard>
         )}
 
@@ -732,6 +795,17 @@ export default function CombatPage() {
               </AnimatePresence>
             </div>
 
+            {activeSkill && (
+              <div className="relative mt-2">
+                <p className="text-xs text-slate-500">
+                  {currentPlayerMp} / {maxPlayerMp} MP
+                </p>
+                <div className="mt-1">
+                  <HpBar current={currentPlayerMp} max={maxPlayerMp} barColorClass="bg-sky-500" />
+                </div>
+              </div>
+            )}
+
             {/* Consumable slot (confirmed with the user, 2026-07-31) — surfaces the
                 best (highest-tier) owned HP potion right on the Combat page so
                 healing mid-fight doesn't require leaving to the Inventory grid. */}
@@ -757,6 +831,31 @@ export default function CombatPage() {
                 <span className="text-slate-600">No HP potions — visit the Shop</span>
               )}
             </div>
+
+            {activeSkill && (
+              <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs">
+                {bestMpPotionStack ? (
+                  <>
+                    <span className="flex min-w-0 items-center gap-2 text-slate-200">
+                      <span className="shrink-0 text-base">💧</span>
+                      <span className="truncate">
+                        {POTION_TYPES[bestMpPotionStack.potionType].displayName} ({bestMpPotionStack.count})
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      disabled={maxPlayerMp > 0 && currentPlayerMp >= maxPlayerMp}
+                      onClick={() => void handleUsePotion(bestMpPotionStack!.id)}
+                      className="shrink-0 rounded border border-sky-500 bg-sky-500/10 px-2 py-1 font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-transparent disabled:text-slate-600"
+                    >
+                      {maxPlayerMp > 0 && currentPlayerMp >= maxPlayerMp ? 'MP full' : 'Use'}
+                    </button>
+                  </>
+                ) : (
+                  <span className="text-slate-600">No Mana potions — visit the Shop</span>
+                )}
+              </div>
+            )}
           </AscensionCard>
         )}
 
