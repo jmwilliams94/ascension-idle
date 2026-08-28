@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.31",
+    "date": "2026-08-29",
+    "changes": [
+      "Fixed more places where an equipped Pickaxe could silently take up an invisible inventory slot — Bank withdrawals (Comets, Fallen Stars, Gems), Scroll-unbundling, and Class Promotion were all still affected after the previous fix"
+    ]
+  },
+  {
     "version": "1.116.30",
     "date": "2026-08-29",
     "changes": [
