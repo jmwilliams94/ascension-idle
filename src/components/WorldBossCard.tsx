@@ -10,6 +10,11 @@ import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { itemHasDurability } from '../game/items/equipmentBonus'
 import { useLockBodyScroll } from '../lib/useLockBodyScroll'
+import { ZONES } from '../game/zones/zoneData'
+
+// Viewing-only placeholder — Mourncrow is Windhollow's boss under the planned
+// per-zone World Boss redesign, ahead of that system actually existing.
+const WINDHOLLOW_BACKGROUND_URL = ZONES['windhollow'].backgroundUrl
 
 const FREE_ATTEMPT_CAP = 10
 const PAID_ATTEMPT_CAP = 10
@@ -138,14 +143,16 @@ export default function WorldBossCard({ characterId, emberColor = null }: { char
       </div>
 
       <div
-        className={`mt-3 h-32 w-32 overflow-hidden rounded-2xl border-2 border-slate-700 bg-gradient-to-br from-rose-900 to-slate-950 ${
+        className={`relative mt-3 aspect-square w-full overflow-hidden rounded-2xl border-2 border-slate-700 bg-slate-950 bg-cover bg-center ${
           bossDefeated ? 'opacity-40 grayscale' : ''
         }`}
+        style={WINDHOLLOW_BACKGROUND_URL ? { backgroundImage: `url(${WINDHOLLOW_BACKGROUND_URL})` } : undefined}
       >
+        {WINDHOLLOW_BACKGROUND_URL && <div className="absolute inset-0 bg-slate-950/40" />}
         <img
           src={`${import.meta.env.BASE_URL}bosses/mourncrow.png`}
           alt="World Boss"
-          className="h-full w-full object-contain p-[10%]"
+          className="relative h-full w-full object-contain p-[10%]"
         />
       </div>
 

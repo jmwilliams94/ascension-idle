@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.19",
+    "date": "2026-08-28",
+    "changes": [
+      "World Boss portrait now fills the width of its card, with a zone backdrop behind it"
+    ]
+  },
+  {
     "version": "1.116.18",
     "date": "2026-08-28",
     "changes": [
