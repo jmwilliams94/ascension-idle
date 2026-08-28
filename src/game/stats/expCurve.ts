@@ -84,12 +84,13 @@ export function requiredExpForLevel(level: number): number {
 // ~1.75-2x per tier instead: roughly 10 min/level at the very start, ~32
 // min/level by tier 3 (level 40+), up to ~8.3 hours/level in the endgame
 // (tier 7, level 120+) — ~215 hours of active kill-time for the full 1-130
-// run (before the idle-rate split and damage-dealt EXP below further adjust
-// the *effective* time). PLACEHOLDER table, same disclosed-not-final status
-// as every other economy number in this combat system. Doesn't account for
-// the White/Green/Red/Black level-diff EXP multiplier
-// (expMultiplierForLevelDiff in combatResolver.ts) or the damage-dealt EXP
-// below — both still apply on top of this exactly as before, unchanged.
+// run (before the idle-rate split further adjusts the *effective* time).
+// PLACEHOLDER table, same disclosed-not-final status as every other economy
+// number in this combat system. Doesn't account for the White/Green/Red/
+// Black level-diff EXP multiplier (expMultiplierForLevelDiff in
+// combatResolver.ts), which still applies on top of this unchanged. Damage-
+// dealt EXP (a flat bonus on top of the on-kill grant) was removed 2026-11
+// alongside the RESPAWN_GAP_MS increase, in favor of on-kill-only rewards.
 const PROMOTION_TIER_ANCHORS = [1, 15, 40, 70, 100, 110, 120]
 const KILLS_PER_LEVEL_BY_TIER = [200, 350, 650, 1300, 2600, 5200, 10000]
 
@@ -107,20 +108,3 @@ export function expRewardForLevel(level: number): number {
   return Math.max(1, Math.round(requiredExpForLevel(level) / killsPerLevelForLevel(level)))
 }
 
-// Damage-dealt EXP (confirmed with the user, 2026-08-05, matching a real
-// Conquer Online mechanic — damage dealt earns EXP too, not just the killing
-// blow). Deliberately not a 1-for-1 conversion: DAMAGE_EXP_SHARE of a kill's
-// own EXP reward is earned via the hits that landed it, split proportionally
-// by how much of the monster's max HP each hit did — since a full kill's
-// damage sums to ~maxHp, this naturally totals to ~DAMAGE_EXP_SHARE of
-// expRewardForLevel by the time the monster dies, layered ON TOP of (not
-// instead of) the existing full on-kill EXP grant. A full kill nets
-// (1 + DAMAGE_EXP_SHARE) = 150% of the base reward.
-//
-// Exported (2026-08-11) so combatResolver.ts's expectedRewardPerAttack can
-// apply this same share to a continuous expected-damage value directly —
-// the old per-hit damageExpForHit(damage, monsterMaxHp, monsterLevel) helper
-// (which rounded per hit) was removed the same day: nothing calls it
-// anymore once reward math moved to closed-form per-window totals instead
-// of per-attack accumulation (see resolve-combat/index.ts's mirrored math).
-export const DAMAGE_EXP_SHARE = 0.5

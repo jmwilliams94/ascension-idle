@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.117.0",
+    "date": "2026-08-29",
+    "changes": [
+      "Major combat rebalance: monsters now have much more health, so fights actually take a few real hits instead of being over in one or two — upgrading your weapon, ring, and composition now matters a lot more for how easily you clear content",
+      "Weapon and ring stats now scale more steadily with level, so an old weapon falls noticeably further behind as you level up — a real reason to keep gear upgraded",
+      "Composition (+N) bonuses doubled, from +5% to +10% per level",
+      "Monsters now take 10 seconds to respawn after being killed, up from 2 seconds",
+      "Experience is now only granted for the killing blow, not for every hit landed along the way"
+    ]
+  },
+  {
     "version": "1.116.34",
     "date": "2026-08-29",
     "changes": [

@@ -102,7 +102,12 @@ function scaledStat(baseStats: Record<string, number>, key: string, qualityTier:
 // bonus for a key actually present on that item's own base_stats, so this is
 // a no-op for whichever of the two an item doesn't have (2026-08-26, see
 // 20261016000000_fix_wuxia_backsword_bracelet_stats.sql).
-export const COMPOSITION_BONUS_PCT_PER_TIER = 0.05
+// Raised 5% -> 10%/tier (2026-11, requested by the user as part of the
+// weapon-curve/enemy-HP rebalance) -- at 5% it barely moved the needle for
+// even a heavily-invested character (max composition + best gems still only
+// shaved 1 hit off a fight), so it wasn't pulling its weight as a real
+// upgrade-path incentive.
+export const COMPOSITION_BONUS_PCT_PER_TIER = 0.10
 
 export const COMPOSITION_BONUS_STAT_KEYS: Record<string, string[]> = {
   weapon: ['physical_attack', 'magic_attack'],

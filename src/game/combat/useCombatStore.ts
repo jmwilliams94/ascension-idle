@@ -74,10 +74,11 @@ const KNOCKOUT_LOCKOUT_MS = 10_000
 // (no respawn timer) — fight continuously until selection changes"). At a
 // 1-attack/sec weapon, instant respawn made it look like more than one kill
 // could land per attack-interval tick once a monster's remaining HP got low
-// relative to hit damage. PLACEHOLDER duration, same disclosed-not-final
-// status as the rest of this combat system — mirrored in resolve-combat/
-// index.ts's own RESPAWN_GAP_MS, must stay in sync.
-export const RESPAWN_GAP_MS = 2_000
+// relative to hit damage. Raised 2s -> 10s (2026-11, requested by the user
+// alongside the weapon-curve/enemy-HP rebalance, to match the slower,
+// more-hits-per-kill pacing that rebalance produces) — mirrored in
+// resolve-combat/index.ts's own RESPAWN_GAP_MS, must stay in sync.
+export const RESPAWN_GAP_MS = 10_000
 
 function appendLog(log: CombatLogEntry[], entry: Omit<CombatLogEntry, 'id' | 'timestamp'>): CombatLogEntry[] {
   const full: CombatLogEntry = {

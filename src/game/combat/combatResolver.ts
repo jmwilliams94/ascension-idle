@@ -1,5 +1,5 @@
 import type { EnemyTypeDef } from '../zones/zoneData'
-import { DAMAGE_EXP_SHARE, expRewardForLevel } from '../stats/expCurve'
+import { expRewardForLevel } from '../stats/expCurve'
 
 // PLACEHOLDER rare-monster odds/multipliers — matches CLAUDE.md's confirmed design
 // (5% chance per monster, 2x HP, 5x gold/EXP) but the underlying zone economy these
@@ -335,11 +335,6 @@ export function rollAttackLands(playerDexterity: number, monsterDodgeValue: numb
 // stays a genuine coin flip, unaffected by this.
 const RARE_BLENDED_HP_FACTOR = 1 - RARE_CHANCE + RARE_CHANCE * RARE_HP_MULTIPLIER // 1.05
 const RARE_BLENDED_REWARD_FACTOR = 1 - RARE_CHANCE + RARE_CHANCE * RARE_REWARD_MULTIPLIER // 1.2
-// See resolve-combat/index.ts's own copy of this constant for why damage-EXP
-// gets a different blend than gold/kill-EXP (a rare spawn's real HP pool
-// doubles too, which already halves the per-point-of-damage fraction before
-// the 5x reward multiplier is applied on top).
-const RARE_BLENDED_DAMAGE_EXP_FACTOR = 1 - RARE_CHANCE + RARE_CHANCE * (RARE_REWARD_MULTIPLIER / RARE_HP_MULTIPLIER) // 1.075
 
 export interface ExpectedRewardPerAttack {
   gold: number
@@ -383,8 +378,6 @@ export function expectedRewardPerAttack(
 
   const gold = expectedKills * type.goldReward * RARE_BLENDED_REWARD_FACTOR
   const killExp = expectedKills * expRewardForLevel(type.level) * expMultiplier * RARE_BLENDED_REWARD_FACTOR
-  const damageExp =
-    expectedDamage * ((expRewardForLevel(type.level) * DAMAGE_EXP_SHARE) / type.maxHp) * expMultiplier * RARE_BLENDED_DAMAGE_EXP_FACTOR
 
-  return { gold, exp: (killExp + damageExp) * (1 + irisBonusPct / 100) * eventExpMultiplier }
+  return { gold, exp: killExp * (1 + irisBonusPct / 100) * eventExpMultiplier }
 }

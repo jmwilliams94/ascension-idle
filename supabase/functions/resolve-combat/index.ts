@@ -294,10 +294,10 @@ function computeMaxDurability(slotType: string, requiredLevel: number): number |
 // affordability at low levels.
 const DURABILITY_TARGET_HOURS_TO_EMPTY_MS = 18 * 60 * 60 * 1000
 
-// Monster respawn gap (2026-08-17, requested by the user) — mirrors
-// useCombatStore.ts's own RESPAWN_GAP_MS, must stay in sync. PLACEHOLDER
-// duration, same disclosed-not-final status as the rest of this economy.
-const RESPAWN_GAP_MS = 2_000
+// Monster respawn gap (2026-08-17, requested by the user; raised 2s -> 10s
+// 2026-11 alongside the weapon-curve/enemy-HP rebalance) — mirrors
+// useCombatStore.ts's own RESPAWN_GAP_MS, must stay in sync.
+const RESPAWN_GAP_MS = 10_000
 
 // Mirrors src/game/combat/combatResolver.ts
 const RARE_CHANCE = 0.05
@@ -319,13 +319,6 @@ const MIN_DAMAGE_PERCENT_OF_ATTACK = 0.1
 // for that quantity>` — the expected value of the rare/not-rare coin flip.
 const RARE_BLENDED_HP_FACTOR = (1 - RARE_CHANCE) + RARE_CHANCE * RARE_HP_MULTIPLIER // 1.05
 const RARE_BLENDED_REWARD_FACTOR = (1 - RARE_CHANCE) + RARE_CHANCE * RARE_REWARD_MULTIPLIER // 1.2
-// Damage-dealt EXP's own blend is different from the other two: a rare
-// spawn's damage-EXP per point of raw damage dealt scales by
-// (RARE_REWARD_MULTIPLIER / RARE_HP_MULTIPLIER) relative to normal, not by
-// RARE_REWARD_MULTIPLIER alone — a rare monster's real HP pool doubles too,
-// which already halves the per-point-of-damage fraction before the 5x
-// reward multiplier is applied on top (see monster.max_hp's use below).
-const RARE_BLENDED_DAMAGE_EXP_FACTOR = (1 - RARE_CHANCE) + RARE_CHANCE * (RARE_REWARD_MULTIPLIER / RARE_HP_MULTIPLIER) // 1.075
 // Comet/Fallen Star kill-drop odds — confirmed, flat (reverted 2026-08-03: a
 // same-day earlier attempt scaled *this* base rate by monster level, but the
 // user clarified that was the wrong lever — the base rate was never the
@@ -563,16 +556,6 @@ function killsPerLevelForLevel(level: number): number {
 function expRewardForLevel(level: number): number {
   return Math.max(1, Math.round(requiredExpForLevel(level) / killsPerLevelForLevel(level)))
 }
-
-// Damage-dealt EXP (confirmed with the user, 2026-08-05, matching a real
-// Conquer Online mechanic) — mirrors expCurve.ts's DAMAGE_EXP_SHARE. Every
-// point of expected damage dealt earns a slice of the target's own EXP
-// reward proportional to how much of its max HP it represents, on top of
-// (not instead of) the full kill EXP grant — a full kill nets
-// (1 + DAMAGE_EXP_SHARE) of the base reward. Computed as a closed-form total
-// over the whole window now (see the main reward math below) rather than
-// per individual hit. DAMAGE_EXP_SHARE must stay in sync with expCurve.ts.
-const DAMAGE_EXP_SHARE = 0.5
 
 // AFK-cap Kill Count tier reward (confirmed with the user, 2026-08-05,
 // rebased 2026-08-06 onto the reworked single Kill Count track now that
@@ -1157,14 +1140,6 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     const timeToKillMs = effectiveHp / dps
     const cycleTimeMs = timeToKillMs + RESPAWN_GAP_MS
     const expectedKillsThisWindow = elapsedMs / cycleTimeMs
-    // Effective damage dealt this window, respecting the gap — feeds
-    // damageExp below (DAMAGE_EXP_SHARE credits partial progress toward a
-    // not-yet-dead monster, same as before, just no longer creditable
-    // while sitting in the post-kill gap with nothing to hit).
-    const wholeKillsThisWindowLocal = Math.floor(expectedKillsThisWindow)
-    const remainderMs = elapsedMs - wholeKillsThisWindowLocal * cycleTimeMs
-    const activeRemainderMs = Math.max(0, remainderMs - RESPAWN_GAP_MS)
-    const totalExpectedDamage = wholeKillsThisWindowLocal * effectiveHp + activeRemainderMs * dps
 
     // How many WHOLE kills this window actually crosses, combining the
     // fractional running total already on the row (characterKillsBefore,
@@ -1341,7 +1316,6 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     }
 
     const creditedKills = expectedKillsThisWindow * creditedFraction
-    const creditedDamage = totalExpectedDamage * creditedFraction
 
     kills = Math.round(creditedKills)
     // Math.round is required here (bug found 2026-08-11, reported by the
@@ -1355,14 +1329,9 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     // PATCH, which failed with "invalid input syntax for type integer".
     goldGained += Math.round(creditedKills * monster.gold_reward * RARE_BLENDED_REWARD_FACTOR)
     const killExp = creditedKills * expRewardForLevel(monster.level) * expMultiplier * RARE_BLENDED_REWARD_FACTOR
-    const damageExp =
-      creditedDamage *
-      ((expRewardForLevel(monster.level) * DAMAGE_EXP_SHARE) / monster.max_hp) *
-      expMultiplier *
-      RARE_BLENDED_DAMAGE_EXP_FACTOR
     // Iris gem bonus % applied last, after every other EXP multiplier —
     // mirrors combatResolver.ts's expectedRewardPerAttack exactly.
-    expGained += Math.round((killExp + damageExp) * (1 + irisBonusPct / 100) * eventExpMultiplier)
+    expGained += Math.round(killExp * (1 + irisBonusPct / 100) * eventExpMultiplier)
     // Feeds resolve_combat_apply_results as a fractional delta — see the
     // migration widening character_monster_kills/account_monster_kills.kills
     // to numeric, and this same value's use in the zone-tier layer below.
