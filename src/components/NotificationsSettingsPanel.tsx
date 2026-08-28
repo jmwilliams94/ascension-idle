@@ -41,11 +41,20 @@ export default function NotificationsSettingsPanel() {
     setErrorMessage(null)
     const result = checked ? await enable(accountId) : await disable(accountId)
     if (!result.ok && result.error) {
-      setErrorMessage(
-        result.error === 'permission_denied'
-          ? 'Notifications were blocked -- check your browser/OS settings to allow them for this site.'
-          : `Something went wrong${result.detail ? `: ${result.detail}` : '.'} Please try again.`,
-      )
+      if (result.error === 'permission_denied') {
+        setErrorMessage('Notifications were blocked -- check your browser/OS settings to allow them for this site.')
+      } else if (result.error === 'push_service_blocked') {
+        // Allowing the browser's own Notification permission prompt isn't
+        // enough -- Brave (and possibly other Chromium forks) separately
+        // blocks the underlying push service by default, silently failing
+        // subscribe() even after that prompt was granted.
+        setErrorMessage(
+          "Your browser blocked the push service. If you're using Brave, go to brave://settings/privacy and enable " +
+            '"Use Google services for push messaging", then try again.',
+        )
+      } else {
+        setErrorMessage(`Something went wrong${result.detail ? `: ${result.detail}` : '.'} Please try again.`)
+      }
     }
   }
 

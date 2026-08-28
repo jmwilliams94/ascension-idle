@@ -117,6 +117,17 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       // literally nothing: no toggle change, no error, only a console
       // warning nobody would see (reported by the user, 2026-08-28).
       console.error('push enable() failed', err)
+      // Chrome-family browsers throw this exact AbortError when the browser
+      // itself can't reach the underlying push service (Google's FCM) --
+      // most commonly Brave, which blocks it under Shields by default
+      // regardless of whether the site's own Notification permission was
+      // granted (reported by the user, 2026-08-28: they'd already allowed
+      // the permission popup and still hit this). Not fixable from here --
+      // just recognized so the UI can point at the actual cause instead of
+      // showing raw browser text.
+      if (err instanceof DOMException && err.name === 'AbortError' && /push service/i.test(err.message)) {
+        return { ok: false, error: 'push_service_blocked' }
+      }
       return { ok: false, error: 'exception', detail: err instanceof Error ? err.message : String(err) }
     } finally {
       set({ busy: false })

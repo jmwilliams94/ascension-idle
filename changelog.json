@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.114.5",
+    "date": "2026-08-28",
+    "changes": [
+      "The Notifications toggle now explains when Brave has blocked push messaging under Shields, instead of showing a generic error"
+    ]
+  },
+  {
     "version": "1.114.4",
     "date": "2026-08-28",
     "changes": [
