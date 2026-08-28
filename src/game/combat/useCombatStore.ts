@@ -16,7 +16,6 @@ import {
   MONSTER_ATTACK_INTERVAL_MS,
   applyDamageReduction,
   expMultiplierForLevelDiff,
-  expectedRewardPerAttack,
   killRewards,
   monsterAttackDamage,
   monsterDefense,
@@ -345,13 +344,14 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     const accountDropMultiplier = 1 + zoneDropBonusPct / 100
     // Gold Donation Event's active buff (2026-08-29, see
     // CLAUDE.server-events.md) — PREDICTIVE ONLY like the rest of this
-    // block, mirrors resolve-combat/index.ts's own eventExpMultiplier/
-    // eventCometMultiplier/eventFallenStarMultiplier derivation exactly.
+    // block, mirrors resolve-combat/index.ts's own eventCometMultiplier/
+    // eventFallenStarMultiplier derivation exactly (its 'exp' category no
+    // longer has a client-side consumer now that reward-on-kill removed
+    // per-attack EXP prediction entirely — see the comment further down).
     // 'quality_tier' has no client mirror (see combatResolver.ts's own
     // note — this predictive path never rolls quality tier at all), so
     // there's no equivalent multiplier to derive here for that category.
     const activeGoldDonationEvent = getActiveGoldDonationEvent(useGoldDonationStore.getState().pool, nowMs)
-    const eventExpMultiplier = activeGoldDonationEvent?.category === 'exp' ? activeGoldDonationEvent.multiplier : 1
     const eventCometMultiplier = activeGoldDonationEvent?.category === 'comet' ? activeGoldDonationEvent.multiplier : 1
     const eventFallenStarMultiplier =
       activeGoldDonationEvent?.category === 'fallen_star' ? activeGoldDonationEvent.multiplier : 1
@@ -511,30 +511,16 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     // cost, not a per-damage cost).
     const nextPlayerMp = activeSkill ? currentPlayerMp - activeSkill.mpCost : currentPlayerMp
 
-    // Deterministic expected-value reward accrual (2026-08-11 rewrite, see
-    // combatResolver.ts's expectedRewardPerAttack and CLAUDE.md's Combat
-    // section) — replaces the old per-hit/per-kill RNG-driven
-    // addPredictedRewards calls (damage-dealt EXP on every landed hit, gold+
-    // EXP on every kill). Runs once per attack-interval tick, UNCONDITIONALLY
-    // — before the rollAttackLands miss-check below, not gated behind it —
-    // because expectedRewardPerAttack already bakes hit-chance into its own
-    // expected value; gating this behind the visual roll would double-apply
-    // that chance and systematically under-predict. This is what actually
-    // closes the "predicted then reverts" gap: a smooth, deterministic
-    // estimate that matches resolve-combat's own confirmed result almost
-    // exactly, instead of one keyed to this tick loop's own random outcomes.
-    // The visual layer below (rollAttackLands, the damage roll, "Miss" text,
-    // kill events) is completely unchanged — purely cosmetic now.
+    // Reward-on-kill (2026-11, requested by the user — see resolve-combat/
+    // index.ts's own rewrite) — the client no longer predicts gold/EXP ahead
+    // of the server at all. This used to call expectedRewardPerAttack/
+    // addPredictedRewards every tick for a smooth, continuously-climbing
+    // estimate; now the displayed value only ever advances when a real
+    // server reconciliation confirms a completed kill, which the user
+    // explicitly preferred over the old "smooth but sometimes visibly
+    // corrects itself" feel — a brief, expected pause after a kill lands
+    // rather than continuous prediction.
     const expMultiplier = expMultiplierForLevelDiff(characterLevel, type.level)
-    const perAttack = expectedRewardPerAttack(
-      attackMidpoint,
-      derived.dexterity,
-      type,
-      characterLevel,
-      derived.irisBonusPct,
-      eventExpMultiplier,
-    )
-    useProgressionStore.getState().addPredictedRewards(perAttack.gold, perAttack.exp)
 
     // Outgoing hit-chance roll (2026-08-02, confirmed design) — the reverse of
     // the incoming dodge check below: monsters now have a real Dodge stat
@@ -570,10 +556,9 @@ export const useCombatStore = create<CombatState>((set, get) => ({
 
     if (nextHp <= 0) {
       // Gold/EXP in this log line are still the old RNG-flavor numbers, kept
-      // purely for the "kill moment" celebratory text — no longer fed into
-      // addPredictedRewards, which now accrues smoothly per attack above
-      // rather than in a lump on the specific attack that happens to roll
-      // the killing blow.
+      // purely for the "kill moment" celebratory text — no client prediction
+      // is fed by this at all now (see the reward-on-kill comment above);
+      // the real grant only ever comes from the next server reconciliation.
       const { gold, exp } = killRewards(type, state.isRareInstance, expMultiplier)
 
       set((s) => ({

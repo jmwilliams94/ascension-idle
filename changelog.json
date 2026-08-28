@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.117.2",
+    "date": "2026-08-29",
+    "changes": [
+      "Gold and experience are now only rewarded when a monster actually dies, instead of accruing continuously while fighting — you may notice a brief pause after a kill before the bar updates",
+      "Fixed potion purchases (both Health and Mana) failing with an error every time — buying potions now works correctly"
+    ]
+  },
+  {
     "version": "1.117.1",
     "date": "2026-08-29",
     "changes": [

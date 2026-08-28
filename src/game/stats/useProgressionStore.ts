@@ -6,21 +6,6 @@ import { MAX_CHARACTER_LEVEL, requiredExpForLevel } from './expCurve'
 // rewards from the same curve without importing this whole Zustand store.
 export { MAX_CHARACTER_LEVEL, requiredExpForLevel }
 
-// Deliberate under-prediction margin (2026-08-05, confirmed with the user:
-// "can we always have it slightly under predict exp? That way if it ever
-// has to make an adjustment it's always an adjustment upwards and never
-// downwards"). Kept as a small residual buffer after the 2026-08-11
-// expected-value rewrite (see combatResolver.ts's expectedRewardPerAttack
-// and resolve-combat/index.ts's mirrored server math) — predicted EXP is now
-// computed from the same deterministic formula the server uses, rather than
-// two independent RNG simulations of the same window, so this margin only
-// needs to absorb the tiny remaining clock-skew between this tick loop's own
-// timing and the server's elapsed-window boundary, not several kills' worth
-// of RNG disagreement. PLACEHOLDER magnitude, same disclosed-not-final
-// status as every other economy number — revisit once real-world play shows
-// how tight the match actually is.
-const PREDICTED_EXP_SAFETY_FACTOR = 0.95
-
 interface ProgressionState {
   // Confirmed/authoritative — only ever set by applyServerCombatResult,
   // hydrate, or addRewards (the gold-only sell-item path). Everything that
@@ -31,51 +16,30 @@ interface ProgressionState {
   level: number
   exp: number
   gold: number
-  // Local-only running total of gold predicted since the last resolve-combat
-  // confirmation (see useCombatStore.runTick's kill branch), added on top of
-  // gold for display (ExpBar) so the visible counter moves in real time with
-  // the log instead of sitting frozen until the next confirmation lands.
-  // Reset to 0 whenever applyServerCombatResult lands, since the confirmed
-  // total already includes whatever was predicted.
-  predictedGold: number
-  // Predictive level system (2026-08-05, confirmed with the user — "I
-  // dislike the huge delays and no exp reward when something dies").
-  // Previously predictedExp was just added on top of the confirmed exp for
-  // display, clamped at 100% of the *current confirmed* level's requirement
-  // — so once a player got close to leveling, the bar visually capped out
-  // and just sat there (reading as "no reward") until the next resolve-
-  // combat confirmation actually crossed the threshold, up to
-  // RESOLVE_INTERVAL_MS (see CombatEngine.tsx) later. predictedLevel/
-  // predictedExp now roll over locally using the exact same level-up loop
-  // addRewards uses below (just against these fields instead of the
-  // confirmed level/exp), so the bar keeps climbing — and a "Level up!"
-  // toast fires — immediately, well before the server confirms it. This is
-  // display-only prediction, same trust tier as predictedGold: nothing here
-  // is itself authoritative, and applyServerCombatResult always resyncs both
-  // fields to the server's real values once it lands (which can occasionally
-  // mean predictedLevel visibly steps back down a notch if the server's own
-  // independent RNG/kill-timing simulated slightly fewer kills than the
-  // client predicted — the same already-accepted divergence risk
-  // predictedGold/predictedExp already had, just now also affecting the
-  // level number, not only the numbers within it). See
-  // PREDICTED_EXP_SAFETY_FACTOR below for how addPredictedRewards guards
-  // against this specifically for EXP — gold has no equivalent margin.
+  // predictedLevel/predictedExp: display-only mirrors of level/exp, only
+  // ever set by applyServerCombatResult/hydrate. Originally a genuine
+  // per-attack prediction (2026-08-05, "I dislike the huge delays and no exp
+  // reward when something dies") that ran ahead of the server for a smooth,
+  // immediately-climbing EXP bar. Retired as *prediction* in the 2026-11
+  // reward-on-kill rewrite (requested by the user, reversing that decision —
+  // see useCombatStore.runTick's own comment) — nothing advances these
+  // fields ahead of a real server confirmation anymore, so they now just
+  // hold the last confirmed value, same as `level`/`exp`. Kept as separate
+  // fields rather than merged back into them since ExpBar.tsx/
+  // LevelUpBanner.tsx already read these specifically and merging would be a
+  // larger, unnecessary change. predictedGold (the equivalent field for
+  // gold) was removed outright instead — ExpBar.tsx now just reads `gold`
+  // directly.
   predictedLevel: number
   predictedExp: number
   // The level just reached, shown as a one-off toast by the UI, or null if there's
   // nothing new to show (cleared once the UI has displayed it).
   lastLevelUp: number | null
-  // Highest level a toast has already been shown for, predictively or
-  // confirmed — prevents applyServerCombatResult from re-firing a toast for
-  // a level-up addPredictedRewards already announced a few seconds earlier,
-  // and prevents addPredictedRewards from re-announcing one after a
-  // predictedLevel rollback (see predictedLevel's own comment) re-crosses
-  // the same threshold a second time.
+  // Highest level a toast has already been shown for — prevents
+  // applyServerCombatResult from re-firing a toast for a level-up already
+  // shown.
   lastLevelUpNotified: number
   addRewards: (gold: number, exp: number) => void
-  // Accumulates a local prediction only — never itself grants anything real,
-  // see the predictedGold/predictedLevel/predictedExp field comments.
-  addPredictedRewards: (gold: number, exp: number) => void
   clearLevelUpNotice: () => void
   // Sets saved values loaded from persistence directly, bypassing the level-up loop
   // and toast in addRewards — this is restoring state, not a gameplay event.
@@ -106,7 +70,6 @@ export const useProgressionStore = create<ProgressionState>((set, get) => ({
   level: 1,
   exp: 0,
   gold: 0,
-  predictedGold: 0,
   predictedLevel: 1,
   predictedExp: 0,
   lastLevelUp: null,
@@ -140,42 +103,6 @@ export const useProgressionStore = create<ProgressionState>((set, get) => ({
     })
   },
 
-  addPredictedRewards: (gold, exp) => {
-    set((state) => {
-      let level = state.predictedLevel
-      let expInLevel = state.predictedExp
-
-      // No Math.floor here (2026-08-11) — since the expected-value rewrite
-      // calls this once per attack-interval tick with small fractional
-      // deltas rather than in kill-sized lumps, flooring per-call would
-      // round every single call down to 0 and the bar would never move at
-      // all. predictedExp stays a genuine float; ExpBar.tsx only ever reads
-      // it as a percentage, and predictedGold is floored at display time
-      // instead (see ExpBar.tsx).
-      if (level < MAX_CHARACTER_LEVEL) {
-        expInLevel += exp * PREDICTED_EXP_SAFETY_FACTOR
-      }
-
-      let leveledUpTo: number | null = null
-
-      while (level < MAX_CHARACTER_LEVEL && expInLevel >= requiredExpForLevel(level)) {
-        expInLevel -= requiredExpForLevel(level)
-        level += 1
-        leveledUpTo = level
-      }
-
-      const showToast = leveledUpTo !== null && leveledUpTo > state.lastLevelUpNotified
-
-      return {
-        predictedGold: state.predictedGold + gold,
-        predictedLevel: level,
-        predictedExp: expInLevel,
-        lastLevelUp: showToast ? leveledUpTo : state.lastLevelUp,
-        lastLevelUpNotified: showToast ? (leveledUpTo as number) : state.lastLevelUpNotified,
-      }
-    })
-  },
-
   clearLevelUpNotice: () => set({ lastLevelUp: null }),
 
   hydrate: (saved) =>
@@ -183,13 +110,11 @@ export const useProgressionStore = create<ProgressionState>((set, get) => ({
       level: saved.level,
       gold: saved.gold,
       exp: saved.exp,
-      predictedGold: 0,
       predictedLevel: saved.level,
       // Bug fix (2026-08-05): this was 0, not saved.exp — predictedExp is the
       // sole source ExpBar reads for the fraction/bar-fill display now (see
-      // predictedLevel's own comment), not something added on top of a
-      // separately-displayed confirmed exp the way predictedGold still is.
-      // Resetting it to 0 here (and in applyServerCombatResult below) meant
+      // predictedLevel's own comment). Resetting it to 0 here (and in
+      // applyServerCombatResult below) meant
       // the bar visibly dropped to 0 and had to reclimb from scratch on
       // every load/confirmation, reported by the user as EXP "flicking back
       // to 0" every few seconds.
@@ -223,7 +148,6 @@ export const useProgressionStore = create<ProgressionState>((set, get) => ({
       gold: state.gold + values.goldGained,
       exp: values.exp,
       level: values.level,
-      predictedGold: 0,
       predictedLevel: values.level,
       // Bug fix (2026-08-05) — see hydrate's own comment: this was 0, not
       // values.exp, dropping the visible bar to 0 on every confirmation

@@ -33,21 +33,11 @@ const AP_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/ascension-points.png`
 export default function ExpBar() {
   const gold = useProgressionStore((state) => state.gold)
   const ascensionPoints = usePlayerRecordStore((state) => state.ascensionPoints)
-  // Local combat-log predictions layered on top of the confirmed gold (see
-  // useProgressionStore's predictedGold) so this bar moves in real time with
-  // the log instead of sitting frozen until the next server confirmation.
-  const predictedGold = useProgressionStore((state) => state.predictedGold)
   // predictedLevel/predictedExp (not the confirmed level/exp) drive the
-  // whole Lv/bar/percentage display now (2026-08-05) — see
-  // useProgressionStore's own comment on predictedLevel for why: the old
-  // exp+predictedExp display was clamped at 100% of the *confirmed* level's
-  // requirement, so it visually froze full for up to RESOLVE_INTERVAL_MS
-  // once a player got close to leveling, reading as "no reward." These two
-  // already roll all the way over into the next level locally, so there's
-  // nothing left to clamp. Also deliberately underpredicted by a small
-  // safety margin (see PREDICTED_EXP_SAFETY_FACTOR in useProgressionStore.ts)
-  // so a server confirmation almost always corrects this percentage upward,
-  // never down.
+  // whole Lv/bar/percentage display — see useProgressionStore's own comment
+  // on predictedLevel: originally a genuine per-attack prediction, now
+  // (2026-11 reward-on-kill rewrite) just the last server-confirmed value,
+  // kept as a separate field from level/exp rather than merged back in.
   //
   // Shown as a plain percentage (2026-08-05, confirmed with the user: "can
   // we also change the exp to show the percentage to the next level instead
@@ -60,12 +50,7 @@ export default function ExpBar() {
   const predictedExp = useProgressionStore((state) => state.predictedExp)
   const isMaxLevel = predictedLevel >= MAX_CHARACTER_LEVEL
   const required = requiredExpForLevel(predictedLevel)
-  // predictedGold is a genuine float now (2026-08-11 expected-value rewrite
-  // — see useProgressionStore's addPredictedRewards) since it accrues in
-  // small per-tick fractions rather than kill-sized lumps; floored here,
-  // display-only, same "floor at render time, not in the accumulator"
-  // pattern the Achievements kill count uses.
-  const displayedGold = Math.floor(gold + predictedGold)
+  const displayedGold = Math.floor(gold)
   const percent = isMaxLevel ? 100 : required > 0 ? Math.min(100, (predictedExp / required) * 100) : 100
 
   return (

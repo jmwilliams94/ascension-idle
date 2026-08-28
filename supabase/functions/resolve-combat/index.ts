@@ -1191,12 +1191,13 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     // a fast weak monster.
     const wholeKillsThisWindow = Math.floor(characterKillsBefore + expectedKillsThisWindow) - Math.floor(characterKillsBefore)
 
-    // Fraction of this window's deterministic totals actually credited —
-    // stays 1 unless live mode runs out of Inventory room partway through
-    // the whole-kill loop below, at which point it's trimmed to match "a
-    // kill's own reward still counts, the rest of the window doesn't" (the
-    // same behavior the old per-attack loop had via its early break).
-    let creditedFraction = 1
+    // Real, integer count of kills actually processed this window — the
+    // reward-crediting unit now (2026-11, requested by the user: "reward the
+    // actual exp when an enemy dies," not a smoothed continuous estimate).
+    // Bounded by wholeKillsThisWindow above, but can stop earlier in live
+    // mode if a drop can't fit (see the inventoryFull break below) — "a
+    // kill's own reward still counts, the rest of the window doesn't."
+    let killsProcessed = 0
 
     if (wholeKillsThisWindow > 0) {
       // Level-appropriate selection (confirmed with the user, 2026-07-30):
@@ -1245,8 +1246,6 @@ async function handleResolveCombat(req: Request): Promise<Response> {
         }
         return jadeShardTemplate
       }
-
-      let killsProcessed = 0
 
       for (let i = 0; i < wholeKillsThisWindow; i += 1) {
         // Rare status is still rolled per whole kill here — but purely for
@@ -1343,39 +1342,37 @@ async function handleResolveCombat(req: Request): Promise<Response> {
         }
 
         // Live mode stops the whole window right here — matches "you'd have
-        // stopped fighting the moment you couldn't carry any more loot."
-        // creditedFraction below trims gold/EXP/kills to match.
+        // stopped fighting the moment you couldn't carry any more loot" —
+        // killsProcessed below stays wherever the break left it, crediting
+        // exactly the kills that actually completed and nothing more.
         if (mode === 'live' && inventoryFull) {
           break
         }
       }
-
-      if (killsProcessed < wholeKillsThisWindow) {
-        creditedFraction = killsProcessed / wholeKillsThisWindow
-      }
     }
 
-    const creditedKills = expectedKillsThisWindow * creditedFraction
-
-    kills = Math.round(creditedKills)
-    // Math.round is required here (bug found 2026-08-11, reported by the
-    // user) — unlike expGained below, this was left as a raw fractional
-    // value, which then flowed into resolve_combat_apply_rewards' p_gold_delta
-    // (a Postgres `integer` param). That silently failed the RPC call
-    // (caught by the `if (rewardError || !rewardRow)` fallback below), which
-    // fell back to a JS-computed fractional gold total that was never
-    // actually written to the DB — the client then tried to autosave that
-    // fractional value into characters.gold (also `integer`) via a direct
-    // PATCH, which failed with "invalid input syntax for type integer".
-    goldGained += Math.round(creditedKills * monster.gold_reward * RARE_BLENDED_REWARD_FACTOR)
-    const killExp = creditedKills * expRewardForLevel(monster.level) * expMultiplier * RARE_BLENDED_REWARD_FACTOR
+    // Reward-on-kill (2026-11 rewrite, requested by the user) — gold/EXP are
+    // now a flat multiple of killsProcessed, the real integer number of
+    // kills that completed this window, replacing the old fractional
+    // "expectedKillsThisWindow * creditedFraction" estimate that credited a
+    // slice of progress every ~4s resolve regardless of whether a kill had
+    // actually finished. Deliberately NOT a revert to the pre-2026-08-11
+    // per-attack RNG simulation that rewrite fixed — this is still the same
+    // deterministic, no-roll math (hitChance/expectedDamagePerHit above),
+    // just counted in whole-kill units instead of a continuous rate, so
+    // there's no client/server RNG-divergence risk reintroduced. The client
+    // mirror (combatResolver.ts) no longer predicts a smooth in-between
+    // value either — see its own comment.
+    kills = killsProcessed
+    goldGained += Math.round(killsProcessed * monster.gold_reward * RARE_BLENDED_REWARD_FACTOR)
+    const killExp = killsProcessed * expRewardForLevel(monster.level) * expMultiplier * RARE_BLENDED_REWARD_FACTOR
     // Iris gem bonus % applied last, after every other EXP multiplier —
     // mirrors combatResolver.ts's expectedRewardPerAttack exactly.
     expGained += Math.round(killExp * (1 + irisBonusPct / 100) * eventExpMultiplier)
-    // Feeds resolve_combat_apply_results as a fractional delta — see the
-    // migration widening character_monster_kills/account_monster_kills.kills
-    // to numeric, and this same value's use in the zone-tier layer below.
-    killsThisWindow = creditedKills
+    // Feeds resolve_combat_apply_results — character_monster_kills/
+    // account_monster_kills.kills stay `numeric` (from the 2026-08-11
+    // widening) but only ever hold whole integers again now.
+    killsThisWindow = killsProcessed
   }
 
   // Idle/offline EXP rate (see IDLE_EXP_MULTIPLIER above) — applied once to

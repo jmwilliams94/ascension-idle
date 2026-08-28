@@ -315,69 +315,11 @@ export function rollAttackLands(playerDexterity: number, monsterDodgeValue: numb
   return Math.random() >= missChance
 }
 
-// Expected-value reward rate (2026-08-11 rewrite, see resolve-combat/
-// index.ts's mirrored server math and CLAUDE.md's Combat section) — used by
-// useCombatStore's smooth per-tick predictive accumulator instead of the
-// per-hit/per-kill calls the visual tick loop used to trigger directly from
-// rollAttackLands/rollDamageInRange/rollIsRare's own outcomes. Deliberately
-// NOT built from those RNG functions above (they stay, untouched, for the
-// visual log/floating-number layer only) — this is closed-form math so the
-// predicted total can match resolve-combat's own confirmed result almost
-// exactly, instead of the two independently rolling outcomes and
-// disagreeing by a kill or two most windows.
-//
-// Rare-monster status is folded into a blended expected-value multiplier
-// rather than tied to any individual roll, for the same reason the server
-// mirror does — a single rare kill landing on one side of a resolve-window
-// boundary but not the other would reintroduce exactly the divergence this
-// rewrite removes, worse (a 5x swing instead of a 1x one). The visual
-// rare-spawn glow/toast (isRareInstance, rolled by rollIsRare at spawn time)
-// stays a genuine coin flip, unaffected by this.
-const RARE_BLENDED_HP_FACTOR = 1 - RARE_CHANCE + RARE_CHANCE * RARE_HP_MULTIPLIER // 1.05
-const RARE_BLENDED_REWARD_FACTOR = 1 - RARE_CHANCE + RARE_CHANCE * RARE_REWARD_MULTIPLIER // 1.2
-
-export interface ExpectedRewardPerAttack {
-  gold: number
-  exp: number
-}
-
-// attackMidpoint should already include every existing multiplier (quality
-// tier, composition bonus, the account-wide attack buff, Drake/Ember gem
-// bonus — i.e. exactly the same value already passed to rollDamageInRange
-// for the visual layer).
-export function expectedRewardPerAttack(
-  attackMidpoint: number,
-  playerDexterity: number,
-  type: EnemyTypeDef,
-  characterLevel: number,
-  // Socketed Iris gem bonus %, summed across every equipped item's sockets
-  // (2026-08-26, requested by the user — see gemCatalog.ts's
-  // sumSocketedGemBonusPct). Applied as the final multiplier on total EXP,
-  // after every other EXP multiplier (level-diff, rare-blend) — mirrors
-  // resolve-combat/index.ts's own copy exactly.
-  irisBonusPct = 0,
-  // Gold Donation Event's active buff multiplier, only when its category is
-  // 'exp' (2026-08-29) — 1 (no effect) otherwise. Mirrors resolve-combat/
-  // index.ts's own eventExpMultiplier.
-  eventExpMultiplier = 1,
-): ExpectedRewardPerAttack {
-  const hitChance =
-    1 - Math.min(Math.max(0, monsterDodge(type) - playerDexterity) * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
-  const expectedDamagePerHit = resolvePhysicalDamage(attackMidpoint, monsterDefense(type, characterLevel))
-  // Overkill cap — mirrors resolve-combat/index.ts's own copy of this fix
-  // (see its comment for the full bug writeup). One attack can only ever
-  // land one kill, no matter how much its damage exceeds the monster's own
-  // max_hp, so expectedDamage (and everything derived from it below) is
-  // capped at "one hit's worth of this monster's HP," not left to scale
-  // unboundedly with raw attack power against a trivial monster.
-  const rawExpectedDamage = hitChance * expectedDamagePerHit
-  const maxUsefulDamage = hitChance * type.maxHp * RARE_BLENDED_HP_FACTOR
-  const expectedDamage = Math.min(rawExpectedDamage, maxUsefulDamage)
-  const expectedKills = expectedDamage / (type.maxHp * RARE_BLENDED_HP_FACTOR)
-  const expMultiplier = expMultiplierForLevelDiff(characterLevel, type.level)
-
-  const gold = expectedKills * type.goldReward * RARE_BLENDED_REWARD_FACTOR
-  const killExp = expectedKills * expRewardForLevel(type.level) * expMultiplier * RARE_BLENDED_REWARD_FACTOR
-
-  return { gold, exp: killExp * (1 + irisBonusPct / 100) * eventExpMultiplier }
-}
+// expectedRewardPerAttack (the 2026-08-11 rewrite's smooth per-tick
+// predictive accumulator) was removed 2026-11, requested by the user —
+// reward-on-kill (see resolve-combat/index.ts's own rewrite) means the
+// client no longer predicts gold/EXP ahead of the server's confirmation at
+// all; useCombatStore.runTick no longer calls this. The underlying
+// deterministic hitChance/expectedDamagePerHit math it was built from still
+// lives in resolve-combat/index.ts, now counted in whole-kill units instead
+// of a continuous rate.
