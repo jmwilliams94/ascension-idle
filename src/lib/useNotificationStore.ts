@@ -19,8 +19,8 @@ interface NotificationState {
   supported: boolean
   isStandalone: boolean
   refresh: () => Promise<void>
-  enable: (accountId: string) => Promise<{ ok: boolean; error?: string }>
-  disable: (accountId: string) => Promise<{ ok: boolean; error?: string }>
+  enable: (accountId: string) => Promise<{ ok: boolean; error?: string; detail?: string }>
+  disable: (accountId: string) => Promise<{ ok: boolean; error?: string; detail?: string }>
 }
 
 function detectStandalone(): boolean {
@@ -76,10 +76,16 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       }
 
       const registration = await navigator.serviceWorker.ready
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: base64UrlToUint8Array(vapidPublicKey),
-      })
+      // Re-subscribing with a *different* applicationServerKey than an
+      // already-live subscription throws InvalidStateError on some browsers
+      // -- reuse the existing one rather than assuming subscribe() is
+      // always safe to call again.
+      const subscription =
+        (await registration.pushManager.getSubscription()) ??
+        (await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: base64UrlToUint8Array(vapidPublicKey),
+        }))
       const json = subscription.toJSON()
       const keys = json.keys as { p256dh?: string; auth?: string } | undefined
       if (!json.endpoint || !keys?.p256dh || !keys.auth) {
@@ -103,6 +109,15 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
       set({ subscribed: true })
       return { ok: true }
+    } catch (err) {
+      // Was previously an uncaught rejection (try/finally with no catch) --
+      // pushManager.subscribe() throwing (a real DOMException on some
+      // browsers, e.g. a stale/mismatched applicationServerKey from an
+      // already-subscribed-with-a-different-key state) surfaced as
+      // literally nothing: no toggle change, no error, only a console
+      // warning nobody would see (reported by the user, 2026-08-28).
+      console.error('push enable() failed', err)
+      return { ok: false, error: 'exception', detail: err instanceof Error ? err.message : String(err) }
     } finally {
       set({ busy: false })
     }
@@ -124,6 +139,9 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       }
       set({ subscribed: false })
       return { ok: true }
+    } catch (err) {
+      console.error('push disable() failed', err)
+      return { ok: false, error: 'exception', detail: err instanceof Error ? err.message : String(err) }
     } finally {
       set({ busy: false })
     }

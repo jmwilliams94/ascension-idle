@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.114.4",
+    "date": "2026-08-28",
+    "changes": [
+      "Fixed the Notifications toggle silently doing nothing (no error, no change) in some desktop browsers after allowing the permission prompt"
+    ]
+  },
+  {
     "version": "1.114.3",
     "date": "2026-08-28",
     "changes": [

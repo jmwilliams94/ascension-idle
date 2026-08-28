@@ -44,7 +44,7 @@ export default function NotificationsSettingsPanel() {
       setErrorMessage(
         result.error === 'permission_denied'
           ? 'Notifications were blocked -- check your browser/OS settings to allow them for this site.'
-          : 'Something went wrong. Please try again.',
+          : `Something went wrong${result.detail ? `: ${result.detail}` : '.'} Please try again.`,
       )
     }
   }
