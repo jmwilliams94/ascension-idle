@@ -240,7 +240,7 @@ export default function InventorySlot({
       )}
       {Boolean(compositionLevel) && (
         <span
-          className="absolute right-1 top-0.5 z-10 text-[16px] font-extrabold leading-none text-slate-100"
+          className="absolute right-1 top-0.5 z-10 text-[16px] font-extrabold leading-none text-slate-200"
           style={{ textShadow: '0 1px 2px rgba(0,0,0,0.9), 0 -1px 0 rgba(255,255,255,0.35)' }}
         >
           +{compositionLevel}

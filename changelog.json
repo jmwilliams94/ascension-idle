@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.11",
+    "date": "2026-08-28",
+    "changes": [
+      "Softened the +N composition badge's color to a slightly off-white"
+    ]
+  },
+  {
     "version": "1.116.10",
     "date": "2026-08-28",
     "changes": [
