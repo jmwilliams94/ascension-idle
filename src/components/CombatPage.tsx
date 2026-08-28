@@ -193,7 +193,7 @@ function EventsModeButton({ mode, onChange }: { mode: CombatMode; onChange: (mod
     <button
       type="button"
       onClick={() => onChange('events')}
-      className={`${MODE_BUTTON_CLASS} ${mode === 'events' ? 'btn-gold-active' : 'btn-gold'}`}
+      className={`${MODE_BUTTON_CLASS} ${mode === 'events' ? 'btn-gold-active' : 'btn-gold'} ${emberColor ? 'btn-ember-safe' : ''}`}
       style={eventBorderTintStyle(emberColor)}
     >
       Events

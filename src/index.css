@@ -446,22 +446,60 @@ a,
 /* Gold CTA button — dark-gold idle state, full gradient + glow on hover.
    Layout/sizing (padding, rounding, tracking) stays as Tailwind utility
    classes on the consuming <button>; this class only owns the color
-   treatment, same split-of-concerns as .accent-glow. Richer idle gradient +
-   glassy inset top highlight (2026-08-28, Prism Obsidian & Light Sweep
-   pass) — deliberately NO overflow:hidden/::before/::after light-sweep
-   here unlike .btn-steel/.btn-glow below: TabNav/MobileBottomNav/CombatPage
-   render <EventEmberBorder> as a direct child of a .btn-gold/.btn-gold-
-   active button, and its particles anchor outside the button's own box by
-   design (see eventEmberBorder.tsx) — clipping this element would cut them
-   off. Corner shape is likewise left to whatever Tailwind rounding class
-   the consumer applies (rounded-lg, rounded-xl, rounded-full for the
-   Idling FAB), not forced here. */
+   treatment, same split-of-concerns as .accent-glow. Richer idle gradient,
+   glassy inset top highlight, and the same overflow:hidden + ::before/
+   ::after light-sweep as .btn-steel/.btn-glow below (2026-08-28, Prism
+   Obsidian & Light Sweep pass — this is the FIGHT/Buy/Confirm/Claim/Equip
+   button, the single most-visible CTA app-wide, so it gets the full
+   treatment by default). Corner shape is left to whatever Tailwind
+   rounding class the consumer applies (rounded-lg, rounded-xl, rounded-full
+   for the Idling FAB), not forced here.
+
+   EXCEPTION — see .btn-ember-safe below: TabNav's Idling/LuckyLad tabs,
+   MobileBottomNav's FAB, and CombatPage's Events sub-tab render
+   <EventEmberBorder> as a direct child of a .btn-gold/.btn-gold-active
+   button, and its particles anchor outside the button's own box by design
+   (see eventEmberBorder.tsx) — overflow:hidden would cut them off. Those
+   five call sites add .btn-ember-safe alongside .btn-gold/.btn-gold-active
+   whenever their own event-color prop is actually set, same conditional
+   pattern as AscensionCard's --ember-safe modifier. */
 .btn-gold {
+  position: relative;
+  overflow: hidden;
   background: linear-gradient(180deg, #3a2e0a 0%, #1a1403 100%);
   border: 1px solid var(--ascension-gold);
   color: var(--ascension-gold-bright);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.4);
   transition: all 0.25s ease;
+}
+
+.btn-gold::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -10%;
+  right: -10%;
+  height: 45%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 100%);
+  border-radius: 0 0 50% 50%;
+  pointer-events: none;
+}
+
+.btn-gold::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 40%;
+  height: 200%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transform: rotate(25deg);
+  transition: left 0.6s ease;
+  pointer-events: none;
+}
+
+.btn-gold:hover:not(:disabled)::after {
+  left: 120%;
 }
 
 .btn-gold:hover:not(:disabled) {
@@ -472,6 +510,23 @@ a,
 
 .btn-gold:disabled {
   opacity: 0.4;
+}
+
+/* Opt-out for the handful of .btn-gold/.btn-gold-active instances that
+   host EventEmberBorder — see the comment above .btn-gold. Drops back to
+   unclipped overflow and removes the sweep pseudo-elements entirely rather
+   than just hiding them, since `content: none` on ::before/::after unsets
+   `content` and the box stops generating. */
+.btn-gold.btn-ember-safe,
+.btn-gold-active.btn-ember-safe {
+  overflow: visible;
+}
+
+.btn-gold.btn-ember-safe::before,
+.btn-gold.btn-ember-safe::after,
+.btn-gold-active.btn-ember-safe::before,
+.btn-gold-active.btn-ember-safe::after {
+  content: none;
 }
 
 /* Steel counterpart of .btn-gold — for Button's `secondary` variant
@@ -539,13 +594,47 @@ a,
    .btn-gold only reaches on hover, without fighting that rule's own
    specificity (:hover:not(:disabled) already beats a second plain class).
    Applied instead of .btn-gold, never alongside it, so there's nothing to
-   override. */
+   override. Shares .btn-gold's overflow:hidden + ::before/::after sweep
+   pseudo-elements (both selectors are combined into the rules above/below
+   this one) — the sweep still plays on hover even though the base gradient
+   is already bright, same .btn-ember-safe opt-out applies here too. */
 .btn-gold-active {
+  position: relative;
+  overflow: hidden;
   background: linear-gradient(180deg, var(--ascension-gold-bright) 0%, var(--ascension-gold) 60%, var(--ascension-gold-dark) 100%);
   border: 1px solid var(--ascension-gold);
   color: var(--ascension-ink);
   box-shadow: 0 0 16px rgba(255, 215, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.5);
   transition: all 0.25s ease;
+}
+
+.btn-gold-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -10%;
+  right: -10%;
+  height: 45%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 100%);
+  border-radius: 0 0 50% 50%;
+  pointer-events: none;
+}
+
+.btn-gold-active::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 40%;
+  height: 200%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  transform: rotate(25deg);
+  transition: left 0.6s ease;
+  pointer-events: none;
+}
+
+.btn-gold-active:hover::after {
+  left: 120%;
 }
 
 /* Compact active-state pill for MobileBottomNav's four side tabs

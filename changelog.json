@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.2",
+    "date": "2026-08-28",
+    "changes": [
+      "Fight/Buy/Confirm/Claim and other gold buttons now get the same hover shine sweep as the rest of the redesigned UI chrome"
+    ]
+  },
+  {
     "version": "1.116.1",
     "date": "2026-08-28",
     "changes": [

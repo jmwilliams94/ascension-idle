@@ -71,7 +71,7 @@ function IdlingTabButton({ label }: { label: string }) {
     <button
       type="button"
       onClick={() => setActiveTab('combat')}
-      className={`relative ${TAB_BUTTON_CLASS} ${active ? 'btn-gold-active' : 'btn-gold'}`}
+      className={`relative ${TAB_BUTTON_CLASS} ${active ? 'btn-gold-active' : 'btn-gold'} ${emberColor ? 'btn-ember-safe' : ''}`}
       style={eventBorderTintStyle(emberColor)}
     >
       {icon && <NavIconGlyph icon={icon} sizeClassName="h-8 w-8" />}
@@ -96,7 +96,7 @@ function LuckyTabButton({ label }: { label: string }) {
     <button
       type="button"
       onClick={() => setActiveTab('lucky')}
-      className={`relative ${TAB_BUTTON_CLASS} ${active ? 'btn-gold-active' : 'btn-gold'}`}
+      className={`relative ${TAB_BUTTON_CLASS} ${active ? 'btn-gold-active' : 'btn-gold'} ${emberColor ? 'btn-ember-safe' : ''}`}
       style={eventBorderTintStyle(emberColor)}
     >
       {icon && <NavIconGlyph icon={icon} sizeClassName="h-8 w-8" />}

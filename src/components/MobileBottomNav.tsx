@@ -166,7 +166,7 @@ function IdlingNavButton() {
       <span
         className={`relative flex h-14 w-14 items-center justify-center rounded-full shadow-lg ${
           active ? 'btn-gold-active shadow-amber-500/20' : 'btn-gold shadow-black/30'
-        }`}
+        } ${emberColor ? 'btn-ember-safe' : ''}`}
         style={eventBorderTintStyle(emberColor)}
       >
         {icon && <NavIconGlyph icon={icon} sizeClassName="h-9 w-9" />}
