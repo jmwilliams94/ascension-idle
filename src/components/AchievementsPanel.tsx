@@ -1,4 +1,4 @@
-import { Fragment, useState, type CSSProperties, type ReactNode } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import { ENEMY_TYPES, ZONES, ZONE_ORDER, zoneIdForMonster, type EnemyTypeId, type ZoneId } from '../game/zones/zoneData'
 import { useAchievementsStore, type MonsterKillEntry } from '../game/achievements/useAchievementsStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
@@ -150,18 +150,38 @@ function MonsterCard({ children, badgeCount }: { children: ReactNode; badgeCount
 
 const TIER_SEGMENT_CLAIMED_STYLE = { '--glow-bright': '#6ee7b7', '--glow-base': '#34d399', '--glow-dark': '#047857' } as CSSProperties
 
-// A single full-width rectangle of 6 segments (one per tier), separated by a
-// chevron divider — replaces the old small circular chip row and, for the
-// zone-level ladder, the old blue/green milestone bar (2026-08-28 redesign,
-// requested by the user: "an ugly blue/green indicator"). A locked segment is
-// a plain inert box; once its threshold is reached it "turns into" a real
-// button using the app's own CTA styling (.btn-gold) and becomes clickable —
-// clicking claims whichever tier is next in sequence server-side (the RPCs
-// never let a specific tier be picked, see claim_kill_count_reward), so every
-// currently-claimable segment triggers the same onClaim call. Reused by the
-// per-monster ladder (Character/Account tracks) and the per-zone Zone Tier
-// ladder alike, parametrized since their thresholds/rewards/claim RPCs all
-// differ.
+// Interlocking arrow-step geometry (2026-08-28, refined per the user: "one
+// long connected rectangle... instead of a line separating each of them it's
+// a bent line (chevron)") — each segment is clipped to a rightward arrow
+// point, with a matching concave notch cut into its left edge so the next
+// segment's point shows through the notch of the one after it. Placed with
+// a -DEPTH margin-left on every segment but the first so the notch of
+// segment N+1 lands exactly on the point of segment N (flexbox's negative-
+// margin handling already redistributes that overlap as extra flex-grow
+// space, so the whole row still renders exactly full-width with no extra
+// width math needed) — the net effect reads as one unbroken rectangle with a
+// bent (chevron) seam between each tier instead of a gap.
+const TIER_SEGMENT_CHEVRON_DEPTH = 10
+
+function tierSegmentClipPath(isFirst: boolean, isLast: boolean): string {
+  const d = TIER_SEGMENT_CHEVRON_DEPTH
+  const rightEdge = isLast ? '100% 0%, 100% 100%' : `calc(100% - ${d}px) 0%, 100% 50%, calc(100% - ${d}px) 100%`
+  const leftEdge = isFirst ? '0% 100%' : `0% 100%, ${d}px 50%`
+  return `polygon(0% 0%, ${rightEdge}, ${leftEdge})`
+}
+
+// One long connected rectangle of 6 segments (one per tier), each seamed to
+// its neighbor by the chevron cut above — replaces the old small circular
+// chip row and, for the zone-level ladder, the old blue/green milestone bar
+// (2026-08-28 redesign, requested by the user: "an ugly blue/green
+// indicator"). A locked segment is a plain inert box; once its threshold is
+// reached it "turns into" a real button using the app's own CTA styling
+// (.btn-gold) and becomes clickable — clicking claims whichever tier is next
+// in sequence server-side (the RPCs never let a specific tier be picked, see
+// claim_kill_count_reward), so every currently-claimable segment triggers
+// the same onClaim call. Reused by the per-monster ladder (Character/Account
+// tracks) and the per-zone Zone Tier ladder alike, parametrized since their
+// thresholds/rewards/claim RPCs all differ.
 function TierSegmentBar({
   thresholds,
   claimedTierIndex,
@@ -191,10 +211,13 @@ function TierSegmentBar({
 
   return (
     <div className="mt-2 w-full">
-      <div className="flex w-full items-center">
+      <div className="flex w-full">
         {thresholds.map((threshold, tierIndex) => {
           const state = tierSegmentState(tierIndex, claimedTierIndex, reachedTierIndex)
           const color = TIER_SEGMENT_STATE_COLOR[state]
+          const isFirst = tierIndex === 0
+          const isLast = tierIndex === thresholds.length - 1
+          const clipPath = tierSegmentClipPath(isFirst, isLast)
           const tooltip = (
             <ItemTooltip
               title={`Tier ${tierIndex + 1} · ${formatThreshold(threshold)}`}
@@ -207,36 +230,39 @@ function TierSegmentBar({
           )
 
           return (
-            <Fragment key={threshold}>
-              {tierIndex > 0 && (
-                <span className="mx-0.5 shrink-0 select-none text-xs leading-none text-slate-600">❯</span>
-              )}
-              <div className="min-w-0 flex-1">
-                <HoverTooltip content={tooltip}>
-                  {state === 'claimable' ? (
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void handleClaim()}
-                      className="btn-gold h-8 w-full min-w-0 animate-pulse rounded-md text-[11px] font-bold transition disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      {tierIndex + 1}
-                    </button>
-                  ) : state === 'claimed' ? (
-                    <div
-                      style={TIER_SEGMENT_CLAIMED_STYLE}
-                      className="btn-glow flex h-8 w-full min-w-0 items-center justify-center rounded-md text-[11px] font-bold"
-                    >
-                      ✓
-                    </div>
-                  ) : (
-                    <div className="flex h-8 w-full min-w-0 items-center justify-center rounded-md border border-slate-700 bg-slate-950/60 text-[11px] font-semibold text-slate-500">
-                      {tierIndex + 1}
-                    </div>
-                  )}
-                </HoverTooltip>
-              </div>
-            </Fragment>
+            <div
+              key={threshold}
+              className="min-w-0 flex-1"
+              style={{ marginLeft: isFirst ? 0 : -TIER_SEGMENT_CHEVRON_DEPTH, zIndex: tierIndex + 1 }}
+            >
+              <HoverTooltip content={tooltip}>
+                {state === 'claimable' ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void handleClaim()}
+                    style={{ clipPath }}
+                    className="btn-gold h-9 w-full min-w-0 animate-pulse px-3 text-[11px] font-bold transition disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {tierIndex + 1}
+                  </button>
+                ) : state === 'claimed' ? (
+                  <div
+                    style={{ ...TIER_SEGMENT_CLAIMED_STYLE, clipPath }}
+                    className="btn-glow flex h-9 w-full min-w-0 items-center justify-center px-3 text-[11px] font-bold"
+                  >
+                    ✓
+                  </div>
+                ) : (
+                  <div
+                    style={{ clipPath }}
+                    className="flex h-9 w-full min-w-0 items-center justify-center border border-slate-700 bg-slate-950/60 px-3 text-[11px] font-semibold text-slate-500"
+                  >
+                    {tierIndex + 1}
+                  </div>
+                )}
+              </HoverTooltip>
+            </div>
           )
         })}
       </div>

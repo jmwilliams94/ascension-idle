@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.25",
+    "date": "2026-08-28",
+    "changes": [
+      "Achievements tier segments now render as one continuous connected bar with a bent chevron seam between each tier, instead of 6 separate boxes"
+    ]
+  },
+  {
     "version": "1.116.24",
     "date": "2026-08-28",
     "changes": [
