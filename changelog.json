@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.22",
+    "date": "2026-08-28",
+    "changes": [
+      "Fixed the notification count badge getting clipped in the top-right corner of nav bar buttons"
+    ]
+  },
+  {
     "version": "1.116.21",
     "date": "2026-08-28",
     "changes": [
