@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.6",
+    "date": "2026-08-28",
+    "changes": [
+      "Actually fixed the Settings menu's Suggestions/Bug Reports admin queue not scrolling (the previous fix was incomplete) — the list is now genuinely contained in its own scrollable area on both mobile and desktop"
+    ]
+  },
+  {
     "version": "1.116.5",
     "date": "2026-08-28",
     "changes": [

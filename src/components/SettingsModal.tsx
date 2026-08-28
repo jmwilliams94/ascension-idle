@@ -95,24 +95,39 @@ export default function SettingsModal({ characterId, onClose }: { characterId: s
       onClick={onClose}
     >
       <div
-        className="ascension-card-frame flex max-h-[85dvh] w-full max-w-2xl"
+        className="ascension-card-frame flex w-full max-w-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        {/* flex-col below sm -- the desktop side-nav (a fixed w-40 rail next
-            to the content pane) left barely any width for content on a
-            phone screen (reported by the user, "squished"). Below sm, nav
-            becomes a horizontal scrollable strip of pills above the
-            content instead. min-h-0 on both the row and the content pane
-            is the actual fix for the reported "can't scroll the admin
-            queue" -- a flex child's default min-height:auto floors it at
-            its content size, which silently defeats flex-1 + overflow-y-
-            auto once content (e.g. a long Suggestions/Bug Reports admin
-            queue) exceeds the modal's max-h-[85dvh] cap; without min-h-0
-            the pane just grew past the cap instead of scrolling within it.
-            max-h-[85dvh] (was 80vh) -- dvh tracks the real available height
-            as mobile browser chrome shows/hides, vh doesn't (see
-            CLAUDE.pwa-and-mobile.md's viewport-unit gotchas). */}
-        <div className="ascension-card-inner flex min-h-0 w-full flex-col overflow-hidden sm:flex-row">
+        {/* max-h-[85dvh] lives directly on .ascension-card-inner, not on
+            .ascension-card-frame above -- an earlier version had it on the
+            frame and relied on .ascension-card-inner's own `height: 100%`
+            (index.css) to inherit that cap, but a percentage height doesn't
+            reliably resolve against a max-height-clamped auto-sized
+            ancestor (frame here isn't cross-axis-stretched -- the backdrop
+            uses `items-center`, not `stretch` -- so its own clamped size
+            isn't a "definite" size for a percentage-height child to resolve
+            against). That silently left .ascension-card-inner unbounded, so
+            the flex-1/overflow-y-auto/min-h-0 chain below had nothing real
+            to scroll within -- the whole modal just grew past the viewport
+            with no internal scrollbar (reported by the user: the admin
+            Suggestions/Bug Reports queue "isn't inside of a scroll
+            container"). Setting max-height directly here removes the
+            percentage-through-max-height ambiguity entirely: this element's
+            own box is now genuinely capped, so its flex children (the nav +
+            content row below) get a real bounded cross-size to distribute
+            within. flex-col below sm -- the desktop side-nav (a fixed w-40
+            rail next to the content pane) left barely any width for
+            content on a phone screen (reported by the user, "squished").
+            Below sm, nav becomes a horizontal scrollable strip of pills
+            above the content instead. min-h-0 on both this row and the
+            content pane below is still needed on top of the above -- a
+            flex child's default min-height:auto floors it at its content
+            size, independently defeating flex-1 + overflow-y-auto even
+            once the parent's own height is genuinely bounded. dvh (not vh)
+            tracks the real available height as mobile browser chrome
+            shows/hides (see CLAUDE.pwa-and-mobile.md's viewport-unit
+            gotchas). */}
+        <div className="ascension-card-inner flex max-h-[85dvh] min-h-0 w-full flex-col overflow-hidden sm:flex-row">
           <nav className="flex shrink-0 gap-1.5 overflow-x-auto border-b border-white/10 bg-black/20 p-3 sm:w-40 sm:flex-col sm:overflow-visible sm:border-b-0 sm:border-r">
             {sections.map((section) => (
               <button
