@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.10",
+    "date": "2026-08-28",
+    "changes": [
+      "Made the +N composition badge on item icons (Inventory, Equipment, Bank, Forge, Marketplace, everywhere gear is shown) a bit smaller and tucked slightly closer into the corner"
+    ]
+  },
+  {
     "version": "1.116.9",
     "date": "2026-08-28",
     "changes": [
