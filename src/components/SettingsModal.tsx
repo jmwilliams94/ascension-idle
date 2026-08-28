@@ -93,17 +93,31 @@ export default function SettingsModal({ characterId, onClose }: { characterId: s
       onClick={onClose}
     >
       <div
-        className="ascension-card-frame flex max-h-[80vh] w-full max-w-2xl"
+        className="ascension-card-frame flex max-h-[85dvh] w-full max-w-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="ascension-card-inner flex w-full overflow-hidden">
-          <nav className="w-40 shrink-0 space-y-1 border-r border-white/10 bg-black/20 p-3">
+        {/* flex-col below sm -- the desktop side-nav (a fixed w-40 rail next
+            to the content pane) left barely any width for content on a
+            phone screen (reported by the user, "squished"). Below sm, nav
+            becomes a horizontal scrollable strip of pills above the
+            content instead. min-h-0 on both the row and the content pane
+            is the actual fix for the reported "can't scroll the admin
+            queue" -- a flex child's default min-height:auto floors it at
+            its content size, which silently defeats flex-1 + overflow-y-
+            auto once content (e.g. a long Suggestions/Bug Reports admin
+            queue) exceeds the modal's max-h-[85dvh] cap; without min-h-0
+            the pane just grew past the cap instead of scrolling within it.
+            max-h-[85dvh] (was 80vh) -- dvh tracks the real available height
+            as mobile browser chrome shows/hides, vh doesn't (see
+            CLAUDE.pwa-and-mobile.md's viewport-unit gotchas). */}
+        <div className="ascension-card-inner flex min-h-0 w-full flex-col overflow-hidden sm:flex-row">
+          <nav className="flex shrink-0 gap-1.5 overflow-x-auto border-b border-white/10 bg-black/20 p-3 sm:w-40 sm:flex-col sm:overflow-visible sm:border-b-0 sm:border-r">
             {sections.map((section) => (
               <button
                 key={section.id}
                 type="button"
                 onClick={() => setActiveSectionId(section.id)}
-                className={`flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm transition ${
+                className={`flex shrink-0 items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm transition sm:w-full ${
                   section.id === activeSectionId
                     ? 'border-amber-400/60 bg-amber-500/10 text-amber-300'
                     : 'border-transparent text-slate-400 hover:border-white/10 hover:bg-white/5 hover:text-slate-200'
@@ -119,7 +133,7 @@ export default function SettingsModal({ characterId, onClose }: { characterId: s
             ))}
           </nav>
 
-          <div className="flex-1 overflow-y-auto p-5">
+          <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-5">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">Settings</h2>
               <button

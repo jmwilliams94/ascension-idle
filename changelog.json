@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.116.4",
+    "date": "2026-08-28",
+    "changes": [
+      "Fixed the Settings menu feeling cramped on phones — the section list now sits in a scrollable strip above the content instead of squeezing it into a narrow side column",
+      "Fixed being unable to scroll through the admin Suggestions/Bug Reports queue on mobile"
+    ]
+  },
+  {
     "version": "1.116.3",
     "date": "2026-08-28",
     "changes": [
