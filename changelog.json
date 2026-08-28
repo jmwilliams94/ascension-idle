@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.12",
+    "date": "2026-08-28",
+    "changes": [
+      "Shrunk the +N composition badge to 14px"
+    ]
+  },
+  {
     "version": "1.116.11",
     "date": "2026-08-28",
     "changes": [
