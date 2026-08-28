@@ -109,9 +109,11 @@ export default function CharacterSelectScreen() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_#1e293b,_#020617_70%)] p-6 text-slate-100">
+    <div className="ascension-page-bg flex min-h-screen items-center justify-center p-6 text-slate-100">
       <div className="w-full max-w-md">
-        <h1 className="text-center text-2xl font-semibold text-white">Choose your character</h1>
+        <h1 className="font-heading text-gradient-steel text-center text-2xl font-black tracking-[0.15em] uppercase">
+          Choose your character
+        </h1>
         <p className="mt-1 text-center text-sm text-slate-400">
           Up to {MAX_CHARACTER_SLOTS} character slots per account.
         </p>
@@ -124,23 +126,33 @@ export default function CharacterSelectScreen() {
               const slotIndex = index + 1
 
               if (slot) {
-                const classDef = slot.classId ? CLASS_DEFINITIONS[slot.classId as ClassId] : undefined
                 const isDeleting = deletingSlot === slotIndex
 
                 return (
                   <AscensionCard key={slotIndex} title={slot.name}>
-                    <p className="text-xs text-slate-500">
-                      {classDef?.displayName ?? slot.classId ?? 'Unknown class'} · Level {slot.level}
-                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-heading text-gradient-steel text-sm font-black tracking-[0.1em] uppercase">
+                        Level {slot.level}
+                      </span>
+                      <span className="text-heading-label">
+                        {slot.lastActiveIdleMode === 'mining' ? 'Mining' : 'Hunting'}
+                      </span>
+                    </div>
 
                     {!isDeleting ? (
-                      <div className="mt-3 flex gap-2">
+                      <div className="mt-3 flex items-center gap-2">
+                        <div className="w-9 shrink-0" aria-hidden="true" />
                         <Button variant="primary" onClick={() => setActiveCharacterId(slot.id)} className="flex-1">
                           Play
                         </Button>
-                        <Button variant="danger" onClick={() => startDeleting(slotIndex)}>
-                          Delete
-                        </Button>
+                        <button
+                          type="button"
+                          onClick={() => startDeleting(slotIndex)}
+                          aria-label={`Delete ${slot.name}`}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-rose-700 text-rose-300 transition hover:border-rose-500 hover:bg-rose-500/10"
+                        >
+                          ✕
+                        </button>
                       </div>
                     ) : (
                       <div className="mt-3 space-y-2">
@@ -148,13 +160,15 @@ export default function CharacterSelectScreen() {
                           Type <span className="font-semibold text-slate-200">{slot.name}</span> to confirm deletion.
                           This cannot be undone.
                         </p>
-                        <input
-                          type="text"
-                          value={deleteConfirmText}
-                          onChange={(event) => setDeleteConfirmText(event.target.value)}
-                          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-base text-slate-200 focus:border-red-500 focus:outline-none"
-                          placeholder={slot.name}
-                        />
+                        <div className="select-frame rounded-lg">
+                          <input
+                            type="text"
+                            value={deleteConfirmText}
+                            onChange={(event) => setDeleteConfirmText(event.target.value)}
+                            className="w-full bg-transparent px-3 py-2 text-base text-slate-200 focus:outline-none"
+                            placeholder={slot.name}
+                          />
+                        </div>
                         <div className="flex gap-2">
                           <Button
                             variant="danger"
@@ -177,8 +191,8 @@ export default function CharacterSelectScreen() {
               const isExpanded = expandedSlot === slotIndex
 
               return (
-                <div key={slotIndex} className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 p-4">
-                  <p className="text-sm font-medium text-slate-500">Empty slot</p>
+                <AscensionCard key={slotIndex}>
+                  <p className="text-heading-label">Empty Slot</p>
 
                   {!isExpanded ? (
                     <Button variant="secondary" onClick={() => startCreating(slotIndex)} className="mt-3 w-full">
@@ -186,16 +200,18 @@ export default function CharacterSelectScreen() {
                     </Button>
                   ) : (
                     <div className="mt-3 space-y-2">
-                      <input
-                        type="text"
-                        value={nameInput}
-                        onChange={(event) => {
-                          setNameInput(event.target.value)
-                          setCreateError(null)
-                        }}
-                        placeholder="Name"
-                        className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-base text-slate-200 focus:border-sky-500 focus:outline-none"
-                      />
+                      <div className="select-frame rounded-lg">
+                        <input
+                          type="text"
+                          value={nameInput}
+                          onChange={(event) => {
+                            setNameInput(event.target.value)
+                            setCreateError(null)
+                          }}
+                          placeholder="Name"
+                          className="w-full bg-transparent px-3 py-2 text-base text-slate-200 focus:outline-none"
+                        />
+                      </div>
                       <p className="text-xs text-slate-500">
                         Capital letter first, lowercase the rest (e.g. "Aragorn"). Must be unique.
                       </p>
@@ -203,26 +219,36 @@ export default function CharacterSelectScreen() {
                       {CLASS_ORDER.map((classId) => {
                         const classDef = CLASS_DEFINITIONS[classId]
                         const isUnlocked = unlockedClasses.includes(classId)
+                        const disabled = !isUnlocked || !isNameValid || creating
+
+                        if (!isUnlocked) {
+                          return (
+                            <div key={classId} className="ascension-chip-frame">
+                              <button
+                                type="button"
+                                disabled
+                                className="ascension-chip-inner w-full cursor-not-allowed px-3 py-2 text-left text-sm text-slate-600"
+                              >
+                                <span className="font-medium">{classDef.displayName}</span>
+                                <span className="block text-xs text-slate-600">
+                                  Unlocks after a Hunter reaches level {CLASS_UNLOCK_LEVEL_PLACEHOLDER} (placeholder)
+                                </span>
+                              </button>
+                            </div>
+                          )
+                        }
 
                         return (
-                          <button
-                            key={classId}
-                            type="button"
-                            disabled={!isUnlocked || !isNameValid || creating}
-                            onClick={() => handleCreate(slotIndex, classId)}
-                            className={`w-full rounded-lg border px-3 py-2 text-left text-sm ${
-                              isUnlocked
-                                ? 'border-sky-500 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40'
-                                : 'cursor-not-allowed border-slate-800 text-slate-600'
-                            }`}
-                          >
-                            <span className="font-medium">{classDef.displayName}</span>
-                            {!isUnlocked && (
-                              <span className="block text-xs text-slate-600">
-                                Unlocks after a Hunter reaches level {CLASS_UNLOCK_LEVEL_PLACEHOLDER} (placeholder)
-                              </span>
-                            )}
-                          </button>
+                          <div key={classId} className="ascension-chip-frame is-interactive">
+                            <button
+                              type="button"
+                              disabled={disabled}
+                              onClick={() => handleCreate(slotIndex, classId)}
+                              className="ascension-chip-inner w-full px-3 py-2 text-left text-sm text-amber-300 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              <span className="font-medium">{classDef.displayName}</span>
+                            </button>
+                          </div>
                         )
                       })}
 
@@ -233,7 +259,7 @@ export default function CharacterSelectScreen() {
                       </Button>
                     </div>
                   )}
-                </div>
+                </AscensionCard>
               )
             })}
           </div>

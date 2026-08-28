@@ -488,14 +488,20 @@ a,
   pointer-events: none;
 }
 
-.btn-gold:hover:not(:disabled)::after {
-  left: 120%;
-}
+/* Hover-only rules are gated behind (hover: hover) — on touch devices a tap
+   sets :hover and it can stay "stuck" lit until the user taps elsewhere
+   (no real pointer to un-hover it), reported as buttons randomly staying
+   lit up. Real mouse/trackpad input still gets the full hover treatment. */
+@media (hover: hover) {
+  .btn-gold:hover:not(:disabled)::after {
+    left: 120%;
+  }
 
-.btn-gold:hover:not(:disabled) {
-  background: linear-gradient(180deg, var(--ascension-gold-bright) 0%, var(--ascension-gold) 60%, var(--ascension-gold-dark) 100%);
-  color: var(--ascension-ink);
-  box-shadow: 0 0 24px rgba(255, 215, 0, 0.75);
+  .btn-gold:hover:not(:disabled) {
+    background: linear-gradient(180deg, var(--ascension-gold-bright) 0%, var(--ascension-gold) 60%, var(--ascension-gold-dark) 100%);
+    color: var(--ascension-ink);
+    box-shadow: 0 0 24px rgba(255, 215, 0, 0.75);
+  }
 }
 
 .btn-gold:disabled {
@@ -565,14 +571,16 @@ a,
   pointer-events: none;
 }
 
-.btn-steel:hover:not(:disabled)::after {
-  left: 120%;
-}
+@media (hover: hover) {
+  .btn-steel:hover:not(:disabled)::after {
+    left: 120%;
+  }
 
-.btn-steel:hover:not(:disabled) {
-  background: linear-gradient(180deg, var(--ascension-steel-bright) 0%, var(--ascension-steel) 60%, var(--ascension-steel-dark) 100%);
-  color: var(--ascension-ink);
-  box-shadow: 0 0 20px rgba(192, 209, 227, 0.6);
+  .btn-steel:hover:not(:disabled) {
+    background: linear-gradient(180deg, var(--ascension-steel-bright) 0%, var(--ascension-steel) 60%, var(--ascension-steel-dark) 100%);
+    color: var(--ascension-ink);
+    box-shadow: 0 0 20px rgba(192, 209, 227, 0.6);
+  }
 }
 
 .btn-steel:disabled {
@@ -623,8 +631,10 @@ a,
   pointer-events: none;
 }
 
-.btn-gold-active:hover::after {
-  left: 120%;
+@media (hover: hover) {
+  .btn-gold-active:hover::after {
+    left: 120%;
+  }
 }
 
 /* Compact active-state pill for MobileBottomNav's four side tabs
@@ -748,8 +758,10 @@ a,
   clip-path: polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px);
 }
 
-.ascension-chip-frame.is-interactive:hover {
-  background: linear-gradient(180deg, rgba(255, 215, 0, 0.85) 0%, rgba(192, 209, 227, 0.45) 50%, rgba(255, 215, 0, 0.7) 100%);
+@media (hover: hover) {
+  .ascension-chip-frame.is-interactive:hover {
+    background: linear-gradient(180deg, rgba(255, 215, 0, 0.85) 0%, rgba(192, 209, 227, 0.45) 50%, rgba(255, 215, 0, 0.7) 100%);
+  }
 }
 
 /* Dark inset frame for the custom <select> wrapper (Select.tsx) — border
@@ -762,7 +774,12 @@ a,
   transition: border-color 0.2s ease;
 }
 
-.select-frame:hover,
+@media (hover: hover) {
+  .select-frame:hover {
+    border-color: rgba(212, 175, 55, 0.5);
+  }
+}
+
 .select-frame:focus-within {
   border-color: rgba(212, 175, 55, 0.5);
 }

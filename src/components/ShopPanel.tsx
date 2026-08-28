@@ -223,7 +223,7 @@ function GearRow({ template, bulkBuy }: { template: ItemTemplate; bulkBuy: boole
                 onClick={() => void handleBuyMany(10)}
                 className="px-2 py-1 text-[11px]"
               >
-                Buy 10
+                10
               </Button>
               <Button
                 variant="primary"
@@ -232,7 +232,7 @@ function GearRow({ template, bulkBuy }: { template: ItemTemplate; bulkBuy: boole
                 onClick={() => void handleBuyMany(5)}
                 className="px-2 py-1 text-[11px]"
               >
-                Buy 5
+                5
               </Button>
             </>
           )}

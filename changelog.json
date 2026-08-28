@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.116.13",
+    "date": "2026-08-28",
+    "changes": [
+      "Restyled the character select screen (background, cards, and Create Character panel) to match the rest of the game's theme",
+      "Character select cards now show Level in a bolder style and whether that character is Hunting or Mining, and swapped the Delete button for a small X",
+      "Shop's bulk-buy buttons now just say \"5\" and \"10\" so item names don't get squeezed",
+      "Fixed some buttons occasionally staying lit up after tapping them on mobile"
+    ]
+  },
+  {
     "version": "1.116.12",
     "date": "2026-08-28",
     "changes": [

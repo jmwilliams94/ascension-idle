@@ -16,6 +16,7 @@ export interface CharacterSlotSummary {
   classId: string | null
   level: number
   name: string
+  lastActiveIdleMode: 'hunting' | 'mining'
 }
 
 export type CreateCharacterResult =
@@ -59,7 +60,7 @@ export const useCharacterRosterStore = create<CharacterRosterState>((set) => ({
   loadRoster: async (accountId) => {
     const { data, error } = await supabase
       .from('characters')
-      .select('id, slot_index, class, level, name')
+      .select('id, slot_index, class, level, name, last_active_idle_mode')
       .eq('account_id', accountId)
       .order('slot_index', { ascending: true })
 
@@ -73,7 +74,14 @@ export const useCharacterRosterStore = create<CharacterRosterState>((set) => ({
     for (const row of data ?? []) {
       const index = row.slot_index - 1
       if (index >= 0 && index < MAX_CHARACTER_SLOTS) {
-        slots[index] = { id: row.id, slotIndex: row.slot_index, classId: row.class, level: row.level, name: row.name }
+        slots[index] = {
+          id: row.id,
+          slotIndex: row.slot_index,
+          classId: row.class,
+          level: row.level,
+          name: row.name,
+          lastActiveIdleMode: row.last_active_idle_mode === 'mining' ? 'mining' : 'hunting',
+        }
       }
     }
 
@@ -113,6 +121,7 @@ export const useCharacterRosterStore = create<CharacterRosterState>((set) => ({
         classId: data.class,
         level: data.level,
         name: data.name,
+        lastActiveIdleMode: 'hunting',
       }
       return { slots }
     })
