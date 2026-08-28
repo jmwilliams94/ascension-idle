@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.114.1",
+    "date": "2026-08-28",
+    "changes": [
+      "Fixed the new Push Notifications toggle failing with \"Something went wrong\" for everyone on the live site"
+    ]
+  },
+  {
     "version": "1.114.0",
     "date": "2026-08-28",
     "changes": [
