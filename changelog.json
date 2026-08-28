@@ -1,11 +1,17 @@
 [
   {
+    "version": "1.113.5",
+    "date": "2026-08-28",
+    "changes": [
+      "Fixed the actual cause of the stray gold sliver at the bottom of Forge tiles like Salvage and Enchantress — a card whose description was shorter than its neighbor's could leave a gap exposing the card's gold border color"
+    ]
+  },
+  {
     "version": "1.113.4",
     "date": "2026-08-28",
     "changes": [
       "Restyled the What's New popup, Settings menu, and item tooltips to match the rest of the gold/steel theme",
       "The Unclaimed Rewards popup no longer shows a redundant title and icon at the top",
-      "Fixed a visual glitch on mobile where forge tiles could show a stray gold sliver near a corner after tapping",
       "Nudged the spacing above each tab's title so it doesn't crowd the row above it",
       "Neutral buttons (Back, Store All, etc.) now get a proper steel gradient instead of a plain outline"
     ]
