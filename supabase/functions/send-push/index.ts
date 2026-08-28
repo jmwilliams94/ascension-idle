@@ -104,8 +104,9 @@ async function handleSendPush(req: Request): Promise<Response> {
     return json({ ok: false, error: 'no_subscriptions' }, 404)
   }
 
+  // Not 'Ascension Idle' -- see src/sw.ts's own fallback for why.
   const notificationPayload = JSON.stringify({
-    title: payload.title ?? 'Ascension Idle',
+    title: payload.title ?? 'Notification',
     body: payload.body ?? '',
     url: payload.url ?? '/',
   })

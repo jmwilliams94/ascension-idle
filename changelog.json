@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.114.6",
+    "date": "2026-08-28",
+    "changes": [
+      "Fixed the test notification reading \"Ascension Idle from Ascension Idle\" — it now has its own distinct title"
+    ]
+  },
+  {
     "version": "1.114.5",
     "date": "2026-08-28",
     "changes": [

@@ -63,7 +63,11 @@ self.addEventListener('push', (event) => {
     payload = { body: event.data?.text() }
   }
 
-  const title = payload.title ?? 'Ascension Idle'
+  // Not 'Ascension Idle' -- the OS/browser already shows that as this
+  // notification's own "from Ascension Idle" attribution (from the manifest
+  // name), so reusing it as the title reads as a duplicated "Ascension Idle
+  // from Ascension Idle" if a real caller ever omits its own title.
+  const title = payload.title ?? 'Notification'
   event.waitUntil(
     self.registration.showNotification(title, {
       body: payload.body,

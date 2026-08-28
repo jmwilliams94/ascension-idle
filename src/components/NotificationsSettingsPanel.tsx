@@ -70,7 +70,12 @@ export default function NotificationsSettingsPanel() {
       sent?: number
       failures?: { statusCode?: number; message: string }[]
     }>('send-push', {
-      body: { account_id: accountId, title: 'Ascension Idle', body: 'Test notification -- this is what a push looks like.' },
+      // Title deliberately isn't "Ascension Idle" -- the OS/browser already
+      // shows that as the notification's own "from Ascension Idle"
+      // attribution underneath (from the manifest name), so reusing it as
+      // the title read as a duplicated "Ascension Idle from Ascension Idle"
+      // (reported by the user, 2026-08-28).
+      body: { account_id: accountId, title: 'Test Notification', body: "This is what a push from Ascension Idle looks like." },
     })
     if (error || !data?.ok) {
       setTestState('error')
