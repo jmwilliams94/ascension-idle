@@ -38,6 +38,28 @@ body {
   background: var(--ascension-ink-soft);
 }
 
+/* Rotate-device blocker (2026-08-28, requested by the user) — the manifest's
+   `orientation: 'portrait-primary'` (vite.config.ts) only actually locks
+   rotation for an installed/standalone PWA on Android; iOS Safari has no
+   orientation-lock mechanism at all, installed or not, and a plain browser
+   tab (not installed) ignores manifest orientation everywhere. This is the
+   universal fallback: rather than letting the game's own layout try to
+   reflow into landscape, RotateDeviceOverlay.tsx renders this unconditionally
+   and pure CSS decides visibility, so it responds instantly to a real
+   orientationchange with no JS/resize-listener involved. Gated on
+   `(hover: none) and (pointer: coarse)` (touch-only) plus a width cap so a
+   desktop browser window that happens to be wide/short doesn't trigger it —
+   only an actual phone/small-tablet held sideways should. */
+.rotate-device-overlay {
+  display: none;
+}
+
+@media (orientation: landscape) and (max-width: 900px) and (hover: none) and (pointer: coarse) {
+  .rotate-device-overlay {
+    display: flex;
+  }
+}
+
 /* Every gear/currency icon in the game now renders as a real <img> (see
    equipmentBonus.ts's getGearIconSrc, forgeCosts.ts's COMET_ICON_SRC/
    FALLEN_STAR_ICON_SRC, ItemTooltip.tsx's icon column) instead of a plain

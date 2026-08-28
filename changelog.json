@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.15",
+    "date": "2026-08-28",
+    "changes": [
+      "Added a \"Rotate Your Device\" screen that blocks the game if you tilt your phone sideways, since portrait mode can't always be force-locked on every device/browser"
+    ]
+  },
+  {
     "version": "1.116.14",
     "date": "2026-08-28",
     "changes": [

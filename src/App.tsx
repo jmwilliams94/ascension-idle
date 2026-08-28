@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import AuthGate from './components/AuthGate'
 import CharacterSelectScreen from './components/CharacterSelectScreen'
 import GameShell from './components/GameShell'
+import RotateDeviceOverlay from './components/RotateDeviceOverlay'
 import SessionConflictModal from './components/SessionConflictModal'
 import SessionEvictedToast from './components/SessionEvictedToast'
 import UpdateBanner from './components/UpdateBanner'
@@ -33,6 +34,17 @@ function App() {
   // characterId happens to become null, which would fight the "Switch Character"
   // button (that's a deliberate action, it shouldn't immediately re-resume).
   const hasAttemptedResume = useRef(false)
+
+  // Best-effort real orientation lock, on top of the manifest's
+  // `orientation: 'portrait-primary'` hint (only honored for an installed/
+  // standalone PWA, and only on browsers that support it — Chrome/Android
+  // mainly). Fails silently everywhere else (iOS Safari has no lock API at
+  // all; a plain browser tab isn't allowed to lock without user-initiated
+  // fullscreen) — RotateDeviceOverlay below is the fallback that actually
+  // covers those cases.
+  useEffect(() => {
+    void screen.orientation?.lock?.('portrait-primary').catch(() => {})
+  }, [])
 
   useEffect(() => {
     loadTemplates()
@@ -93,6 +105,7 @@ function App() {
 
   return (
     <>
+      <RotateDeviceOverlay />
       <UpdateBanner />
       <SessionConflictModal />
       <SessionEvictedToast />
