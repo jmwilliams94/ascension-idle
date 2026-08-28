@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.32",
+    "date": "2026-08-29",
+    "changes": [
+      "The Shop now remembers which tab (Weapons/Armor/Jeweller/Potions/Repair) you last had open, instead of always resetting to Weapons when you come back to it"
+    ]
+  },
+  {
     "version": "1.116.31",
     "date": "2026-08-29",
     "changes": [

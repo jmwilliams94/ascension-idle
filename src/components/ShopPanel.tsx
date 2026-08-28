@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { create } from 'zustand'
 import InventoryPanel from './InventoryPanel'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import { AscensionCard } from './ui/AscensionCard'
@@ -49,6 +50,19 @@ function previewInstance(template: ItemTemplate): ItemInstance {
 }
 
 type ShopTab = 'weapons' | 'armor' | 'jeweller' | 'potions' | 'repair'
+
+// GameShell only mounts ShopPanel while the Shop tab is active, so a plain
+// useState here would reset to 'weapons' every time the player navigates
+// away and back — this Zustand store survives that unmount/remount, same as
+// useTabStore does for the top-level page tab.
+interface ShopTabState {
+  tab: ShopTab
+  setTab: (tab: ShopTab) => void
+}
+const useShopTabStore = create<ShopTabState>((set) => ({
+  tab: 'weapons',
+  setTab: (tab) => set({ tab }),
+}))
 
 // Rings/Necklaces split out into their own Jeweller tab (2026-08-07,
 // confirmed with the user) — Armor keeps boots/hats/coats. Quiver removed
@@ -292,7 +306,8 @@ export default function ShopPanel() {
   const repairBusy = useRepairStore((state) => state.busy)
   const repairAll = useRepairStore((state) => state.repairAll)
 
-  const [tab, setTab] = useState<ShopTab>('weapons')
+  const tab = useShopTabStore((state) => state.tab)
+  const setTab = useShopTabStore((state) => state.setTab)
   const [repairResult, setRepairResult] = useState<{ success: boolean; message: string } | null>(null)
 
   // Gold is deducted server-side (shop_buy_potion RPC) only once the
