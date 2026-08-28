@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.113.3",
+    "date": "2026-08-28",
+    "changes": [
+      "Fixed a mobile layout glitch where the Shop's Weapons/Armor/Jeweller tabs could stretch the tab icons and item list sideways"
+    ]
+  },
+  {
     "version": "1.113.2",
     "date": "2026-08-28",
     "changes": [

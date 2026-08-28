@@ -213,7 +213,7 @@ function GearRow({ template, bulkBuy }: { template: ItemTemplate; bulkBuy: boole
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
           {bulkBuy && (
             <>
               <Button
@@ -373,7 +373,7 @@ export default function ShopPanel() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <div className="space-y-3">
+      <div className="min-w-0 space-y-3">
         {/* One row of 5 (2026-08-14, requested by the user) — was grid-cols-3,
             which wrapped the 5 tabs onto two uneven rows. Capped + centered at
             lg+ only (reported too large on desktop), unchanged below lg. */}
@@ -606,7 +606,7 @@ export default function ShopPanel() {
         </AscensionCard>
       </div>
 
-      <AscensionCard>
+      <AscensionCard className="min-w-0">
         <InventoryPanel columns={5} enableSelling />
       </AscensionCard>
     </div>
