@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.113.6",
+    "date": "2026-08-28",
+    "changes": [
+      "Item action popups (Deposit, Bank, Bundle/Open, etc.) now always line up width-wise with the tooltip above them",
+      "When a popup has 3 actions, the main one (Bundle/Open/Claim) now gets its own row with the other two below it, instead of all three cramming into one row"
+    ]
+  },
+  {
     "version": "1.113.5",
     "date": "2026-08-28",
     "changes": [

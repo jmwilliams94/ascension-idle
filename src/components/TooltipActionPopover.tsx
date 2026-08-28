@@ -92,6 +92,17 @@ export default function TooltipActionPopover({ anchorRect, tooltip, actions, onC
   )
   const top = showBelow ? anchorRect.bottom + 6 : anchorRect.top - 6
 
+  // 3-action lists (Bundle/Open + Bank + Bank All, Claim/Store/Sell, ...) put
+  // the first action on its own full-width row and split the rest below it
+  // — mirrors what 2-action lists (Deposit/Deposit All, Withdraw/Withdraw
+  // All) already look like on a single row. Without this, three buttons
+  // sharing one flex-wrap row just wrapped each label's own text internally
+  // instead of the whole button dropping to a second row (nothing in a plain
+  // flex-wrap row forces that split on its own).
+  const [firstAction, ...restActions] = actions
+  const showFirstActionOnOwnRow = actions.length > 2
+  const wrappedRowActions = showFirstActionOnOwnRow ? restActions : actions
+
   return createPortal(
     <div
       data-tooltip-action-popover
@@ -100,13 +111,22 @@ export default function TooltipActionPopover({ anchorRect, tooltip, actions, onC
       onPointerDown={(event) => event.stopPropagation()}
     >
       <ItemTooltip {...tooltip} />
-      <div className="ascension-chip-frame mt-1.5 shadow-xl shadow-black/50">
-        <div className="ascension-chip-inner flex flex-wrap gap-1.5 p-1.5">
-          {actions.map((action) => (
-            <Button key={action.label} variant={actionVariant(action)} disabled={action.disabled} onClick={action.onClick} className="flex-1">
-              {action.label}
+      {/* w-64 — matches ItemTooltip's own fixed width so the button bar's
+          edges always line up with the tooltip card above it. */}
+      <div className="ascension-chip-frame mt-1.5 w-64 shadow-xl shadow-black/50">
+        <div className="ascension-chip-inner flex flex-col gap-1.5 p-1.5">
+          {showFirstActionOnOwnRow && (
+            <Button variant={actionVariant(firstAction)} disabled={firstAction.disabled} onClick={firstAction.onClick} className="w-full">
+              {firstAction.label}
             </Button>
-          ))}
+          )}
+          <div className="flex flex-wrap gap-1.5">
+            {wrappedRowActions.map((action) => (
+              <Button key={action.label} variant={actionVariant(action)} disabled={action.disabled} onClick={action.onClick} className="flex-1">
+                {action.label}
+              </Button>
+            ))}
+          </div>
         </div>
       </div>
     </div>,
