@@ -9,6 +9,7 @@ import { useEquipmentStore, EQUIP_SLOTS } from '../game/items/useEquipmentStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { itemHasDurability } from '../game/items/equipmentBonus'
+import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 
 const FREE_ATTEMPT_CAP = 10
 const PAID_ATTEMPT_CAP = 10
@@ -49,6 +50,7 @@ export default function WorldBossCard({ characterId, emberColor = null }: { char
   const [lastResult, setLastResult] = useState<WorldBossAttackResult | null>(null)
   const [leaderboardOpen, setLeaderboardOpen] = useState(false)
   const [showRepairAlert, setShowRepairAlert] = useState(false)
+  useLockBodyScroll(showRepairAlert)
   // Own 1s tick for the cooldown countdown — independent of CombatPage's
   // own 200ms floating-number tick, which this card doesn't use.
   const [now, setNow] = useState(() => Date.now())

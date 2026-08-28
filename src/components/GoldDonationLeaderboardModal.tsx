@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 
 interface LeaderboardEntry {
   rank: number
@@ -34,6 +35,7 @@ export default function GoldDonationLeaderboardModal({
 }) {
   const [result, setResult] = useState<LeaderboardResult | null>(null)
   const [loading, setLoading] = useState(true)
+  useLockBodyScroll()
 
   useEffect(() => {
     let cancelled = false

@@ -11,6 +11,7 @@ import { ENEMY_TYPES } from '../game/zones/zoneData'
 import type { VipAutomationSummary } from '../game/vip/vipAutomationSummary'
 import { formatGoldAmount } from '../game/stats/formatGold'
 import { GEM_TIERS, GEM_TYPE_ORDER, GEM_TYPES, formatGemTierLabel, getGemIconSrc, getGemTierColor, parseGemStorageKey } from '../game/items/gemTypes'
+import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 
 // One real-icon tile + count, for a "what currency/materials did I actually
 // find" row — reuses the same InventorySlot tile every other grid in the
@@ -178,6 +179,7 @@ export default function OfflineProgressModal() {
   const lootHoldingCount = useLootHoldingStore((state) => state.entries.length)
   const manuallyOpened = useLootHoldingModalStore((state) => state.open)
   const closeManualModal = useLootHoldingModalStore((state) => state.closeModal)
+  useLockBodyScroll(Boolean(result || miningResult || manuallyOpened || syncFailed))
 
   // Bug fix (reported by the user — an empty "Unclaimed rewards" shell,
   // just the title and "Got it", with nothing in it): the "Unclaimed

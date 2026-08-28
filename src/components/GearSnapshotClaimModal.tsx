@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useGearClaimPromptStore } from '../game/items/useGearClaimPromptStore'
 import { useGearSnapshotStore } from '../game/items/useGearSnapshotStore'
+import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 
 // Gear Score Snapshot claim-transfer prompt (requested by the user) — shown
 // when equipping an item that's currently snapshotted onto a different
@@ -16,6 +17,7 @@ export default function GearSnapshotClaimModal() {
   const clear = useGearClaimPromptStore((state) => state.clear)
   const claimSnapshot = useGearSnapshotStore((state) => state.claimSnapshot)
   const [busy, setBusy] = useState(false)
+  useLockBodyScroll(Boolean(pending))
 
   if (!pending) {
     return null

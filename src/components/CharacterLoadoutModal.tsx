@@ -12,6 +12,7 @@ import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemT
 import type { ItemInstance } from '../game/items/useInventoryStore'
 import { useCharacterLoadoutStore, type LoadoutItem, type LoadoutSlot } from '../game/social/useCharacterLoadoutStore'
 import type { ClassId } from '../game/stats/classes'
+import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 
 // Same paper-doll size/grid EquipmentPanel.tsx uses (see that file's own
 // comment for the layout's history) -- kept in sync deliberately so
@@ -71,6 +72,7 @@ export default function CharacterLoadoutModal() {
   const error = useCharacterLoadoutStore((state) => state.error)
   const loadout = useCharacterLoadoutStore((state) => state.loadout)
   const templates = useItemTemplatesStore((state) => state.templates)
+  useLockBodyScroll(open)
 
   if (!open) {
     return null

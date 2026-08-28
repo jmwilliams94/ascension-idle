@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useSessionConflictStore } from '../game/social/useSessionConflictStore'
 import { useAuthStore } from '../lib/useAuthStore'
+import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 
 // Shown when this tab detects (via global-activity's Presence sync, see
 // GlobalActivityConnection.tsx) that another session for this account is
@@ -12,6 +13,7 @@ export default function SessionConflictModal() {
   const requestEvictOthers = useSessionConflictStore((state) => state.requestEvictOthers)
   const clearOtherSessions = useSessionConflictStore((state) => state.clearOtherSessions)
   const [busy, setBusy] = useState(false)
+  useLockBodyScroll(Boolean(otherSessionIds && otherSessionIds.length > 0))
 
   if (!otherSessionIds || otherSessionIds.length === 0) {
     return null

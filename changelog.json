@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.5",
+    "date": "2026-08-28",
+    "changes": [
+      "Fixed the game behind a popup (Settings, Chat, Bank, Marketplace mail, and other overlays) scrolling along with it when you tried to scroll content inside the popup"
+    ]
+  },
+  {
     "version": "1.116.4",
     "date": "2026-08-28",
     "changes": [

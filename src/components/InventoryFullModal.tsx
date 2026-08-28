@@ -3,6 +3,7 @@ import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { usePotionStore } from '../game/items/usePotionStore'
 import { POTION_TYPES } from '../game/items/potionTypes'
+import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 
 // Only ever set from a Shop purchase (see useInventoryStore.buyShopItem) that
 // couldn't fit — combat drops go through resolve-combat's own server-side
@@ -23,6 +24,7 @@ export default function InventoryFullModal() {
   // infinite re-render loop (React error #185, "Maximum update depth exceeded").
   const potionStacks = usePotionStore((state) => state.stacks)
   const visiblePotionStacks = potionStacks.filter((stack) => stack.count > 0)
+  useLockBodyScroll(Boolean(pendingFullDrop))
 
   if (!pendingFullDrop) {
     return null

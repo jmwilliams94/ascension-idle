@@ -10,6 +10,7 @@ import PlanPanel from './PlanPanel'
 import SuggestionsPanel from './SuggestionsPanel'
 import BugReportPanel from './BugReportPanel'
 import NotificationsSettingsPanel from './NotificationsSettingsPanel'
+import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 
 // Lazy -- three/@react-three/fiber/drei/postprocessing alone push the main
 // bundle's single chunk past vite-plugin-pwa's 2MB Workbox precache limit
@@ -38,6 +39,7 @@ interface SettingsSection {
 // (see those components); Plans shows its add/remove/drag controls the
 // same cosmetic isAdmin-gated way.
 export default function SettingsModal({ characterId, onClose }: { characterId: string; onClose: () => void }) {
+  useLockBodyScroll()
   const isAdmin = useIsAdmin()
   // Admin-only badges (2026-08-21) — count of still-open reports/suggestions
   // across every account, mirroring the badge treatment TabNav.tsx/

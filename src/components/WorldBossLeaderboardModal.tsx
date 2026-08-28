@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 
 interface LeaderboardEntry {
   rank: number
@@ -30,6 +31,7 @@ export default function WorldBossLeaderboardModal({
   onClose: () => void
 }) {
   const [result, setResult] = useState<LeaderboardResult | null>(null)
+  useLockBodyScroll()
   // Starts true (the very first render, before the effect below has had a
   // chance to run) — not reset to true again on a later spawnId change, so a
   // refetch just quietly replaces stale data instead of flashing a spinner.

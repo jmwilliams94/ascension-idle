@@ -2,6 +2,7 @@ import { useVipSettingsModalStore } from '../game/vip/useVipSettingsModalStore'
 import { useVipAutomationStore, type LiquidationPriority, type SalvageTier } from '../game/vip/useVipAutomationStore'
 import { Button } from './ui/Button'
 import { ToggleSwitch } from './ui/ToggleSwitch'
+import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 
 const SALVAGE_TIER_OPTIONS: { value: SalvageTier; label: string }[] = [
   { value: 'tempered', label: 'Tempered' },
@@ -22,6 +23,7 @@ export default function VipSettingsModal() {
   const closeModal = useVipSettingsModalStore((state) => state.closeModal)
   const settings = useVipAutomationStore((state) => state.settings)
   const updateSettings = useVipAutomationStore((state) => state.updateSettings)
+  useLockBodyScroll(open)
 
   if (!open) {
     return null

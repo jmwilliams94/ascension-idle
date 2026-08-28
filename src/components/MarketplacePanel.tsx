@@ -6,6 +6,7 @@ import { DragDropProvider } from './dragDrop'
 import { AscensionCard } from './ui/AscensionCard'
 import { Button } from './ui/Button'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
+import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemTemplatesStore'
 import {
@@ -752,6 +753,7 @@ function MailDetailModal({
   onClaim: () => void
   onClose: () => void
 }) {
+  useLockBodyScroll()
   const canClaim = isGroupUnclaimed(group)
   const message = group.entries[0].message
   // Message-only mail (2026-08-13, requested by the user) — a row with

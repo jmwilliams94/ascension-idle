@@ -4,6 +4,7 @@ import { useChatStore } from '../game/social/useChatStore'
 import { useAnnouncementHistoryStore } from '../game/social/useAnnouncementHistoryStore'
 import { useCharacterLoadoutStore } from '../game/social/useCharacterLoadoutStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
+import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 import { AnnouncementIcon } from './GlobalAnnouncementTicker'
 import { VIP_TOKEN_ICON_SRC } from '../game/items/forgeCosts'
 
@@ -42,6 +43,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 export default function ChatOverlay({ characterId }: { characterId: string }) {
   const open = useChatOverlayStore((state) => state.open)
   const closeOverlay = useChatOverlayStore((state) => state.closeOverlay)
+  useLockBodyScroll(open)
 
   const messages = useChatStore((state) => state.messages)
   const chatLoaded = useChatStore((state) => state.loaded)

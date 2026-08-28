@@ -5,6 +5,7 @@ import { useGoldDonationStore, type GoldDonationResult } from '../game/goldDonat
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { formatGoldAmount } from '../game/stats/formatGold'
 import GoldDonationLeaderboardModal from './GoldDonationLeaderboardModal'
+import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 
 const ERROR_MESSAGES: Record<string, string> = {
   invalid_amount: 'Enter a valid amount.',
@@ -26,6 +27,7 @@ export default function GoldDonationModal({ characterId, onClose }: { characterI
   const pool = useGoldDonationStore((state) => state.pool)
   const busy = useGoldDonationStore((state) => state.busy)
   const donate = useGoldDonationStore((state) => state.donate)
+  useLockBodyScroll()
 
   // Slider max is capped by both what the player can afford AND what the
   // pool still needs to hit its target (requested by the user — donate_gold

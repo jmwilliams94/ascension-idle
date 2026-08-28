@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 
 // Shared modal shell for BankSquares (2026-08-07, confirmed with the user:
 // "a popup overlay in the middle of the screen with a more polished/
@@ -21,6 +22,8 @@ export default function BankActionModal({
   onClose: () => void
   children: ReactNode
 }) {
+  useLockBodyScroll()
+
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
