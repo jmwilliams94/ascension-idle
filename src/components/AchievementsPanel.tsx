@@ -229,26 +229,30 @@ function TierSegmentBar({
             />
           )
 
-          // Inline borderWidth/borderColor beats .btn-gold/.btn-glow's own
-          // `border: 1px solid ...` shorthand regardless of class source
-          // order — index.css's plain (unlayered) rules already sit above
-          // Tailwind's own `@layer utilities` in cascade priority (see
-          // CLAUDE.md's `.ascension-card-frame` vs. an `absolute` utility
-          // gotcha for the same mechanic), so a Tailwind border-width
-          // utility class wouldn't reliably win here either — only inline
-          // style does. This is deliberate: keep the app's real button
-          // chrome (dark idle gradient, shimmer, hover glow) for the
-          // segment body, and only make the chevron-shaped divider itself
-          // — the border tracing the clipped notch/point edges — bright and
-          // thick enough to read clearly, per the user's correction that
-          // recoloring the whole segment fill was "backwards" from the ask.
-          const borderStyle = { clipPath, borderWidth: 2, borderColor: color }
-
+          // `border` can't actually paint along a clip-path-cut edge — it
+          // only ever traces the element's original rectangular border-box,
+          // so a border-color set on the clipped button/div itself only
+          // ever shows on the segment's flat top/bottom (and the outer
+          // bar's flat far-left/far-right edges); the diagonal notch/point
+          // cuts have no border there at all, just the clipped fill color,
+          // which is what made the chevron seams unreadable in the last
+          // pass (reported by the user, screenshot showed only the bar's
+          // outer perimeter colored). Fixed with the same padding-trick
+          // this app already uses for `.ascension-card-frame`/
+          // `.ascension-chip-frame`: an OUTER div filled solid with the
+          // state color and clipped to this same chevron polygon, `padding:
+          // 2px`, containing an INNER element (the real .btn-gold/.btn-glow/
+          // locked button) clipped to the *same* polygon formula again —
+          // since clip-path's percentages always resolve against the
+          // element's own box, the inner shape comes out as a uniform 2px
+          // smaller copy of the outer one automatically, leaving a 2px rim
+          // of solid state color visible all the way around, diagonal cuts
+          // included, with no separate "inner" polygon math needed.
           return (
             <div
               key={threshold}
               className="min-w-0 flex-1"
-              style={{ marginLeft: isFirst ? 0 : -TIER_SEGMENT_CHEVRON_DEPTH, zIndex: tierIndex + 1 }}
+              style={{ marginLeft: isFirst ? 0 : -TIER_SEGMENT_CHEVRON_DEPTH, zIndex: tierIndex + 1, clipPath, backgroundColor: color, padding: 2 }}
             >
               <HoverTooltip content={tooltip}>
                 {state === 'claimable' ? (
@@ -256,21 +260,21 @@ function TierSegmentBar({
                     type="button"
                     disabled={busy}
                     onClick={() => void handleClaim()}
-                    style={borderStyle}
+                    style={{ clipPath }}
                     className="btn-gold h-9 w-full min-w-0 animate-pulse px-3 text-[11px] font-bold transition disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {tierIndex + 1}
                   </button>
                 ) : state === 'claimed' ? (
                   <div
-                    style={{ ...TIER_SEGMENT_CLAIMED_STYLE, ...borderStyle }}
+                    style={{ ...TIER_SEGMENT_CLAIMED_STYLE, clipPath }}
                     className="btn-glow flex h-9 w-full min-w-0 items-center justify-center px-3 text-[11px] font-bold"
                   >
                     ✓
                   </div>
                 ) : (
                   <div
-                    style={borderStyle}
+                    style={{ clipPath }}
                     className="flex h-9 w-full min-w-0 items-center justify-center bg-slate-950/60 px-3 text-[11px] font-semibold text-slate-500"
                   >
                     {tierIndex + 1}

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.28",
+    "date": "2026-08-28",
+    "changes": [
+      "Fixed Achievements tier chevron dividers not actually showing their color between same-state tiers (e.g. an all-claimed row) — only the outer edge of the whole bar was colored before"
+    ]
+  },
+  {
     "version": "1.116.27",
     "date": "2026-08-28",
     "changes": [
