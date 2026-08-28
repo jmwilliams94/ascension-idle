@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.7",
+    "date": "2026-08-28",
+    "changes": [
+      "Fixed the World Boss card silently re-fetching your attempt data every time any other player landed a hit on the boss — was causing the tab to get laggy and use more memory the longer a fight went on"
+    ]
+  },
+  {
     "version": "1.116.6",
     "date": "2026-08-28",
     "changes": [

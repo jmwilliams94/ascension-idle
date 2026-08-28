@@ -64,7 +64,16 @@ export default function WorldBossCard({ characterId, emberColor = null }: { char
     if (spawn) {
       void loadParticipation(characterId, spawn.id)
     }
-  }, [characterId, spawn?.id, loadParticipation, spawn])
+    // spawn (the whole object) deliberately excluded — WorldBossConnection
+    // calls setSpawn with a brand-new object on every world_boss_spawns
+    // UPDATE broadcast, which fires globally on every attack from every
+    // player (HP ticking down), not just when the spawn itself changes.
+    // Depending on the full object refetched participation on every other
+    // player's hit while this card was mounted — a steady stream of
+    // redundant queries during an active fight (reported by the user as
+    // Chrome tab lag/rising memory). spawn?.id is the only real trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [characterId, spawn?.id, loadParticipation])
 
   if (!spawn) {
     return (
