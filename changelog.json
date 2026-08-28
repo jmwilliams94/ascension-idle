@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.14",
+    "date": "2026-08-28",
+    "changes": [
+      "Fixed item icons (Equipment, Bank, Inventory) frequently having to re-download and pop in all at once when switching tabs, caused by an icon cache limit that had fallen behind the number of item icons in the game"
+    ]
+  },
+  {
     "version": "1.116.13",
     "date": "2026-08-28",
     "changes": [

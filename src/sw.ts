@@ -28,8 +28,8 @@ declare const self: ServiceWorkerGlobalScope
 // those requests and would fall through to network on every load.
 precacheAndRoute(self.__WB_MANIFEST, { ignoreURLParametersMatching: [/^v$/] })
 
-// item-icons/ (gear/material art, 23MB across 140+ files) is cached
-// piecemeal on first view rather than precached upfront. StaleWhileRevalidate
+// item-icons/ (gear/material art, growing past 300 files as of 2026-08-28)
+// is cached piecemeal on first view rather than precached upfront. StaleWhileRevalidate
 // (2026-08-28, was CacheFirst since this route's original vite.config.ts
 // workbox.runtimeCaching days) -- item-icon URLs are plain unversioned paths
 // (no `?v=` cache-bust like navIcons.ts's iconUrl() uses for nav/lucky
@@ -51,13 +51,26 @@ precacheAndRoute(self.__WB_MANIFEST, { ignoreURLParametersMatching: [/^v$/] })
 // StaleWhileRevalidate's background-refresh-on-next-request to eventually
 // catch up. The abandoned 'item-icons' cache is left for the browser's own
 // storage-pressure eviction rather than explicitly deleted -- not worth the
-// added complexity for a bounded, capped-at-300-entries cache.
+// added complexity for a bounded, capped-entries cache.
+// maxEntries bumped 300 -> 600 (2026-08-28, reported by the user as icons
+// visibly "popping in all at once" switching between Equipment/Bank/
+// Inventory) -- public/item-icons/ had already grown past 300 files (317 at
+// the time of this fix), so the cache was constantly at its cap and
+// ExpirationPlugin was evicting older entries on every new icon fetch. A
+// character with a reasonable equipment/inventory/bank spread easily
+// references more than 300 distinct icons in one session, so entries kept
+// getting evicted and re-fetched over the network right as a heavy grid
+// (Equipment's paper doll, Bank's full inventory) mounted -- StaleWhileRevalidate
+// still serves a cache hit instantly, but an eviction forces a real fetch,
+// and several of those landing around the same tick reads as "everything
+// rendering at once." 600 gives headroom well past the current file count
+// for future icon additions without needing another bump soon.
 registerRoute(
   ({ url }) => url.pathname.includes('/item-icons/'),
   new StaleWhileRevalidate({
     cacheName: 'item-icons-v2',
     plugins: [
-      new ExpirationPlugin({ maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 90 }),
+      new ExpirationPlugin({ maxEntries: 600, maxAgeSeconds: 60 * 60 * 24 * 90 }),
       new CacheableResponsePlugin({ statuses: [0, 200] }),
     ],
   }),
