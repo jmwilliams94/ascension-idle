@@ -157,26 +157,48 @@ interface MailState {
   clearHistory: (characterId: string) => Promise<{ ok: boolean; error?: string; cleared_count?: number }>
 }
 
+const MAIL_SELECT_COLUMNS =
+  'id, character_id, item_id, currency_type, amount, reason, mail_batch_id, sender_label, subject, message, claimed_at, created_at, item_template_id, item_quality_tier, item_level, item_composition_level'
+
+// Caps how much *claimed* history loadMail pulls in (2026-08-28, reported by
+// the user — an account that never clears its mail history eventually stops
+// being able to open the detail overlay at all, no console error, root cause
+// never pinned down beyond "hundreds of accumulated rows"; clearing history
+// was the workaround). Unclaimed mail is never capped — those are real
+// un-granted rewards and must always load in full — only old, already-claimed
+// history is bounded, same "don't let unbounded lifetime history keep
+// growing the working set forever" idea as LOOT_HOLDING_CAP. Known edge case:
+// a batch claimed partway then abandoned, with its claimed rows aging past
+// this cap while an unclaimed sibling row remains, would render that group
+// missing its older reward tiles — accepted, since it only affects very old
+// partial claims, not the common case this fixes.
+const MAIL_HISTORY_LIMIT = 100
+
 export const useMailStore = create<MailState>((set, get) => ({
   entries: [],
   loaded: false,
   busy: false,
 
   loadMail: async (characterId) => {
-    const { data, error } = await supabase
-      .from('mail')
-      .select(
-        'id, character_id, item_id, currency_type, amount, reason, mail_batch_id, sender_label, subject, message, claimed_at, created_at, item_template_id, item_quality_tier, item_level, item_composition_level',
-      )
-      .eq('character_id', characterId)
-      .order('created_at', { ascending: true })
+    const [unclaimedResult, historyResult] = await Promise.all([
+      supabase.from('mail').select(MAIL_SELECT_COLUMNS).eq('character_id', characterId).is('claimed_at', null),
+      supabase
+        .from('mail')
+        .select(MAIL_SELECT_COLUMNS)
+        .eq('character_id', characterId)
+        .not('claimed_at', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(MAIL_HISTORY_LIMIT),
+    ])
 
-    if (error) {
-      console.error('Failed to load mail', error)
+    if (unclaimedResult.error || historyResult.error) {
+      console.error('Failed to load mail', unclaimedResult.error ?? historyResult.error)
       return
     }
 
-    const entries = (data ?? []) as MailEntry[]
+    const entries = [...((unclaimedResult.data ?? []) as MailEntry[]), ...((historyResult.data ?? []) as MailEntry[])].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    )
     const itemIds = [...new Set(entries.map((entry) => entry.item_id).filter((id): id is string => id !== null))]
 
     let hydrated = entries

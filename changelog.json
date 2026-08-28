@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.20",
+    "date": "2026-08-28",
+    "changes": [
+      "Fixed Mail sometimes failing to open a message's details on accounts with a very large mail history"
+    ]
+  },
+  {
     "version": "1.116.19",
     "date": "2026-08-28",
     "changes": [
