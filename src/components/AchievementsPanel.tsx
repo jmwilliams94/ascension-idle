@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import { ENEMY_TYPES, ZONES, ZONE_ORDER, zoneIdForMonster, type EnemyTypeId, type ZoneId } from '../game/zones/zoneData'
 import { useAchievementsStore, type MonsterKillEntry } from '../game/achievements/useAchievementsStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
@@ -148,19 +148,7 @@ function MonsterCard({ children, badgeCount }: { children: ReactNode; badgeCount
   )
 }
 
-// Solid fill per state (2026-08-28, requested by the user — the earlier
-// .btn-gold/.btn-glow treatment's dark idle background with only a thin
-// colored outline made same-state neighbors barely distinguishable, so the
-// chevron seams between them read as "thin and unclear"). Background now
-// matches TIER_SEGMENT_STATE_COLOR's identity color directly (green means
-// green, not "dark with a green edge"); border is a darker shade of the same
-// hue purely so the zigzag boundary between two same-state segments still
-// shows, since a truly identical fill+border would make that seam invisible.
-const TIER_SEGMENT_FILL: Record<TierSegmentState, { background: string; border: string; text: string }> = {
-  claimed: { background: '#34d399', border: '#047857', text: '#022c1e' },
-  claimable: { background: '#f59e0b', border: '#92400e', text: '#3b1a03' },
-  locked: { background: '#475569', border: '#1e293b', text: '#e2e8f0' },
-}
+const TIER_SEGMENT_CLAIMED_STYLE = { '--glow-bright': '#6ee7b7', '--glow-base': '#34d399', '--glow-dark': '#047857' } as CSSProperties
 
 // Interlocking arrow-step geometry (2026-08-28, refined per the user: "one
 // long connected rectangle... instead of a line separating each of them it's
@@ -241,8 +229,20 @@ function TierSegmentBar({
             />
           )
 
-          const fill = TIER_SEGMENT_FILL[state]
-          const segmentStyle = { clipPath, backgroundColor: fill.background, borderColor: fill.border, color: fill.text }
+          // Inline borderWidth/borderColor beats .btn-gold/.btn-glow's own
+          // `border: 1px solid ...` shorthand regardless of class source
+          // order — index.css's plain (unlayered) rules already sit above
+          // Tailwind's own `@layer utilities` in cascade priority (see
+          // CLAUDE.md's `.ascension-card-frame` vs. an `absolute` utility
+          // gotcha for the same mechanic), so a Tailwind border-width
+          // utility class wouldn't reliably win here either — only inline
+          // style does. This is deliberate: keep the app's real button
+          // chrome (dark idle gradient, shimmer, hover glow) for the
+          // segment body, and only make the chevron-shaped divider itself
+          // — the border tracing the clipped notch/point edges — bright and
+          // thick enough to read clearly, per the user's correction that
+          // recoloring the whole segment fill was "backwards" from the ask.
+          const borderStyle = { clipPath, borderWidth: 2, borderColor: color }
 
           return (
             <div
@@ -256,17 +256,24 @@ function TierSegmentBar({
                     type="button"
                     disabled={busy}
                     onClick={() => void handleClaim()}
-                    style={segmentStyle}
-                    className="h-9 w-full min-w-0 animate-pulse border-2 px-3 text-[11px] font-bold transition disabled:cursor-not-allowed disabled:opacity-40"
+                    style={borderStyle}
+                    className="btn-gold h-9 w-full min-w-0 animate-pulse px-3 text-[11px] font-bold transition disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {tierIndex + 1}
                   </button>
+                ) : state === 'claimed' ? (
+                  <div
+                    style={{ ...TIER_SEGMENT_CLAIMED_STYLE, ...borderStyle }}
+                    className="btn-glow flex h-9 w-full min-w-0 items-center justify-center px-3 text-[11px] font-bold"
+                  >
+                    ✓
+                  </div>
                 ) : (
                   <div
-                    style={segmentStyle}
-                    className="flex h-9 w-full min-w-0 items-center justify-center border-2 px-3 text-[11px] font-bold"
+                    style={borderStyle}
+                    className="flex h-9 w-full min-w-0 items-center justify-center bg-slate-950/60 px-3 text-[11px] font-semibold text-slate-500"
                   >
-                    {state === 'claimed' ? '✓' : tierIndex + 1}
+                    {tierIndex + 1}
                   </div>
                 )}
               </HoverTooltip>

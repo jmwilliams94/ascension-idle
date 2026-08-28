@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.27",
+    "date": "2026-08-28",
+    "changes": [
+      "Achievements tier segments go back to the app's normal button styling, but now with a thicker, clearly colored chevron border so the divisions between tiers are still easy to see"
+    ]
+  },
+  {
     "version": "1.116.26",
     "date": "2026-08-28",
     "changes": [
