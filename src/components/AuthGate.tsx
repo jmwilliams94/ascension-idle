@@ -10,8 +10,8 @@ export default function AuthGate({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_#1e293b,_#020617_70%)] text-slate-400">
-        Loading…
+      <div className="ascension-page-bg flex min-h-screen items-center justify-center">
+        <p className="font-heading text-heading-label ascension-glow-pulse text-base">Loading…</p>
       </div>
     )
   }

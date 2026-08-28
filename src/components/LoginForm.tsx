@@ -1,7 +1,21 @@
 import { useState, type FormEvent } from 'react'
 import { useAuthStore } from '../lib/useAuthStore'
+import { AscensionCard } from './ui/AscensionCard'
+import { Button } from './ui/Button'
 
 type Mode = 'sign-in' | 'sign-up' | 'reset-request'
+
+const MODE_TITLE: Record<Mode, string> = {
+  'sign-in': 'Sign In',
+  'sign-up': 'Create Account',
+  'reset-request': 'Reset Password',
+}
+
+const MODE_SUBMIT_LABEL: Record<Mode, string> = {
+  'sign-in': 'Sign In',
+  'sign-up': 'Sign Up',
+  'reset-request': 'Send Reset Link',
+}
 
 export default function LoginForm() {
   const signIn = useAuthStore((state) => state.signIn)
@@ -55,46 +69,50 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_#1e293b,_#020617_70%)] px-4 text-slate-100">
-      <div className="w-full max-w-sm space-y-6 rounded-3xl border border-slate-800/80 bg-slate-900/70 p-8 shadow-xl shadow-slate-950/30">
-        <div>
-          <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Ascension Idle</p>
-          <h1 className="text-xl font-semibold text-white">
-            {mode === 'sign-in' ? 'Sign in' : mode === 'sign-up' ? 'Create an account' : 'Reset your password'}
-          </h1>
-        </div>
+    <div className="ascension-page-bg flex min-h-screen flex-col items-center justify-center px-4 py-10 text-slate-100">
+      <h1 className="font-heading mb-6 flex items-center gap-2.5 text-2xl font-black tracking-[0.15em] uppercase sm:mb-8 sm:text-3xl">
+        <span className="ascension-glow-pulse text-base text-amber-400 sm:text-lg">✦</span>
+        <span className="text-gradient-steel">ASCENSION</span>
+        <span className="text-gradient-gold">IDLE</span>
+        <span className="ascension-glow-pulse text-base text-amber-400 sm:text-lg">✦</span>
+      </h1>
 
+      <AscensionCard title={MODE_TITLE[mode]} className="w-full max-w-sm">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm text-slate-400">
+            <label htmlFor="email" className="text-heading-label">
               Email
             </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-base text-slate-100 focus:border-sky-500 focus:outline-none"
-            />
+            <div className="select-frame mt-1.5 rounded-lg">
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="w-full bg-transparent px-3 py-2 text-base text-slate-100 focus:outline-none"
+              />
+            </div>
           </div>
 
           {mode !== 'reset-request' && (
             <div>
-              <label htmlFor="password" className="block text-sm text-slate-400">
+              <label htmlFor="password" className="text-heading-label">
                 Password
               </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
-                required
-                minLength={6}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-base text-slate-100 focus:border-sky-500 focus:outline-none"
-              />
+              <div className="select-frame mt-1.5 rounded-lg">
+                <input
+                  id="password"
+                  type="password"
+                  autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="w-full bg-transparent px-3 py-2 text-base text-slate-100 focus:outline-none"
+                />
+              </div>
             </div>
           )}
 
@@ -102,7 +120,7 @@ export default function LoginForm() {
             <button
               type="button"
               onClick={() => switchMode('reset-request')}
-              className="text-sm text-slate-400 hover:text-slate-200"
+              className="text-sm text-slate-400 transition hover:text-amber-300"
             >
               Forgot your password?
             </button>
@@ -111,35 +129,31 @@ export default function LoginForm() {
           {error && <p className="text-sm text-red-400">{error}</p>}
           {info && <p className="text-sm text-emerald-400">{info}</p>}
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded-lg bg-sky-500 px-3 py-2 text-sm font-medium text-white hover:bg-sky-400 disabled:opacity-50"
-          >
-            {submitting
-              ? 'Please wait…'
-              : mode === 'sign-in'
-                ? 'Sign in'
-                : mode === 'sign-up'
-                  ? 'Sign up'
-                  : 'Send reset link'}
-          </button>
+          <Button type="submit" disabled={submitting} className="w-full">
+            {submitting ? 'Please Wait…' : MODE_SUBMIT_LABEL[mode]}
+          </Button>
         </form>
 
+        <div className="ascension-card-header-line mt-6 mb-4" />
+
         {mode === 'reset-request' ? (
-          <button type="button" onClick={() => switchMode('sign-in')} className="text-sm text-slate-400 hover:text-slate-200">
+          <button
+            type="button"
+            onClick={() => switchMode('sign-in')}
+            className="w-full text-center text-sm text-slate-400 transition hover:text-amber-300"
+          >
             Back to sign in
           </button>
         ) : (
           <button
             type="button"
             onClick={() => switchMode(mode === 'sign-in' ? 'sign-up' : 'sign-in')}
-            className="text-sm text-slate-400 hover:text-slate-200"
+            className="w-full text-center text-sm text-slate-400 transition hover:text-amber-300"
           >
             {mode === 'sign-in' ? 'Need an account? Sign up' : 'Already have an account? Sign in'}
           </button>
         )}
-      </div>
+      </AscensionCard>
     </div>
   )
 }

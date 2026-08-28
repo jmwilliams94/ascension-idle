@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.9",
+    "date": "2026-08-28",
+    "changes": [
+      "Restyled the sign-in/sign-up/reset-password screens to match the rest of the game's gold/steel theme, with the Ascension Idle wordmark now shown above the login card"
+    ]
+  },
+  {
     "version": "1.116.8",
     "date": "2026-08-28",
     "changes": [
