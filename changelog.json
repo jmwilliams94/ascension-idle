@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.113.7",
+    "date": "2026-08-28",
+    "changes": [
+      "The Bundle button on the Comet/Fallen Star popup now uses the gold CTA styling, matching Open/Claim"
+    ]
+  },
+  {
     "version": "1.113.6",
     "date": "2026-08-28",
     "changes": [

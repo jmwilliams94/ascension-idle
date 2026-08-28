@@ -53,10 +53,10 @@ function actionVariant(action: TooltipActionPopoverAction): 'primary' | 'seconda
   if (label.startsWith('Sell')) {
     return 'danger'
   }
-  if (label.startsWith('Claim') || label.startsWith('Open')) {
+  if (label.startsWith('Claim') || label.startsWith('Open') || label.startsWith('Bundl')) {
     return 'primary'
   }
-  if (label.startsWith('Deposit') || label.startsWith('Bank') || label.startsWith('Stor') || label.startsWith('Bundl')) {
+  if (label.startsWith('Deposit') || label.startsWith('Bank') || label.startsWith('Stor')) {
     return 'secondary'
   }
   return 'primary'
