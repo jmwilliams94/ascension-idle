@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.26",
+    "date": "2026-08-28",
+    "changes": [
+      "Achievements tier segments are now solid-colored (green/gold/gray) instead of dark boxes with a thin colored outline, so the chevron divisions between tiers are clearly visible"
+    ]
+  },
+  {
     "version": "1.116.25",
     "date": "2026-08-28",
     "changes": [

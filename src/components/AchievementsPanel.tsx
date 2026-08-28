@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { ENEMY_TYPES, ZONES, ZONE_ORDER, zoneIdForMonster, type EnemyTypeId, type ZoneId } from '../game/zones/zoneData'
 import { useAchievementsStore, type MonsterKillEntry } from '../game/achievements/useAchievementsStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
@@ -148,7 +148,19 @@ function MonsterCard({ children, badgeCount }: { children: ReactNode; badgeCount
   )
 }
 
-const TIER_SEGMENT_CLAIMED_STYLE = { '--glow-bright': '#6ee7b7', '--glow-base': '#34d399', '--glow-dark': '#047857' } as CSSProperties
+// Solid fill per state (2026-08-28, requested by the user — the earlier
+// .btn-gold/.btn-glow treatment's dark idle background with only a thin
+// colored outline made same-state neighbors barely distinguishable, so the
+// chevron seams between them read as "thin and unclear"). Background now
+// matches TIER_SEGMENT_STATE_COLOR's identity color directly (green means
+// green, not "dark with a green edge"); border is a darker shade of the same
+// hue purely so the zigzag boundary between two same-state segments still
+// shows, since a truly identical fill+border would make that seam invisible.
+const TIER_SEGMENT_FILL: Record<TierSegmentState, { background: string; border: string; text: string }> = {
+  claimed: { background: '#34d399', border: '#047857', text: '#022c1e' },
+  claimable: { background: '#f59e0b', border: '#92400e', text: '#3b1a03' },
+  locked: { background: '#475569', border: '#1e293b', text: '#e2e8f0' },
+}
 
 // Interlocking arrow-step geometry (2026-08-28, refined per the user: "one
 // long connected rectangle... instead of a line separating each of them it's
@@ -175,13 +187,13 @@ function tierSegmentClipPath(isFirst: boolean, isLast: boolean): string {
 // chip row and, for the zone-level ladder, the old blue/green milestone bar
 // (2026-08-28 redesign, requested by the user: "an ugly blue/green
 // indicator"). A locked segment is a plain inert box; once its threshold is
-// reached it "turns into" a real button using the app's own CTA styling
-// (.btn-gold) and becomes clickable — clicking claims whichever tier is next
-// in sequence server-side (the RPCs never let a specific tier be picked, see
-// claim_kill_count_reward), so every currently-claimable segment triggers
-// the same onClaim call. Reused by the per-monster ladder (Character/Account
-// tracks) and the per-zone Zone Tier ladder alike, parametrized since their
-// thresholds/rewards/claim RPCs all differ.
+// reached it "turns into" a real clickable <button> — clicking claims
+// whichever tier is next in sequence server-side (the RPCs never let a
+// specific tier be picked, see claim_kill_count_reward), so every currently-
+// claimable segment triggers the same onClaim call. Reused by the per-
+// monster ladder (Character/Account tracks) and the per-zone Zone Tier
+// ladder alike, parametrized since their thresholds/rewards/claim RPCs all
+// differ.
 function TierSegmentBar({
   thresholds,
   claimedTierIndex,
@@ -229,6 +241,9 @@ function TierSegmentBar({
             />
           )
 
+          const fill = TIER_SEGMENT_FILL[state]
+          const segmentStyle = { clipPath, backgroundColor: fill.background, borderColor: fill.border, color: fill.text }
+
           return (
             <div
               key={threshold}
@@ -241,24 +256,17 @@ function TierSegmentBar({
                     type="button"
                     disabled={busy}
                     onClick={() => void handleClaim()}
-                    style={{ clipPath }}
-                    className="btn-gold h-9 w-full min-w-0 animate-pulse px-3 text-[11px] font-bold transition disabled:cursor-not-allowed disabled:opacity-40"
+                    style={segmentStyle}
+                    className="h-9 w-full min-w-0 animate-pulse border-2 px-3 text-[11px] font-bold transition disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {tierIndex + 1}
                   </button>
-                ) : state === 'claimed' ? (
-                  <div
-                    style={{ ...TIER_SEGMENT_CLAIMED_STYLE, clipPath }}
-                    className="btn-glow flex h-9 w-full min-w-0 items-center justify-center px-3 text-[11px] font-bold"
-                  >
-                    ✓
-                  </div>
                 ) : (
                   <div
-                    style={{ clipPath }}
-                    className="flex h-9 w-full min-w-0 items-center justify-center border border-slate-700 bg-slate-950/60 px-3 text-[11px] font-semibold text-slate-500"
+                    style={segmentStyle}
+                    className="flex h-9 w-full min-w-0 items-center justify-center border-2 px-3 text-[11px] font-bold"
                   >
-                    {tierIndex + 1}
+                    {state === 'claimed' ? '✓' : tierIndex + 1}
                   </div>
                 )}
               </HoverTooltip>
