@@ -77,7 +77,7 @@ import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { equipPickaxe } from '../game/mining/pickaxeEquipActions'
-import { POTION_TYPES } from '../game/items/potionTypes'
+import { POTION_TYPES, type PotionTypeId } from '../game/items/potionTypes'
 import { useBankStore } from '../game/items/useBankStore'
 import { useGainToastStore } from '../game/hud/useGainToastStore'
 import { useMoneyBagRevealStore } from '../game/items/useMoneyBagRevealStore'
@@ -171,6 +171,45 @@ interface InventoryPanelProps {
   enableCompareToggle?: boolean
 }
 
+// Isolated so only this tiny button subscribes to the live HP/MP that ticks
+// every 100ms while combat runs in the background (CombatEngine.tsx) —
+// InventoryPanel itself used to select currentPlayerHp/maxPlayerHp/
+// currentPlayerMp/maxPlayerMp directly, which meant the *entire* grid (every
+// InventorySlot, plus every Forge/Bank/Shop screen that embeds this same
+// component) re-rendered up to 10x/second any time the player was fighting,
+// regardless of which tab was open. Same shape as WorldBossCard's spawn-
+// object-in-deps bug (v1.116.7) — subscribing to something that changes far
+// more often than what's actually being computed from it, at the top of a
+// component big enough that the re-render cost isn't free.
+function PotionUseButton({ potionType, onUse }: { potionType: PotionTypeId; onUse: () => void }) {
+  const currentPlayerHp = useCombatStore((state) => state.currentPlayerHp)
+  const maxPlayerHp = useCombatStore((state) => state.maxPlayerHp)
+  const currentPlayerMp = useCombatStore((state) => state.currentPlayerMp)
+  const maxPlayerMp = useCombatStore((state) => state.maxPlayerMp)
+
+  const type = POTION_TYPES[potionType]
+  const hpFull = type.kind === 'hp' && maxPlayerHp > 0 && currentPlayerHp >= maxPlayerHp
+  const mpFull = type.kind === 'mp' && maxPlayerMp > 0 && currentPlayerMp >= maxPlayerMp
+  const disabled = hpFull || mpFull
+  const label = hpFull ? 'HP already full' : mpFull ? 'MP already full' : 'Use'
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      title={hpFull ? 'HP already full' : mpFull ? 'MP already full' : undefined}
+      onClick={onUse}
+      className={`mt-3 w-full rounded-lg border px-3 py-1.5 text-xs font-medium ${
+        disabled
+          ? 'cursor-not-allowed border-slate-800 text-slate-600'
+          : 'border-sky-500 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'
+      }`}
+    >
+      {label}
+    </button>
+  )
+}
+
 export default function InventoryPanel({
   reservedItemIds = [],
   onTileDrop,
@@ -221,10 +260,6 @@ export default function InventoryPanel({
   const showGearClaimPrompt = useGearClaimPromptStore((state) => state.show)
   const potionStacks = usePotionStore((state) => state.stacks)
   const handlePotionUse = usePotionStore((state) => state.usePotion)
-  const currentPlayerHp = useCombatStore((state) => state.currentPlayerHp)
-  const maxPlayerHp = useCombatStore((state) => state.maxPlayerHp)
-  const currentPlayerMp = useCombatStore((state) => state.currentPlayerMp)
-  const maxPlayerMp = useCombatStore((state) => state.maxPlayerMp)
   // Same "subscribe to the reactive data, not a stable selector-function
   // reference" fix as equippedIds above — myListings/mail entries, not
   // isListed/hasUnclaimedMail themselves.
@@ -1855,29 +1890,7 @@ export default function InventoryPanel({
             </div>
           </div>
 
-          {(() => {
-            const type = POTION_TYPES[selectedPotionStack.potionType]
-            const hpFull = type.kind === 'hp' && maxPlayerHp > 0 && currentPlayerHp >= maxPlayerHp
-            const mpFull = type.kind === 'mp' && maxPlayerMp > 0 && currentPlayerMp >= maxPlayerMp
-            const disabled = hpFull || mpFull
-            const label = hpFull ? 'HP already full' : mpFull ? 'MP already full' : 'Use'
-
-            return (
-              <button
-                type="button"
-                disabled={disabled}
-                title={hpFull ? 'HP already full' : mpFull ? 'MP already full' : undefined}
-                onClick={() => void handlePotionUse(selectedPotionStack.id)}
-                className={`mt-3 w-full rounded-lg border px-3 py-1.5 text-xs font-medium ${
-                  disabled
-                    ? 'cursor-not-allowed border-slate-800 text-slate-600'
-                    : 'border-sky-500 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'
-                }`}
-              >
-                {label}
-              </button>
-            )
-          })()}
+          <PotionUseButton potionType={selectedPotionStack.potionType} onUse={() => void handlePotionUse(selectedPotionStack.id)} />
         </div>
       )}
 

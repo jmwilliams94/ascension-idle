@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.8",
+    "date": "2026-08-28",
+    "changes": [
+      "Fixed Inventory (and every Forge screen, Bank, Shop, and Equipment — they all share the same grid) re-rendering the whole item grid up to 10 times a second while fighting in the background, instead of only when something actually changed"
+    ]
+  },
+  {
     "version": "1.116.7",
     "date": "2026-08-28",
     "changes": [
