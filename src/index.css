@@ -470,6 +470,20 @@ a,
   transition: all 0.25s ease;
 }
 
+/* Compact active-state pill for MobileBottomNav's four side tabs
+   (2026-08-28 redesign, requested by the user — the bar read as "a row of
+   boxed buttons" competing with the Idling FAB for visual weight instead of
+   one cohesive bar). Same bright gradient/glow as .btn-gold-active but with
+   no border and sized to hug just the icon+label content (rounded-lg,
+   applied to an inner span, not the full-height/width tap-target button)
+   instead of stretching edge-to-edge — the idle state has no background at
+   all, just muted text, so only the active tab shows any box whatsoever. */
+.nav-pill-active {
+  background: linear-gradient(180deg, var(--ascension-gold-bright) 0%, var(--ascension-gold) 60%, var(--ascension-gold-dark) 100%);
+  color: var(--ascension-ink);
+  box-shadow: 0 0 14px rgba(255, 215, 0, 0.45);
+}
+
 /* Colored variant of .btn-gold's idle-dark/hover-bright-gradient-plus-glow
    treatment (2026-08-14, requested by the user — LuckyLad's purple/emerald
    payment buttons and Salvage's per-tier Tempered/Infused/Radiant buttons

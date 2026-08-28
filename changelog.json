@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.113.8",
+    "date": "2026-08-28",
+    "changes": [
+      "Redesigned the mobile bottom nav bar — the four side tabs (Equip, LuckyLad, Tavern, Achievements) are borderless now, with a compact gold pill behind just the active tab's icon and label instead of every tab being its own boxed button"
+    ]
+  },
+  {
     "version": "1.113.7",
     "date": "2026-08-28",
     "changes": [

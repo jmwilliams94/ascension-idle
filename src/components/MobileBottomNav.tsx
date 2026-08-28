@@ -53,49 +53,37 @@ const RIGHT_ITEMS: { id: TabId; label: string }[] = [{ id: 'achievements', label
 
 // badge (2026-08-06, Achievements rework) — a small count bubble, currently
 // only used for the Achievements button (claimable tier count).
-// Same .btn-gold/.btn-gold-active treatment as TabNav.tsx's desktop buttons
-// (2026-08-16, requested by the user — "same button styling we've been
-// going with"), scaled down to this bar's compact size.
-// outerCorner (2026-08-16, requested by the user) — Equip/Achiev. are the
-// bar's two physical end buttons, so their one true outer-bottom corner gets
-// a radius matching the nav's own rounded-b-[3rem] (see MobileBottomNav's
-// className comment below) instead of the shared rounded-lg. Written as four
-// explicit longhand corners rather than mixing the `rounded-lg` shorthand
-// with a longhand override — both compile to the same border-radius
-// longhand at equal specificity, so which one wins would depend on
-// generated-CSS source order instead of JSX order.
-function NavButton({
-  id,
-  label,
-  badge,
-  outerCorner,
-}: {
-  id: TabId
-  label: string
-  badge?: number
-  outerCorner?: 'bl' | 'br'
-}) {
+// Borderless tab redesign (2026-08-28, requested by the user — the old
+// per-button .btn-gold/.btn-gold-active box made every tab read as an
+// equally-weighted boxed button, competing with the Idling FAB instead of
+// deferring to it) — the outer <button> is now just a plain tap target with
+// no background/border of its own; only the active tab's icon+label gets a
+// small .nav-pill-active pill behind it, sized to its own content instead of
+// stretching edge-to-edge. This also retires the old outerCorner prop (see
+// git history) — that existed only to match a boxed button's one true outer
+// corner to the bar's own rounded-b-[3rem] mask, which is moot now that idle
+// buttons have no box to clip, and the active pill sits well clear of the
+// bar's physical edge (px-2 on the row below, unchanged).
+function NavButton({ id, label, badge }: { id: TabId; label: string; badge?: number }) {
   const activeTab = useTabStore((state) => state.activeTab)
   const setActiveTab = useTabStore((state) => state.setActiveTab)
   const active = activeTab === id
   const icon = TAB_ICONS[id]
-  const cornerClass =
-    outerCorner === 'bl'
-      ? 'rounded-tl-lg rounded-tr-lg rounded-br-lg rounded-bl-[3rem]'
-      : outerCorner === 'br'
-        ? 'rounded-tl-lg rounded-tr-lg rounded-bl-lg rounded-br-[3rem]'
-        : 'rounded-lg'
 
   return (
     <button
       type="button"
       onClick={() => setActiveTab(id)}
-      className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-medium leading-tight ${cornerClass} ${
-        active ? 'btn-gold-active' : 'btn-gold'
-      }`}
+      className="relative flex flex-1 flex-col items-center justify-center rounded-lg py-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400/50"
     >
-      {icon && <NavIconGlyph icon={icon} />}
-      <span className="truncate">{label}</span>
+      <span
+        className={`flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[10px] font-medium leading-tight transition-all ${
+          active ? 'nav-pill-active' : 'text-slate-400'
+        }`}
+      >
+        {icon && <NavIconGlyph icon={icon} />}
+        <span className="truncate">{label}</span>
+      </span>
       {Boolean(badge) && (
         <span className="absolute right-2 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-slate-900 bg-amber-500 px-1 text-[9px] font-bold text-slate-950">
           {badge! > 99 ? '99+' : badge}
@@ -105,10 +93,14 @@ function NavButton({
   )
 }
 
-// Same compact flex-[0.85] sizing as NavButton's `compact` prop (LuckyLad
-// was already the sole user of that prop), plus the World-Boss-button's own
-// border-ember/outline-ring effect, retriggered here by the free 4h ticket
-// cooldown instead of a server event (2026-08-25, requested by the user).
+// Compact flex-[0.85] sizing (flanks Idling, reads slightly smaller than
+// the edge buttons), same borderless pill treatment as NavButton — plus the
+// World-Boss-button's own border-ember/outline-ring effect, retriggered here
+// by the free 4h ticket cooldown instead of a server event (2026-08-25,
+// requested by the user). The ember/outline stay on the outer <button> (the
+// full tap target), not the inner pill — a free-ticket-ready LuckyLad should
+// still draw the eye via the ember ring even while idle/un-pilled, same as
+// before the 2026-08-28 borderless redesign.
 function LuckyNavButton({ label }: { label: string }) {
   const activeTab = useTabStore((state) => state.activeTab)
   const setActiveTab = useTabStore((state) => state.setActiveTab)
@@ -120,13 +112,17 @@ function LuckyNavButton({ label }: { label: string }) {
     <button
       type="button"
       onClick={() => setActiveTab('lucky')}
-      className={`relative flex flex-[0.85] flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[10px] font-medium leading-tight ${
-        active ? 'btn-gold-active' : 'btn-gold'
-      }`}
+      className="relative flex flex-[0.85] flex-col items-center justify-center rounded-lg py-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400/50"
       style={eventBorderTintStyle(emberColor)}
     >
-      {icon && <NavIconGlyph icon={icon} />}
-      <span className="truncate">{label}</span>
+      <span
+        className={`flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[10px] font-medium leading-tight transition-all ${
+          active ? 'nav-pill-active' : 'text-slate-400'
+        }`}
+      >
+        {icon && <NavIconGlyph icon={icon} />}
+        <span className="truncate">{label}</span>
+      </span>
       <EventEmberBorder color={emberColor} count={20} />
     </button>
   )
@@ -283,12 +279,16 @@ function TavernNavButton({ badges }: { badges: Partial<Record<TabId, number>> })
       <button
         type="button"
         onClick={() => setExpanded((current) => !current)}
-        className={`relative flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-lg py-1.5 text-[10px] font-medium leading-tight ${
-          active || expanded ? 'btn-gold-active' : 'btn-gold'
-        }`}
+        className="relative flex h-full w-full flex-col items-center justify-center rounded-lg py-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400/50"
       >
-        <img src={TAVERN_ICON_SRC} alt="Tavern" className="h-6 w-6 object-contain" />
-        <span className="truncate">Tavern</span>
+        <span
+          className={`flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[10px] font-medium leading-tight transition-all ${
+            active || expanded ? 'nav-pill-active' : 'text-slate-400'
+          }`}
+        >
+          <img src={TAVERN_ICON_SRC} alt="Tavern" className="h-6 w-6 object-contain" />
+          <span className="truncate">Tavern</span>
+        </span>
         {totalBadge > 0 && (
           <span className="absolute right-2 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-slate-900 bg-amber-500 px-1 text-[9px] font-bold text-slate-950">
             {totalBadge > 99 ? '99+' : totalBadge}
@@ -326,37 +326,33 @@ export default function MobileBottomNav() {
       // rounded-b, no overflow-hidden (2026-08-16, requested by the user:
       // bar should "contour" to the phone's rounded bottom corners) —
       // border-radius clips this element's own background on its own,
-      // without needing overflow-hidden. Equip/Achiev. carry a matching
-      // rounded-b-[3rem] on their own one true outer corner (see
-      // NavButton's `outerCorner` prop) so the curve reads as continuous.
+      // without needing overflow-hidden. Equip/Achiev. no longer need a
+      // matching outer-corner radius of their own (see NavButton's doc
+      // comment — the 2026-08-28 borderless redesign removed their box
+      // entirely, so there's nothing left to clip against this mask).
       // overflow-hidden was here originally too, to clip those buttons
-      // flush to this same mask before they got their own outerCorner
-      // radius (and before px-2 moved them off the physical edge) — kept
-      // dropped now (2026-08-16, reported by the user: Tavern's popup menu
-      // stopped registering taps) since it was also silently clipping the
-      // Tavern rollup, which opens via `absolute bottom-full` and pokes out
-      // above this box: content clipped by an ancestor's overflow-hidden
-      // doesn't receive pointer events either, so every rollup item was a
-      // dead zone once this got added.
+      // flush to this same mask before they got their own now-removed
+      // outerCorner radius (and before px-2 moved them off the physical
+      // edge) — kept dropped now (2026-08-16, reported by the user:
+      // Tavern's popup menu stopped registering taps) since it was also
+      // silently clipping the Tavern rollup, which opens via `absolute
+      // bottom-full` and pokes out above this box: content clipped by an
+      // ancestor's overflow-hidden doesn't receive pointer events either,
+      // so every rollup item was a dead zone once this got added.
       style={{ paddingBottom: 'env(safe-area-inset-bottom)', transform: 'translateZ(0)' }}
     >
       <div className="mx-auto flex max-w-md items-stretch gap-1 px-2 py-1">
-        {LEFT_ITEMS.map((item, index) =>
+        {LEFT_ITEMS.map((item) =>
           item.id === 'lucky' ? (
             <LuckyNavButton key={item.id} label={item.label} />
           ) : (
-            <NavButton key={item.id} {...item} outerCorner={index === 0 ? 'bl' : undefined} />
+            <NavButton key={item.id} {...item} />
           ),
         )}
         <IdlingNavButton />
         <TavernNavButton badges={{ marketplace: mailBadge }} />
         {RIGHT_ITEMS.map((item) => (
-          <NavButton
-            key={item.id}
-            {...item}
-            badge={item.id === 'achievements' ? achievementsBadge : undefined}
-            outerCorner="br"
-          />
+          <NavButton key={item.id} {...item} badge={item.id === 'achievements' ? achievementsBadge : undefined} />
         ))}
       </div>
     </nav>
