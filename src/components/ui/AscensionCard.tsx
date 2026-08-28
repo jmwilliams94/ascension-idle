@@ -50,9 +50,14 @@ export function AscensionCard({
   const isLarge = titleSize === 'large'
 
   return (
-    <div className={`ascension-card-frame ${className}`} style={eventBorderTintStyle(activeEventColor)}>
+    <div
+      className={`ascension-card-frame ${activeEventColor ? 'ascension-card-frame--ember-safe' : ''} ${className}`}
+      style={eventBorderTintStyle(activeEventColor)}
+    >
       {activeEventColor && <EventEmberBorder color={activeEventColor} />}
-      <div className={`ascension-card-inner ${title ? (isLarge ? 'pt-6 lg:pt-9' : 'pt-6') : ''} ${contentClassName}`}>
+      <div
+        className={`ascension-card-inner ${activeEventColor ? 'ascension-card-inner--ember-safe' : ''} ${title ? (isLarge ? 'pt-6 lg:pt-9' : 'pt-6') : ''} ${contentClassName}`}
+      >
         {title && (
           <div className={`ascension-card-ribbon ${isLarge ? 'ascension-card-ribbon-lg' : ''}`}>
             <span className={`ascension-glow-pulse text-amber-400 ${isLarge ? 'text-xs lg:text-base' : 'text-xs'}`}>✦</span>

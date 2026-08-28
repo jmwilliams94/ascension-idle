@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.0",
+    "date": "2026-08-28",
+    "changes": [
+      "Refreshed the gold/steel UI chrome with a darker, more faceted look — cards, dropdowns, and buttons now have angled corners, richer gradients, and a light-sweep shine on hover"
+    ]
+  },
+  {
     "version": "1.115.0",
     "date": "2026-08-28",
     "changes": [
