@@ -256,18 +256,26 @@ function TierSegmentBar({
             >
               <HoverTooltip content={tooltip}>
                 {state === 'claimable' ? (
+                  // borderColor: 'transparent' neutralizes .btn-gold's own
+                  // `border: 1px solid var(--ascension-gold)` — left in
+                  // place it still traces near the inner shape's flat top/
+                  // bottom (a border partially intersects a clip-path'd
+                  // box's original edges even where the diagonal cut itself
+                  // shows none, see [[gotcha_border_clip_path_no_trace]]),
+                  // producing a second, fainter gold line competing with
+                  // the outer frame's clean 2px rim right at the seam.
                   <button
                     type="button"
                     disabled={busy}
                     onClick={() => void handleClaim()}
-                    style={{ clipPath }}
+                    style={{ clipPath, borderColor: 'transparent' }}
                     className="btn-gold h-9 w-full min-w-0 animate-pulse px-3 text-[11px] font-bold transition disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {tierIndex + 1}
                   </button>
                 ) : state === 'claimed' ? (
                   <div
-                    style={{ ...TIER_SEGMENT_CLAIMED_STYLE, clipPath }}
+                    style={{ ...TIER_SEGMENT_CLAIMED_STYLE, clipPath, borderColor: 'transparent' }}
                     className="btn-glow flex h-9 w-full min-w-0 items-center justify-center px-3 text-[11px] font-bold"
                   >
                     ✓

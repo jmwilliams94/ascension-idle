@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.29",
+    "date": "2026-08-28",
+    "changes": [
+      "Fixed Achievements tier chevron dividers showing a competing second-color line at each seam — each divider is now one solid color matching the tier to its left"
+    ]
+  },
+  {
     "version": "1.116.28",
     "date": "2026-08-28",
     "changes": [
