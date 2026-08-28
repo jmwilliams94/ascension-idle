@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.33",
+    "date": "2026-08-29",
+    "changes": [
+      "The VIP badge at the top of the screen is now icon-only on mobile, to free up space — tap it to see your remaining VIP days"
+    ]
+  },
+  {
     "version": "1.116.32",
     "date": "2026-08-29",
     "changes": [
