@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.21",
+    "date": "2026-08-28",
+    "changes": [
+      "World Boss display is now a wider, landscape shape instead of square"
+    ]
+  },
+  {
     "version": "1.116.20",
     "date": "2026-08-28",
     "changes": [

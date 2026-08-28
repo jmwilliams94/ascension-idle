@@ -143,7 +143,7 @@ export default function WorldBossCard({ characterId, emberColor = null }: { char
       </div>
 
       <div
-        className={`relative mt-3 aspect-square w-full overflow-hidden rounded-2xl border-2 border-slate-700 bg-slate-950 bg-cover bg-center ${
+        className={`relative mt-3 aspect-[16/9] w-full overflow-hidden rounded-2xl border-2 border-slate-700 bg-slate-950 bg-cover bg-center ${
           bossDefeated ? 'opacity-40 grayscale' : ''
         }`}
         style={WINDHOLLOW_BACKGROUND_URL ? { backgroundImage: `url(${WINDHOLLOW_BACKGROUND_URL})` } : undefined}
@@ -152,7 +152,7 @@ export default function WorldBossCard({ characterId, emberColor = null }: { char
         <img
           src={`${import.meta.env.BASE_URL}bosses/mourncrow.png`}
           alt="World Boss"
-          className="relative h-full w-full object-contain p-[10%]"
+          className="relative h-full w-full object-contain p-[16%]"
         />
       </div>
 
