@@ -25,10 +25,15 @@ interface AscensionCardProps {
   /**
    * Same border-ember effect as the Idling nav button/Events sub-tab button
    * (2026-10-11, requested by the user, extended to the Events tab's own
-   * World Boss/Gold Donation cards) — null/undefined renders nothing. The
-   * outer frame div is already `position: relative` with no overflow clip
-   * (see .ascension-card-frame in index.css), so the embers anchor and
-   * drift correctly without any extra wrapper.
+   * World Boss/Gold Donation cards) — null/undefined renders nothing.
+   * EventEmberBorder's particles anchor outside their own parent's box by
+   * design (see eventEmberBorder.tsx), which conflicts with
+   * .ascension-card-frame's own clip-path chamfer (2026-08-28, Prism
+   * Obsidian pass) — clipping the frame would cut the embers off. So
+   * whenever this is set, the embers render as a sibling of the frame
+   * (inside an unclipped wrapper) instead of a child of it, letting the
+   * frame chamfer unconditionally either way. Only WorldBossCard/
+   * GoldDonationCard pass this today, and neither passes `className`.
    */
   activeEventColor?: EventEmberColor | null
 }
@@ -50,30 +55,35 @@ export function AscensionCard({
 }: AscensionCardProps) {
   const isLarge = titleSize === 'large'
 
-  return (
-    <div
-      className={`ascension-card-frame ${activeEventColor ? 'ascension-card-frame--ember-safe' : ''} ${className}`}
-      style={eventBorderTintStyle(activeEventColor)}
-    >
-      {activeEventColor && <EventEmberBorder color={activeEventColor} />}
-      <div
-        className={`ascension-card-inner ${activeEventColor ? 'ascension-card-inner--ember-safe' : ''} ${contentClassName}`}
-      >
-        {title && (
-          <div className={`ascension-card-header ${isLarge ? 'ascension-card-header-lg' : ''}`}>
-            <span className="ascension-card-header-line" />
-            <h3
-              className={`font-heading text-gradient-steel whitespace-nowrap font-black uppercase tracking-[0.15em] ${
-                isLarge ? 'text-sm lg:text-2xl' : 'text-sm'
-              }`}
-            >
-              {title}
-            </h3>
-            <span className="ascension-card-header-line" />
-          </div>
-        )}
-        {children}
-      </div>
+  const content = (
+    <div className={`ascension-card-inner ${contentClassName}`}>
+      {title && (
+        <div className={`ascension-card-header ${isLarge ? 'ascension-card-header-lg' : ''}`}>
+          <span className="ascension-card-header-line" />
+          <h3
+            className={`font-heading text-gradient-steel whitespace-nowrap font-black uppercase tracking-[0.15em] ${
+              isLarge ? 'text-sm lg:text-2xl' : 'text-sm'
+            }`}
+          >
+            {title}
+          </h3>
+          <span className="ascension-card-header-line" />
+        </div>
+      )}
+      {children}
     </div>
   )
+
+  if (activeEventColor) {
+    return (
+      <div className={`relative h-full w-full ${className}`}>
+        <div className="ascension-card-frame h-full w-full" style={eventBorderTintStyle(activeEventColor)}>
+          {content}
+        </div>
+        <EventEmberBorder color={activeEventColor} />
+      </div>
+    )
+  }
+
+  return <div className={`ascension-card-frame ${className}`}>{content}</div>
 }

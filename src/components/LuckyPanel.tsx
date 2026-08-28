@@ -493,7 +493,6 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
 
       {!paymentChoice && !board && (
         <AscensionCard contentClassName="p-3">
-          <p className="text-xs text-slate-400">Choose how to pay for a draw:</p>
           {/* 2x2 grid of square buttons (2026-08-23, requested by the user —
               a 4th option needed room without stretching the button row into
               a cluttered 4-across line). max-w-[220px] + mx-auto keeps the
@@ -504,8 +503,10 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
               CLAUDE.visual-design.md's guardrail); right column pays with
               Ascension Points (purple = single entry, emerald = bulk,
               unchanged from before). Top row = single draw, bottom row =
-              9-for-8 bulk. */}
-          <div className="mx-auto mt-2 grid max-w-[220px] grid-cols-2 gap-2">
+              9-for-8 bulk. "Choose how to pay" label removed 2026-08-28,
+              requested by the user — the four payment buttons below are
+              self-explanatory without it. */}
+          <div className="mx-auto grid max-w-[220px] grid-cols-2 gap-2">
             <Button
               variant="primary"
               disabled={busy || !canAffordTicket}

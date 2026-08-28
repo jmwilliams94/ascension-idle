@@ -16,7 +16,7 @@
 // behavior as before this switch.
 import { precacheAndRoute } from 'workbox-precaching'
 import { registerRoute } from 'workbox-routing'
-import { CacheFirst } from 'workbox-strategies'
+import { StaleWhileRevalidate } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 import { CacheableResponsePlugin } from 'workbox-cacheable-response'
 
@@ -28,13 +28,34 @@ declare const self: ServiceWorkerGlobalScope
 // those requests and would fall through to network on every load.
 precacheAndRoute(self.__WB_MANIFEST, { ignoreURLParametersMatching: [/^v$/] })
 
-// Literal port of vite.config.ts's former workbox.runtimeCaching entry --
 // item-icons/ (gear/material art, 23MB across 140+ files) is cached
-// piecemeal on first view rather than precached upfront.
+// piecemeal on first view rather than precached upfront. StaleWhileRevalidate
+// (2026-08-28, was CacheFirst since this route's original vite.config.ts
+// workbox.runtimeCaching days) -- item-icon URLs are plain unversioned paths
+// (no `?v=` cache-bust like navIcons.ts's iconUrl() uses for nav/lucky
+// icons), so under CacheFirst a phone that had already cached an icon PNG
+// would keep serving those exact bytes for up to maxAgeSeconds below no
+// matter how many app updates shipped a fixed version of that same file --
+// bit the Bracelet/Bag icon crop fixes (v1.111.5/1.111.7) this way, reported
+// by the user weeks later still seeing the old art on mobile only (desktop's
+// browser cache is far more likely to have already been cleared/expired
+// naturally). StaleWhileRevalidate still serves instantly from cache (same
+// perceived speed/offline behavior as before) but also fires a background
+// fetch to refresh that cache entry, so a fixed icon self-heals within one
+// extra load instead of staying wrong for up to 90 days.
+//
+// cacheName bumped to 'item-icons-v2' (one-time, this fix only -- not tied
+// to APP_VERSION, which would force a full ~23MB re-download on every
+// future deploy) so every phone still holding pre-fix cropped icons under
+// the old 'item-icons' cache starts clean instead of waiting on
+// StaleWhileRevalidate's background-refresh-on-next-request to eventually
+// catch up. The abandoned 'item-icons' cache is left for the browser's own
+// storage-pressure eviction rather than explicitly deleted -- not worth the
+// added complexity for a bounded, capped-at-300-entries cache.
 registerRoute(
   ({ url }) => url.pathname.includes('/item-icons/'),
-  new CacheFirst({
-    cacheName: 'item-icons',
+  new StaleWhileRevalidate({
+    cacheName: 'item-icons-v2',
     plugins: [
       new ExpirationPlugin({ maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 90 }),
       new CacheableResponsePlugin({ statuses: [0, 200] }),

@@ -351,7 +351,12 @@ a,
    13px inner, matching the 1px padding) instead of border-radius — a plain
    box-shadow would get clipped by clip-path along with everything else, so
    the drop shadow moves to `filter: drop-shadow(...)`, which paints from
-   the element's rendered (post-clip) alpha instead of its border-box. */
+   the element's rendered (post-clip) alpha instead of its border-box.
+   Always chamfered, unconditionally — EventEmberBorder's particles anchor
+   outside their own parent's box by design, which would otherwise conflict
+   with this clip-path, but AscensionCard.tsx sidesteps that by rendering
+   the embers as a sibling of this frame (not a child) whenever
+   activeEventColor is set, rather than compromising this rule. */
 .ascension-card-frame {
   position: relative;
   background: linear-gradient(180deg, rgba(212, 175, 55, 0.7) 0%, rgba(122, 139, 158, 0.3) 50%, rgba(212, 175, 55, 0.5) 100%);
@@ -365,19 +370,6 @@ a,
   filter:
     drop-shadow(0 12px 32px rgba(0, 0, 0, 0.8))
     drop-shadow(0 0 16px rgba(212, 175, 55, 0.12));
-}
-
-/* EventEmberBorder's particles (eventEmberBorder.tsx) anchor up to ~56% out
-   from this element's own center — genuinely outside the box on every edge,
-   by design ("Parent must be position: relative (and not clip overflow)
-   for the embers to anchor correctly") — and clip-path would cut them all
-   off. AscensionCard.tsx adds this modifier class alongside
-   ascension-card-frame/-inner only while activeEventColor is set, falling
-   back to the old rounded-corner geometry for exactly as long as embers are
-   actually mounted on that card. Chamfered is the default everywhere else. */
-.ascension-card-frame.ascension-card-frame--ember-safe {
-  clip-path: none;
-  border-radius: 1rem;
 }
 
 .ascension-card-inner {
@@ -400,11 +392,6 @@ a,
      AscensionCard usages), so this only ever kicks in where the frame
      actually has a definite stretched height to fill. */
   height: 100%;
-}
-
-.ascension-card-inner.ascension-card-inner--ember-safe {
-  clip-path: none;
-  border-radius: calc(1rem - 1px);
 }
 
 /* In-flow header row (2026-08-28, Prism Obsidian & Light Sweep pass —
@@ -460,9 +447,12 @@ a,
    <EventEmberBorder> as a direct child of a .btn-gold/.btn-gold-active
    button, and its particles anchor outside the button's own box by design
    (see eventEmberBorder.tsx) — overflow:hidden would cut them off. Those
-   five call sites add .btn-ember-safe alongside .btn-gold/.btn-gold-active
-   whenever their own event-color prop is actually set, same conditional
-   pattern as AscensionCard's --ember-safe modifier. */
+   three call sites add .btn-ember-safe alongside .btn-gold/.btn-gold-active
+   whenever their own event-color prop is actually set. AscensionCard.tsx
+   solves the equivalent problem for .ascension-card-frame differently —
+   it renders EventEmberBorder as an unclipped sibling instead of a clipped
+   child, so the card frame stays chamfered unconditionally with no
+   opt-out class needed there. */
 .btn-gold {
   position: relative;
   overflow: hidden;

@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.116.3",
+    "date": "2026-08-28",
+    "changes": [
+      "World Boss and Gold Donation cards now match the rest of the app's new chamfered card style",
+      "Removed the redundant \"Choose how to pay for a draw\" label on Lucky Lad",
+      "Fixed item icons (including Bracelets and Bags) getting permanently stuck on outdated art on phones after an art update — icons now refresh themselves in the background instead of staying cached indefinitely"
+    ]
+  },
+  {
     "version": "1.116.2",
     "date": "2026-08-28",
     "changes": [
