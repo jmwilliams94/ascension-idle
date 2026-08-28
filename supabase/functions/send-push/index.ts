@@ -111,6 +111,7 @@ async function handleSendPush(req: Request): Promise<Response> {
   })
 
   const staleIds: string[] = []
+  const failures: { statusCode?: number; message: string }[] = []
   let sent = 0
 
   await Promise.all(
@@ -127,11 +128,17 @@ async function handleSendPush(req: Request): Promise<Response> {
         // else (network blip, 429 rate limit) is left alone to retry on the
         // next send rather than deleted on a transient failure.
         const statusCode = (err as { statusCode?: number }).statusCode
+        const message = err instanceof Error ? err.message : String(err)
         if (statusCode === 404 || statusCode === 410) {
           staleIds.push(row.id)
         } else {
-          console.error('sendNotification failed', row.id, err)
+          console.error('sendNotification failed', row.id, statusCode, message)
         }
+        // Surfaced in the response (not just console.error) since this
+        // project has no way to tail Edge Function logs from the CLI used
+        // to deploy it -- the caller needs to be able to see why without
+        // dashboard access.
+        failures.push({ statusCode, message })
       }
     }),
   )
@@ -140,7 +147,10 @@ async function handleSendPush(req: Request): Promise<Response> {
     await db.from('push_subscriptions').delete().in('id', staleIds)
   }
 
-  return json({ ok: true, sent, pruned: staleIds.length })
+  // ok reflects whether anything actually sent, not just "the function ran
+  // without throwing" — a caller with only dead/erroring subscriptions
+  // should see a failure, not a false "Sent!".
+  return json({ ok: sent > 0, sent, pruned: staleIds.length, failures })
 }
 
 Deno.serve(async (req) => {

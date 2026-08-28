@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.114.3",
+    "date": "2026-08-28",
+    "changes": [
+      "The \"Send test notification\" button now shows the actual reason a send failed, instead of just a generic error"
+    ]
+  },
+  {
     "version": "1.114.2",
     "date": "2026-08-28",
     "changes": [

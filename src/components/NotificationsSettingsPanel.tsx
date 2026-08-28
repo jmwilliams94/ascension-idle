@@ -26,6 +26,7 @@ export default function NotificationsSettingsPanel() {
   const disable = useNotificationStore((state) => state.disable)
   const [testState, setTestState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [testErrorDetail, setTestErrorDetail] = useState<string | null>(null)
 
   useEffect(() => {
     void refresh()
@@ -53,11 +54,33 @@ export default function NotificationsSettingsPanel() {
       return
     }
     setTestState('sending')
-    const { data, error } = await supabase.functions.invoke('send-push', {
+    setTestErrorDetail(null)
+    const { data, error } = await supabase.functions.invoke<{
+      ok: boolean
+      error?: string
+      sent?: number
+      failures?: { statusCode?: number; message: string }[]
+    }>('send-push', {
       body: { account_id: accountId, title: 'Ascension Idle', body: 'Test notification -- this is what a push looks like.' },
     })
     if (error || !data?.ok) {
       setTestState('error')
+      // send-push returns per-subscription failure detail (statusCode +
+      // message from the push service) in its response body -- surfaced
+      // here since this project has no way to tail Edge Function logs from
+      // the CLI used to deploy it. A non-2xx response (401/403/404/500) is
+      // reported via `error` instead, with the JSON body only reachable
+      // through error.context (a raw Response) rather than `data`.
+      let detail = data?.error ?? data?.failures?.map((f) => `${f.statusCode ?? '?'}: ${f.message}`).join('; ')
+      if (!detail && error && 'context' in error && error.context instanceof Response) {
+        try {
+          const body = await error.context.clone().json()
+          detail = body?.error ?? JSON.stringify(body)
+        } catch {
+          detail = error.message
+        }
+      }
+      setTestErrorDetail(detail ?? (error ? String(error.message ?? error) : null))
       return
     }
     setTestState('sent')
@@ -109,7 +132,11 @@ export default function NotificationsSettingsPanel() {
                 {testState === 'sending' ? 'Sending…' : 'Send test notification'}
               </button>
               {testState === 'sent' && <p className="text-[11px] text-emerald-400">Sent! Check your notifications.</p>}
-              {testState === 'error' && <p className="text-[11px] text-red-400">Failed to send -- try again in a moment.</p>}
+              {testState === 'error' && (
+                <p className="text-[11px] text-red-400">
+                  Failed to send{testErrorDetail ? `: ${testErrorDetail}` : ' -- try again in a moment.'}
+                </p>
+              )}
             </div>
           )}
         </>
