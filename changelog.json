@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.30",
+    "date": "2026-08-29",
+    "changes": [
+      "Fixed a bug where an equipped Pickaxe could silently take up an invisible inventory slot during Hunting, Row Combat, and Lucky Ticket draws, making the game think your inventory was fuller than what you could actually see"
+    ]
+  },
+  {
     "version": "1.116.29",
     "date": "2026-08-28",
     "changes": [
