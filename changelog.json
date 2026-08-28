@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.18",
+    "date": "2026-08-28",
+    "changes": [
+      "Gave the World Boss a real portrait instead of a placeholder icon"
+    ]
+  },
+  {
     "version": "1.116.17",
     "date": "2026-08-28",
     "changes": [

@@ -138,11 +138,15 @@ export default function WorldBossCard({ characterId, emberColor = null }: { char
       </div>
 
       <div
-        className={`mt-3 flex h-32 w-32 items-center justify-center rounded-2xl border-2 border-slate-700 bg-gradient-to-br from-rose-900 to-slate-950 text-5xl ${
+        className={`mt-3 h-32 w-32 overflow-hidden rounded-2xl border-2 border-slate-700 bg-gradient-to-br from-rose-900 to-slate-950 ${
           bossDefeated ? 'opacity-40 grayscale' : ''
         }`}
       >
-        👹
+        <img
+          src={`${import.meta.env.BASE_URL}bosses/mourncrow.png`}
+          alt="World Boss"
+          className="h-full w-full object-contain p-[10%]"
+        />
       </div>
 
       <div className="mt-3">
