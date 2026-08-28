@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.114.2",
+    "date": "2026-08-28",
+    "changes": [
+      "Fixed the Push Notifications toggle still failing after granting the browser permission prompt"
+    ]
+  },
+  {
     "version": "1.114.1",
     "date": "2026-08-28",
     "changes": [
