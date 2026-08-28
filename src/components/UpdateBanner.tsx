@@ -17,11 +17,12 @@ export default function UpdateBanner() {
 
   return (
     <div
-      className="fixed inset-x-0 top-0 z-[60] flex items-center justify-center gap-3 border-b border-amber-600/50 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-200 backdrop-blur"
-      // translateZ(0), same fix as MobileBottomNav.tsx -- fixed + backdrop-filter
-      // is a known iOS Safari combo that can visually detach and drift with
-      // the page during a scroll gesture; forcing its own compositor layer
-      // up front avoids the mid-scroll re-promotion that triggers it.
+      className="fixed inset-x-0 top-0 z-[60] flex items-center justify-center gap-3 border-b border-amber-600/50 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-200"
+      // No backdrop-blur (dropped 2026-08-29, reported by the user) -- fixed +
+      // backdrop-filter is a known iOS Safari combo that can visually detach
+      // and drift with the page during a scroll gesture. translateZ(0) below
+      // is kept anyway as a harmless defensive measure, same as
+      // MobileBottomNav.tsx's own.
       style={{ transform: 'translateZ(0)' }}
     >
       <span>A new version of Ascension Idle is available.</span>

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.34",
+    "date": "2026-08-29",
+    "changes": [
+      "Fixed the bottom navigation bar occasionally drifting/detaching from the bottom of the screen while scrolling on mobile"
+    ]
+  },
+  {
     "version": "1.116.33",
     "date": "2026-08-29",
     "changes": [

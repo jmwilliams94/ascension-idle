@@ -27,7 +27,7 @@ export default function PetToast() {
   }
 
   return (
-    <div className="rounded-lg border border-amber-400/60 bg-amber-400/10 px-3 py-1.5 text-center text-xs font-semibold text-amber-300 backdrop-blur">
+    <div className="rounded-lg border border-amber-400/60 bg-amber-400/10 px-3 py-1.5 text-center text-xs font-semibold text-amber-300">
       🎉 You obtained the {monsterName} pet!
     </div>
   )

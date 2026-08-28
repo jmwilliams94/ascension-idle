@@ -92,7 +92,7 @@ export default function MoneyBagRevealModal() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.92 }}
             transition={{ duration: 0.25 }}
-            className="relative flex items-center gap-2 rounded-xl border bg-slate-900/95 px-3 py-2 shadow-xl backdrop-blur"
+            className="relative flex items-center gap-2 rounded-xl border bg-slate-900/95 px-3 py-2 shadow-xl"
             style={{ borderColor: `${color}80` }}
           >
             <EmberBurst seed={seed} color={color as string} />
