@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useGoldDonationStore, type GoldDonationPool } from '../game/goldDonation/useGoldDonationStore'
+import { useTabActivityStore } from '../lib/useTabActivityStore'
 
 function toPool(row: Record<string, unknown>): GoldDonationPool {
   return {
@@ -49,7 +50,15 @@ export default function GoldDonationConnection() {
       { event: '*', schema: 'public', table: 'gold_donation_pools' },
       (payload) => {
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-          setPool(toPool(payload.new as Record<string, unknown>))
+          // Detect the buff just triggering (status flipping to 'active')
+          // before overwriting the store, so a bare donation-total tick
+          // (status still 'collecting') doesn't also flag the tab.
+          const wasActive = useGoldDonationStore.getState().pool?.status === 'active'
+          const pool = toPool(payload.new as Record<string, unknown>)
+          setPool(pool)
+          if (pool.status === 'active' && !wasActive) {
+            useTabActivityStore.getState().markPending()
+          }
         }
       },
     )

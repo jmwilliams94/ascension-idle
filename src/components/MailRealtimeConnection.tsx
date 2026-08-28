@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useMailStore } from '../game/marketplace/useMailStore'
+import { useTabActivityStore } from '../lib/useTabActivityStore'
 
 // Non-visual, mounted unconditionally in GameShell alongside CombatEngine/
 // GlobalActivityConnection (2026-08-13, requested by the user) — pushes new
@@ -28,7 +29,10 @@ export default function MailRealtimeConnection({ characterId }: { characterId: s
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'mail', filter: `character_id=eq.${characterId}` },
-        () => void loadMail(characterId),
+        () => {
+          void loadMail(characterId)
+          useTabActivityStore.getState().markPending()
+        },
       )
       .on(
         'postgres_changes',

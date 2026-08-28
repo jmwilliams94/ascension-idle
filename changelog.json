@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.114.0",
+    "date": "2026-08-28",
+    "changes": [
+      "Added the groundwork for push notifications — a new Notifications section in Settings lets you turn on browser/device notifications and send yourself a test one (no real alerts are wired up to fire automatically yet, that's coming later)",
+      "If you leave the game open in a background tab, the tab title and icon now flash to let you know something happened (new mail, World Boss, Gold Donation, or an announcement) while you were away"
+    ]
+  },
+  {
     "version": "1.113.8",
     "date": "2026-08-28",
     "changes": [

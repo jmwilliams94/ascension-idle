@@ -9,6 +9,7 @@ import ItemEffectGallery from './ItemEffectGallery'
 import PlanPanel from './PlanPanel'
 import SuggestionsPanel from './SuggestionsPanel'
 import BugReportPanel from './BugReportPanel'
+import NotificationsSettingsPanel from './NotificationsSettingsPanel'
 
 // Lazy -- three/@react-three/fiber/drei/postprocessing alone push the main
 // bundle's single chunk past vite-plugin-pwa's 2MB Workbox precache limit
@@ -65,6 +66,7 @@ export default function SettingsModal({ characterId, onClose }: { characterId: s
       badge: suggestionsBadge,
     },
     { id: 'bugs', label: 'Bug Reports', content: <BugReportPanel characterId={characterId} />, badge: bugsBadge },
+    { id: 'notifications', label: 'Notifications', content: <NotificationsSettingsPanel /> },
     // Rendering (2026-08-20, requested by the user) -- dev/debug tab for
     // testing GLB model loading, not gameplay UI. See RenderingTestPanel.tsx.
     {

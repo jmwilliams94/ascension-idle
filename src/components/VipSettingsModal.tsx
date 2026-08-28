@@ -1,6 +1,7 @@
 import { useVipSettingsModalStore } from '../game/vip/useVipSettingsModalStore'
 import { useVipAutomationStore, type LiquidationPriority, type SalvageTier } from '../game/vip/useVipAutomationStore'
 import { Button } from './ui/Button'
+import { ToggleSwitch } from './ui/ToggleSwitch'
 
 const SALVAGE_TIER_OPTIONS: { value: SalvageTier; label: string }[] = [
   { value: 'tempered', label: 'Tempered' },
@@ -10,30 +11,6 @@ const SALVAGE_TIER_OPTIONS: { value: SalvageTier; label: string }[] = [
 ]
 
 const BANK_LEVEL_OPTIONS = Array.from({ length: 12 }, (_, index) => index + 1)
-
-function ToggleSwitch({ checked, onChange, label }: { checked: boolean; onChange: (checked: boolean) => void; label: string }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={`relative h-6 w-11 shrink-0 rounded-full border p-0 transition ${
-        checked ? 'border-amber-500 bg-amber-500/80' : 'border-slate-700 bg-slate-800'
-      }`}
-      aria-label={label}
-    >
-      {/* Anchored with an explicit left-0.5, not left as an implicit static
-          position — a bare <button> keeps the browser's default padding
-          unless zeroed (see p-0 above), which throws off an unanchored
-          absolute + translate-x child. translate-x then layers on top of
-          this fixed anchor for the "on" position instead of assuming 0. */}
-      <span
-        className={`absolute left-0.5 top-0.5 h-4.5 w-4.5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-[20px]' : ''}`}
-      />
-    </button>
-  )
-}
 
 // VIP settings overlay (v1.108.0) — opened by clicking VipStatusHud's HUD
 // badge. Every toggle here is a pure convenience wrapper around actions the

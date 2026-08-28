@@ -4,6 +4,7 @@ import { useGlobalActivityStore, type GlobalAnnouncement } from '../game/social/
 import { useAnnouncementHistoryStore } from '../game/social/useAnnouncementHistoryStore'
 import { useChatStore, toChatMessage } from '../game/social/useChatStore'
 import { useSessionConflictStore } from '../game/social/useSessionConflictStore'
+import { useTabActivityStore } from '../lib/useTabActivityStore'
 
 function toAnnouncement(row: Record<string, unknown>): GlobalAnnouncement {
   return {
@@ -163,6 +164,7 @@ export default function GlobalActivityConnection({ accountId }: { accountId: str
           // (MILESTONE_KINDS) makes exactly one of these two calls a no-op.
           addAnnouncementHistoryEntry(announcement)
           addMilestoneEntry(announcement)
+          useTabActivityStore.getState().markPending()
         },
       )
       .on(

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useWorldBossStore, type WorldBossSpawn } from '../game/worldboss/useWorldBossStore'
+import { useTabActivityStore } from '../lib/useTabActivityStore'
 
 function toSpawn(row: Record<string, unknown>): WorldBossSpawn {
   return {
@@ -47,6 +48,11 @@ export default function WorldBossConnection() {
       (payload) => {
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
           setSpawn(toSpawn(payload.new as Record<string, unknown>))
+          // INSERT only — a fresh spawn window opening is notification-
+          // worthy, HP ticking down from other players' attacks isn't.
+          if (payload.eventType === 'INSERT') {
+            useTabActivityStore.getState().markPending()
+          }
         }
       },
     )

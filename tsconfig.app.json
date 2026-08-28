@@ -23,5 +23,9 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "changelog.json"]
+  "include": ["src", "changelog.json"],
+  // sw.ts runs in the ServiceWorkerGlobalScope, not DOM -- typechecked
+  // separately under tsconfig.sw.json's "webworker" lib instead (see
+  // CLAUDE.pwa-and-mobile.md's Push Notifications section).
+  "exclude": ["src/sw.ts"]
 }
