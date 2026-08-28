@@ -185,20 +185,26 @@ function CombatModeSwitcher({ mode, onChange }: { mode: CombatMode; onChange: (m
 // re-render when those change. Same red/green/gold border-ember + outline
 // tint as the Idling nav button (2026-08-16, requested by the user to apply
 // "the same ember rules" here) — see useEventEmberColor.ts for the priority
-// rule.
+// rule. EventEmberBorder renders as an unclipped sibling of the button in an
+// outer `relative` wrapper (2026-08-28, same fix as TabNav's Idling/LuckyLad
+// tabs — see their doc comments) rather than the old .btn-ember-safe opt-out,
+// which stripped .btn-gold's glass highlight + hover light-sweep while an
+// event was live, exactly when this button should look its best.
 function EventsModeButton({ mode, onChange }: { mode: CombatMode; onChange: (mode: CombatMode) => void }) {
   const emberColor = useActiveEventEmberColor()
 
   return (
-    <button
-      type="button"
-      onClick={() => onChange('events')}
-      className={`${MODE_BUTTON_CLASS} ${mode === 'events' ? 'btn-gold-active' : 'btn-gold'} ${emberColor ? 'btn-ember-safe' : ''}`}
-      style={eventBorderTintStyle(emberColor)}
-    >
-      Events
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => onChange('events')}
+        className={`${MODE_BUTTON_CLASS} ${mode === 'events' ? 'btn-gold-active' : 'btn-gold'}`}
+        style={eventBorderTintStyle(emberColor)}
+      >
+        Events
+      </button>
       <EventEmberBorder color={emberColor} />
-    </button>
+    </div>
   )
 }
 

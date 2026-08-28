@@ -61,7 +61,16 @@ function TabButton({ id, label, badge }: { id: TabId; label: string; badge?: num
 // Donation stores — the other 7 tabs don't need to re-render when those
 // change. Same button markup as TabButton, plus the event-color outline
 // ring and border embers layered on top — see useEventEmberColor.ts for the
-// red/green/gold priority rule.
+// red/green/gold priority rule. EventEmberBorder renders as an unclipped
+// sibling of the button, inside this outer `relative` wrapper div, rather
+// than as a child of the button itself (2026-08-28, reported by the user:
+// the old approach added .btn-ember-safe to the button whenever an event was
+// live, which strips .btn-gold's overflow:hidden AND its ::before/::after
+// glass highlight + hover light-sweep — so Idling visibly lost its normal
+// chrome exactly while a World Boss fight was making it glow, which read as
+// "this button is broken" rather than "this button is highlighted." Same
+// sibling-wrapper fix AscensionCard already uses for its activeEventColor
+// prop — see CLAUDE.visual-design.md.
 function IdlingTabButton({ label }: { label: string }) {
   const activeTab = useTabStore((state) => state.activeTab)
   const setActiveTab = useTabStore((state) => state.setActiveTab)
@@ -70,16 +79,18 @@ function IdlingTabButton({ label }: { label: string }) {
   const emberColor = useActiveEventEmberColor()
 
   return (
-    <button
-      type="button"
-      onClick={() => setActiveTab('combat')}
-      className={`relative ${TAB_BUTTON_CLASS} ${active ? 'btn-gold-active' : 'btn-gold'} ${emberColor ? 'btn-ember-safe' : ''}`}
-      style={eventBorderTintStyle(emberColor)}
-    >
-      {icon && <NavIconGlyph icon={icon} sizeClassName="h-8 w-8" />}
-      <span>{label}</span>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setActiveTab('combat')}
+        className={`${TAB_BUTTON_CLASS} w-full ${active ? 'btn-gold-active' : 'btn-gold'}`}
+        style={eventBorderTintStyle(emberColor)}
+      >
+        {icon && <NavIconGlyph icon={icon} sizeClassName="h-8 w-8" />}
+        <span>{label}</span>
+      </button>
       <EventEmberBorder color={emberColor} />
-    </button>
+    </div>
   )
 }
 
@@ -95,16 +106,18 @@ function LuckyTabButton({ label }: { label: string }) {
   const emberColor = useLuckyFreeEmberColor()
 
   return (
-    <button
-      type="button"
-      onClick={() => setActiveTab('lucky')}
-      className={`relative ${TAB_BUTTON_CLASS} ${active ? 'btn-gold-active' : 'btn-gold'} ${emberColor ? 'btn-ember-safe' : ''}`}
-      style={eventBorderTintStyle(emberColor)}
-    >
-      {icon && <NavIconGlyph icon={icon} sizeClassName="h-8 w-8" />}
-      <span>{label}</span>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setActiveTab('lucky')}
+        className={`${TAB_BUTTON_CLASS} w-full ${active ? 'btn-gold-active' : 'btn-gold'}`}
+        style={eventBorderTintStyle(emberColor)}
+      >
+        {icon && <NavIconGlyph icon={icon} sizeClassName="h-8 w-8" />}
+        <span>{label}</span>
+      </button>
       <EventEmberBorder color={emberColor} />
-    </button>
+    </div>
   )
 }
 

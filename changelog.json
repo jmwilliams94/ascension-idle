@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.23",
+    "date": "2026-08-28",
+    "changes": [
+      "Fixed the Idling nav button (and LuckyLad/Events buttons) losing their normal glass/hover styling while a World Boss or Gold Donation event was live"
+    ]
+  },
+  {
     "version": "1.116.22",
     "date": "2026-08-28",
     "changes": [

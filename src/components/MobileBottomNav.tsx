@@ -134,7 +134,14 @@ function LuckyNavButton({ label }: { label: string }) {
 // Circle now uses the same .btn-gold/.btn-gold-active treatment as the rest
 // of the nav (2026-08-16) instead of its own bespoke amber/slate colors, and
 // carries the World Boss/Gold Donation Event border embers — see
-// useEventEmberColor.ts for the red/green/gold priority rule.
+// useEventEmberColor.ts for the red/green/gold priority rule. The circle
+// itself is now an inner `absolute inset-0` span, with EventEmberBorder as
+// an unclipped sibling in the outer h-14 w-14 wrapper (2026-08-28, reported
+// by the user: while an event was live, the old .btn-ember-safe opt-out
+// stripped .btn-gold's overflow:hidden AND its ::before/::after glass
+// highlight + hover light-sweep, so the FAB visibly lost its normal chrome
+// exactly when it should stand out most) — same sibling-wrapper fix as
+// AscensionCard's activeEventColor prop, see CLAUDE.visual-design.md.
 // Sized up (h-11 -> h-14, 2026-08-16, requested by the user) so the center
 // action button reads as the primary one — the row's items-stretch cross-
 // axis means the whole nav bar's height grows to match this circle, and the
@@ -163,13 +170,15 @@ function IdlingNavButton() {
       onClick={() => setActiveTab('combat')}
       className="flex w-16 flex-none flex-col items-center justify-center gap-0.5"
     >
-      <span
-        className={`relative flex h-14 w-14 items-center justify-center rounded-full shadow-lg ${
-          active ? 'btn-gold-active shadow-amber-500/20' : 'btn-gold shadow-black/30'
-        } ${emberColor ? 'btn-ember-safe' : ''}`}
-        style={eventBorderTintStyle(emberColor)}
-      >
-        {icon && <NavIconGlyph icon={icon} sizeClassName="h-9 w-9" />}
+      <span className="relative flex h-14 w-14 items-center justify-center">
+        <span
+          className={`absolute inset-0 flex items-center justify-center rounded-full shadow-lg ${
+            active ? 'btn-gold-active shadow-amber-500/20' : 'btn-gold shadow-black/30'
+          }`}
+          style={eventBorderTintStyle(emberColor)}
+        >
+          {icon && <NavIconGlyph icon={icon} sizeClassName="h-9 w-9" />}
+        </span>
         <EventEmberBorder color={emberColor} count={20} />
       </span>
       <span className={`text-[10px] font-semibold leading-tight ${active ? 'text-amber-300' : 'text-slate-400'}`}>Idling</span>

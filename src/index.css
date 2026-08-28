@@ -464,17 +464,20 @@ a,
    rounding class the consumer applies (rounded-lg, rounded-xl, rounded-full
    for the Idling FAB), not forced here.
 
-   EXCEPTION — see .btn-ember-safe below: TabNav's Idling/LuckyLad tabs,
-   MobileBottomNav's FAB, and CombatPage's Events sub-tab render
-   <EventEmberBorder> as a direct child of a .btn-gold/.btn-gold-active
-   button, and its particles anchor outside the button's own box by design
-   (see eventEmberBorder.tsx) — overflow:hidden would cut them off. Those
-   three call sites add .btn-ember-safe alongside .btn-gold/.btn-gold-active
-   whenever their own event-color prop is actually set. AscensionCard.tsx
-   solves the equivalent problem for .ascension-card-frame differently —
-   it renders EventEmberBorder as an unclipped sibling instead of a clipped
-   child, so the card frame stays chamfered unconditionally with no
-   opt-out class needed there. */
+   EXCEPTION — TabNav's Idling/LuckyLad tabs, MobileBottomNav's FAB, and
+   CombatPage's Events sub-tab all host <EventEmberBorder>, whose particles
+   anchor outside their parent's own box by design (see eventEmberBorder.tsx)
+   — overflow:hidden would cut them off. An earlier pass (2026-08-16) had
+   those three call sites add a now-removed .btn-ember-safe class alongside
+   .btn-gold/.btn-gold-active whenever their event-color prop was set, which
+   dropped overflow:hidden but ALSO stripped the ::before/::after glass
+   highlight + hover light-sweep below — so the button visibly lost its
+   normal chrome exactly while an event was making it glow (reported by the
+   user 2026-08-28). Fixed the same way AscensionCard.tsx already solved the
+   identical problem for .ascension-card-frame: EventEmberBorder renders as
+   an unclipped sibling in an outer `position: relative` wrapper instead of
+   a child of the button, so .btn-gold/.btn-gold-active keep their normal
+   overflow:hidden + sweep unconditionally, with no opt-out class needed. */
 .btn-gold {
   position: relative;
   overflow: hidden;
@@ -528,23 +531,6 @@ a,
 
 .btn-gold:disabled {
   opacity: 0.4;
-}
-
-/* Opt-out for the handful of .btn-gold/.btn-gold-active instances that
-   host EventEmberBorder — see the comment above .btn-gold. Drops back to
-   unclipped overflow and removes the sweep pseudo-elements entirely rather
-   than just hiding them, since `content: none` on ::before/::after unsets
-   `content` and the box stops generating. */
-.btn-gold.btn-ember-safe,
-.btn-gold-active.btn-ember-safe {
-  overflow: visible;
-}
-
-.btn-gold.btn-ember-safe::before,
-.btn-gold.btn-ember-safe::after,
-.btn-gold-active.btn-ember-safe::before,
-.btn-gold-active.btn-ember-safe::after {
-  content: none;
 }
 
 /* Steel counterpart of .btn-gold — for Button's `secondary` variant
@@ -617,7 +603,8 @@ a,
    override. Shares .btn-gold's overflow:hidden + ::before/::after sweep
    pseudo-elements (both selectors are combined into the rules above/below
    this one) — the sweep still plays on hover even though the base gradient
-   is already bright, same .btn-ember-safe opt-out applies here too. */
+   is already bright, unconditionally now (see the EventEmberBorder
+   exception note above .btn-gold — no opt-out class needed here either). */
 .btn-gold-active {
   position: relative;
   overflow: hidden;
