@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.24",
+    "date": "2026-08-28",
+    "changes": [
+      "Redesigned Achievements tier tracking: zones now show two per row on desktop, and the old blue/green progress bar is replaced with a row of 6 tier buttons (separated by chevrons) that you tap directly to claim a reward once it's ready — used for both the Zone Tier ladder and each monster's own kill-count ladder"
+    ]
+  },
+  {
     "version": "1.116.23",
     "date": "2026-08-28",
     "changes": [
