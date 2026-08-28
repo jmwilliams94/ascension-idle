@@ -4,7 +4,7 @@ import { eventBorderTintStyle } from '../../game/hud/eventEmberBorderData'
 import type { EventEmberColor } from '../../game/hud/useEventEmberColor'
 
 interface AscensionCardProps {
-  /** Floating ribbon title. Omit for a plain frame with no ribbon. */
+  /** Header-line title (gold rule flanking the text). Omit for a plain frame with no title. */
   title?: ReactNode
   children: ReactNode
   /** Extra classes on the outer gradient-frame div (e.g. width/margin). */
@@ -13,7 +13,7 @@ interface AscensionCardProps {
   contentClassName?: string
   /**
    * 'large' (2026-08-14, requested by the user) is GameShell's single
-   * page-identity ribbon (one per active tab — Idling/Equipment/Forge/
+   * page-identity title (one per active tab — Idling/Equipment/Forge/
    * Market/Shop/Bank/Achievements/LuckyLad) — roughly doubled on desktop
    * (`lg`+) only; below that it renders at the exact same size as
    * 'default', per the user's explicit ask that every main-container title
@@ -34,10 +34,11 @@ interface AscensionCardProps {
 }
 
 /**
- * Shared gold/steel "ribbon" card chrome (2026-08-14 visual overhaul) —
+ * Shared gold/steel card chrome (2026-08-14 visual overhaul, title treatment
+ * reworked 2026-08-28 to the Prism Obsidian in-flow header-line style) —
  * replaces the old `rounded-2xl border border-slate-800 bg-slate-950/80 p-4`
  * pattern duplicated across panel files. See src/index.css's
- * `.ascension-card-frame`/`.ascension-card-inner`/`.ascension-card-ribbon`.
+ * `.ascension-card-frame`/`.ascension-card-inner`/`.ascension-card-header`.
  */
 export function AscensionCard({
   title,
@@ -56,11 +57,11 @@ export function AscensionCard({
     >
       {activeEventColor && <EventEmberBorder color={activeEventColor} />}
       <div
-        className={`ascension-card-inner ${activeEventColor ? 'ascension-card-inner--ember-safe' : ''} ${title ? (isLarge ? 'pt-6 lg:pt-9' : 'pt-6') : ''} ${contentClassName}`}
+        className={`ascension-card-inner ${activeEventColor ? 'ascension-card-inner--ember-safe' : ''} ${contentClassName}`}
       >
         {title && (
-          <div className={`ascension-card-ribbon ${isLarge ? 'ascension-card-ribbon-lg' : ''}`}>
-            <span className={`ascension-glow-pulse text-amber-400 ${isLarge ? 'text-xs lg:text-base' : 'text-xs'}`}>✦</span>
+          <div className={`ascension-card-header ${isLarge ? 'ascension-card-header-lg' : ''}`}>
+            <span className="ascension-card-header-line" />
             <h3
               className={`font-heading text-gradient-steel whitespace-nowrap font-black uppercase tracking-[0.15em] ${
                 isLarge ? 'text-sm lg:text-2xl' : 'text-sm'
@@ -68,7 +69,7 @@ export function AscensionCard({
             >
               {title}
             </h3>
-            <span className={`ascension-glow-pulse text-amber-400 ${isLarge ? 'text-xs lg:text-base' : 'text-xs'}`}>✦</span>
+            <span className="ascension-card-header-line" />
           </div>
         )}
         {children}

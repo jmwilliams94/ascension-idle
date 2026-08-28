@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.116.1",
+    "date": "2026-08-28",
+    "changes": [
+      "Card titles (Zone & Monster, Storage, the page heading, etc.) now sit inline with a gold rule line on either side, instead of floating in a bubble over the card's top edge"
+    ]
+  },
+  {
     "version": "1.116.0",
     "date": "2026-08-28",
     "changes": [
