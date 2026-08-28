@@ -1,11 +1,20 @@
 // Push notification groundwork (2026-08-28) — see CLAUDE.pwa-and-mobile.md's
 // Push Notifications section. Sends a Web Push message to every subscription
-// on file for one account. No real game event calls this yet — today the
-// only caller is Settings > Notifications' "Send test notification" button,
-// invoked as the account's own authenticated user (validated below). A
-// future server-triggered event (needs its own pg_cron, deliberately not
-// built yet) would call this with the service-role key instead, skipping the
-// self-service ownership check.
+// on file for one or more accounts. Two callers:
+// - Settings > Notifications' "Send test notification" button: self-service,
+//   a real logged-in player's own session JWT, may only target their own
+//   account_id (validated below).
+// - notify_lucky_ticket_ready() (supabase/migrations, the first real
+//   server-triggered event): privileged, identified by the X-Cron-Secret
+//   header matching CRON_PUSH_SECRET (stored in Supabase Vault, read by that
+//   Postgres function via pg_net — see that migration's own comments for why
+//   the secret itself is never committed to a migration file), may target a
+//   batch of account_ids with no per-caller ownership check since the caller
+//   already decided who's eligible.
+// Deployed with --no-verify-jwt so the privileged path's X-Cron-Secret-only
+// request (no real Supabase-signed JWT) reaches this code at all; the
+// self-service path's actual enforcement was always this function's own
+// getUser()+ownership check below, not the platform gateway.
 //
 // No supabase/functions/_shared/ folder exists in this project — every Edge
 // Function is fully self-contained, same convention world-boss-attack/
@@ -24,6 +33,7 @@ const SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY')!
 const VAPID_PUBLIC_KEY = Deno.env.get('VAPID_PUBLIC_KEY')!
 const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY')!
 const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT')!
+const CRON_PUSH_SECRET = Deno.env.get('CRON_PUSH_SECRET')
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
 
@@ -41,6 +51,7 @@ function json(body: unknown, status = 200) {
 
 interface SendPushBody {
   account_id?: string
+  account_ids?: string[]
   title?: string
   body?: string
   url?: string
@@ -54,11 +65,6 @@ interface SubscriptionRow {
 }
 
 async function handleSendPush(req: Request): Promise<Response> {
-  const authHeader = req.headers.get('Authorization')
-  if (!authHeader) {
-    return json({ ok: false, error: 'not_authenticated' }, 401)
-  }
-
   let payload: SendPushBody
   try {
     payload = await req.json()
@@ -66,35 +72,48 @@ async function handleSendPush(req: Request): Promise<Response> {
     return json({ ok: false, error: 'invalid_body' }, 400)
   }
 
-  if (!payload.account_id) {
-    return json({ ok: false, error: 'missing_account_id' }, 400)
-  }
+  const cronSecretHeader = req.headers.get('X-Cron-Secret')
+  const isPrivileged = CRON_PUSH_SECRET !== undefined && cronSecretHeader === CRON_PUSH_SECRET
 
-  // Self-service only for now — a caller may only send to their own
-  // account. A future server-triggered path would call this function with
-  // the service-role key as its own Authorization header instead, which
-  // bypasses getUser() (no session to look up) — that path isn't wired up
-  // yet, so every caller today is a real logged-in player.
-  const callerClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-  })
-  const {
-    data: { user },
-    error: authError,
-  } = await callerClient.auth.getUser()
+  let accountIds: string[]
 
-  if (authError || !user) {
-    return json({ ok: false, error: 'not_authenticated' }, 401)
-  }
-  if (user.id !== payload.account_id) {
-    return json({ ok: false, error: 'not_owner' }, 403)
+  if (isPrivileged) {
+    if (!payload.account_ids || payload.account_ids.length === 0) {
+      return json({ ok: false, error: 'missing_account_ids' }, 400)
+    }
+    accountIds = payload.account_ids
+  } else {
+    // Self-service path -- a caller may only send to their own account.
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return json({ ok: false, error: 'not_authenticated' }, 401)
+    }
+    if (!payload.account_id) {
+      return json({ ok: false, error: 'missing_account_id' }, 400)
+    }
+
+    const callerClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    })
+    const {
+      data: { user },
+      error: authError,
+    } = await callerClient.auth.getUser()
+
+    if (authError || !user) {
+      return json({ ok: false, error: 'not_authenticated' }, 401)
+    }
+    if (user.id !== payload.account_id) {
+      return json({ ok: false, error: 'not_owner' }, 403)
+    }
+    accountIds = [payload.account_id]
   }
 
   const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
   const { data: subscriptions, error: fetchError } = await db
     .from('push_subscriptions')
     .select('id, endpoint, p256dh_key, auth_key')
-    .eq('account_id', payload.account_id)
+    .in('account_id', accountIds)
 
   if (fetchError) {
     console.error('push_subscriptions fetch failed', fetchError)

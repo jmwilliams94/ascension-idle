@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.115.0",
+    "date": "2026-08-28",
+    "changes": [
+      "Added the first real push notification: you'll now get a \"You have a free Lucky Lad roll available!\" alert on your device once every 4 hours, even if the app isn't open, if you've enabled Push Notifications in Settings"
+    ]
+  },
+  {
     "version": "1.114.6",
     "date": "2026-08-28",
     "changes": [
