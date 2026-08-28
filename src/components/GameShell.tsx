@@ -595,7 +595,11 @@ export default function GameShell({ characterId }: { characterId: string }) {
 
         <TabNav />
 
-        <AscensionCard title={TAB_TITLES[activeTab]} titleSize="large">
+        {/* mt-2/lg:mt-4 — the ribbon title pokes up out of the card frame
+            (see .ascension-card-ribbon/-lg's negative top offset) further
+            than the space-y-4 gap above it accounts for, crowding TabNav on
+            desktop and the game-info row on mobile without it. */}
+        <AscensionCard title={TAB_TITLES[activeTab]} titleSize="large" className="mt-2 lg:mt-4">
           {activeTab === 'combat' && <CombatPage />}
           {activeTab === 'equipment' && <EquipmentTabPage />}
           {activeTab === 'forge' && <ForgePanel />}

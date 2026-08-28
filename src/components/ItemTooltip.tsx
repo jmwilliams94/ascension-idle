@@ -89,20 +89,22 @@ export default function ItemTooltip({
   )
 
   return (
-    <div className="w-64 rounded-lg border border-slate-700 bg-slate-950/95 p-2.5 text-left shadow-xl shadow-black/50">
-      {hasIcon ? (
-        <div className="flex items-start gap-2">
-          <div
-            className="flex h-22 w-22 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-lg"
-            style={{ borderColor: iconColor ?? '#475569', backgroundColor: iconColor ? `${iconColor}22` : undefined }}
-          >
-            {iconSrc ? <img src={iconSrc} alt="" className="h-4/5 w-4/5 object-contain" /> : <span>{icon}</span>}
+    <div className="ascension-chip-frame w-64 shadow-xl shadow-black/50">
+      <div className="ascension-chip-inner p-2.5 text-left">
+        {hasIcon ? (
+          <div className="flex items-start gap-2">
+            <div
+              className="flex h-22 w-22 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-lg"
+              style={{ borderColor: iconColor ?? '#475569', backgroundColor: iconColor ? `${iconColor}22` : undefined }}
+            >
+              {iconSrc ? <img src={iconSrc} alt="" className="h-4/5 w-4/5 object-contain" /> : <span>{icon}</span>}
+            </div>
+            <div className="min-w-0 flex-1">{body}</div>
           </div>
-          <div className="min-w-0 flex-1">{body}</div>
-        </div>
-      ) : (
-        body
-      )}
+        ) : (
+          body
+        )}
+      </div>
     </div>
   )
 }

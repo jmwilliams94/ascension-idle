@@ -59,6 +59,19 @@ img {
   -webkit-user-select: none;
 }
 
+/* A <button>/<a> has no border-radius of its own even when the rounded
+   card/chip it wraps (e.g. ForgeHub's tile buttons around AscensionCard)
+   does — so the browser's default tap-highlight rectangle on mobile
+   WebKit/Chrome is square-cornered and pokes past the child's rounded
+   corners as a small gold/gray sliver, worst at the corner nearest the
+   touch point. Killing the highlight removes the artifact at the root
+   instead of patching every wrapper individually. */
+button,
+a,
+[role='button'] {
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* Accent glow — a slow, subtle pulse (not a static shadow) flagging "this is
    currently special/active," reused across features rather than one-off per
    feature. Originally the Equipment paper-doll's Super-quality-only glow
@@ -407,6 +420,29 @@ img {
 }
 
 .btn-gold:disabled {
+  opacity: 0.4;
+}
+
+/* Steel counterpart of .btn-gold — for Button's `secondary` variant
+   (Cancel/Back/neutral actions). Previously a flat `border-slate-700`
+   with no ascension chrome at all, which read as "unstyled" next to any
+   gold CTA beside it (Forge's Back button, Loot Holding's Store All) —
+   this gives it the same idle-dark/hover-bright-gradient-plus-glow
+   treatment as .btn-gold, just on the steel token ramp. */
+.btn-steel {
+  background: linear-gradient(180deg, #1c232c 0%, #0d1116 100%);
+  border: 1px solid var(--ascension-steel-dark);
+  color: var(--ascension-steel);
+  transition: all 0.25s ease;
+}
+
+.btn-steel:hover:not(:disabled) {
+  background: linear-gradient(180deg, var(--ascension-steel-bright) 0%, var(--ascension-steel) 60%, var(--ascension-steel-dark) 100%);
+  color: var(--ascension-ink);
+  box-shadow: 0 0 16px rgba(192, 209, 227, 0.5);
+}
+
+.btn-steel:disabled {
   opacity: 0.4;
 }
 

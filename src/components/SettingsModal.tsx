@@ -91,45 +91,47 @@ export default function SettingsModal({ characterId, onClose }: { characterId: s
       onClick={onClose}
     >
       <div
-        className="flex max-h-[80vh] w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl"
+        className="ascension-card-frame flex max-h-[80vh] w-full max-w-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <nav className="w-40 shrink-0 space-y-1 border-r border-slate-800 bg-slate-950/60 p-3">
-          {sections.map((section) => (
-            <button
-              key={section.id}
-              type="button"
-              onClick={() => setActiveSectionId(section.id)}
-              className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm ${
-                section.id === activeSectionId
-                  ? 'bg-sky-500/10 text-sky-300'
-                  : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
-              }`}
-            >
-              <span>{section.label}</span>
-              {Boolean(section.badge) && (
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-slate-950">
-                  {section.badge! > 99 ? '99+' : section.badge}
-                </span>
-              )}
-            </button>
-          ))}
-        </nav>
+        <div className="ascension-card-inner flex w-full overflow-hidden">
+          <nav className="w-40 shrink-0 space-y-1 border-r border-white/10 bg-black/20 p-3">
+            {sections.map((section) => (
+              <button
+                key={section.id}
+                type="button"
+                onClick={() => setActiveSectionId(section.id)}
+                className={`flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm transition ${
+                  section.id === activeSectionId
+                    ? 'border-amber-400/60 bg-amber-500/10 text-amber-300'
+                    : 'border-transparent text-slate-400 hover:border-white/10 hover:bg-white/5 hover:text-slate-200'
+                }`}
+              >
+                <span>{section.label}</span>
+                {Boolean(section.badge) && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-slate-950">
+                    {section.badge! > 99 ? '99+' : section.badge}
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
 
-        <div className="flex-1 overflow-y-auto p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">Settings</h2>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close settings"
-              className="text-slate-400 hover:text-slate-200"
-            >
-              ✕
-            </button>
+          <div className="flex-1 overflow-y-auto p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white">Settings</h2>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close settings"
+                className="text-slate-400 transition hover:text-amber-300"
+              >
+                ✕
+              </button>
+            </div>
+
+            {activeSection.content}
           </div>
-
-          {activeSection.content}
         </div>
       </div>
     </div>

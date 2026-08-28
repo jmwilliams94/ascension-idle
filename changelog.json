@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.113.4",
+    "date": "2026-08-28",
+    "changes": [
+      "Restyled the What's New popup, Settings menu, and item tooltips to match the rest of the gold/steel theme",
+      "The Unclaimed Rewards popup no longer shows a redundant title and icon at the top",
+      "Fixed a visual glitch on mobile where forge tiles could show a stray gold sliver near a corner after tapping",
+      "Nudged the spacing above each tab's title so it doesn't crowd the row above it",
+      "Neutral buttons (Back, Store All, etc.) now get a proper steel gradient instead of a plain outline"
+    ]
+  },
+  {
     "version": "1.113.3",
     "date": "2026-08-28",
     "changes": [

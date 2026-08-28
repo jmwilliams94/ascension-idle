@@ -100,12 +100,14 @@ export default function TooltipActionPopover({ anchorRect, tooltip, actions, onC
       onPointerDown={(event) => event.stopPropagation()}
     >
       <ItemTooltip {...tooltip} />
-      <div className="mt-1.5 flex flex-wrap gap-1.5 rounded-lg border border-slate-700 bg-slate-950/95 p-1.5 shadow-xl shadow-black/50">
-        {actions.map((action) => (
-          <Button key={action.label} variant={actionVariant(action)} disabled={action.disabled} onClick={action.onClick} className="flex-1">
-            {action.label}
-          </Button>
-        ))}
+      <div className="ascension-chip-frame mt-1.5 shadow-xl shadow-black/50">
+        <div className="ascension-chip-inner flex flex-wrap gap-1.5 p-1.5">
+          {actions.map((action) => (
+            <Button key={action.label} variant={actionVariant(action)} disabled={action.disabled} onClick={action.onClick} className="flex-1">
+              {action.label}
+            </Button>
+          ))}
+        </div>
       </div>
     </div>,
     document.body,

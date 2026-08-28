@@ -78,7 +78,7 @@ export default function ForgeHub({ onSelect }: ForgeHubProps) {
           key={tile.mode}
           type="button"
           onClick={() => onSelect(tile.mode)}
-          className="group text-left transition hover:-translate-y-0.5"
+          className="group rounded-2xl text-left transition hover:-translate-y-0.5"
         >
           <AscensionCard
             className="h-full transition group-hover:shadow-[0_0_18px_rgba(212,175,55,0.25)]"

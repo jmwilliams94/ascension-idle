@@ -231,23 +231,25 @@ export default function OfflineProgressModal() {
           </div>
         ) : (
           <>
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">{result || miningResult ? '👋' : '📦'}</span>
-              <div>
-                <h2 className="text-lg font-semibold text-white">{result || miningResult ? 'Welcome back' : 'Unclaimed rewards'}</h2>
-                {result && type && (
-                  <p className="mt-1 text-sm text-slate-400">
-                    While you were away ({formatDuration(result.elapsedMs)}), your character kept fighting {type.displayName}.
-                  </p>
-                )}
-                {miningResult && (
-                  <p className="mt-1 text-sm text-slate-400">
-                    While you were away ({formatDuration(miningResult.elapsedMs)}), your character kept mining
-                    {miningResult.nodeDisplayName ? ` ${miningResult.nodeDisplayName}` : ''}.
-                  </p>
-                )}
+            {(result || miningResult) && (
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">👋</span>
+                <div>
+                  <h2 className="text-lg font-semibold text-white">Welcome back</h2>
+                  {result && type && (
+                    <p className="mt-1 text-sm text-slate-400">
+                      While you were away ({formatDuration(result.elapsedMs)}), your character kept fighting {type.displayName}.
+                    </p>
+                  )}
+                  {miningResult && (
+                    <p className="mt-1 text-sm text-slate-400">
+                      While you were away ({formatDuration(miningResult.elapsedMs)}), your character kept mining
+                      {miningResult.nodeDisplayName ? ` ${miningResult.nodeDisplayName}` : ''}.
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             {result && result.petObtained && (
               <div className="relative rounded-xl border border-amber-400 bg-amber-500/10 p-3 text-center shadow-lg shadow-amber-500/20">
