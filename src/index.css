@@ -773,6 +773,57 @@ a,
   opacity: 0.4;
 }
 
+/* Permanently-lit variant of .btn-glow's :hover/:active gradient (2026-08-29)
+   — same relationship .btn-gold-active has to .btn-gold above, just on the
+   --glow-* custom properties instead of the fixed gold ramp. For a toggle
+   whose "on" state should sit in the same lit look .btn-glow only reaches on
+   hover/press. Applied instead of .btn-glow, never alongside it. First user:
+   Forge's Auto-Repeat toggle. */
+.btn-glow-active {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--glow-bright) 0%, var(--glow-base) 60%, var(--glow-dark) 100%);
+  border: 1px solid var(--glow-base);
+  color: var(--ascension-ink);
+  box-shadow: 0 0 24px var(--glow-base), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: all 0.25s ease;
+}
+
+.btn-glow-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -10%;
+  right: -10%;
+  height: 45%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 100%);
+  border-radius: 0 0 50% 50%;
+  pointer-events: none;
+}
+
+.btn-glow-active::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 40%;
+  height: 200%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  transform: rotate(25deg);
+  transition: left 0.6s ease;
+  pointer-events: none;
+}
+
+@media (hover: hover) {
+  .btn-glow-active:hover::after {
+    left: 120%;
+  }
+}
+
+.btn-glow-active:disabled {
+  opacity: 0.4;
+}
+
 /* Horizontal gold/steel/gold edge line (2026-08-14) — same three-stop
    palette as .ascension-card-frame's vertical gradient, rotated 90° for a
    straight top/bottom rule rather than a boxed panel. Used where a card-

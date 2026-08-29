@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.119.8",
+    "date": "2026-08-29",
+    "changes": [
+      "Auto-Repeat button now has the same rounded, glowing button shape and press feedback as Confirm/Cancel, just in violet"
+    ]
+  },
+  {
     "version": "1.119.7",
     "date": "2026-08-29",
     "changes": [

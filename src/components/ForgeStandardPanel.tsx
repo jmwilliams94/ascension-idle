@@ -36,10 +36,12 @@ const RESULT_DISPLAY_MS = 2600
 // per second, matching the user's own description of the feature.
 const AUTO_FORGE_TICK_MS = 1000
 
-// Same violet as VipStatusHud.tsx/VipSettingsModal.tsx's VIP_TINT — this
-// toggle is VIP-gated, so it borrows the app's one established "VIP" color.
-const VIP_TINT = '#8b5cf6'
-const VIP_TINT_STYLE = { '--ascension-tint': VIP_TINT } as CSSProperties
+// .btn-glow/.btn-glow-active color stops (see index.css) for Auto-Repeat's
+// toggle — same violet-500 as VipStatusHud/VipSettingsModal's VIP_TINT
+// (#8b5cf6) for --glow-base, one Tailwind violet step lighter/darker for the
+// other two stops, matching how SalvagePanel/LuckyPanel derive their own
+// --glow-* triples per tier/color rather than reusing a single flat tint.
+const AUTO_REPEAT_GLOW_STYLE = { '--glow-bright': '#c4b5fd', '--glow-base': '#8b5cf6', '--glow-dark': '#6d28d9' } as CSSProperties
 
 type MaterialMode = 'quality' | 'level'
 
@@ -381,23 +383,19 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
   const confirmVisible = Boolean(previewItem) && !blockedByEquipLevel && !weaponNeedsMasterForge
 
   const autoRepeatButton = (
-    <div
-      className={`ascension-chip-frame is-tinted ${isVipActive ? 'is-interactive' : 'opacity-40'} ${
-        autoRepeat ? 'shadow-[0_0_14px_rgba(139,92,246,0.55)]' : ''
-      }`}
-      style={VIP_TINT_STYLE}
+    <button
+      type="button"
+      onClick={() => setAutoRepeat((current) => !current)}
+      disabled={!isVipActive}
+      aria-pressed={autoRepeat}
+      title={isVipActive ? 'Auto-repeat: 1 Level Upgrade/sec across every other matching item' : 'Requires VIP'}
+      style={AUTO_REPEAT_GLOW_STYLE}
+      className={`${
+        autoRepeat ? 'btn-glow-active' : 'btn-glow'
+      } rounded-lg px-4 py-2.5 text-sm font-heading font-bold uppercase tracking-[0.12em] transition disabled:cursor-not-allowed`}
     >
-      <button
-        type="button"
-        onClick={() => setAutoRepeat((current) => !current)}
-        disabled={!isVipActive}
-        aria-pressed={autoRepeat}
-        title={isVipActive ? 'Auto-repeat: 1 Level Upgrade/sec across every other matching item' : 'Requires VIP'}
-        className="ascension-chip-inner flex h-full items-center px-4 py-2.5 text-sm font-medium text-violet-200 transition disabled:cursor-not-allowed"
-      >
-        Auto-Repeat
-      </button>
-    </div>
+      Auto-Repeat
+    </button>
   )
 
   // Separate from useForgeStore's own `busy` — that flag also flips on every
