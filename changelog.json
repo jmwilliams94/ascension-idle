@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.118.10",
+    "date": "2026-08-29",
+    "changes": [
+      "Reduced the Upgrade Ripple's start-up delay — the screen capture it needs now begins as soon as you press down, not on release, so it's ready sooner"
+    ]
+  },
+  {
     "version": "1.118.9",
     "date": "2026-08-29",
     "changes": [

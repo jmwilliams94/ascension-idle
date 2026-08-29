@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { useFxStore, type FxKind } from '../game/fx/useFxStore'
+import { useWarpStore } from '../game/fx/useWarpStore'
 
 const EXAMPLES: { kind: FxKind; label: string; caption: string }[] = [
   { kind: 'lightning', label: '⚡ Lightning Strike', caption: 'Procedural branching bolt (Wuxia attack flavor) -- midpoint displacement, not a canned shape' },
@@ -68,6 +69,12 @@ export default function FxTestPanel() {
             ref={iconRef}
             type="button"
             onClick={fireFromIcon}
+            // Starts the slow screen capture on press-down, not click -- by
+            // the time click fires (a real, if small, gap after pointerdown)
+            // the capture is often already done or well underway, instead
+            // of only starting once the click handler runs. See
+            // useWarpStore.ts's prewarmCapture doc comment.
+            onPointerDown={() => useWarpStore.getState().prewarmCapture()}
             className="flex h-14 w-14 items-center justify-center rounded-lg border-2 text-2xl transition hover:brightness-125 lg:h-16 lg:w-16"
             // #A855F7 -- the established Radiant gear-quality color (see
             // QUALITY_COLORS in equipmentBonus.ts), matching InventorySlot's

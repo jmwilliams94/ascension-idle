@@ -12,10 +12,21 @@ export interface ActiveWarp {
 interface WarpState {
   active: ActiveWarp | null
   triggerWarp: (x?: number, y?: number) => void
+  prewarmCapture: () => void
   clear: (id: number) => void
 }
 
 let nextId = 0
+
+// A capture kicked off ahead of the actual trigger -- see prewarmCapture
+// below. Module-level (not store state) since it's write-only plumbing
+// nothing needs to react to.
+let pendingCapture: Promise<HTMLCanvasElement> | null = null
+let pendingCaptureAt = 0
+// If triggerWarp() is called long after the prewarm started, the page has
+// likely changed since -- fall back to a fresh capture rather than show a
+// stale one.
+const PREWARM_MAX_AGE_MS = 3000
 
 // Drives WarpLayer.tsx -- the WebGL counterpart to useFxStore.ts's 2D
 // effects, for the one kind of effect a 2D canvas can't produce: actually
@@ -31,12 +42,38 @@ let nextId = 0
 // effect (a comet impact, a big upgrade), not something that fires rapidly.
 export const useWarpStore = create<WarpState>((set, get) => ({
   active: null,
+  // Starts the (slow, ~hundreds of ms to ~1s depending on page complexity)
+  // screen capture early, before the actual trigger -- e.g. on a button's
+  // pointerdown rather than its click, or (once wired to a real gameplay
+  // trigger) the moment an upgrade attempt is sent to the server rather
+  // than when its result comes back. triggerWarp() below reuses whatever
+  // this produces instead of starting a fresh capture, so the effect can
+  // start visibly the instant triggerWarp() fires instead of waiting out
+  // the capture at that point -- the capture cost doesn't go away, it just
+  // moves earlier, hidden behind whatever latency already exists between
+  // the prewarm moment and the actual trigger (a mousedown-to-click gap for
+  // a manual test button; a real network round-trip for a real gameplay
+  // success/fail result). Safe to call speculatively even if nothing ends
+  // up firing -- an unused prewarmed capture is just quietly discarded.
+  prewarmCapture: () => {
+    pendingCapture = captureScreen()
+    pendingCaptureAt = performance.now()
+    // Swallow here so an unused/failed prewarm never surfaces as an
+    // unhandled rejection -- triggerWarp has its own catch for when (if)
+    // this capture actually gets used.
+    pendingCapture.catch(() => {})
+  },
   triggerWarp: (x, y) => {
     nextId += 1
     const id = nextId
     const targetX = x ?? window.innerWidth / 2
     const targetY = y ?? window.innerHeight / 2
-    captureScreen()
+
+    const prewarmIsFresh = pendingCapture !== null && performance.now() - pendingCaptureAt < PREWARM_MAX_AGE_MS
+    const capture = prewarmIsFresh ? pendingCapture! : captureScreen()
+    pendingCapture = null
+
+    capture
       .then((canvas) => {
         set({ active: { id, canvas, x: targetX, y: targetY, startedAt: performance.now() } })
       })
