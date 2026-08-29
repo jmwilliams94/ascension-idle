@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.118.19",
+    "date": "2026-08-29",
+    "changes": [
+      "Restyled the kill-reward toast with the app's own violet-tinted chrome and moved it to the center of the screen"
+    ]
+  },
+  {
     "version": "1.118.18",
     "date": "2026-08-29",
     "changes": [

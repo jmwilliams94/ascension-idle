@@ -1,9 +1,15 @@
-import { useEffect } from 'react'
+import { useEffect, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useKillRewardToastStore, type KillRewardToastEntry } from '../game/hud/useKillRewardToastStore'
 
 const TOAST_DISPLAY_MS = 2200
+
+// Violet, not the app's true `purple` (Ascension Points' own established
+// currency color, see CLAUDE.md's guardrail) — same substitution VIP's own
+// badge uses for "purple" requests, kept consistent rather than picking a
+// second, different "purple" for this toast.
+const TOAST_TINT_STYLE = { '--ascension-tint': '#8b5cf6' } as CSSProperties
 
 function KillRewardToastItem({ toast }: { toast: KillRewardToastEntry }) {
   const dismiss = useKillRewardToastStore((state) => state.dismiss)
@@ -18,33 +24,38 @@ function KillRewardToastItem({ toast }: { toast: KillRewardToastEntry }) {
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: -8, scale: 0.95 }}
+      initial={{ opacity: 0, y: -8, scale: 0.9 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -6, scale: 0.95 }}
+      exit={{ opacity: 0, y: -6, scale: 0.9 }}
       transition={{ duration: 0.2 }}
-      className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium shadow-lg backdrop-blur will-change-transform ${
-        isRare ? 'border-fuchsia-400/60 bg-fuchsia-400/10' : 'border-slate-700 bg-slate-900/95'
-      }`}
+      className="ascension-chip-frame is-tinted shadow-lg will-change-transform"
+      style={TOAST_TINT_STYLE}
     >
-      {isRare && <span className="shrink-0 text-sm leading-none">★</span>}
-      {toast.kills > 1 && <span className="text-slate-400">{toast.kills}× kills</span>}
-      <span className="text-amber-300">+{toast.gold.toLocaleString()} Gold</span>
-      <span className="text-sky-300">+{toast.exp.toLocaleString()} EXP</span>
+      <div className="ascension-chip-inner flex items-center gap-2 px-4 py-2 text-sm font-medium">
+        {isRare && <span className="shrink-0 leading-none">★</span>}
+        {toast.kills > 1 && <span className="text-violet-300">{toast.kills}× kills</span>}
+        <span className="text-amber-300">+{toast.gold.toLocaleString()} Gold</span>
+        <span className="text-sky-300">+{toast.exp.toLocaleString()} EXP</span>
+      </div>
     </motion.div>
   )
 }
 
 // Small centered "kill confirmed" toast (see useKillRewardToastStore.ts's own
 // comment for the full rationale/timing) — a portaled, fixed overlay so it
-// reads the same no matter which tab triggered it, positioned below
-// LevelUpBanner's own top-20 slot so the two never overlap if a level-up and
-// a kill grant land in the same instant. pointer-events-none on the wrapper,
-// same "never intercepts clicks" precedent as GainToastHost.
+// reads the same no matter which tab triggered it, dead-centered on screen
+// (2026-08-29, requested by the user — was previously top-32) via
+// `inset-0 flex items-center justify-center` rather than LevelUpBanner's own
+// top-anchored `inset-x-0 top-20`. Uses the app's own tinted chamfered chip
+// frame (`.ascension-chip-frame.is-tinted`, see src/index.css) instead of a
+// plain rounded-lg/rounded-full pill, matching the "our styling" ask — same
+// primitive VIP's own badge uses for its violet tint. pointer-events-none on
+// the wrapper, same "never intercepts clicks" precedent as GainToastHost.
 export default function KillRewardToast() {
   const toasts = useKillRewardToastStore((state) => state.toasts)
 
   return createPortal(
-    <div className="pointer-events-none fixed inset-x-0 top-32 z-[75] flex flex-col items-center gap-1.5 px-4">
+    <div className="pointer-events-none fixed inset-0 z-[75] flex flex-col items-center justify-center gap-1.5 px-4">
       <AnimatePresence>
         {toasts.map((toast) => (
           <KillRewardToastItem key={toast.id} toast={toast} />
