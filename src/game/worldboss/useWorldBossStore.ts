@@ -135,7 +135,26 @@ export const useWorldBossStore = create<WorldBossState>((set, get) => ({
     set({ busy: false })
 
     if (error) {
-      console.error('world-boss-attack call failed', error)
+      // A non-2xx response (the Edge Function's own query_failed/
+      // unhandled_exception paths) surfaces here as a bare transport error —
+      // `data` is null, and the JSON body (with the real `error`/`detail`
+      // fields) is only reachable through error.context (a raw Response),
+      // same pattern NotificationsSettingsPanel.tsx already uses, added here
+      // 2026-11 (requested by the user — "sometimes my character will attack
+      // and other times Something went wrong," with no way to tell which of
+      // several possible causes it actually was). This project has no way to
+      // tail Edge Function logs from the CLI used to deploy it, so this is
+      // the only way to see the real cause of a future occurrence.
+      let detail: string | undefined
+      if ('context' in error && error.context instanceof Response) {
+        try {
+          const body = await error.context.clone().json()
+          detail = body?.error ? `${body.error}${body.detail ? `: ${body.detail}` : ''}` : JSON.stringify(body)
+        } catch {
+          detail = error.message
+        }
+      }
+      console.error('world-boss-attack call failed', detail ?? error)
       return { ok: false, error: 'rpc_failed' }
     }
 

@@ -226,7 +226,8 @@ function scaledStat(baseStats: Record<string, number>, key: string, qualityTier:
 // multipliers). Only physical_attack/magic_attack matter here — defense/
 // dodge composition bonuses aren't simulated server-side at all, same as the
 // rest of incoming mitigation (see the comment above equipmentBonus).
-const COMPOSITION_BONUS_PCT_PER_TIER = 0.05
+// Raised 5% -> 10% (2026-11) — must stay in sync with equipmentBonus.ts.
+const COMPOSITION_BONUS_PCT_PER_TIER = 0.1
 
 const COMPOSITION_BONUS_STAT_KEYS: Record<string, string[]> = {
   weapon: ['physical_attack', 'magic_attack'],

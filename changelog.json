@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.118.2",
+    "date": "2026-08-29",
+    "changes": [
+      "Fixed composition (+N) bonuses being under-applied server-side in every combat mode (Hunting, Row Combat, Mining, and the World Boss) — they were correctly showing +10%/tier in the UI but only granting the old +5%/tier when rewards were actually confirmed",
+      "World Boss attack failures now log the real underlying cause to the browser console instead of just a generic error, to make any future occurrence easier to diagnose"
+    ]
+  },
+  {
     "version": "1.118.1",
     "date": "2026-08-29",
     "changes": [

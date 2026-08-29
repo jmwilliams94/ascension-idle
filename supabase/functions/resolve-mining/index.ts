@@ -68,7 +68,8 @@ const PICKAXE_QUALITY_MULTIPLIERS: Record<string, number> = {
   ascended: 5,
 }
 
-const COMPOSITION_BONUS_PCT_PER_TIER = 0.05
+// Raised 5% -> 10% (2026-11) — must stay in sync with equipmentBonus.ts.
+const COMPOSITION_BONUS_PCT_PER_TIER = 0.1
 
 const MIN_DAMAGE_PERCENT_OF_ATTACK = 0.1
 
