@@ -1559,6 +1559,19 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       comets: newComets,
       fallenStars: newFallenStars,
       cometScrolls: newCometScrolls,
+      // 2026-11 bug fix (reported by the user — EXP silently stopped moving
+      // despite visibly landing kills client-side): currentPlayerMp was a
+      // purely client-local simulation with no connection to this function's
+      // own persisted characters.current_mp, so the two could drift —
+      // typically the server's copy (which assumes continuous attacking
+      // across the *entire* elapsed window, same "AFK simulation" model as
+      // gold/EXP) drains faster in wall-clock terms than the client's own
+      // foreground-tick-driven counter, hitting 0 and silently zeroing every
+      // future kill/reward long before the client's own MP bar shows empty.
+      // null when no MP-costing skill is active this resolve (nothing to
+      // sync) — see useCombatStore's own reconciliation, which only
+      // overwrites currentPlayerMp when this is a real number.
+      currentMp: newCurrentMp,
     },
     leveledUp: level > character.level,
     itemsGranted,

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.117.5",
+    "date": "2026-08-29",
+    "changes": [
+      "Fixed Mana silently getting stuck at 0 server-side even when it looked fine in the game — Mana is now kept in sync between what you see and what actually gets rewarded, so experience/gold no longer freeze without explanation"
+    ]
+  },
+  {
     "version": "1.117.4",
     "date": "2026-08-29",
     "changes": [

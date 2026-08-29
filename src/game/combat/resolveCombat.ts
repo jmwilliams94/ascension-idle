@@ -29,7 +29,17 @@ export interface ResolveCombatResult {
   error?: string
   elapsedMs?: number
   gained?: { kills: number; rareKills: number; gold: number; exp: number; comets: number; fallenStars: number }
-  character?: { gold: number; exp: number; level: number; comets: number; fallenStars: number; cometScrolls: number }
+  character?: {
+    gold: number
+    exp: number
+    level: number
+    comets: number
+    fallenStars: number
+    cometScrolls: number
+    // 2026-11 bug fix — see useCombatStore's syncPlayerMp for the full
+    // writeup. null when no MP-costing skill was active this resolve.
+    currentMp?: number | null
+  }
   leveledUp?: boolean
   itemsGranted?: ItemInstance[]
   itemsHeld?: { template_id: string }[]
@@ -76,6 +86,9 @@ export async function resolveCombat(characterId: string, mode: ResolveCombatMode
   useCurrencyStore.getState().setComets(result.character.comets)
   useCurrencyStore.getState().setFallenStars(result.character.fallenStars)
   useCurrencyStore.getState().setCometScrolls(result.character.cometScrolls)
+  if (typeof result.character.currentMp === 'number') {
+    useCombatStore.getState().syncPlayerMp(result.character.currentMp)
+  }
 
   for (const item of result.itemsGranted ?? []) {
     useInventoryStore.getState().addItem(item)

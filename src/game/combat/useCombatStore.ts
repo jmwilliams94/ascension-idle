@@ -152,6 +152,18 @@ interface CombatState {
   // Called by usePotionStore.usePotion for a Mana potion — same clamp-to-max/
   // no-op-before-lazy-init shape as healPlayerHp above.
   restorePlayerMp: (amount: number) => void
+  // Called by resolveCombat.ts whenever a resolve response reports a real
+  // (non-null) authoritative currentMp — 2026-11 bug fix (reported by the
+  // user: EXP silently stopped moving despite visibly landing kills
+  // client-side). Overwrites, doesn't add — currentPlayerMp used to be a
+  // purely client-local simulation with no connection to resolve-combat's
+  // own persisted characters.current_mp at all, so the two could drift
+  // (typically the server's copy drains faster in wall-clock terms, since it
+  // assumes continuous attacking across the *entire* elapsed window same as
+  // the gold/EXP math, hitting 0 and silently zeroing every future
+  // kill/reward long before the client's own MP bar showed empty). No-ops
+  // before lazy-init (0/0 sentinel), same as healPlayerHp/restorePlayerMp.
+  syncPlayerMp: (amount: number) => void
   // Called by resolveCombat.ts when a live (not offline) resolve-combat
   // response reports inventoryFull — a kill rolled a drop that had nowhere
   // to go, so the fight stops outright rather than silently discarding it or
@@ -627,6 +639,15 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         return {}
       }
       return { currentPlayerMp: Math.min(state.maxPlayerMp, state.currentPlayerMp + amount) }
+    })
+  },
+
+  syncPlayerMp: (amount) => {
+    set((state) => {
+      if (state.maxPlayerMp <= 0) {
+        return {}
+      }
+      return { currentPlayerMp: Math.min(state.maxPlayerMp, Math.max(0, amount)) }
     })
   },
 
