@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.119.7",
+    "date": "2026-08-29",
+    "changes": [
+      "Fixed the Forge's Confirm/Cancel buttons flickering and shifting around while Auto-Repeat is running",
+      "Auto-Repeat button now matches the VIP badge's actual look instead of using its own bold/uppercase styling"
+    ]
+  },
+  {
     "version": "1.119.6",
     "date": "2026-08-29",
     "changes": [

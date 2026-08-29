@@ -98,7 +98,6 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
   const fallenStarScrolls = useCurrencyStore((state) => state.fallenStarScrolls)
   const characterLevel = useProgressionStore((state) => state.level)
   const isEquipped = useEquipmentStore((state) => state.isEquipped)
-  const busy = useForgeStore((state) => state.busy)
   const qualityUpgrade = useForgeStore((state) => state.qualityUpgrade)
   const levelUpgrade = useForgeStore((state) => state.levelUpgrade)
   const qualityUpgradeScroll = useForgeStore((state) => state.qualityUpgradeScroll)
@@ -394,12 +393,19 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
         disabled={!isVipActive}
         aria-pressed={autoRepeat}
         title={isVipActive ? 'Auto-repeat: 1 Level Upgrade/sec across every other matching item' : 'Requires VIP'}
-        className="ascension-chip-inner px-4 py-2.5 text-sm font-bold uppercase tracking-[0.08em] text-violet-100 transition disabled:cursor-not-allowed"
+        className="ascension-chip-inner flex h-full items-center px-4 py-2.5 text-sm font-medium text-violet-200 transition disabled:cursor-not-allowed"
       >
         Auto-Repeat
       </button>
     </div>
   )
+
+  // Separate from useForgeStore's own `busy` — that flag also flips on every
+  // background tick of the Auto-Forge loop below (a different item's
+  // levelUpgrade call), which isn't what Confirm/Cancel's disabled+label
+  // state should track. Sharing `busy` made Confirm's label flicker between
+  // "Confirm"/"Working…" once a second, shifting the whole button row.
+  const [confirmBusy, setConfirmBusy] = useState(false)
 
   const handleConfirm = async () => {
     if (!selectedItem || (materialMode !== 'quality' && materialMode !== 'level')) {
@@ -409,6 +415,7 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
       return
     }
 
+    setConfirmBusy(true)
     const result = isBatch
       ? materialMode === 'quality'
         ? await qualityUpgradeScroll(selectedItem.id)
@@ -416,6 +423,7 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
       : materialMode === 'quality'
         ? await qualityUpgrade(selectedItem.id)
         : await levelUpgrade(selectedItem.id)
+    setConfirmBusy(false)
 
     if (!result.ok) {
       setAttemptResult({ success: false, message: describeFailure(result.error) })
@@ -490,10 +498,10 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
                 <div className="flex flex-col items-center gap-2">
                   <div className="flex justify-center gap-2">
                     {materialMode === 'level' && autoRepeatButton}
-                    <Button variant="primary" disabled={busy} onClick={() => void handleConfirm()}>
-                      {busy ? 'Working…' : 'Confirm'}
+                    <Button variant="primary" disabled={confirmBusy} onClick={() => void handleConfirm()}>
+                      {confirmBusy ? 'Working…' : 'Confirm'}
                     </Button>
-                    <Button variant="secondary" disabled={busy} onClick={() => setMaterialEntries([])}>
+                    <Button variant="secondary" disabled={confirmBusy} onClick={() => setMaterialEntries([])}>
                       Cancel
                     </Button>
                   </div>
