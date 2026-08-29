@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.118.9",
+    "date": "2026-08-29",
+    "changes": [
+      "Fixed the FX shockwave rendering too dark (a color bug), and the Upgrade Ripple preview now fires from a clickable item icon instead of screen center, so it previews the way it'll actually be used"
+    ]
+  },
+  {
     "version": "1.118.8",
     "date": "2026-08-29",
     "changes": [

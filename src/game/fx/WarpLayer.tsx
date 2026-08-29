@@ -75,7 +75,18 @@ function WarpMesh({ warp }: { warp: ActiveWarp }) {
 
   const texture = useMemo(() => {
     const tex = new THREE.CanvasTexture(warp.canvas)
-    tex.colorSpace = THREE.SRGBColorSpace
+    // Deliberately NOT tex.colorSpace = THREE.SRGBColorSpace -- that tag
+    // makes Three.js decode the texture's stored bytes as sRGB on every
+    // texture2D() sample (sRGB -> linear), but this shader just passes the
+    // sampled r/g/b straight through to gl_FragColor with no corresponding
+    // re-encode back to sRGB (there's no lighting/PBR math here needing
+    // linear space at all) -- so tagging it SRGBColorSpace silently
+    // darkened every warp by one full sRGB decode pass (confirmed via a
+    // known-color test: source #1b2436 rendered as ~#03040a, which is
+    // exactly the sRGB-decoded value of the source, to the pixel). Leaving
+    // colorSpace at its default (NoColorSpace) samples the raw bytes
+    // untouched, matching what the browser already displayed when this was
+    // captured.
     tex.minFilter = THREE.LinearFilter
     tex.magFilter = THREE.LinearFilter
     // The plane always shows this at native 1:1 scale (full-screen quad,
