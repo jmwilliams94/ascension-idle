@@ -147,7 +147,16 @@ export default function WarpLayer() {
   return createPortal(
     <Canvas
       data-fx-exclude="true"
-      className="pointer-events-none fixed inset-0 z-[88]"
+      className="pointer-events-none z-[88]"
+      // Canvas applies its own inline `position: relative; width/height:
+      // 100%` to this wrapper div by default -- an inline style always beats
+      // a class-based utility in the cascade regardless of specificity, so
+      // `fixed inset-0` in className above silently loses to it (confirmed
+      // via getComputedStyle while building this: position read back as
+      // "relative", and the canvas sized itself to a content-driven 150px
+      // fallback height instead of the viewport). Passing position/inset
+      // here explicitly is what actually wins.
+      style={{ position: 'fixed', inset: 0 }}
       orthographic
       dpr={1}
       gl={{ alpha: false, antialias: false, toneMapping: THREE.NoToneMapping }}

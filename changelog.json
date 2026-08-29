@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.118.3",
+    "date": "2026-08-29",
+    "changes": [
+      "The Comet Impact and Upgrade Ripple FX previews now actually distort the screen (a real WebGL shockwave) instead of just drawing rings on top of it — still preview-only in Settings > FX, not wired to gameplay yet"
+    ]
+  },
+  {
     "version": "1.118.2",
     "date": "2026-08-29",
     "changes": [
