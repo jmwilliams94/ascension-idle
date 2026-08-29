@@ -1,4 +1,5 @@
 import { mulberry32 } from '../../items/tierEffectsData'
+import { useWarpStore } from '../useWarpStore'
 import type { FxEffect, FxEffectOptions } from './types'
 
 interface Point {
@@ -59,6 +60,14 @@ export function createComet(width: number, height: number, seed: number, options
       } else if (!impactFired) {
         impactFired = true
         triggerScreenShake()
+        // The actual screen-warp (see WarpLayer.tsx) -- captures the screen
+        // and distorts it, layered underneath this effect's own glow rings
+        // drawn below. Fired here rather than at flight-start so the
+        // capture reflects the screen right as the comet lands, not 550ms
+        // earlier -- the small async capture latency reads as a beat of
+        // hitstop before the shockwave, which is an acceptable rough edge
+        // for now rather than something worth a "prepare early" redesign.
+        useWarpStore.getState().triggerWarp(targetX, targetY)
       }
       return elapsed >= TOTAL_MS
     },

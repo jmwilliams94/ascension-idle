@@ -1,3 +1,4 @@
+import { useWarpStore } from '../useWarpStore'
 import type { FxEffect, FxEffectOptions } from './types'
 
 // Amber -- matches the game's established gold/upgrade accent (.btn-gold,
@@ -18,6 +19,12 @@ export function createRipple(width: number, height: number, _seed: number, optio
   const targetX = options?.x ?? width / 2
   const targetY = options?.y ?? height / 2
   const maxRadius = Math.max(width, height) * 0.75
+
+  // The actual screen-warp (see WarpLayer.tsx), layered underneath this
+  // effect's own glow rings drawn below -- fired immediately (unlike
+  // comet.ts, ripple has no flight/wind-up phase to fire it during) so the
+  // real distortion and the 2D glow rings start together.
+  useWarpStore.getState().triggerWarp(targetX, targetY)
 
   let elapsed = 0
 
