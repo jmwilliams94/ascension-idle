@@ -1081,7 +1081,7 @@ export default function InventoryPanel({
               onClick={() => setCompareMode((current) => !current)}
               className={`rounded border px-2 py-1 text-xs font-medium ${
                 compareMode
-                  ? 'border-amber-500 bg-amber-500/10 text-amber-300'
+                  ? 'border-slate-300 bg-slate-300/10 text-slate-100'
                   : 'border-slate-700 text-slate-300 hover:border-slate-500'
               }`}
             >

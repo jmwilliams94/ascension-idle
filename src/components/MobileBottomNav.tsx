@@ -173,7 +173,7 @@ function IdlingNavButton() {
       <span className="relative flex h-14 w-14 items-center justify-center">
         <span
           className={`absolute inset-0 flex items-center justify-center rounded-full shadow-lg ${
-            active ? 'btn-gold-active shadow-amber-500/20' : 'btn-gold shadow-black/30'
+            active ? 'btn-gold-active shadow-slate-300/20' : 'btn-gold shadow-black/30'
           }`}
           style={eventBorderTintStyle(emberColor)}
         >
@@ -181,7 +181,7 @@ function IdlingNavButton() {
         </span>
         <EventEmberBorder color={emberColor} count={20} />
       </span>
-      <span className={`text-[10px] font-semibold leading-tight ${active ? 'text-amber-300' : 'text-slate-400'}`}>Idling</span>
+      <span className={`text-[10px] font-semibold leading-tight ${active ? 'text-slate-100' : 'text-slate-400'}`}>Idling</span>
     </button>
   )
 }
@@ -266,7 +266,7 @@ function TavernNavButton({ badges }: { badges: Partial<Record<TabId, number>> })
                         setExpanded(false)
                       }}
                       className={`relative flex items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-left text-xs font-medium ${
-                        activeTab === item.id ? 'bg-amber-500/10 text-amber-300' : 'text-slate-300 hover:bg-slate-800/80'
+                        activeTab === item.id ? 'bg-slate-300/10 text-slate-100' : 'text-slate-300 hover:bg-slate-800/80'
                       }`}
                     >
                       {icon && <NavIconGlyph icon={icon} sizeClassName="h-5 w-5" />}

@@ -51,7 +51,7 @@ export default function BankActionModal({
                 type="button"
                 onClick={onClose}
                 aria-label="Close"
-                className="ascension-chip-inner px-2 py-1 text-xs text-slate-400 hover:text-amber-100"
+                className="ascension-chip-inner px-2 py-1 text-xs text-slate-400 hover:text-slate-100"
               >
                 ✕
               </button>

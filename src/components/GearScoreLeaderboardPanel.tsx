@@ -69,7 +69,7 @@ export default function GearScoreLeaderboardPanel({ characterId }: { characterId
           type="button"
           onClick={() => setClassFilter(null)}
           className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${
-            classFilter === null ? 'border-amber-400 bg-amber-500/10 text-amber-300' : 'border-slate-700 text-slate-300 hover:border-amber-500/50'
+            classFilter === null ? 'border-slate-300 bg-slate-300/10 text-slate-100' : 'border-slate-700 text-slate-300 hover:border-slate-400/50'
           }`}
         >
           All
@@ -81,8 +81,8 @@ export default function GearScoreLeaderboardPanel({ characterId }: { characterId
             onClick={() => setClassFilter(classId)}
             className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${
               classFilter === classId
-                ? 'border-amber-400 bg-amber-500/10 text-amber-300'
-                : 'border-slate-700 text-slate-300 hover:border-amber-500/50'
+                ? 'border-slate-300 bg-slate-300/10 text-slate-100'
+                : 'border-slate-700 text-slate-300 hover:border-slate-400/50'
             }`}
           >
             {CLASS_DEFINITIONS[classId].displayName}

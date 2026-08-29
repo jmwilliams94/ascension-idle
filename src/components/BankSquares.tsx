@@ -297,7 +297,7 @@ function Square({
         type="button"
         onClick={onClick}
         title={hasIcon ? label : undefined}
-        className="relative flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border border-amber-400 bg-amber-500/10 p-2 text-center"
+        className="relative flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border border-slate-300 bg-slate-300/10 p-2 text-center"
       >
         {content}
       </button>
@@ -383,7 +383,7 @@ function CurrencyPanel({
     <div className="space-y-3">
       <div className="flex gap-1.5">
         {mode === 'deposit' ? (
-          <button type="button" className="flex-1 rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300">
+          <button type="button" className="flex-1 rounded-lg border border-slate-300 bg-slate-300/10 px-3 py-1.5 text-xs font-medium text-slate-100">
             Deposit
           </button>
         ) : (
@@ -395,14 +395,14 @@ function CurrencyPanel({
                 setAmount(0)
                 setError(null)
               }}
-              className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100"
+              className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-slate-100"
             >
               Deposit
             </button>
           </div>
         )}
         {mode === 'withdraw' ? (
-          <button type="button" className="flex-1 rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300">
+          <button type="button" className="flex-1 rounded-lg border border-slate-300 bg-slate-300/10 px-3 py-1.5 text-xs font-medium text-slate-100">
             Withdraw
           </button>
         ) : (
@@ -414,7 +414,7 @@ function CurrencyPanel({
                 setAmount(0)
                 setError(null)
               }}
-              className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100"
+              className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-slate-100"
             >
               Withdraw
             </button>
@@ -547,7 +547,7 @@ function CometFallenStarPanel({
     <div className="space-y-3">
       <div className="flex gap-1.5">
         {mode === 'individual' ? (
-          <button type="button" className="flex-1 rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300">
+          <button type="button" className="flex-1 rounded-lg border border-slate-300 bg-slate-300/10 px-3 py-1.5 text-xs font-medium text-slate-100">
             Individual
           </button>
         ) : (
@@ -555,14 +555,14 @@ function CometFallenStarPanel({
             <button
               type="button"
               onClick={() => setModeAndReset('individual')}
-              className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100"
+              className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-slate-100"
             >
               Individual
             </button>
           </div>
         )}
         {mode === 'scroll' ? (
-          <button type="button" className="flex-1 rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300">
+          <button type="button" className="flex-1 rounded-lg border border-slate-300 bg-slate-300/10 px-3 py-1.5 text-xs font-medium text-slate-100">
             Scroll
           </button>
         ) : (
@@ -570,7 +570,7 @@ function CometFallenStarPanel({
             <button
               type="button"
               onClick={() => setModeAndReset('scroll')}
-              className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100"
+              className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-slate-100"
             >
               Scroll
             </button>
@@ -731,7 +731,7 @@ function GearPointsPanel({
               <button
                 type="button"
                 onClick={() => setSlotType(type)}
-                className="ascension-chip-inner w-full px-2.5 py-2 text-left text-xs font-medium text-slate-300 hover:text-amber-100"
+                className="ascension-chip-inner w-full px-2.5 py-2 text-left text-xs font-medium text-slate-300 hover:text-slate-100"
               >
                 <span className="block">{formatGearSlotLabel(type)}</span>
                 <span className="block text-[10px] font-normal text-slate-500">{gearCompositionPoints[type].toLocaleString()} pts</span>
@@ -947,7 +947,7 @@ function GemsPanel({
             <button
               key={id}
               type="button"
-              className="rounded-lg border border-amber-400 bg-amber-500/10 px-2 py-1.5 text-[11px] font-medium text-amber-300"
+              className="rounded-lg border border-slate-300 bg-slate-300/10 px-2 py-1.5 text-[11px] font-medium text-slate-100"
             >
               {GEM_TYPES[id].displayName.replace(' Gem', '')}
             </button>
@@ -956,7 +956,7 @@ function GemsPanel({
               <button
                 type="button"
                 onClick={() => setGemId(id)}
-                className="ascension-chip-inner w-full px-2 py-1.5 text-[11px] font-medium text-slate-300 hover:text-amber-100"
+                className="ascension-chip-inner w-full px-2 py-1.5 text-[11px] font-medium text-slate-300 hover:text-slate-100"
               >
                 {GEM_TYPES[id].displayName.replace(' Gem', '')}
               </button>
@@ -989,7 +989,7 @@ function GemsPanel({
           )
 
           return tier === t ? (
-            <button key={t} type="button" className="flex flex-col items-center gap-1 rounded-xl border border-amber-400 bg-amber-500/10 p-2">
+            <button key={t} type="button" className="flex flex-col items-center gap-1 rounded-xl border border-slate-300 bg-slate-300/10 p-2">
               {iconBlock}
             </button>
           ) : (

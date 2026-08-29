@@ -206,7 +206,7 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
 
         <div className="flex gap-3">
           {upgradeType === 'quality' ? (
-            <button type="button" className="rounded-lg border border-amber-400 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-300">
+            <button type="button" className="rounded-lg border border-slate-300 bg-slate-300/10 px-4 py-2 text-sm font-medium text-slate-100">
               Quality
             </button>
           ) : (
@@ -214,14 +214,14 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
               <button
                 type="button"
                 onClick={() => handlePickType('quality')}
-                className="ascension-chip-inner px-4 py-2 text-sm font-medium text-slate-300 hover:text-amber-100"
+                className="ascension-chip-inner px-4 py-2 text-sm font-medium text-slate-300 hover:text-slate-100"
               >
                 Quality
               </button>
             </div>
           )}
           {upgradeType === 'level' ? (
-            <button type="button" className="rounded-lg border border-amber-400 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-300">
+            <button type="button" className="rounded-lg border border-slate-300 bg-slate-300/10 px-4 py-2 text-sm font-medium text-slate-100">
               Level
             </button>
           ) : (
@@ -229,7 +229,7 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
               <button
                 type="button"
                 onClick={() => handlePickType('level')}
-                className="ascension-chip-inner px-4 py-2 text-sm font-medium text-slate-300 hover:text-amber-100"
+                className="ascension-chip-inner px-4 py-2 text-sm font-medium text-slate-300 hover:text-slate-100"
               >
                 Level
               </button>

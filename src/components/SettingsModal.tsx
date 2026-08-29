@@ -150,7 +150,7 @@ export default function SettingsModal({ characterId, onClose }: { characterId: s
                 onClick={() => setActiveSectionId(section.id)}
                 className={`flex shrink-0 items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm transition sm:w-full ${
                   section.id === activeSectionId
-                    ? 'border-amber-400/60 bg-amber-500/10 text-amber-300'
+                    ? 'border-slate-300/60 bg-slate-300/10 text-slate-100'
                     : 'border-transparent text-slate-400 hover:border-white/10 hover:bg-white/5 hover:text-slate-200'
                 }`}
               >

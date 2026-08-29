@@ -315,11 +315,14 @@ a,
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(245, 158, 11, 0.55);
+  background-color: rgba(203, 213, 225, 0.6);
 }
 
 /* ============================================================
-   Gold/Steel "Ascension" chrome (2026-08-14 visual overhaul)
+   Silver/Steel "Ascension" chrome (2026-08-14 visual overhaul,
+   recolored 2026-08-29 from the original gold/steel palette to a
+   sterling-silver/steel one — full pivot away from gold, confirmed
+   app-wide, modeled on a "Sterling Silver" mockup)
    ------------------------------------------------------------
    A deliberate reversal of the earlier "no gradients" preference
    documented at GameShell.tsx's header comment — confirmed by the
@@ -327,15 +330,19 @@ a,
    (a gradient wordmark + a gradient-bordered "ribbon" card). Scoped
    to UI *chrome* only (cards, headings, buttons, dropdown frames) —
    gameplay-data color coding (item quality tiers, level-diff colors,
-   HP bars, rarity glows) is a separate, untouched system.
+   HP bars, rarity glows, the Gold currency's own amber text color in
+   formatGold.ts) is a separate, untouched system.
    ============================================================ */
 
 :root {
   --ascension-ink: #0b0e14;
   --ascension-ink-soft: #131a24;
-  --ascension-gold-bright: #fff3a1;
-  --ascension-gold: #d4af37;
-  --ascension-gold-dark: #997a15;
+  /* Var names kept as "gold" to avoid renaming across every consumer
+     class (.btn-gold, .text-gradient-gold, ...) — the values themselves
+     are the 2026-08-29 sterling-silver ramp, not gold. */
+  --ascension-gold-bright: #ffffff;
+  --ascension-gold: #cbd5e1;
+  --ascension-gold-dark: #64748b;
   --ascension-steel-bright: #ffffff;
   --ascension-steel: #c0d1e3;
   --ascension-steel-dark: #7a8b9e;
@@ -369,16 +376,16 @@ a,
   color: var(--ascension-steel-dark);
 }
 
-/* Breathing glow for gold accents (ribbon stars, header stars, the primary
+/* Breathing glow for silver accents (ribbon stars, header stars, the primary
    CTA button's idle-state halo) — box-shadow + currentColor, same reuse
-   pattern as .accent-glow above, just a wider/slower pulse suited to gold
+   pattern as .accent-glow above, just a wider/slower pulse suited to silver
    filigree rather than a status indicator. */
 @keyframes ascension-glow-pulse {
   0% {
-    filter: drop-shadow(0 0 4px rgba(212, 175, 55, 0.4));
+    filter: drop-shadow(0 0 4px rgba(148, 163, 184, 0.4));
   }
   100% {
-    filter: drop-shadow(0 0 16px rgba(255, 215, 0, 0.9));
+    filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.9));
   }
 }
 
@@ -398,9 +405,10 @@ a,
   background: var(--ascension-ink-soft);
 }
 
-/* Thin metallic gold-to-steel gradient frame + inset dark panel — the
+/* Thin metallic silver-to-steel gradient frame + inset dark panel — the
    "obsidian" chamfered-corner chrome (2026-08-28, Prism Obsidian & Light
-   Sweep pass — supersedes the original rounded-corner "ribbon card" look).
+   Sweep pass — supersedes the original rounded-corner "ribbon card" look;
+   recolored 2026-08-29 from gold to silver, see the :root token comment).
    .ascension-card-frame is the 1px gradient border (padding trick, no
    border-image quirks); .ascension-card-inner is the actual dark content
    panel sized to it. Corners are cut via clip-path polygon (14px outer,
@@ -415,7 +423,7 @@ a,
    activeEventColor is set, rather than compromising this rule. */
 .ascension-card-frame {
   position: relative;
-  background: linear-gradient(180deg, rgba(212, 175, 55, 0.7) 0%, rgba(122, 139, 158, 0.3) 50%, rgba(212, 175, 55, 0.5) 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(148, 163, 184, 0.3) 50%, rgba(203, 213, 225, 0.55) 100%);
   padding: 1px;
   clip-path: polygon(
     14px 0%, calc(100% - 14px) 0%,
@@ -425,7 +433,7 @@ a,
   );
   filter:
     drop-shadow(0 12px 32px rgba(0, 0, 0, 0.8))
-    drop-shadow(0 0 16px rgba(212, 175, 55, 0.12));
+    drop-shadow(0 0 16px rgba(203, 213, 225, 0.15));
 }
 
 .ascension-card-inner {
@@ -466,7 +474,7 @@ a,
 .ascension-card-header-line {
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.5), transparent);
+  background: linear-gradient(90deg, transparent, rgba(226, 232, 240, 0.55), transparent);
 }
 
 /* Large header variant (2026-08-14, requested by the user — the single
@@ -515,7 +523,7 @@ a,
 .btn-gold {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(180deg, #3a2e0a 0%, #1a1403 100%);
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
   border: 1px solid var(--ascension-gold);
   color: var(--ascension-gold-bright);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.4);
@@ -559,7 +567,7 @@ a,
   .btn-gold:hover:not(:disabled) {
     background: linear-gradient(180deg, var(--ascension-gold-bright) 0%, var(--ascension-gold) 60%, var(--ascension-gold-dark) 100%);
     color: var(--ascension-ink);
-    box-shadow: 0 0 24px rgba(255, 215, 0, 0.75);
+    box-shadow: 0 0 24px rgba(255, 255, 255, 0.75);
   }
 }
 
@@ -645,7 +653,7 @@ a,
   background: linear-gradient(180deg, var(--ascension-gold-bright) 0%, var(--ascension-gold) 60%, var(--ascension-gold-dark) 100%);
   border: 1px solid var(--ascension-gold);
   color: var(--ascension-ink);
-  box-shadow: 0 0 16px rgba(255, 215, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.5);
   transition: all 0.25s ease;
 }
 
@@ -691,7 +699,7 @@ a,
 .nav-pill-active {
   background: linear-gradient(180deg, var(--ascension-gold-bright) 0%, var(--ascension-gold) 60%, var(--ascension-gold-dark) 100%);
   color: var(--ascension-ink);
-  box-shadow: 0 0 14px rgba(255, 215, 0, 0.45);
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.45);
 }
 
 /* Colored variant of .btn-gold's idle-dark/hover-bright-gradient-plus-glow
@@ -773,12 +781,12 @@ a,
    border-radius, which is fine here since neither consumer is rounded. */
 .ascension-edge-b {
   border-bottom: 1px solid transparent;
-  border-image: linear-gradient(90deg, rgba(212, 175, 55, 0.6) 0%, rgba(122, 139, 158, 0.35) 50%, rgba(212, 175, 55, 0.6) 100%) 1;
+  border-image: linear-gradient(90deg, rgba(226, 232, 240, 0.65) 0%, rgba(122, 139, 158, 0.35) 50%, rgba(226, 232, 240, 0.65) 100%) 1;
 }
 
 .ascension-edge-t {
   border-top: 1px solid transparent;
-  border-image: linear-gradient(90deg, rgba(212, 175, 55, 0.6) 0%, rgba(122, 139, 158, 0.35) 50%, rgba(212, 175, 55, 0.6) 100%) 1;
+  border-image: linear-gradient(90deg, rgba(226, 232, 240, 0.65) 0%, rgba(122, 139, 158, 0.35) 50%, rgba(226, 232, 240, 0.65) 100%) 1;
 }
 
 /* Compact "chip" variant of the card frame (2026-08-14) — same gradient-
@@ -791,7 +799,7 @@ a,
    clickable. */
 .ascension-chip-frame {
   position: relative;
-  background: linear-gradient(180deg, rgba(212, 175, 55, 0.65) 0%, rgba(122, 139, 158, 0.3) 50%, rgba(212, 175, 55, 0.5) 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(122, 139, 158, 0.3) 50%, rgba(203, 213, 225, 0.5) 100%);
   padding: 1px;
   clip-path: polygon(6px 0%, calc(100% - 6px) 0%, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0% calc(100% - 6px), 0% 6px);
 }
@@ -803,7 +811,7 @@ a,
 
 @media (hover: hover) {
   .ascension-chip-frame.is-interactive:hover {
-    background: linear-gradient(180deg, rgba(255, 215, 0, 0.85) 0%, rgba(192, 209, 227, 0.45) 50%, rgba(255, 215, 0, 0.7) 100%);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(192, 209, 227, 0.5) 50%, rgba(226, 232, 240, 0.75) 100%);
   }
 }
 
@@ -819,10 +827,10 @@ a,
 
 @media (hover: hover) {
   .select-frame:hover {
-    border-color: rgba(212, 175, 55, 0.5);
+    border-color: rgba(203, 213, 225, 0.6);
   }
 }
 
 .select-frame:focus-within {
-  border-color: rgba(212, 175, 55, 0.5);
+  border-color: rgba(203, 213, 225, 0.6);
 }

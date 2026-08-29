@@ -306,7 +306,7 @@ export default function EquipmentPanel() {
           onClick={() => (lockEditMode ? cancelLockEditMode() : enterLockEditMode())}
           title={lockEditMode ? 'Cancel' : 'Lock/unlock equipped gear'}
           className={`rounded-lg border px-2.5 py-1.5 text-sm ${
-            lockEditMode ? 'border-amber-400 bg-amber-500/10 text-amber-300' : 'border-slate-700 text-slate-300 hover:border-amber-500/50'
+            lockEditMode ? 'border-slate-300 bg-slate-300/10 text-slate-100' : 'border-slate-700 text-slate-300 hover:border-slate-400/50'
           }`}
         >
           🔒

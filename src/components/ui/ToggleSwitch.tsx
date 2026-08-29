@@ -19,7 +19,7 @@ export function ToggleSwitch({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={`relative h-6 w-11 shrink-0 rounded-full border p-0 transition disabled:cursor-not-allowed disabled:opacity-50 ${
-        checked ? 'border-amber-500 bg-amber-500/80' : 'border-slate-700 bg-slate-800'
+        checked ? 'border-slate-300 bg-slate-300/80' : 'border-slate-700 bg-slate-800'
       }`}
       aria-label={label}
     >

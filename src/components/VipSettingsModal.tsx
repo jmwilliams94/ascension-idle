@@ -140,7 +140,7 @@ export default function VipSettingsModal() {
                   onClick={() => setPriority('bank_first')}
                   className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition ${
                     settings.priority === 'bank_first'
-                      ? 'border-amber-500 bg-amber-500/10 text-amber-300'
+                      ? 'border-slate-300 bg-slate-300/10 text-slate-100'
                       : 'border-slate-700 text-slate-400 hover:border-slate-500'
                   }`}
                 >
@@ -151,7 +151,7 @@ export default function VipSettingsModal() {
                   onClick={() => setPriority('salvage_first')}
                   className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition ${
                     settings.priority === 'salvage_first'
-                      ? 'border-amber-500 bg-amber-500/10 text-amber-300'
+                      ? 'border-slate-300 bg-slate-300/10 text-slate-100'
                       : 'border-slate-700 text-slate-400 hover:border-slate-500'
                   }`}
                 >

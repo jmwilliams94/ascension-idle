@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.118.11",
+    "date": "2026-08-29",
+    "changes": [
+      "Recolored the UI's gold accents — buttons, card frames, nav highlights, and selected tabs — to a sterling silver/steel look"
+    ]
+  },
+  {
     "version": "1.118.10",
     "date": "2026-08-29",
     "changes": [

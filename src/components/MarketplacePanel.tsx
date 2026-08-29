@@ -249,7 +249,7 @@ function BrowseTab({ characterId, templates }: { characterId: string; templates:
           <button
             type="button"
             onClick={() => void loadBrowseListings()}
-            className="ascension-chip-inner px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100"
+            className="ascension-chip-inner px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-slate-100"
           >
             Refresh
           </button>
@@ -405,12 +405,12 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
           <div className="flex-1 space-y-2">
             <div className="flex gap-2">
               {priceCurrency === 'gold' ? (
-                <button type="button" onClick={() => setPriceCurrency('gold')} className="rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300">
+                <button type="button" onClick={() => setPriceCurrency('gold')} className="rounded-lg border border-slate-300 bg-slate-300/10 px-3 py-1 text-xs font-medium text-slate-100">
                   Gold
                 </button>
               ) : (
                 <div className="ascension-chip-frame is-interactive">
-                  <button type="button" onClick={() => setPriceCurrency('gold')} className="ascension-chip-inner px-3 py-1 text-xs font-medium text-slate-300 hover:text-amber-100">
+                  <button type="button" onClick={() => setPriceCurrency('gold')} className="ascension-chip-inner px-3 py-1 text-xs font-medium text-slate-300 hover:text-slate-100">
                     Gold
                   </button>
                 </div>
@@ -419,7 +419,7 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
                 <button
                   type="button"
                   onClick={() => setPriceCurrency('ascension_points')}
-                  className="rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300"
+                  className="rounded-lg border border-slate-300 bg-slate-300/10 px-3 py-1 text-xs font-medium text-slate-100"
                 >
                   Ascension Points
                 </button>
@@ -428,7 +428,7 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
                   <button
                     type="button"
                     onClick={() => setPriceCurrency('ascension_points')}
-                    className="ascension-chip-inner px-3 py-1 text-xs font-medium text-slate-300 hover:text-amber-100"
+                    className="ascension-chip-inner px-3 py-1 text-xs font-medium text-slate-300 hover:text-slate-100"
                   >
                     Ascension Points
                   </button>
@@ -452,7 +452,7 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
                     key={option.hours}
                     type="button"
                     onClick={() => setDurationHours(option.hours)}
-                    className="rounded-lg border border-amber-400 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-300"
+                    className="rounded-lg border border-slate-300 bg-slate-300/10 px-2.5 py-1 text-[11px] font-medium text-slate-100"
                   >
                     {option.label}
                   </button>
@@ -461,7 +461,7 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
                     <button
                       type="button"
                       onClick={() => setDurationHours(option.hours)}
-                      className="ascension-chip-inner px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:text-amber-100"
+                      className="ascension-chip-inner px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:text-slate-100"
                     >
                       {option.label}
                     </button>
@@ -903,29 +903,29 @@ export default function MarketplacePanel() {
     <div className="space-y-3">
       <div className="grid grid-cols-3 gap-2">
         {tab === 'browse' ? (
-          <button type="button" onClick={() => setTab('browse')} className="rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300">
+          <button type="button" onClick={() => setTab('browse')} className="rounded-lg border border-slate-300 bg-slate-300/10 px-3 py-1.5 text-xs font-medium text-slate-100">
             Browse
           </button>
         ) : (
           <div className="ascension-chip-frame is-interactive">
-            <button type="button" onClick={() => setTab('browse')} className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100">
+            <button type="button" onClick={() => setTab('browse')} className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-slate-100">
               Browse
             </button>
           </div>
         )}
         {tab === 'my-listings' ? (
-          <button type="button" onClick={() => setTab('my-listings')} className="rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300">
+          <button type="button" onClick={() => setTab('my-listings')} className="rounded-lg border border-slate-300 bg-slate-300/10 px-3 py-1.5 text-xs font-medium text-slate-100">
             My Listings
           </button>
         ) : (
           <div className="ascension-chip-frame is-interactive">
-            <button type="button" onClick={() => setTab('my-listings')} className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100">
+            <button type="button" onClick={() => setTab('my-listings')} className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-slate-100">
               My Listings
             </button>
           </div>
         )}
         {tab === 'mail' ? (
-          <button type="button" onClick={() => setTab('mail')} className="relative rounded-lg border border-amber-400 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300">
+          <button type="button" onClick={() => setTab('mail')} className="relative rounded-lg border border-slate-300 bg-slate-300/10 px-3 py-1.5 text-xs font-medium text-slate-100">
             Mail
             {mailCount > 0 && (
               <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-slate-950">
@@ -935,7 +935,7 @@ export default function MarketplacePanel() {
           </button>
         ) : (
           <div className="ascension-chip-frame is-interactive relative">
-            <button type="button" onClick={() => setTab('mail')} className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100">
+            <button type="button" onClick={() => setTab('mail')} className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-slate-100">
               Mail
             </button>
             {mailCount > 0 && (

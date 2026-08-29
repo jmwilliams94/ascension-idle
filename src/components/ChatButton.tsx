@@ -33,7 +33,7 @@ export default function ChatButton() {
         onClick={openOverlay}
         aria-label="Open global chat"
         title="Global Chat"
-        className="ascension-chip-inner px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:text-amber-100 lg:px-3 lg:py-2 lg:text-sm"
+        className="ascension-chip-inner px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:text-slate-100 lg:px-3 lg:py-2 lg:text-sm"
       >
         <span aria-hidden="true">💬</span>
       </button>

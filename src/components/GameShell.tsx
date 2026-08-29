@@ -481,7 +481,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
                 onClick={() => setActiveCharacterId(null)}
                 aria-label="Switch Character"
                 title="Switch Character"
-                className="ascension-chip-inner flex items-center gap-1.5 p-2 text-slate-300 hover:text-amber-100 lg:px-3 lg:py-1.5"
+                className="ascension-chip-inner flex items-center gap-1.5 p-2 text-slate-300 hover:text-slate-100 lg:px-3 lg:py-1.5"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -507,7 +507,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
                 onClick={() => setSettingsOpen(true)}
                 aria-label="Settings"
                 title="Settings"
-                className="ascension-chip-inner p-2 text-slate-300 hover:text-amber-100"
+                className="ascension-chip-inner p-2 text-slate-300 hover:text-slate-100"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -530,7 +530,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
                 onClick={() => signOut()}
                 aria-label="Sign out"
                 title="Sign out"
-                className="ascension-chip-inner flex items-center gap-1.5 p-2 text-slate-300 hover:text-amber-100 lg:px-3 lg:py-1.5"
+                className="ascension-chip-inner flex items-center gap-1.5 p-2 text-slate-300 hover:text-slate-100 lg:px-3 lg:py-1.5"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
