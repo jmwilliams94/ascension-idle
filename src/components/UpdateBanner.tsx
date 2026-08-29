@@ -17,12 +17,12 @@ export default function UpdateBanner() {
 
   return (
     <div
-      className="fixed inset-x-0 top-0 z-[60] flex items-center justify-center gap-3 border-b border-amber-600/50 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-200"
-      // No backdrop-blur (dropped 2026-08-29, reported by the user) -- fixed +
-      // backdrop-filter is a known iOS Safari combo that can visually detach
-      // and drift with the page during a scroll gesture. translateZ(0) below
-      // is kept anyway as a harmless defensive measure, same as
-      // MobileBottomNav.tsx's own.
+      className="fixed inset-x-0 top-0 z-[60] flex items-center justify-center gap-3 border-b border-amber-600/50 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-200 lg:backdrop-blur"
+      // backdrop-blur is lg-only (re-added 2026-08-29) -- fixed + backdrop-filter
+      // is a known iOS Safari combo that detaches a fixed element mid-scroll,
+      // but only below lg where MobileBottomNav.tsx (also `lg:hidden`) lives;
+      // gating to lg: keeps the glass look on desktop without that risk.
+      // translateZ(0) below is kept anyway as a harmless defensive measure.
       style={{ transform: 'translateZ(0)' }}
     >
       <span>A new version of Ascension Idle is available.</span>

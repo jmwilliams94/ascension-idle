@@ -22,7 +22,7 @@ export default function HuntingTakeoverToast() {
   }
 
   return (
-    <div className="rounded-lg border border-sky-400/60 bg-sky-400/10 px-3 py-1.5 text-center text-xs font-semibold text-sky-300">
+    <div className="rounded-lg border border-sky-400/60 bg-sky-400/10 px-3 py-1.5 text-center text-xs font-semibold text-sky-300 lg:backdrop-blur">
       Only one character can Hunt at a time — took over from {displacedCharacterName}, who switched to Mining.
     </div>
   )

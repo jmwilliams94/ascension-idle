@@ -80,7 +80,7 @@ export default function SalvageRevealToast() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.92 }}
             transition={{ duration: 0.25 }}
-            className="relative flex items-center gap-2 rounded-xl border bg-slate-900/95 px-3 py-1.5 shadow-xl"
+            className="relative flex items-center gap-2 rounded-xl border bg-slate-900/95 px-3 py-1.5 shadow-xl lg:backdrop-blur"
             style={{ borderColor: `${SALVAGE_COLOR}80` }}
           >
             <ConfettiBurst seed={seedFromRevealId(reveal.id)} />

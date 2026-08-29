@@ -65,7 +65,7 @@ export default function LevelUpBanner() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.95 }}
             transition={{ duration: 0.25 }}
-            className="relative rounded-lg border border-amber-400/60 bg-amber-400/10 px-4 py-2 text-center text-sm font-semibold text-amber-300"
+            className="relative rounded-lg border border-amber-400/60 bg-amber-400/10 px-4 py-2 text-center text-sm font-semibold text-amber-300 lg:backdrop-blur"
           >
             {bursts.map((burst, i) => (
               <EmberBurstPoint key={i} x={burst.x} y={burst.y} color={GOLD_COLOR} delay={burst.delay} seed={burst.seed} radius={70} emberCount={16} />

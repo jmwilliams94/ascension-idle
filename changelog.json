@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.117.4",
+    "date": "2026-08-29",
+    "changes": [
+      "Restored the frosted-glass blur look to toasts and HUD banners on desktop"
+    ]
+  },
+  {
     "version": "1.117.3",
     "date": "2026-08-29",
     "changes": [

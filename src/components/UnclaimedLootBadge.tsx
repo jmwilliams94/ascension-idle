@@ -27,11 +27,11 @@ export default function UnclaimedLootBadge() {
       type="button"
       onClick={openModal}
       aria-label={`${count} unclaimed item${count === 1 ? '' : 's'} — tap to review`}
-      className="fixed bottom-20 left-3 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-amber-500 bg-slate-950/90 text-xl shadow-lg shadow-black/50 hover:bg-slate-900 lg:bottom-4"
-      // translateZ(0), same fix as MobileBottomNav.tsx -- see its comment. No
-      // backdrop-blur (dropped 2026-08-29, reported by the user -- see
-      // MobileBottomNav.tsx's own comment on why that combo detaches a fixed
-      // element on iOS Safari mid-scroll).
+      className="fixed bottom-20 left-3 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-amber-500 bg-slate-950/90 text-xl shadow-lg shadow-black/50 hover:bg-slate-900 lg:bottom-4 lg:backdrop-blur"
+      // translateZ(0), same fix as MobileBottomNav.tsx -- see its comment.
+      // backdrop-blur is lg-only (re-added 2026-08-29) -- MobileBottomNav is
+      // `lg:hidden` so the iOS Safari fixed+blur detach bug never has a nav
+      // bar to detach below lg, and blur never activates below lg anyway.
       style={{ transform: 'translateZ(0)' }}
     >
       🎁
