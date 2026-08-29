@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.119.6",
+    "date": "2026-08-29",
+    "changes": [
+      "Forge's Auto-Repeat is now a VIP-styled button next to Confirm/Cancel instead of a plain checkbox — greyed out with a \"Requires VIP\" tooltip if you're not VIP"
+    ]
+  },
+  {
     "version": "1.119.5",
     "date": "2026-08-29",
     "changes": [

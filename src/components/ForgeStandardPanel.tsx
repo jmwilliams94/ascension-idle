@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import EquippedGearPicker from './EquippedGearPicker'
 import ForgeMaterialSlot, { type MaterialEntry } from './ForgeMaterialSlot'
 import ForgePreviewSlot from './ForgePreviewSlot'
@@ -35,6 +35,11 @@ const RESULT_DISPLAY_MS = 2600
 // VIP Auto-Forge repeat (v1.108.0, Level Upgrade only) — paced one attempt
 // per second, matching the user's own description of the feature.
 const AUTO_FORGE_TICK_MS = 1000
+
+// Same violet as VipStatusHud.tsx/VipSettingsModal.tsx's VIP_TINT — this
+// toggle is VIP-gated, so it borrows the app's one established "VIP" color.
+const VIP_TINT = '#8b5cf6'
+const VIP_TINT_STYLE = { '--ascension-tint': VIP_TINT } as CSSProperties
 
 type MaterialMode = 'quality' | 'level'
 
@@ -368,6 +373,34 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
 
   const previewTemplate = materialMode === 'level' ? nextLevelTemplate : selectedTemplate
 
+  // Same visibility condition the old checkbox used — level-mode item staged
+  // (even a maxed one, so the toggle stays reachable) OR already running,
+  // since the loop keeps going after the Upgrade Slot is cleared out from
+  // under it (see the effect below).
+  const canAutoRepeatHere = materialMode === 'level' && Boolean(selectedItem) && !blockedByEquipLevel && !weaponNeedsMasterForge
+  const showAutoRepeat = autoRepeat || canAutoRepeatHere
+  const confirmVisible = Boolean(previewItem) && !blockedByEquipLevel && !weaponNeedsMasterForge
+
+  const autoRepeatButton = (
+    <div
+      className={`ascension-chip-frame is-tinted ${isVipActive ? 'is-interactive' : 'opacity-40'} ${
+        autoRepeat ? 'shadow-[0_0_14px_rgba(139,92,246,0.55)]' : ''
+      }`}
+      style={VIP_TINT_STYLE}
+    >
+      <button
+        type="button"
+        onClick={() => setAutoRepeat((current) => !current)}
+        disabled={!isVipActive}
+        aria-pressed={autoRepeat}
+        title={isVipActive ? 'Auto-repeat: 1 Level Upgrade/sec across every other matching item' : 'Requires VIP'}
+        className="ascension-chip-inner px-4 py-2.5 text-sm font-bold uppercase tracking-[0.08em] text-violet-100 transition disabled:cursor-not-allowed"
+      >
+        Auto-Repeat
+      </button>
+    </div>
+  )
+
   const handleConfirm = async () => {
     if (!selectedItem || (materialMode !== 'quality' && materialMode !== 'level')) {
       return
@@ -453,14 +486,18 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
                 </div>
               )}
 
-              {previewItem && !blockedByEquipLevel && !weaponNeedsMasterForge ? (
-                <div className="flex justify-center gap-2">
-                  <Button variant="primary" disabled={busy} onClick={() => void handleConfirm()}>
-                    {busy ? 'Working…' : 'Confirm'}
-                  </Button>
-                  <Button variant="secondary" disabled={busy} onClick={() => setMaterialEntries([])}>
-                    Cancel
-                  </Button>
+              {confirmVisible ? (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="flex justify-center gap-2">
+                    {materialMode === 'level' && autoRepeatButton}
+                    <Button variant="primary" disabled={busy} onClick={() => void handleConfirm()}>
+                      {busy ? 'Working…' : 'Confirm'}
+                    </Button>
+                    <Button variant="secondary" disabled={busy} onClick={() => setMaterialEntries([])}>
+                      Cancel
+                    </Button>
+                  </div>
+                  {autoRepeatSummary && <p className="text-center text-[11px] text-amber-400/80">{autoRepeatSummary}</p>}
                 </div>
               ) : (
                 <p className="rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-3 text-center text-[11px] text-slate-600">
@@ -471,20 +508,13 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
           )}
         </div>
 
-        {(autoRepeat || (materialMode === 'level' && Boolean(selectedItem) && !blockedByEquipLevel && !weaponNeedsMasterForge)) && (
+        {/* Confirm/Cancel need a level-mode item staged, but Auto-Repeat must
+            stay reachable even when one isn't (an already-maxed item staged,
+            or the loop still running after the Upgrade Slot got cleared) —
+            covered above whenever confirmVisible, this is the fallback. */}
+        {showAutoRepeat && !confirmVisible && (
           <div className="flex w-full max-w-xs flex-col items-center gap-1">
-            <label
-              className={`flex items-center gap-2 text-xs ${isVipActive ? 'cursor-pointer text-slate-300' : 'cursor-not-allowed text-slate-600'}`}
-              title={isVipActive ? undefined : 'VIP only'}
-            >
-              <input
-                type="checkbox"
-                checked={autoRepeat}
-                disabled={!isVipActive}
-                onChange={(event) => setAutoRepeat(event.target.checked)}
-              />
-              Auto-repeat (VIP) — 1 Level Upgrade/sec across every other matching item
-            </label>
+            {autoRepeatButton}
             {autoRepeatSummary && <p className="text-center text-[11px] text-amber-400/80">{autoRepeatSummary}</p>}
           </div>
         )}
