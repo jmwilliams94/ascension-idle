@@ -147,26 +147,30 @@ function WarpMesh({ warp }: { warp: ActiveWarp }) {
 // screen), rather than draw glow/particles on top of it. Presents as a
 // full-screen "photo" of the page at the moment a warp is triggered (see
 // useWarpStore.ts/screenCapture.ts), distorts that photo (fading in/out at
-// the edges, see FRAGMENT_SHADER's fadeAlpha), then unmounts to reveal the
+// the edges, see FRAGMENT_SHADER's fadeAlpha), then hides to reveal the
 // real live page again -- it never touches the actual DOM pixels
 // underneath, which is what keeps this technique clear of the
 // backdrop-filter + position:fixed iOS Safari bug that bit this game's
 // toasts/HUD repeatedly (see the backdrop-blur gotcha memory): there's no
 // backdrop-filter here at all, just an ordinary WebGL canvas.
 //
-// Only mounts a <Canvas> (and therefore only runs a WebGL render loop)
-// while a warp is actually active -- an idle background render loop for an
-// idle/AFK-heavy game would be a real battery/perf cost for a feature
-// nobody's looking at most of the time. z-[88], between the real game UI
-// and FxLayer's own 2D canvas (z-[90]) -- comet/lightning's glow keeps
-// drawing on top of the warped snapshot underneath it, layering "real
-// distortion" with "extra light VFX" the way game hit-effects usually do.
+// The <Canvas> itself stays mounted permanently (never unmounted/remounted
+// per trigger) -- only `frameloop` toggles between 'never' (idle: no
+// rendering at all, effectively zero per-frame cost) and 'always' (a warp is
+// live). An earlier version mounted/unmounted the whole <Canvas> per
+// trigger, which meant creating a brand new WebGL context and recompiling
+// the shader every single time -- a real, mobile-disproportionate cost
+// (weaker GPUs/drivers handle context creation far worse than desktop) that
+// was still making the effect feel choppy even after the render-loop and
+// capture-cost fixes; reported by the user specifically on mobile. Keeping
+// one warm context and just pausing/resuming its render loop avoids paying
+// that setup cost on every trigger while still not burning cycles while
+// idle. z-[88], between the real game UI and FxLayer's own 2D canvas
+// (z-[90]) -- comet/lightning's glow keeps drawing on top of the warped
+// snapshot underneath it, layering "real distortion" with "extra light VFX"
+// the way game hit-effects usually do.
 export default function WarpLayer() {
   const active = useWarpStore((state) => state.active)
-
-  if (!active) {
-    return null
-  }
 
   return createPortal(
     <Canvas
@@ -183,17 +187,18 @@ export default function WarpLayer() {
       style={{ position: 'fixed', inset: 0 }}
       orthographic
       dpr={1}
-      // alpha: true + a zero-alpha clear color (below) means the brief gap
-      // between this canvas mounting and its first real frame rendering
-      // (shader compile, first CanvasTexture upload) shows the real live
-      // page through it instead of an opaque black flash -- the default GL
-      // clear is opaque black regardless of the context's own alpha
-      // support, so alpha: true alone isn't enough, the renderer's clear
-      // color has to be told explicitly too.
+      // alpha: true + a zero-alpha clear color (below) means whenever the
+      // canvas isn't actively showing a warp (including the very first
+      // frame right after this permanent context is created), it shows the
+      // real live page through it instead of an opaque black flash -- the
+      // default GL clear is opaque black regardless of the context's own
+      // alpha support, so alpha: true alone isn't enough, the renderer's
+      // clear color has to be told explicitly too.
       gl={{ alpha: true, antialias: false, toneMapping: THREE.NoToneMapping }}
       onCreated={({ gl }) => gl.setClearColor(0x000000, 0)}
+      frameloop={active ? 'always' : 'never'}
     >
-      <WarpMesh key={active.id} warp={active} />
+      {active && <WarpMesh key={active.id} warp={active} />}
     </Canvas>,
     document.body,
   )

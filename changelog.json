@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.118.7",
+    "date": "2026-08-29",
+    "changes": [
+      "Reduced FX shockwave choppiness on mobile — it no longer recreates its rendering context from scratch on every trigger, which was adding real setup cost each time, especially on weaker mobile GPUs"
+    ]
+  },
+  {
     "version": "1.118.6",
     "date": "2026-08-29",
     "changes": [
