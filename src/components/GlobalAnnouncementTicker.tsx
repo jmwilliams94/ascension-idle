@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { useGlobalActivityStore } from '../game/social/useGlobalActivityStore'
 import { useAnnouncementHistoryStore } from '../game/social/useAnnouncementHistoryStore'
 import { getGearIconSrc } from '../game/items/equipmentBonus'
@@ -195,34 +195,39 @@ export default function GlobalAnnouncementTicker() {
 
   return (
     <div className="relative min-w-0 max-w-full shrink sm:max-w-sm">
-      <div className="flex items-center gap-2 rounded-lg border border-amber-600/50 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-200 lg:gap-3 lg:px-4 lg:py-2 lg:text-sm backdrop-blur will-change-transform">
-        <AnnouncementIcon kind={announcement.kind} message={announcement.message} imgClassName="h-4 w-4 shrink-0 object-contain lg:h-5 lg:w-5" />
-        <span className="min-w-0 flex-1 truncate">{announcement.message}</span>
-        <button
-          type="button"
-          onClick={() => {
-            const next = !showHistory
-            setShowHistory(next)
-            if (next) {
-              void loadHistory()
-            }
-          }}
-          className="shrink-0 text-[10px] font-normal text-amber-300/70 underline hover:text-amber-100 lg:text-xs"
-        >
-          {showHistory ? 'Hide' : 'See more'}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setCollapsed(true)
-            setShowHistory(false)
-          }}
-          aria-label="Collapse announcement"
-          title="Collapse"
-          className="ml-1 shrink-0 text-amber-300/70 hover:text-amber-100"
-        >
-          ◂
-        </button>
+      <div
+        className="ascension-chip-frame is-tinted"
+        style={{ '--ascension-tint': '#22c55e' } as CSSProperties}
+      >
+        <div className="ascension-chip-inner flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-green-100 lg:gap-3 lg:px-4 lg:py-2 lg:text-sm">
+          <AnnouncementIcon kind={announcement.kind} message={announcement.message} imgClassName="h-4 w-4 shrink-0 object-contain lg:h-5 lg:w-5" />
+          <span className="min-w-0 flex-1 truncate">{announcement.message}</span>
+          <button
+            type="button"
+            onClick={() => {
+              const next = !showHistory
+              setShowHistory(next)
+              if (next) {
+                void loadHistory()
+              }
+            }}
+            className="shrink-0 text-[10px] font-normal text-green-300/70 underline hover:text-green-100 lg:text-xs"
+          >
+            {showHistory ? 'Hide' : 'See more'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setCollapsed(true)
+              setShowHistory(false)
+            }}
+            aria-label="Collapse announcement"
+            title="Collapse"
+            className="ml-1 shrink-0 text-green-300/70 hover:text-green-100"
+          >
+            ◂
+          </button>
+        </div>
       </div>
 
       {showHistory && <AnnouncementHistoryDropdown />}

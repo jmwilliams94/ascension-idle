@@ -455,17 +455,20 @@ export default function GameShell({ characterId }: { characterId: string }) {
             already on). Revised again 2026-08-14: the 2026-08-02 "no
             gradients" call above is deliberately superseded — the user
             explicitly asked for a full pivot to a gold/steel gradient
-            wordmark + glowing star accents (see the gold/steel "Ascension"
-            chrome block in src/index.css), confirmed app-wide, not a one-off.
-            Steel gradient on "ASCENSION", gold gradient on "IDLE" (keeps
-            the established amber-for-IDLE anchor from the old version),
-            pulsing gold stars either side. */}
+            wordmark (see the "Ascension" chrome block in src/index.css),
+            confirmed app-wide, not a one-off. Steel gradient on "ASCENSION",
+            the other gradient token on "IDLE" (keeps the established
+            accent-for-IDLE anchor from the old version). The pulsing star
+            accents either side (✦, .ascension-glow-pulse) were replaced
+            2026-08-29 with plain thin grey fade-lines, per the user's own
+            request — no glow/pulse animation on these, a calmer flanking
+            accent rather than a lit ornament. */}
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
           <h1 className="font-heading flex items-center gap-2.5 text-xl font-black tracking-[0.15em] uppercase sm:text-2xl">
-            <span className="ascension-glow-pulse text-sm text-amber-400 sm:text-base">✦</span>
+            <span className="h-px w-6 shrink-0 bg-gradient-to-r from-transparent to-slate-500 sm:w-8" />
             <span className="text-gradient-steel">ASCENSION</span>
             <span className="text-gradient-gold">IDLE</span>
-            <span className="ascension-glow-pulse text-sm text-amber-400 sm:text-base">✦</span>
+            <span className="h-px w-6 shrink-0 bg-gradient-to-l from-transparent to-slate-500 sm:w-8" />
           </h1>
 
           {/* Icon-only below `lg` (labels hidden via `hidden lg:inline`,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { VIP_TOKEN_ICON_SRC } from '../game/items/forgeCosts'
 import { useVipSettingsModalStore } from '../game/vip/useVipSettingsModalStore'
@@ -79,28 +79,38 @@ export default function VipStatusHud() {
 
   const daysLeft = Math.max(1, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)))
 
+  // Violet, not the app's true `purple` (Ascension Points' own established
+  // currency color, see CLAUDE.md's guardrail) — close enough to read as
+  // "purple" per the user's request, distinct enough not to collide with
+  // that separate semantic meaning elsewhere in the HUD.
+  const vipTintStyle = { '--ascension-tint': '#8b5cf6' } as CSSProperties
+
   return (
     <div className="relative shrink-0" data-vip-hud>
-      <button
-        type="button"
-        onClick={() => (isDesktop ? useVipSettingsModalStore.getState().openModal() : setShowRemaining((current) => !current))}
-        title={isDesktop ? `VIP until ${new Date(vipExpiresAt).toLocaleString()} — click for VIP settings` : undefined}
-        // No backdrop-blur (dropped 2026-10-01, reported by the user — mobile
-        // nav bar drifting slightly during scroll). backdrop-filter anywhere on
-        // the page is the documented trigger for iOS Safari's position: fixed
-        // detach bug (see MobileBottomNav.tsx's own translateZ(0) comment,
-        // which names backdrop-blur specifically as "the original trigger").
-        // This badge only started actually rendering once VIP status became
-        // reachable/tested this session — the class was here since v1.107.0,
-        // just never active on-screen before.
-        className="flex items-center gap-1 rounded-lg border border-amber-500/60 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 transition hover:bg-amber-500/20"
-      >
-        <img src={VIP_TOKEN_ICON_SRC} alt="VIP" className="h-4 w-4 object-contain" />
-        <span className="hidden lg:inline">VIP · {daysLeft}d left</span>
-      </button>
+      <div className="ascension-chip-frame is-interactive is-tinted" style={vipTintStyle}>
+        <button
+          type="button"
+          onClick={() => (isDesktop ? useVipSettingsModalStore.getState().openModal() : setShowRemaining((current) => !current))}
+          title={isDesktop ? `VIP until ${new Date(vipExpiresAt).toLocaleString()} — click for VIP settings` : undefined}
+          // No backdrop-blur (dropped 2026-10-01, reported by the user — mobile
+          // nav bar drifting slightly during scroll). backdrop-filter anywhere on
+          // the page is the documented trigger for iOS Safari's position: fixed
+          // detach bug (see MobileBottomNav.tsx's own translateZ(0) comment,
+          // which names backdrop-blur specifically as "the original trigger").
+          // This badge only started actually rendering once VIP status became
+          // reachable/tested this session — the class was here since v1.107.0,
+          // just never active on-screen before.
+          className="ascension-chip-inner flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-violet-200"
+        >
+          <img src={VIP_TOKEN_ICON_SRC} alt="VIP" className="h-4 w-4 object-contain" />
+          <span className="hidden lg:inline">VIP · {daysLeft}d left</span>
+        </button>
+      </div>
 
       {showRemaining && !isDesktop && (
-        <div className="absolute left-0 top-full z-50 mt-1 whitespace-nowrap rounded-lg border border-amber-500/60 bg-slate-950/95 px-3 py-1.5 text-xs font-medium text-amber-300 shadow-xl shadow-black/50">
+        <div
+          className="absolute left-0 top-full z-50 mt-1 whitespace-nowrap rounded-lg border border-violet-500/60 bg-slate-950/95 px-3 py-1.5 text-xs font-medium text-violet-200 shadow-xl shadow-black/50"
+        >
           VIP · {daysLeft}d left
         </div>
       )}

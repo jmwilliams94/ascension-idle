@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 
@@ -16,13 +16,20 @@ export default function BankActionModal({
   subtitle,
   onClose,
   children,
+  tint,
+  widthClassName = 'max-w-sm',
 }: {
   title: string
   subtitle?: string
   onClose: () => void
   children: ReactNode
+  /** Hex color — recolors the frame + close button via .is-tinted/--ascension-tint (index.css) instead of the default silver/steel. Omit for the default look. */
+  tint?: string
+  /** Tailwind max-width utility for the card. Default `max-w-sm` fits every caller except content-dense settings panels (VipSettingsModal uses `max-w-md`). */
+  widthClassName?: string
 }) {
   useLockBodyScroll()
+  const tintStyle = tint ? ({ '--ascension-tint': tint } as CSSProperties) : undefined
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -39,14 +46,18 @@ export default function BankActionModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4"
       onClick={onClose}
     >
-      <div className="ascension-card-frame w-full max-w-sm" onClick={(event) => event.stopPropagation()}>
+      <div
+        className={`ascension-card-frame w-full ${widthClassName} ${tint ? 'is-tinted' : ''}`}
+        style={tintStyle}
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="ascension-card-inner p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-base font-semibold text-white">{title}</h2>
               {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
             </div>
-            <div className="ascension-chip-frame is-interactive shrink-0">
+            <div className={`ascension-chip-frame is-interactive shrink-0 ${tint ? 'is-tinted' : ''}`} style={tintStyle}>
               <button
                 type="button"
                 onClick={onClose}

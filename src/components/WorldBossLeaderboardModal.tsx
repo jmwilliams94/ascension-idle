@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { useLockBodyScroll } from '../lib/useLockBodyScroll'
+import BankActionModal from './BankActionModal'
 
 interface LeaderboardEntry {
   rank: number
@@ -20,7 +20,6 @@ const RANK_ACCENT: Record<number, string> = {
   3: 'text-orange-400',
 }
 
-// Same fixed-inset backdrop shell as MarketplacePanel.tsx's MailDetailModal.
 export default function WorldBossLeaderboardModal({
   characterId,
   spawnId,
@@ -31,7 +30,6 @@ export default function WorldBossLeaderboardModal({
   onClose: () => void
 }) {
   const [result, setResult] = useState<LeaderboardResult | null>(null)
-  useLockBodyScroll()
   // Starts true (the very first render, before the effect below has had a
   // chance to run) — not reset to true again on a later spawnId change, so a
   // refetch just quietly replaces stale data instead of flashing a spinner.
@@ -59,18 +57,8 @@ export default function WorldBossLeaderboardModal({
   }, [characterId, spawnId])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4" onClick={onClose}>
-      <div
-        className="w-full max-w-xs space-y-3 rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-2">
-          <p className="text-sm font-semibold text-slate-100">World Boss Leaderboard</p>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-slate-500 hover:text-slate-300">
-            ✕
-          </button>
-        </div>
-
+    <BankActionModal title="World Boss Leaderboard" onClose={onClose}>
+      <div className="space-y-3">
         {loading && <p className="py-6 text-center text-sm text-slate-500">Loading…</p>}
 
         {!loading && (!result || !result.ok) && <p className="py-6 text-center text-sm text-slate-500">Couldn't load the leaderboard.</p>}
@@ -98,6 +86,6 @@ export default function WorldBossLeaderboardModal({
           </>
         )}
       </div>
-    </div>
+    </BankActionModal>
   )
 }

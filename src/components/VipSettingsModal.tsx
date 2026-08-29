@@ -2,7 +2,11 @@ import { useVipSettingsModalStore } from '../game/vip/useVipSettingsModalStore'
 import { useVipAutomationStore, type LiquidationPriority, type SalvageTier } from '../game/vip/useVipAutomationStore'
 import { Button } from './ui/Button'
 import { ToggleSwitch } from './ui/ToggleSwitch'
-import { useLockBodyScroll } from '../lib/useLockBodyScroll'
+import BankActionModal from './BankActionModal'
+
+// Violet, not the app's true `purple` (Ascension Points' own established
+// currency color) — see VipStatusHud.tsx's identical note.
+const VIP_TINT = '#8b5cf6'
 
 const SALVAGE_TIER_OPTIONS: { value: SalvageTier; label: string }[] = [
   { value: 'tempered', label: 'Tempered' },
@@ -23,7 +27,6 @@ export default function VipSettingsModal() {
   const closeModal = useVipSettingsModalStore((state) => state.closeModal)
   const settings = useVipAutomationStore((state) => state.settings)
   const updateSettings = useVipAutomationStore((state) => state.updateSettings)
-  useLockBodyScroll(open)
 
   if (!open) {
     return null
@@ -32,19 +35,8 @@ export default function VipSettingsModal() {
   const setPriority = (priority: LiquidationPriority) => void updateSettings({ priority })
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4" onClick={closeModal}>
-      <div
-        className="w-full max-w-md space-y-5 rounded-2xl border border-amber-500/40 bg-slate-900 p-5 shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex items-center justify-between">
-          <h2 className="font-heading text-lg font-bold text-amber-300">👑 VIP Automations</h2>
-          <button type="button" onClick={closeModal} className="text-slate-500 hover:text-slate-300">
-            ✕
-          </button>
-        </div>
-
-        <div className="space-y-4">
+    <BankActionModal title="👑 VIP Automations" onClose={closeModal} tint={VIP_TINT} widthClassName="max-w-md">
+      <div className="space-y-4">
           <div className="space-y-1 rounded-xl border border-slate-800 bg-slate-950/40 p-3">
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-medium text-slate-100">Auto-Sell Ore</p>
@@ -164,10 +156,9 @@ export default function VipSettingsModal() {
           <p className="text-[11px] text-slate-600">🔒 Lock an item (Equipment tab) to protect it from every auto-liquidation rule above.</p>
         </div>
 
-        <Button variant="secondary" className="w-full" onClick={closeModal}>
+        <Button variant="secondary" className="mt-5 w-full" onClick={closeModal}>
           Done
         </Button>
-      </div>
-    </div>
+    </BankActionModal>
   )
 }

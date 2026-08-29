@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.118.12",
+    "date": "2026-08-29",
+    "changes": [
+      "Swapped the main header's pulsing stars for a cleaner thin grey line accent",
+      "Restyled the VIP badge and its settings popup in purple",
+      "Restyled the global announcement banner in green",
+      "Gave the World Boss and Gold Donation damage-leader popups a proper visual overhaul"
+    ]
+  },
+  {
     "version": "1.118.11",
     "date": "2026-08-29",
     "changes": [

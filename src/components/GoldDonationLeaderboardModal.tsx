@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { useLockBodyScroll } from '../lib/useLockBodyScroll'
+import BankActionModal from './BankActionModal'
 
 interface LeaderboardEntry {
   rank: number
@@ -20,8 +20,8 @@ const RANK_ACCENT: Record<number, string> = {
   3: 'text-orange-400',
 }
 
-// Direct adaptation of WorldBossLeaderboardModal.tsx — same fixed-inset
-// backdrop shell, same fetch-fresh-every-open-no-cache RPC pattern, just
+// Direct adaptation of WorldBossLeaderboardModal.tsx — same BankActionModal
+// shell, same fetch-fresh-every-open-no-cache RPC pattern, just
 // total_donated/get_gold_donation_leaderboard/pool_id in place of
 // total_damage/get_world_boss_leaderboard/spawn_id.
 export default function GoldDonationLeaderboardModal({
@@ -35,7 +35,6 @@ export default function GoldDonationLeaderboardModal({
 }) {
   const [result, setResult] = useState<LeaderboardResult | null>(null)
   const [loading, setLoading] = useState(true)
-  useLockBodyScroll()
 
   useEffect(() => {
     let cancelled = false
@@ -57,18 +56,8 @@ export default function GoldDonationLeaderboardModal({
   }, [characterId, poolId])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4" onClick={onClose}>
-      <div
-        className="w-full max-w-xs space-y-3 rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-2">
-          <p className="text-sm font-semibold text-slate-100">Gold Donation Leaderboard</p>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-slate-500 hover:text-slate-300">
-            ✕
-          </button>
-        </div>
-
+    <BankActionModal title="Gold Donation Leaderboard" onClose={onClose}>
+      <div className="space-y-3">
         {loading && <p className="py-6 text-center text-sm text-slate-500">Loading…</p>}
 
         {!loading && (!result || !result.ok) && <p className="py-6 text-center text-sm text-slate-500">Couldn't load the leaderboard.</p>}
@@ -99,6 +88,6 @@ export default function GoldDonationLeaderboardModal({
           </>
         )}
       </div>
-    </div>
+    </BankActionModal>
   )
 }

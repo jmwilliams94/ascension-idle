@@ -815,6 +815,36 @@ a,
   }
 }
 
+/* Tinted variant of the chip/card frame (2026-08-29) — for HUD badges and
+   modals that need their own semantic color instead of the default
+   silver/steel (VIP purple, rare-event-announcement green, ...). Same
+   gradient-border-via-padding technique as the plain chip/card above; the
+   three gradient stops derive from a single --ascension-tint custom
+   property (set inline per consumer) via color-mix, mirroring how .btn-glow
+   parameterizes its own color via --glow-bright/-base/-dark rather than one
+   hardcoded class per color. Shared between .ascension-chip-frame and
+   .ascension-card-frame — same var, same math, different host element. */
+.ascension-card-frame.is-tinted,
+.ascension-chip-frame.is-tinted {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--ascension-tint) 75%, white) 0%,
+    var(--ascension-tint) 55%,
+    color-mix(in srgb, var(--ascension-tint) 65%, black) 100%
+  );
+}
+
+@media (hover: hover) {
+  .ascension-chip-frame.is-tinted.is-interactive:hover {
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ascension-tint) 90%, white) 0%,
+      color-mix(in srgb, var(--ascension-tint) 85%, white) 55%,
+      var(--ascension-tint) 100%
+    );
+  }
+}
+
 /* Dark inset frame for the custom <select> wrapper (Select.tsx) — border
    brightens gold on hover/focus, matching .select-box from the mockup. */
 .select-frame {
