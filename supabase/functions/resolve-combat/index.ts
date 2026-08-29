@@ -1127,8 +1127,12 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // processing loop) — hoisted up here too, since MP-gating below needs to
   // know what fraction of a kill cycle is actually spent attacking vs.
   // sitting in the fixed RESPAWN_GAP_MS gap between kills.
-  const hitChance =
-    1 - Math.min(Math.max(0, monsterDodge(monster) - derived.dexterity) * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
+  // Magic attacks (activeSkill window) always land — dodge only ever applies
+  // to physical attacks (2026-11-25, requested by the user). Mirrors
+  // useCombatStore.runTick's own rollAttackLands gate exactly.
+  const hitChance = activeSkill
+    ? 1
+    : 1 - Math.min(Math.max(0, monsterDodge(monster) - derived.dexterity) * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
   const expectedDamagePerHit = resolvePhysicalDamage(attackMidpoint, monsterDefense(monster, character.level))
   const effectiveHp = monster.max_hp * RARE_BLENDED_HP_FACTOR
   const dps = (hitChance * expectedDamagePerHit) / attackIntervalMs

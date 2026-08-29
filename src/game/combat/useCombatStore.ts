@@ -546,7 +546,9 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     // miss too. Uses derived.dexterity — a separate stat from derived.dodge
     // (Boots' own evasion stat vs. Bows'/Rings' own accuracy stat, both fed
     // by the same Agility attribute but boosted independently by gear).
-    if (!rollAttackLands(derived.dexterity, monsterDodge(type))) {
+    // Magic attacks (activeSkill window) always land — dodge only ever
+    // applies to physical attacks (2026-11-25, requested by the user).
+    if (!activeSkill && !rollAttackLands(derived.dexterity, monsterDodge(type))) {
       set((s) => ({
         lastAttackAt: nowMs,
         currentPlayerMp: nextPlayerMp,

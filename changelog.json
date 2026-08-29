@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.120.2",
+    "date": "2026-08-30",
+    "changes": [
+      "Magic-based attacks (active skills) now always land, instead of being able to miss a monster's dodge like a physical attack"
+    ]
+  },
+  {
     "version": "1.120.1",
     "date": "2026-08-30",
     "changes": [
