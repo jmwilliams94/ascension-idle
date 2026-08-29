@@ -7,6 +7,7 @@ import HoverTooltip from './HoverTooltip'
 import ItemTooltip from './ItemTooltip'
 import { SLOT_SIZE_CLASS } from './InventorySlot'
 import { AscensionCard } from './ui/AscensionCard'
+import { Button } from './ui/Button'
 import GearScoreLeaderboardPanel from './GearScoreLeaderboardPanel'
 import {
   ACHIEVEMENT_TIERS,
@@ -707,14 +708,9 @@ export default function AchievementsPanel({ characterId, accountId }: { characte
               Claimable: <span className="font-semibold text-amber-300">{characterClaimable + accountClaimable}</span>
             </span>
             {anyClaimable && (
-              <button
-                type="button"
-                disabled={claimAllBusy}
-                onClick={() => void claimAll(characterId, accountId)}
-                className="btn-gold h-8 px-3 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-40"
-              >
+              <Button disabled={claimAllBusy} onClick={() => void claimAll(characterId, accountId)} className="h-8 px-3 py-0 text-xs">
                 {claimAllBusy ? 'Claiming…' : 'Claim All'}
-              </button>
+              </Button>
             )}
           </div>
         </div>
