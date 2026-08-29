@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AscensionCard } from './ui/AscensionCard'
+import { Button } from './ui/Button'
 import { HpBar } from './CombatPage'
 import { getActiveGoldDonationEvent, useGoldDonationStore, type GoldDonationBuffCategory } from '../game/goldDonation/useGoldDonationStore'
 import { formatGoldAmount } from '../game/stats/formatGold'
@@ -92,13 +93,9 @@ export default function GoldDonationCard({
             </div>
           </div>
           {characterId && (
-            <button
-              type="button"
-              onClick={() => setDonateOpen(true)}
-              className="mt-3 w-full rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-300 hover:bg-amber-500/20"
-            >
+            <Button variant="primary" onClick={() => setDonateOpen(true)} className="mt-3 w-full">
               Donate
-            </button>
+            </Button>
           )}
         </>
       ) : activeGoldDonationEvent ? (

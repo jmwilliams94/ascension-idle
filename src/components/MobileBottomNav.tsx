@@ -95,12 +95,14 @@ function NavButton({ id, label, badge }: { id: TabId; label: string; badge?: num
 
 // Compact flex-[0.85] sizing (flanks Idling, reads slightly smaller than
 // the edge buttons), same borderless pill treatment as NavButton — plus the
-// World-Boss-button's own border-ember/outline-ring effect, retriggered here
-// by the free 4h ticket cooldown instead of a server event (2026-08-25,
-// requested by the user). The ember/outline stay on the outer <button> (the
-// full tap target), not the inner pill — a free-ticket-ready LuckyLad should
-// still draw the eye via the ember ring even while idle/un-pilled, same as
-// before the 2026-08-28 borderless redesign.
+// World-Boss-button's own border-ember effect, retriggered here by the free
+// 4h ticket cooldown instead of a server event (2026-08-25, requested by the
+// user). The colored outline ring (eventBorderTintStyle) that used to sit on
+// the outer button was dropped 2026-08-29 (requested by the user), along
+// with moving the embers off the outer tap target's border and onto a small
+// wrapper around just the icon glyph — doubled in count to compensate for
+// ringing a much smaller box. A free-ticket-ready LuckyLad now draws the eye
+// via icon-anchored embers alone, no outline.
 function LuckyNavButton({ label }: { label: string }) {
   const activeTab = useTabStore((state) => state.activeTab)
   const setActiveTab = useTabStore((state) => state.setActiveTab)
@@ -113,17 +115,18 @@ function LuckyNavButton({ label }: { label: string }) {
       type="button"
       onClick={() => setActiveTab('lucky')}
       className="relative flex flex-[0.85] flex-col items-center justify-center rounded-lg py-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400/50"
-      style={eventBorderTintStyle(emberColor)}
     >
       <span
         className={`flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[10px] font-medium leading-tight transition-all ${
           active ? 'nav-pill-active' : 'text-slate-400'
         }`}
       >
-        {icon && <NavIconGlyph icon={icon} />}
+        <span className="relative flex h-6 w-6 items-center justify-center">
+          {icon && <NavIconGlyph icon={icon} />}
+          <EventEmberBorder color={emberColor} count={40} />
+        </span>
         <span className="truncate">{label}</span>
       </span>
-      <EventEmberBorder color={emberColor} count={20} />
     </button>
   )
 }
@@ -131,11 +134,14 @@ function LuckyNavButton({ label }: { label: string }) {
 // Static hourglass icon (2026-08-14) — replaced the old dynamic
 // equipped-weapon icon + live "Fighting"/"Idle" status text; label always
 // reads "Idling" now, matching GameShell's page-heading rename.
-// Circle now uses the same .btn-gold/.btn-gold-active treatment as the rest
-// of the nav (2026-08-16) instead of its own bespoke amber/slate colors, and
-// carries the World Boss/Gold Donation Event border embers — see
-// useEventEmberColor.ts for the red/green/gold priority rule. The circle
-// itself is now an inner `absolute inset-0` span, with EventEmberBorder as
+// Uses the same .btn-gold/.btn-gold-active treatment as the rest of the nav
+// (2026-08-16) instead of its own bespoke amber/slate colors, and carries
+// the World Boss/Gold Donation Event border embers — see
+// useEventEmberColor.ts for the red/green/gold priority rule. Chamfered via
+// .ascension-fab-chamfer (2026-08-29, requested by the user — a squarer
+// shape matching the app's established chamfered corner language) instead
+// of the original rounded-full circle. The button itself is now an inner
+// `absolute inset-0` span, with EventEmberBorder as
 // an unclipped sibling in the outer h-14 w-14 wrapper (2026-08-28, reported
 // by the user: while an event was live, the old .btn-ember-safe opt-out
 // stripped .btn-gold's overflow:hidden AND its ::before/::after glass
@@ -172,7 +178,7 @@ function IdlingNavButton() {
     >
       <span className="relative flex h-14 w-14 items-center justify-center">
         <span
-          className={`absolute inset-0 flex items-center justify-center rounded-full shadow-lg ${
+          className={`ascension-fab-chamfer absolute inset-0 flex items-center justify-center shadow-lg ${
             active ? 'btn-gold-active shadow-slate-300/20' : 'btn-gold shadow-black/30'
           }`}
           style={eventBorderTintStyle(emberColor)}

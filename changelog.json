@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.118.13",
+    "date": "2026-08-29",
+    "changes": [
+      "Mobile Idling button is now a chamfered square instead of a circle",
+      "LuckyLad's free-roll indicator no longer draws an outline — doubled the sparkle effect around the icon itself instead",
+      "The Events button no longer draws a colored outline when World Boss/Gold Donation is live — doubled its sparkle effect instead",
+      "World Boss now shows a live countdown until the fight window ends",
+      "Fixed the Gold Donation Event's Donate button to match the rest of the UI"
+    ]
+  },
+  {
     "version": "1.118.12",
     "date": "2026-08-29",
     "changes": [

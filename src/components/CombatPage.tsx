@@ -24,7 +24,6 @@ import { useRowCombatStore } from '../game/combat/useRowCombatStore'
 import { supabase } from '../lib/supabaseClient'
 import { useActiveEventEmberColor } from '../game/hud/useEventEmberColor'
 import { EventEmberBorder } from '../game/hud/eventEmberBorder'
-import { eventBorderTintStyle } from '../game/hud/eventEmberBorderData'
 import MiningModePanel from './MiningModePanel'
 import { MINING_PICKAXE_DROP_ZONE } from './PickaxeEquipSlot'
 import { useMiningStore } from '../game/mining/useMiningStore'
@@ -233,14 +232,16 @@ function CombatModeSwitcher({ mode, onChange }: { mode: CombatMode; onChange: (m
 
 // Split out from CombatModeSwitcher so only the Events button subscribes to
 // the World Boss / Gold Donation stores — Hunting/Mining don't need to
-// re-render when those change. Same red/green/gold border-ember + outline
-// tint as the Idling nav button (2026-08-16, requested by the user to apply
-// "the same ember rules" here) — see useEventEmberColor.ts for the priority
-// rule. EventEmberBorder renders as an unclipped sibling of the button in an
-// outer `relative` wrapper (2026-08-28, same fix as TabNav's Idling/LuckyLad
-// tabs — see their doc comments) rather than the old .btn-ember-safe opt-out,
-// which stripped .btn-gold's glass highlight + hover light-sweep while an
-// event was live, exactly when this button should look its best.
+// re-render when those change. Red/green/gold border-ember as the Idling nav
+// button (2026-08-16, requested by the user to apply "the same ember rules"
+// here) — see useEventEmberColor.ts for the priority rule. EventEmberBorder
+// renders as an unclipped sibling of the button in an outer `relative`
+// wrapper (2026-08-28, same fix as TabNav's Idling/LuckyLad tabs — see their
+// doc comments) rather than the old .btn-ember-safe opt-out, which stripped
+// .btn-gold's glass highlight + hover light-sweep while an event was live,
+// exactly when this button should look its best. The colored outline ring
+// (eventBorderTintStyle) was dropped 2026-08-29, requested by the user —
+// double the ember count instead of also drawing attention via an outline.
 function EventsModeButton({ mode, onChange }: { mode: CombatMode; onChange: (mode: CombatMode) => void }) {
   const emberColor = useActiveEventEmberColor()
 
@@ -250,11 +251,10 @@ function EventsModeButton({ mode, onChange }: { mode: CombatMode; onChange: (mod
         type="button"
         onClick={() => onChange('events')}
         className={`${MODE_BUTTON_CLASS} ${mode === 'events' ? 'btn-gold-active' : 'btn-gold'}`}
-        style={eventBorderTintStyle(emberColor)}
       >
         Events
       </button>
-      <EventEmberBorder color={emberColor} />
+      <EventEmberBorder color={emberColor} count={48} />
     </div>
   )
 }

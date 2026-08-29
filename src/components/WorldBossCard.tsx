@@ -33,12 +33,20 @@ const ERROR_MESSAGES: Record<string, string> = {
   rpc_failed: 'Something went wrong — try again.',
 }
 
+// Also used for the fight-window countdown below (2026-08-29, added
+// alongside it) — the window runs 6-8 hours (see CLAUDE.server-events.md),
+// so this needs an hours place the original 5-minute-attack-cooldown-only
+// version never did; the minutes:seconds form still applies whenever hours
+// is 0, so the existing cooldown call site is unaffected.
 function formatCountdown(msRemaining: number): string {
   if (msRemaining <= 0) return '0:00'
   const totalSeconds = Math.ceil(msRemaining / 1000)
-  const minutes = Math.floor(totalSeconds / 60)
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
   const seconds = totalSeconds % 60
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  return hours > 0
+    ? `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+    : `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
 export default function WorldBossCard({ characterId, emberColor = null }: { characterId: string; emberColor?: EventEmberColor | null }) {
@@ -97,7 +105,8 @@ export default function WorldBossCard({ characterId, emberColor = null }: { char
   const cooldownEndsAtMs = participation?.lastAttemptAt ? new Date(participation.lastAttemptAt).getTime() + ATTACK_COOLDOWN_MS : 0
   const onCooldown = cooldownEndsAtMs > now
 
-  const windowEnded = new Date(spawn.windowEndsAt).getTime() <= now
+  const windowEndsAtMs = new Date(spawn.windowEndsAt).getTime()
+  const windowEnded = windowEndsAtMs <= now
   const bossDefeated = spawn.currentHp <= 0
   const canAttack = spawn.status === 'active' && !windowEnded && !bossDefeated && !outOfAttempts && !onCooldown && !busy
 
@@ -129,7 +138,11 @@ export default function WorldBossCard({ characterId, emberColor = null }: { char
             World Boss
           </p>
           <p className="mt-1 text-xs text-slate-500">
-            {bossDefeated ? 'Defeated — rewards have been mailed out' : windowEnded ? 'Fight ended' : 'Active'}
+            {bossDefeated
+              ? 'Defeated — rewards have been mailed out'
+              : windowEnded
+                ? 'Fight ended'
+                : `Active — ends in ${formatCountdown(windowEndsAtMs - now)}`}
           </p>
         </div>
         <button
