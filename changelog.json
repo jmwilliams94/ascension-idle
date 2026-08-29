@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.121.0",
+    "date": "2026-08-30",
+    "changes": [
+      "World Boss is now Zone Boss — instead of one fixed boss, 8 different bosses now rotate randomly, one per zone: Mourncrow (Windhollow), Emberroot (Cinderleaf), Thundermane (Stormvale), Karthos (Sunscar Wastes), Skytalon (Talon Isle), Nyxharrow (Duskspire Keep), Twistpath Warden (Twistpath Ruins), and Glacius (Rimehollow, the strongest)",
+      "Each Zone Boss has its own toughness — some are built around heavy physical defense, others around heavy magical defense, so your gear's attack type now actually matters against a boss"
+    ]
+  },
+  {
     "version": "1.120.2",
     "date": "2026-08-30",
     "changes": [

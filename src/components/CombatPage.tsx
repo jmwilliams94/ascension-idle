@@ -138,7 +138,7 @@ export function DeadOverlay({
 const DAMAGE_TRAIL_HOLD_MS = 400
 const DAMAGE_TRAIL_CATCHUP_S = 0.5
 
-// Exported — also reused by WorldBossCard.tsx for the boss's own HP bar.
+// Exported — also reused by ZoneBossCard.tsx for the boss's own HP bar.
 export function HpBar({ current, max, barColorClass = 'bg-emerald-500' }: { current: number; max: number; barColorClass?: string }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0
   const [trailPct, setTrailPct] = useState(pct)
@@ -232,7 +232,7 @@ function CombatModeSwitcher({ mode, onChange }: { mode: CombatMode; onChange: (m
 }
 
 // Split out from CombatModeSwitcher so only the Events button subscribes to
-// the World Boss / Gold Donation stores — Hunting/Mining don't need to
+// the Zone Boss / Gold Donation stores — Hunting/Mining don't need to
 // re-render when those change. Red/green/gold border-ember as the Idling nav
 // button (2026-08-16, requested by the user to apply "the same ember rules"
 // here) — see useEventEmberColor.ts for the priority rule. EventEmberBorder
@@ -314,7 +314,7 @@ export default function CombatPage() {
   const handleUsePotion = usePotionStore((state) => state.usePotion)
 
   // Hunting (today's existing view) / Mining (coming-soon placeholder) /
-  // Events (World Boss) — an in-page sub-mode, not a top-level TabId (see
+  // Events (Zone Boss) — an in-page sub-mode, not a top-level TabId (see
   // CombatModeSwitcher above). Lifted into useCombatModeStore (2026-08-29)
   // so KillRewardToast can gate on it without prop-drilling.
   const mode = useCombatModeStore((state) => state.mode)

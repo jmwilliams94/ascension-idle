@@ -15,7 +15,7 @@ import { useEffect } from 'react'
 // `active` defaults to true for the common case (a modal component that's
 // only ever mounted by its parent while open, e.g. `{show && <XModal />}`)
 // -- pass it explicitly for a component that stays mounted itself and
-// toggles an internal open flag instead (ChatOverlay, WorldBossCard's
+// toggles an internal open flag instead (ChatOverlay, ZoneBossCard's
 // repair-alert block), since calling this unconditionally on an
 // always-mounted component would lock scroll for the component's entire
 // lifetime rather than just while its modal is actually showing.

@@ -79,7 +79,7 @@ export interface DerivedStats {
   // combined number. Consumed by useCombatStore.runTick via
   // combatResolver.ts's applyDamageReduction — client-only, same boundary as
   // the rest of incoming player damage (never simulated server-side, and the
-  // World Boss never damages the player back at all, so neither source has
+  // Zone Boss never damages the player back at all, so neither source has
   // any server mirror).
   damageReductionPct: number
 }

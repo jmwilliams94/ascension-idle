@@ -57,7 +57,7 @@ function TabButton({ id, label, badge }: { id: TabId; label: string; badge?: num
 }
 
 // Split out from TabButton, as its own component (rather than a prop on
-// TabButton), so only the Idling tab subscribes to the World Boss / Gold
+// TabButton), so only the Idling tab subscribes to the Zone Boss / Gold
 // Donation stores — the other 7 tabs don't need to re-render when those
 // change. Same button markup as TabButton, plus the event-color outline
 // ring and border embers layered on top — see useEventEmberColor.ts for the
@@ -67,7 +67,7 @@ function TabButton({ id, label, badge }: { id: TabId; label: string; badge?: num
 // the old approach added .btn-ember-safe to the button whenever an event was
 // live, which strips .btn-gold's overflow:hidden AND its ::before/::after
 // glass highlight + hover light-sweep — so Idling visibly lost its normal
-// chrome exactly while a World Boss fight was making it glow, which read as
+// chrome exactly while a Zone Boss fight was making it glow, which read as
 // "this button is broken" rather than "this button is highlighted." Same
 // sibling-wrapper fix AscensionCard already uses for its activeEventColor
 // prop — see CLAUDE.visual-design.md.

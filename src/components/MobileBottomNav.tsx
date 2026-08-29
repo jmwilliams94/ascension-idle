@@ -136,7 +136,7 @@ function LuckyNavButton({ label }: { label: string }) {
 // reads "Idling" now, matching GameShell's page-heading rename.
 // Uses the same .btn-gold/.btn-gold-active treatment as the rest of the nav
 // (2026-08-16) instead of its own bespoke amber/slate colors, and carries
-// the World Boss/Gold Donation Event border embers — see
+// the Zone Boss/Gold Donation Event border embers — see
 // useEventEmberColor.ts for the red/green/gold priority rule. Chamfered via
 // .ascension-fab-chamfer (2026-08-29, requested by the user — a squarer
 // shape matching the app's established chamfered corner language) instead

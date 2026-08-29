@@ -25,14 +25,14 @@ interface AscensionCardProps {
   /**
    * Same border-ember effect as the Idling nav button/Events sub-tab button
    * (2026-10-11, requested by the user, extended to the Events tab's own
-   * World Boss/Gold Donation cards) — null/undefined renders nothing.
+   * Zone Boss/Gold Donation cards) — null/undefined renders nothing.
    * EventEmberBorder's particles anchor outside their own parent's box by
    * design (see eventEmberBorder.tsx), which conflicts with
    * .ascension-card-frame's own clip-path chamfer (2026-08-28, Prism
    * Obsidian pass) — clipping the frame would cut the embers off. So
    * whenever this is set, the embers render as a sibling of the frame
    * (inside an unclipped wrapper) instead of a child of it, letting the
-   * frame chamfer unconditionally either way. Only WorldBossCard/
+   * frame chamfer unconditionally either way. Only ZoneBossCard/
    * GoldDonationCard pass this today, and neither passes `className`.
    */
   activeEventColor?: EventEmberColor | null

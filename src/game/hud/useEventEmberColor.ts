@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react'
-import { useWorldBossStore } from '../worldboss/useWorldBossStore'
+import { useZoneBossStore } from '../zoneboss/useZoneBossStore'
 import { useGoldDonationStore, getActiveGoldDonationEvent } from '../goldDonation/useGoldDonationStore'
 
 export type EventEmberColor = 'boss' | 'buffActive' | 'collecting' | 'luckyFree'
 
-// Idling nav button embers (CLAUDE.server-events.md's World Boss + Gold
-// Donation Event). World Boss and Gold Donation run on independent random
+// Idling nav button embers (CLAUDE.server-events.md's Zone Boss + Gold
+// Donation Event). Zone Boss and Gold Donation run on independent random
 // timers, so both can genuinely be live at once — this is a front-end-only
 // visual priority (no backend coordination) so only one color ever shows:
 // Red (boss fight live) beats Green (donation buff live) beats Gold (pool
 // still collecting, no buff triggered yet).
 export function useActiveEventEmberColor(): EventEmberColor | null {
-  const spawn = useWorldBossStore((state) => state.spawn)
+  const spawn = useZoneBossStore((state) => state.spawn)
   const pool = useGoldDonationStore((state) => state.pool)
   const [now, setNow] = useState(() => Date.now())
 

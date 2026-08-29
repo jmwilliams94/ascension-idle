@@ -3,7 +3,7 @@ import { useLuckyStore } from '../lucky/useLuckyStore'
 import type { EventEmberColor } from './useEventEmberColor'
 
 // LuckyLad nav-button embers — same border-ember/outline-ring effect as the
-// Idling button's World Boss/Gold Donation embers (see useEventEmberColor.ts),
+// Idling button's Zone Boss/Gold Donation embers (see useEventEmberColor.ts),
 // just triggered by the free 4h ticket cooldown (LUCKY_FREE_TICKET_COOLDOWN_MS,
 // see useLuckyStore) elapsing instead of a server event.
 export function useLuckyFreeEmberColor(): EventEmberColor | null {

@@ -8,7 +8,7 @@ import type { EventEmberColor } from './useEventEmberColor'
 // Fast Refresh, same reason tierEffects.tsx/tierEffectsData.ts are split.
 
 export const EVENT_EMBER_HEX: Record<EventEmberColor, string> = {
-  boss: '#EF4444', // World Boss fight live
+  boss: '#EF4444', // Zone Boss fight live
   buffActive: '#34D399', // Gold Donation buff triggered and live
   collecting: '#D4AF37', // Gold Donation pool open, buff not triggered yet
   luckyFree: '#FBBF24', // LuckyLad free 4h ticket ready — brighter than `collecting`'s gold so the two read as distinct

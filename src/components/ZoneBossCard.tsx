@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { AscensionCard } from './ui/AscensionCard'
 import { Button } from './ui/Button'
 import { HpBar } from './CombatPage'
-import { useWorldBossStore, type WorldBossAttackResult } from '../game/worldboss/useWorldBossStore'
-import WorldBossLeaderboardModal from './WorldBossLeaderboardModal'
+import { useZoneBossStore, type ZoneBossAttackResult } from '../game/zoneboss/useZoneBossStore'
+import ZoneBossLeaderboardModal from './ZoneBossLeaderboardModal'
 import type { EventEmberColor } from '../game/hud/useEventEmberColor'
 import { useEquipmentStore, EQUIP_SLOTS } from '../game/items/useEquipmentStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
@@ -11,10 +11,7 @@ import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { itemHasDurability } from '../game/items/equipmentBonus'
 import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 import { ZONES } from '../game/zones/zoneData'
-
-// Viewing-only placeholder — Mourncrow is Windhollow's boss under the planned
-// per-zone World Boss redesign, ahead of that system actually existing.
-const WINDHOLLOW_BACKGROUND_URL = ZONES['windhollow'].backgroundUrl
+import { zoneBossForId } from '../game/zones/zoneBossData'
 
 const FREE_ATTEMPT_CAP = 10
 const PAID_ATTEMPT_CAP = 10
@@ -49,18 +46,18 @@ function formatCountdown(msRemaining: number): string {
     : `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
-export default function WorldBossCard({ characterId, emberColor = null }: { characterId: string; emberColor?: EventEmberColor | null }) {
-  const spawn = useWorldBossStore((state) => state.spawn)
-  const participation = useWorldBossStore((state) => state.participation)
-  const busy = useWorldBossStore((state) => state.busy)
-  const loadParticipation = useWorldBossStore((state) => state.loadParticipation)
-  const attack = useWorldBossStore((state) => state.attack)
+export default function ZoneBossCard({ characterId, emberColor = null }: { characterId: string; emberColor?: EventEmberColor | null }) {
+  const spawn = useZoneBossStore((state) => state.spawn)
+  const participation = useZoneBossStore((state) => state.participation)
+  const busy = useZoneBossStore((state) => state.busy)
+  const loadParticipation = useZoneBossStore((state) => state.loadParticipation)
+  const attack = useZoneBossStore((state) => state.attack)
 
   const equippedIds = useEquipmentStore((state) => state.equippedIds)
   const items = useInventoryStore((state) => state.items)
   const templates = useItemTemplatesStore((state) => state.templates)
 
-  const [lastResult, setLastResult] = useState<WorldBossAttackResult | null>(null)
+  const [lastResult, setLastResult] = useState<ZoneBossAttackResult | null>(null)
   const [leaderboardOpen, setLeaderboardOpen] = useState(false)
   const [showRepairAlert, setShowRepairAlert] = useState(false)
   useLockBodyScroll(showRepairAlert)
@@ -77,7 +74,7 @@ export default function WorldBossCard({ characterId, emberColor = null }: { char
     if (spawn) {
       void loadParticipation(characterId, spawn.id)
     }
-    // spawn (the whole object) deliberately excluded — WorldBossConnection
+    // spawn (the whole object) deliberately excluded — ZoneBossConnection
     // calls setSpawn with a brand-new object on every world_boss_spawns
     // UPDATE broadcast, which fires globally on every attack from every
     // player (HP ticking down), not just when the spawn itself changes.
@@ -91,10 +88,13 @@ export default function WorldBossCard({ characterId, emberColor = null }: { char
   if (!spawn) {
     return (
       <AscensionCard>
-        <p className="text-center text-sm text-slate-500">Loading the World Boss…</p>
+        <p className="text-center text-sm text-slate-500">Loading the Zone Boss…</p>
       </AscensionCard>
     )
   }
+
+  const boss = zoneBossForId(spawn.bossId)
+  const zoneBackgroundUrl = ZONES[boss.zoneId].backgroundUrl
 
   const freeUsed = participation?.freeAttemptsUsed ?? 0
   const paidUsed = participation?.paidAttemptsUsed ?? 0
@@ -111,7 +111,7 @@ export default function WorldBossCard({ characterId, emberColor = null }: { char
   const canAttack = spawn.status === 'active' && !windowEnded && !bossDefeated && !outOfAttempts && !onCooldown && !busy
 
   // Broken (0-durability) gear contributes nothing to combat stats (see
-  // equipmentBonus.ts) — attacking the World Boss with it equipped would
+  // equipmentBonus.ts) — attacking the Zone Boss with it equipped would
   // just burn a limited attempt for a weak hit, so warn before spending one.
   const hasBrokenGear = EQUIP_SLOTS.some((slot) => {
     const itemId = equippedIds[slot]
@@ -135,7 +135,7 @@ export default function WorldBossCard({ characterId, emberColor = null }: { char
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-heading-label" style={{ fontSize: '1.4rem' }}>
-            World Boss
+            Zone Boss — {boss.displayName}
           </p>
           <p className="mt-1 text-xs text-slate-500">
             {bossDefeated
@@ -159,15 +159,15 @@ export default function WorldBossCard({ characterId, emberColor = null }: { char
         className={`relative mt-3 aspect-[16/9] w-full overflow-hidden rounded-2xl border-2 border-slate-700 bg-slate-950 bg-cover bg-center ${
           bossDefeated ? 'opacity-40 grayscale' : ''
         }`}
-        style={WINDHOLLOW_BACKGROUND_URL ? { backgroundImage: `url(${WINDHOLLOW_BACKGROUND_URL})` } : undefined}
+        style={zoneBackgroundUrl ? { backgroundImage: `url(${zoneBackgroundUrl})` } : undefined}
       >
-        {WINDHOLLOW_BACKGROUND_URL && <div className="absolute inset-0 bg-slate-950/40" />}
-        <img
-          src={`${import.meta.env.BASE_URL}bosses/mourncrow.png`}
-          alt="World Boss"
-          className="relative h-full w-full object-contain p-[16%]"
-        />
+        {zoneBackgroundUrl && <div className="absolute inset-0 bg-slate-950/40" />}
+        <img src={boss.portraitUrl} alt={boss.displayName} className="relative h-full w-full object-contain p-[16%]" />
       </div>
+
+      <p className="mt-2 text-center text-xs text-slate-500">
+        {boss.defenseProfile === 'physical' ? 'High physical defense — magic attacks fare better' : 'High magical defense — physical attacks fare better'}
+      </p>
 
       <div className="mt-3">
         <p className="text-xs text-slate-500">
@@ -214,7 +214,7 @@ export default function WorldBossCard({ characterId, emberColor = null }: { char
       )}
 
       {leaderboardOpen && (
-        <WorldBossLeaderboardModal characterId={characterId} spawnId={spawn.id} onClose={() => setLeaderboardOpen(false)} />
+        <ZoneBossLeaderboardModal characterId={characterId} spawnId={spawn.id} bossName={boss.displayName} onClose={() => setLeaderboardOpen(false)} />
       )}
 
       {showRepairAlert && (
@@ -229,7 +229,7 @@ export default function WorldBossCard({ characterId, emberColor = null }: { char
             <p className="text-sm font-semibold text-rose-300">Gear needs repair</p>
             <p className="text-xs text-slate-400">
               One or more of your equipped items is at 0 durability and won't fight effectively. Repair your gear in the Shop before
-              attacking the World Boss.
+              attacking the Zone Boss.
             </p>
             <Button variant="primary" onClick={() => setShowRepairAlert(false)} className="w-full">
               Got it

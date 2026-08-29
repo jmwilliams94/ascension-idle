@@ -17,7 +17,7 @@ function toPool(row: Record<string, unknown>): GoldDonationPool {
 }
 
 // Non-visual, mounted unconditionally in GameShell alongside
-// WorldBossConnection — literal structural copy of that same seed-then-
+// ZoneBossConnection — literal structural copy of that same seed-then-
 // subscribe pattern. Not account-scoped (the donation pool is a single
 // global object every player watches), so this needs no props.
 export default function GoldDonationConnection() {

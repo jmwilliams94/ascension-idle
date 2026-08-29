@@ -1,30 +1,38 @@
 import { create } from 'zustand'
 import { supabase } from '../../lib/supabaseClient'
 import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
+import type { ZoneBossId } from '../zones/zoneBossData'
 
-// World Boss server event — see CLAUDE.combat-and-loot.md and plan
-// tranquil-knitting-acorn for the full design writeup. Mirrors
+// Zone Boss server event (2026-11-13 rework of the original single World
+// Boss — see CLAUDE.combat-and-loot.md and plan gentle-plotting-beaver for
+// the rotation writeup; tranquil-knitting-acorn for the original design).
+// DB tables/RPCs/Edge Function stay named world_boss_* internally (a
+// deliberate scope-limiting call, see the plan) — only this store's own
+// exported names and the player-facing UI are "Zone Boss." Mirrors
 // useLuckyStore.ts's shape (busy-guarded RPC/Edge Function call, server
 // response applied absolutely) — the server is the sole source of truth for
 // every number here, this store never accumulates damage/HP locally.
 
-export interface WorldBossSpawn {
+export interface ZoneBossSpawn {
   id: string
+  bossId: ZoneBossId
   maxHp: number
   currentHp: number
+  physicalDefense: number
+  magicDefense: number
   windowStartedAt: string
   windowEndsAt: string
   status: 'active' | 'ended'
 }
 
-export interface WorldBossParticipation {
+export interface ZoneBossParticipation {
   freeAttemptsUsed: number
   paidAttemptsUsed: number
   totalDamage: number
   lastAttemptAt: string | null
 }
 
-export interface WorldBossAttackResult {
+export interface ZoneBossAttackResult {
   ok: boolean
   error?:
     | 'spawn_changed'
@@ -48,25 +56,28 @@ export interface WorldBossAttackResult {
   payment?: 'free' | 'paid'
 }
 
-function toSpawn(row: Record<string, unknown>): WorldBossSpawn {
+function toSpawn(row: Record<string, unknown>): ZoneBossSpawn {
   return {
     id: row.id as string,
+    bossId: row.boss_id as ZoneBossId,
     maxHp: Number(row.max_hp),
     currentHp: Number(row.current_hp),
+    physicalDefense: Number(row.physical_defense),
+    magicDefense: Number(row.magic_defense),
     windowStartedAt: row.window_started_at as string,
     windowEndsAt: row.window_ends_at as string,
     status: row.status as 'active' | 'ended',
   }
 }
 
-interface WorldBossParticipantRow {
+interface ZoneBossParticipantRow {
   free_attempts_used: number
   paid_attempts_used: number
   total_damage: number
   last_attempt_at: string | null
 }
 
-function toParticipation(row: WorldBossParticipantRow): WorldBossParticipation {
+function toParticipation(row: ZoneBossParticipantRow): ZoneBossParticipation {
   return {
     freeAttemptsUsed: row.free_attempts_used,
     paidAttemptsUsed: row.paid_attempts_used,
@@ -75,20 +86,20 @@ function toParticipation(row: WorldBossParticipantRow): WorldBossParticipation {
   }
 }
 
-interface WorldBossState {
-  spawn: WorldBossSpawn | null
+interface ZoneBossState {
+  spawn: ZoneBossSpawn | null
   // Null means "never attempted this spawn" — distinct from a zeroed-out
-  // WorldBossParticipation, since attempts-remaining math treats both the
+  // ZoneBossParticipation, since attempts-remaining math treats both the
   // same way but the UI needs to tell "no row yet" apart from "loading."
-  participation: WorldBossParticipation | null
+  participation: ZoneBossParticipation | null
   busy: boolean
-  setSpawn: (spawn: WorldBossSpawn) => void
+  setSpawn: (spawn: ZoneBossSpawn) => void
   loadParticipation: (characterId: string, spawnId: string) => Promise<void>
   ensureSpawn: () => Promise<void>
-  attack: (characterId: string) => Promise<WorldBossAttackResult>
+  attack: (characterId: string) => Promise<ZoneBossAttackResult>
 }
 
-export const useWorldBossStore = create<WorldBossState>((set, get) => ({
+export const useZoneBossStore = create<ZoneBossState>((set, get) => ({
   spawn: null,
   participation: null,
   busy: false,
@@ -108,7 +119,7 @@ export const useWorldBossStore = create<WorldBossState>((set, get) => ({
       return
     }
 
-    set({ participation: data ? toParticipation(data as WorldBossParticipantRow) : null })
+    set({ participation: data ? toParticipation(data as ZoneBossParticipantRow) : null })
   },
 
   ensureSpawn: async () => {
@@ -158,7 +169,7 @@ export const useWorldBossStore = create<WorldBossState>((set, get) => ({
       return { ok: false, error: 'rpc_failed' }
     }
 
-    const result = data as WorldBossAttackResult
+    const result = data as ZoneBossAttackResult
 
     if (result.ok) {
       const current = get().spawn

@@ -26,7 +26,7 @@ function formatDuration(ms: number): string {
 
 // Its own full card (2026-10-11, requested by the user — previously just a
 // summary block stacked inside WorldBossEventsCard, with the donate slider
-// only reachable through GoldDonationModal). Mirrors WorldBossCard.tsx's
+// only reachable through GoldDonationModal). Mirrors ZoneBossCard.tsx's
 // shape (title + trophy, big icon tile, status line, HpBar, action button)
 // so the two events read as equal-weight siblings in Events mode — see
 // EventsCardStack.tsx for how the two are ordered and which gets

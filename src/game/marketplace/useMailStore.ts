@@ -39,6 +39,7 @@ export type MailReasonExtended =
   | 'bug_report_reward'
   | 'suggestion_reward'
   | 'world_boss_reward'
+  | 'zone_boss_reward'
   | 'gold_donation_reward'
   | 'sale_notification'
 

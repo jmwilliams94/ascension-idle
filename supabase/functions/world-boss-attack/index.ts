@@ -218,17 +218,6 @@ function rollDamageInRange(midpoint: number): number {
   return min + Math.floor(Math.random() * (max - min + 1))
 }
 
-// PLACEHOLDER mitigation value, same disclosed-not-final status as every
-// other economy number in this game (see the migration's max_hp comment).
-// Lowered from 500 (requested by the user, first real balance pass) —
-// real item data shows even the toughest in-game monster only reaches
-// `defense = round(level * 1.5) ≈ 194` at level 130 (monsterDefense in
-// resolve-combat/index.ts), and a level-130 Normal-tier bow+ring alone is
-// only ~250 physical_attack before quality/composition bonuses — 500 was
-// over 2.5x the toughest real monster's defense, crushing anyone without
-// endgame gear down to the 10% damage floor regardless of level.
-const BOSS_DEFENSE = 200
-
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -279,6 +268,10 @@ interface SpawnSnapshot {
   id: string
   status: string
   window_ends_at: string
+  // Zone Boss (2026-11-13): per-spawn defense split, replacing the old flat
+  // BOSS_DEFENSE constant — see the physical/magic damage split below.
+  physical_defense: number
+  magic_defense: number
 }
 
 interface GatherStateResult {
@@ -386,7 +379,6 @@ async function handleWorldBossAttack(req: Request): Promise<Response> {
   // applied last, per the user's explicit ordering.
   const physicalSubtotal = derived.physicalAttack + compositionPhysicalAttackBonus
   const magicSubtotal = derived.magicAttack + compositionMagicAttackBonus
-  const attackMidpoint = physicalSubtotal * (1 + drakeBonusPct / 100) + magicSubtotal * (1 + emberBonusPct / 100)
 
   // Hunter must have the Quiver equipped to attack at all — same gate live
   // combat enforces.
@@ -394,7 +386,21 @@ async function handleWorldBossAttack(req: Request): Promise<Response> {
     return json({ ok: false, error: 'quiver_required' })
   }
 
-  const damage = resolvePhysicalDamage(rollDamageInRange(attackMidpoint), BOSS_DEFENSE)
+  // Zone Boss (2026-11-13): each boss has its own physical_defense/
+  // magic_defense (see the zone_boss_rotation migration) instead of one flat
+  // BOSS_DEFENSE — the physical- and magic-sourced subtotals are rolled and
+  // mitigated separately against the matching defense, then summed, so a
+  // boss's specialty side genuinely suppresses the matching attack type
+  // instead of one shared number treating every attacker's gear the same.
+  const physicalDamage = resolvePhysicalDamage(
+    rollDamageInRange(physicalSubtotal * (1 + drakeBonusPct / 100)),
+    spawn.physical_defense,
+  )
+  const magicDamage = resolvePhysicalDamage(
+    rollDamageInRange(magicSubtotal * (1 + emberBonusPct / 100)),
+    spawn.magic_defense,
+  )
+  const damage = physicalDamage + magicDamage
 
   const { data: applyData, error: applyError } = await db.rpc('apply_world_boss_attack', {
     p_character_id: characterId,

@@ -585,6 +585,8 @@ function reasonLabel(reason: MailEntry['reason']): string {
       return 'Suggestion Reward'
     case 'world_boss_reward':
       return 'World Boss Reward'
+    case 'zone_boss_reward':
+      return 'Zone Boss Reward'
     case 'gold_donation_reward':
       return 'Gold Donation Reward'
     case 'sale_notification':

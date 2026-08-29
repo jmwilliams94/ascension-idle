@@ -20,13 +20,15 @@ const RANK_ACCENT: Record<number, string> = {
   3: 'text-orange-400',
 }
 
-export default function WorldBossLeaderboardModal({
+export default function ZoneBossLeaderboardModal({
   characterId,
   spawnId,
+  bossName,
   onClose,
 }: {
   characterId: string
   spawnId: string
+  bossName: string
   onClose: () => void
 }) {
   const [result, setResult] = useState<LeaderboardResult | null>(null)
@@ -57,7 +59,7 @@ export default function WorldBossLeaderboardModal({
   }, [characterId, spawnId])
 
   return (
-    <BankActionModal title="World Boss Leaderboard" onClose={onClose}>
+    <BankActionModal title={`${bossName} Leaderboard`} onClose={onClose}>
       <div className="space-y-3">
         {loading && <p className="py-6 text-center text-sm text-slate-500">Loading…</p>}
 

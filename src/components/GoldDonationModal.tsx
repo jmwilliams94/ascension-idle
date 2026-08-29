@@ -21,7 +21,7 @@ const DONATION_STEP = 250_000
 // rather than moving inline onto the card, since a mid-slider donation is a
 // deliberate one-shot action, not something to leave half-adjusted on a card
 // the player might navigate away from. Shell mirrors
-// WorldBossLeaderboardModal.tsx's backdrop/click-outside pattern.
+// ZoneBossLeaderboardModal.tsx's backdrop/click-outside pattern.
 export default function GoldDonationModal({ characterId, onClose }: { characterId: string; onClose: () => void }) {
   const gold = useProgressionStore((state) => state.gold)
   const pool = useGoldDonationStore((state) => state.pool)

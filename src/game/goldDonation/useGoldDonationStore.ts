@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabaseClient'
 import { useProgressionStore } from '../stats/useProgressionStore'
 
 // Gold Donation Event server event — see CLAUDE.server-events.md for the
-// full design writeup. Mirrors useWorldBossStore.ts's shape (busy-guarded
+// full design writeup. Mirrors useZoneBossStore.ts's shape (busy-guarded
 // RPC call, server response applied absolutely) — the server is the sole
 // source of truth for the pool/buff state, this store never accumulates
 // donation totals locally.
@@ -83,7 +83,7 @@ interface GoldDonationState {
   pool: GoldDonationPool | null
   // Null means "never donated to this pool" — distinct from a zeroed-out
   // GoldDonationParticipation, same "no row yet" vs "loading" distinction as
-  // useWorldBossStore's participation field.
+  // useZoneBossStore's participation field.
   participation: GoldDonationParticipation | null
   busy: boolean
   setPool: (pool: GoldDonationPool) => void
@@ -146,7 +146,7 @@ export const useGoldDonationStore = create<GoldDonationState>((set, get) => ({
     if (result.ok) {
       // Pool state itself refreshes via GoldDonationConnection's Realtime
       // subscription, not set locally here — same "server is sole source of
-      // truth" convention as useWorldBossStore.attack(). Only the
+      // truth" convention as useZoneBossStore.attack(). Only the
       // character's own gold balance needs an immediate local update (the
       // server round-trip already returned it).
       if (typeof result.gold_remaining === 'number') {

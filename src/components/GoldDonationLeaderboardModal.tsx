@@ -20,7 +20,7 @@ const RANK_ACCENT: Record<number, string> = {
   3: 'text-orange-400',
 }
 
-// Direct adaptation of WorldBossLeaderboardModal.tsx — same BankActionModal
+// Direct adaptation of ZoneBossLeaderboardModal.tsx — same BankActionModal
 // shell, same fetch-fresh-every-open-no-cache RPC pattern, just
 // total_donated/get_gold_donation_leaderboard/pool_id in place of
 // total_damage/get_world_boss_leaderboard/spawn_id.

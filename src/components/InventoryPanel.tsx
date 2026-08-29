@@ -178,7 +178,7 @@ interface InventoryPanelProps {
 // currentPlayerMp/maxPlayerMp directly, which meant the *entire* grid (every
 // InventorySlot, plus every Forge/Bank/Shop screen that embeds this same
 // component) re-rendered up to 10x/second any time the player was fighting,
-// regardless of which tab was open. Same shape as WorldBossCard's spawn-
+// regardless of which tab was open. Same shape as ZoneBossCard's spawn-
 // object-in-deps bug (v1.116.7) — subscribing to something that changes far
 // more often than what's actually being computed from it, at the top of a
 // component big enough that the re-render cost isn't free.

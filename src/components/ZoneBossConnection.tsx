@@ -1,13 +1,17 @@
 import { useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { useWorldBossStore, type WorldBossSpawn } from '../game/worldboss/useWorldBossStore'
+import { useZoneBossStore, type ZoneBossSpawn } from '../game/zoneboss/useZoneBossStore'
+import type { ZoneBossId } from '../game/zones/zoneBossData'
 import { useTabActivityStore } from '../lib/useTabActivityStore'
 
-function toSpawn(row: Record<string, unknown>): WorldBossSpawn {
+function toSpawn(row: Record<string, unknown>): ZoneBossSpawn {
   return {
     id: row.id as string,
+    bossId: row.boss_id as ZoneBossId,
     maxHp: Number(row.max_hp),
     currentHp: Number(row.current_hp),
+    physicalDefense: Number(row.physical_defense),
+    magicDefense: Number(row.magic_defense),
     windowStartedAt: row.window_started_at as string,
     windowEndsAt: row.window_ends_at as string,
     status: row.status as 'active' | 'ended',
@@ -17,10 +21,12 @@ function toSpawn(row: Record<string, unknown>): WorldBossSpawn {
 // Non-visual, mounted unconditionally in GameShell alongside
 // GlobalActivityConnection/MailRealtimeConnection — same seed-then-subscribe
 // pattern as GlobalActivityConnection.tsx. Not account-scoped (the boss is a
-// single global object every player watches), so this needs no props.
-export default function WorldBossConnection() {
-  const setSpawn = useWorldBossStore((state) => state.setSpawn)
-  const ensureSpawn = useWorldBossStore((state) => state.ensureSpawn)
+// single global object every player watches), so this needs no props. Still
+// subscribes to world_boss_spawns — DB table names stay world_boss_*
+// internally, see the zone_boss_rotation migration header.
+export default function ZoneBossConnection() {
+  const setSpawn = useZoneBossStore((state) => state.setSpawn)
+  const ensureSpawn = useZoneBossStore((state) => state.ensureSpawn)
 
   useEffect(() => {
     let cancelled = false

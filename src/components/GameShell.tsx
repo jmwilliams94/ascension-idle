@@ -4,7 +4,7 @@ import RowCombatEngine from '../game/combat/RowCombatEngine'
 import MiningEngine from '../game/mining/MiningEngine'
 import GlobalActivityConnection from './GlobalActivityConnection'
 import MailRealtimeConnection from './MailRealtimeConnection'
-import WorldBossConnection from './WorldBossConnection'
+import ZoneBossConnection from './ZoneBossConnection'
 import GoldDonationConnection from './GoldDonationConnection'
 import TabActivityIndicator from './TabActivityIndicator'
 import QuiverWarningHud from './QuiverWarningHud'
@@ -576,7 +576,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <MiningEngine />
       <GlobalActivityConnection accountId={accountId} />
       <MailRealtimeConnection characterId={characterId} />
-      <WorldBossConnection />
+      <ZoneBossConnection />
       <GoldDonationConnection />
       <TabActivityIndicator />
       <ChatOverlay characterId={characterId} />
