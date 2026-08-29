@@ -182,7 +182,7 @@ function computeDerivedStats(
 // the user: an out-of-mana Wuxia stopped actually attacking client-side, but
 // this function kept crediting kills/gold/EXP for the full elapsed window
 // regardless, since it had no idea MP existed) — see mpCost's own comment
-// and the totalAttacks-capping block below.
+// and the effectiveElapsedMs-capping block below.
 interface SkillDefinition {
   classId: string
   requiredLevel: number
@@ -1017,65 +1017,13 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       : null
 
   const attackIntervalMs = activeSkill ? activeSkill.attackIntervalMs : 1000 / derived.attackSpeed
-  // attackMidpoint itself is computed further down, once accountAttackBonusPct
-  // is available (see the comment there) — declared as a mutable `let` here
-  // so the rest of the function can keep reading it from one place.
-  let attackMidpoint = 0
 
-  // Hunter must have the Quiver equipped to attack at all (confirmed with the
-  // user, 2026-07-31 — supersedes the earlier ammo-stack/consumption model
-  // entirely). No count, no per-attack consumption — equipped or not is the
-  // whole gate, same as the client-side mirror in useCombatStore.runTick.
-  const isHunter = character.class === 'hunter'
-  let totalAttacks = Math.floor(elapsedMs / attackIntervalMs)
-  if (isHunter && !character.equipped_quiver_id) {
-    totalAttacks = 0
-  }
-
-  // MP gating (2026-11 fix) — mirrors useCombatStore.runTick's 'no-mana'
-  // block, which blocks the attack outright with no fallback once MP runs
-  // out. No regen exists, so startingMp lazy-inits to a full pool only the
-  // first time (character.current_mp is null), then persists for real.
-  // effectiveElapsedMs only diverges from elapsedMs when MP genuinely ran
-  // dry mid-window — kept at full elapsedMs precision otherwise, rather than
-  // always rounding to attack-interval boundaries.
-  let effectiveElapsedMs = elapsedMs
-  let newCurrentMp: number | null = null
-  if (activeSkill && activeSkill.mpCost > 0) {
-    const maxMp = BASE_MP + attributes.spirit * MP_PER_SPIRIT
-    // Clamped to maxMp — use_potion_stack adds a potion's flat restore
-    // amount without knowing this character's true max (computing it there
-    // would mean duplicating the whole attribute-interpolation table into
-    // SQL just for this), so an over-full persisted value is possible and
-    // corrected here rather than there.
-    const startingMp = Math.min(character.current_mp ?? maxMp, maxMp)
-    const castsAffordable = Math.floor(startingMp / activeSkill.mpCost)
-    if (castsAffordable < totalAttacks) {
-      totalAttacks = castsAffordable
-      effectiveElapsedMs = totalAttacks * attackIntervalMs
-    }
-    newCurrentMp = Math.max(0, startingMp - totalAttacks * activeSkill.mpCost)
-  }
-
-  let kills = 0
-  let rareKills = 0
-  let goldGained = 0
-  let expGained = 0
-  let cometsGained = 0
-  let fallenStarsGained = 0
-  // Live mode only (confirmed with the user, 2026-07-31): set the moment a
-  // kill rolls a drop that can't fit, at which point the whole simulated
-  // window stops right there rather than continuing to fight and stashing
-  // the overflow in Loot Holding — "a full inventory should stop combat."
-  // Loot Holding is now exclusively for the offline/idle catch-up window
-  // (surfaced in OfflineProgressModal, not a persistent Warehouse card).
-  let inventoryFull = false
-  const droppedTemplates: { id: string; required_level: number; slot_type: string; qualityTier: string; compositionLevel: number }[] = []
-
-  const characterKillsBefore = Number(gathered.character_kills?.kills ?? 0)
-  const accountKillsBefore = Number(gathered.account_kills?.kills ?? 0)
-  const petAlreadyUnlocked = Boolean(gathered.pet_exists)
-
+  // Zone/event attack multipliers + attackMidpoint — hoisted up from their
+  // original position further down (past the old MP-gating block) because
+  // the cycle-time model just below needs attackMidpoint to exist before
+  // MP-gating's own attack-rate estimate can be computed (2026-11 bug fix,
+  // see that block's own comment for why).
+  //
   // Both per-zone (2026-08-07, confirmed with the user — attack bonus was
   // previously a flat account-wide number applied to every fight regardless
   // of zone). Grinding one zone's own account-tier claims only pays off
@@ -1103,13 +1051,104 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // mirrors useCombatStore.runTick exactly, including deliberately NOT
   // falling back to physical-only for a skill-less Wuxia (see that file's
   // own comment on why).
-  attackMidpoint = activeSkill
+  const attackMidpoint = activeSkill
     ? magicSubtotal * (1 + emberBonusPct / 100)
     : physicalSubtotal * (1 + drakeBonusPct / 100) + magicSubtotal * (1 + emberBonusPct / 100)
   // Same White/Green/Red/Black level-diff EXP multiplier applied to both
   // kill EXP and damage-dealt EXP below (see EXP_MULTIPLIER_BY_COLOR/
   // getLevelDiffColor), precomputed once here.
   const expMultiplier = EXP_MULTIPLIER_BY_COLOR[getLevelDiffColor(character.level, monster.level)]
+
+  // Cycle-time model (see the full write-up further below, by the kill-
+  // processing loop) — hoisted up here too, since MP-gating below needs to
+  // know what fraction of a kill cycle is actually spent attacking vs.
+  // sitting in the fixed RESPAWN_GAP_MS gap between kills.
+  const hitChance =
+    1 - Math.min(Math.max(0, monsterDodge(monster) - derived.dexterity) * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
+  const expectedDamagePerHit = resolvePhysicalDamage(attackMidpoint, monsterDefense(monster, character.level))
+  const effectiveHp = monster.max_hp * RARE_BLENDED_HP_FACTOR
+  const dps = (hitChance * expectedDamagePerHit) / attackIntervalMs
+  const timeToKillMs = effectiveHp / dps
+  const cycleTimeMs = timeToKillMs + RESPAWN_GAP_MS
+  // Fraction of a full kill cycle actually spent attacking rather than
+  // waiting out the respawn gap — always in (0, 1].
+  const activeAttackFraction = timeToKillMs / cycleTimeMs
+
+  // Hunter must have the Quiver equipped to attack at all (confirmed with the
+  // user, 2026-07-31 — supersedes the earlier ammo-stack/consumption model
+  // entirely). No count, no per-attack consumption — equipped or not is the
+  // whole gate, same as the client-side mirror in useCombatStore.runTick.
+  const isHunter = character.class === 'hunter'
+  const canAttackAtAll = !(isHunter && !character.equipped_quiver_id)
+
+  // MP gating (2026-11 fix) — mirrors useCombatStore.runTick's 'no-mana'
+  // block, which blocks the attack outright with no fallback once MP runs
+  // out. No regen exists, so startingMp lazy-inits to a full pool only the
+  // first time (character.current_mp is null), then persists for real.
+  // effectiveElapsedMs only diverges from elapsedMs when the Hunter-no-
+  // quiver gate above blocks everything, or MP genuinely ran dry mid-window
+  // — kept at full elapsedMs precision otherwise, rather than always
+  // rounding to attack-interval boundaries. This is also what the reward
+  // block below actually gates on now (not a naive attack count — see why
+  // below).
+  let effectiveElapsedMs = canAttackAtAll ? elapsedMs : 0
+  let newCurrentMp: number | null = null
+  if (canAttackAtAll && activeSkill && activeSkill.mpCost > 0) {
+    const maxMp = BASE_MP + attributes.spirit * MP_PER_SPIRIT
+    // Clamped to maxMp — use_potion_stack adds a potion's flat restore
+    // amount without knowing this character's true max (computing it there
+    // would mean duplicating the whole attribute-interpolation table into
+    // SQL just for this), so an over-full persisted value is possible and
+    // corrected here rather than there.
+    const startingMp = Math.min(character.current_mp ?? maxMp, maxMp)
+    // Real bug fix (2026-11, reported by the user — "still losing mana even
+    // when no enemy present," and a fresh Wuxia getting no EXP for a real
+    // kill). attacksInWindow used to be Math.floor(elapsedMs /
+    // attackIntervalMs) with no activeAttackFraction scaling, which assumed
+    // an attack landed every single attackIntervalMs across the ENTIRE
+    // elapsed window — including the RESPAWN_GAP_MS dead time between kills
+    // (and any knockout lockout), when nothing is actually being attacked.
+    // That wildly over-counted attacks for any window spanning more than one
+    // kill cycle, which silently over-drained current_mp far faster than
+    // real combat ever could: for a fresh low-level Wuxia this could exhaust
+    // the entire MP pool (starving gold/EXP for the window too, via
+    // effectiveElapsedMs below) within the very first resolve call, then
+    // keep it pinned at 0 forever after since MP never regenerates on its
+    // own. Scaling by activeAttackFraction here counts only the portion of
+    // elapsedMs actually spent mid-fight as attack time.
+    const attacksInWindow = Math.floor((elapsedMs * activeAttackFraction) / attackIntervalMs)
+    const castsAffordable = Math.floor(startingMp / activeSkill.mpCost)
+    let attacksUsed = attacksInWindow
+    if (castsAffordable < attacksInWindow) {
+      attacksUsed = castsAffordable
+      // Real wall-clock time this many actual attacks consume, including
+      // their proportional share of respawn-gap dead time — the inverse of
+      // the activeAttackFraction scaling above, so a genuine MP exhaustion
+      // clamps this window the same principled way an elapsedMs cap would.
+      effectiveElapsedMs = (attacksUsed * attackIntervalMs) / activeAttackFraction
+    }
+    newCurrentMp = Math.max(0, startingMp - attacksUsed * activeSkill.mpCost)
+  }
+
+  let kills = 0
+  let rareKills = 0
+  let goldGained = 0
+  let expGained = 0
+  let cometsGained = 0
+  let fallenStarsGained = 0
+  // Live mode only (confirmed with the user, 2026-07-31): set the moment a
+  // kill rolls a drop that can't fit, at which point the whole simulated
+  // window stops right there rather than continuing to fight and stashing
+  // the overflow in Loot Holding — "a full inventory should stop combat."
+  // Loot Holding is now exclusively for the offline/idle catch-up window
+  // (surfaced in OfflineProgressModal, not a persistent Warehouse card).
+  let inventoryFull = false
+  const droppedTemplates: { id: string; required_level: number; slot_type: string; qualityTier: string; compositionLevel: number }[] = []
+
+  const characterKillsBefore = Number(gathered.character_kills?.kills ?? 0)
+  const accountKillsBefore = Number(gathered.account_kills?.kills ?? 0)
+  const petAlreadyUnlocked = Boolean(gathered.pet_exists)
+
   let killsThisWindow = 0
   let petObtained = false
 
@@ -1142,7 +1181,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // the post-loop pass reaches it.
   let projectedOccupied = occupied
 
-  if (totalAttacks > 0) {
+  if (effectiveElapsedMs > 0) {
     // Deterministic expected-value reward math (2026-08-11 rewrite, see
     // CLAUDE.md's Combat section) — closed-form math computed once for the
     // whole window rather than per-attack RNG simulation. This is what
@@ -1168,18 +1207,11 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     // needed anymore either (the old bug this fixed — a level-100+
     // character idling a level-1 monster racking up 12,493 "kills" — can't
     // recur here, since kills are now bounded by wall-clock cycle time, not
-    // by raw damage output divided by HP).
-    const hitChance =
-      1 - Math.min(Math.max(0, monsterDodge(monster) - derived.dexterity) * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
-    const expectedDamagePerHit = resolvePhysicalDamage(attackMidpoint, monsterDefense(monster, character.level))
-    const effectiveHp = monster.max_hp * RARE_BLENDED_HP_FACTOR
-    // Damage per millisecond, continuous rate — hitChance is always >= 0.5
-    // (MAX_DODGE_CHANCE caps dodge at 50%) and expectedDamagePerHit is
-    // always >= 1 (resolvePhysicalDamage's own floor), so this can never be
-    // zero/undefined.
-    const dps = (hitChance * expectedDamagePerHit) / attackIntervalMs
-    const timeToKillMs = effectiveHp / dps
-    const cycleTimeMs = timeToKillMs + RESPAWN_GAP_MS
+    // by raw damage output divided by HP). hitChance/expectedDamagePerHit/
+    // effectiveHp/dps/timeToKillMs/cycleTimeMs are now computed earlier (see
+    // activeAttackFraction above) since MP-gating needs them too — only
+    // expectedKillsThisWindow itself still belongs here, since it depends on
+    // effectiveElapsedMs (only final once MP-gating has run).
     const expectedKillsThisWindow = effectiveElapsedMs / cycleTimeMs
 
     // How many WHOLE kills this window actually crosses, combining the
@@ -1188,8 +1220,8 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     // window's own fractional contribution, the same "carry the remainder
     // forward" idea the EXP level-up loop already uses. Bounded/small (real
     // kills, not attacks), so looping this many times for drop/currency/pet
-    // rolls only is cheap even though totalAttacks itself can be large for
-    // a fast weak monster.
+    // rolls only is cheap even though the underlying attack count can be
+    // large for a fast weak monster.
     const wholeKillsThisWindow = Math.floor(characterKillsBefore + expectedKillsThisWindow) - Math.floor(characterKillsBefore)
 
     // Real, integer count of kills actually processed this window — the

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.118.14",
+    "date": "2026-08-29",
+    "changes": [
+      "Fixed a bug where a Wuxia's mana could drain even while no monster was actively being fought, sometimes blocking all gold/EXP for the rest of the session"
+    ]
+  },
+  {
     "version": "1.118.13",
     "date": "2026-08-29",
     "changes": [
