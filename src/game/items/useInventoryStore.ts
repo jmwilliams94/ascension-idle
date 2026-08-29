@@ -91,8 +91,20 @@ const DROP_CHANCE = 1 / 150
 // combatResolver.ts's other server/client mirrors.
 export const NON_DROPPABLE_FAMILIES = ['sword', 'quiver', 'lucky-bow', 'money-bag', 'gem-bag', 'promotion-gear', 'promotion-material', 'pickaxe', 'ore']
 
+// Juggernaut/Twin-soul gear is in the catalog (see CLAUDE.accounts-and-
+// classes.md) but neither class is unlocked for play yet — temporarily
+// excluded from the drop pool (2026-08-29, requested by the user, reported
+// live/obtainable despite that) until they actually launch. Mirrors
+// pick_drop_template's own new WHERE clause — remove both together once
+// released.
+const UNRELEASED_DROP_CLASSES = ['juggernaut', 'twin-soul']
+
 export function pickLevelAppropriateTemplate(templates: ItemTemplate[], monsterLevel: number): ItemTemplate | null {
-  const droppable = templates.filter((template) => !NON_DROPPABLE_FAMILIES.includes(template.item_family ?? ''))
+  const droppable = templates.filter(
+    (template) =>
+      !NON_DROPPABLE_FAMILIES.includes(template.item_family ?? '') &&
+      !UNRELEASED_DROP_CLASSES.includes(template.required_class ?? ''),
+  )
   const minLevel = Math.max(1, monsterLevel - 40)
   const inRange = droppable.filter((template) => template.required_level >= minLevel && template.required_level <= monsterLevel)
   const pool = inRange.length > 0 ? inRange : droppable

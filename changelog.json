@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.119.3",
+    "date": "2026-08-29",
+    "changes": [
+      "Juggernaut and Twin-soul gear can no longer drop from monsters — those classes aren't released yet"
+    ]
+  },
+  {
     "version": "1.119.2",
     "date": "2026-08-29",
     "changes": [
