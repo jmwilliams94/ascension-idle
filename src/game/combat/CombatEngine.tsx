@@ -74,6 +74,22 @@ export default function CombatEngine() {
         resolve()
       }
     })
+    // Resolve immediately on a kill (2026-11, reported by the user — reward
+    // timing felt "hit and miss," landing during a kill sometimes and only
+    // once the next monster had already spawned other times). Root cause:
+    // the periodic RESOLVE_INTERVAL_MS poll above has no relationship to the
+    // actual kill/respawn cycle's phase, so which poll happens to cross the
+    // server's own deterministic "a kill completed" threshold is essentially
+    // random relative to the client's own visual kill moment. respawnReadyAt
+    // flips from 0 to a real timestamp at exactly that visual moment (see
+    // its own field comment) — triggering a resolve right then ties the two
+    // together as tightly as this architecture allows, without reverting to
+    // a much shorter (egress-costly) polling interval.
+    const unsubscribeRespawn = useCombatStore.subscribe((state, prevState) => {
+      if (state.respawnReadyAt > 0 && prevState.respawnReadyAt === 0) {
+        resolve()
+      }
+    })
     // Deliberately bypasses resolve()'s own isFighting guard above — by the
     // time this fires, isFighting has already flipped to false, so resolve()
     // would always no-op here (bug, fixed 2026-08-22: this "final resolve"
@@ -95,6 +111,7 @@ export default function CombatEngine() {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('beforeunload', handleBeforeUnload)
       unsubscribeZone()
+      unsubscribeRespawn()
       unsubscribeCombat()
     }
   }, [])
