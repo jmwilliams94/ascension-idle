@@ -285,29 +285,28 @@ export default function CombatPage() {
   const characterLevel = useProgressionStore((state) => state.level)
   const characterName = useCharacterRecordStore((state) => state.characterName)
   const characterId = useActiveCharacterStore((state) => state.characterId)
-  // Outgoing damage color (2026-08-26, requested by the user): white for
-  // physical, light blue for magic. Damage is one combined attackMidpoint
-  // number (physicalAttack + magicAttack summed, see combatResolver.ts), not
-  // separately tagged per hit — but per that same file's own comment, every
-  // class so far only ever puts starting attribute points into one of
-  // Strength or Spirit, so exactly one of the two is ever nonzero in
-  // practice. Wuxia is the sole Spirit/magic-attack class today, so class
-  // alone is a reliable proxy without needing to thread derived stats
-  // through here.
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
-  const dealsMagicDamage = selectedClassId === 'wuxia'
 
   // Mirrors useCombatStore.runTick's own activeSkill re-derivation (class +
   // level re-validated, never trusts equippedSkillId at face value) — used
-  // only to gate the MP bar's visibility below. MP itself is a real pool for
-  // every class (BASE_MP=20 regardless of Strength/Spirit split), but only
-  // shown when there's an actual MP-costing skill equipped and usable, since
-  // it's otherwise never spent and would just be confusing clutter.
+  // both to gate the MP bar's visibility below and to pick the outgoing
+  // damage color. MP itself is a real pool for every class (BASE_MP=20
+  // regardless of Strength/Spirit split), but only shown when there's an
+  // actual MP-costing skill equipped and usable, since it's otherwise never
+  // spent and would just be confusing clutter.
   const candidateSkill = equippedSkillId ? SKILL_TYPES[equippedSkillId] : null
   const activeSkill =
     candidateSkill && candidateSkill.classId === selectedClassId && characterLevel >= candidateSkill.requiredLevel
       ? candidateSkill
       : null
+  // Outgoing damage color (2026-08-26, requested by the user; retargeted
+  // 2026-11 alongside the physical-only-without-a-skill damage fix): white
+  // for physical, light blue for magic. Used to be a flat per-class proxy
+  // (Wuxia always blue) back when the attack formula summed physical+magic
+  // unconditionally — now that useCombatStore.runTick actually branches on
+  // activeSkill (magic-only while a skill fires, physical-only otherwise),
+  // the color follows that same branch exactly instead of guessing off class.
+  const dealsMagicDamage = activeSkill !== null
   const outgoingDamageColorClass = dealsMagicDamage ? 'text-sky-300' : 'text-white'
 
   const potionStacks = usePotionStore((state) => state.stacks)

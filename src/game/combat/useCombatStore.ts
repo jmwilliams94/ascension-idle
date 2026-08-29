@@ -385,14 +385,20 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       (activeSkill?.effectDamage ?? 0)
     // While a skill is active, damage is magic-only (drops physicalSubtotal
     // entirely) — see activeSkill's own comment above. With no skill
-    // equipped, every class (including a skill-less Wuxia) keeps the
-    // original uniform physical+magic sum unchanged, deliberately not the
-    // "physicalAttack only" fallback CLAUDE.combat-and-loot.md's design note
-    // describes as the eventual final state — that would nerf existing
-    // skill-less Wuxia characters and wasn't asked for in this first pass.
+    // equipped, damage is physical-only (drops magicSubtotal), matching how
+    // every other class's own auto-attack already works in practice (2026-11
+    // bug fix, requested by the user — Bow/Club/Longsword/Blade have never
+    // carried a magic_attack stat at all, so this was already a no-op for
+    // them; only Backsword carries both, which made a skill-less Wuxia
+    // silently double-dip on both stats at once). This supersedes the
+    // original "uniform physical+magic sum for every class, no branching"
+    // design (kept when Backsword had no real physical_attack stat yet, to
+    // avoid a skill-less Wuxia dealing 0 damage) — Backsword's
+    // physical_attack was given real reference-sourced values in the
+    // 2026-10-17 retune, so that concern no longer applies.
     const attackMidpoint = activeSkill
       ? magicSubtotal * (1 + derived.emberBonusPct / 100)
-      : physicalSubtotal * (1 + derived.drakeBonusPct / 100) + magicSubtotal * (1 + derived.emberBonusPct / 100)
+      : physicalSubtotal * (1 + derived.drakeBonusPct / 100)
 
     // Lazy-init the player's HP the first time combat ever ticks (0/0 sentinel —
     // see the CombatState field comments) rather than resetting it on every

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.118.16",
+    "date": "2026-08-29",
+    "changes": [
+      "Wuxia now deals physical melee damage when no spell is equipped, and only casts magic damage while a spell like Thunder is active — the damage number's color now reflects this too"
+    ]
+  },
+  {
     "version": "1.118.15",
     "date": "2026-08-29",
     "changes": [

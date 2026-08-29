@@ -214,10 +214,15 @@ export function monsterAttackDamage(type: EnemyTypeDef): number {
 //
 // Also closes a previously-documented gap: damage used to be `physicalAttack`
 // alone, so a Spirit-scaling class (Wuxia, physicalAttack always 0 per its
-// Str-0 starting attributes) dealt zero damage. Using physicalAttack +
-// magicAttack fixes this generally rather than branching on class — for every
-// class so far, starting attributes only ever put points in one of Strength
-// or Spirit, so exactly one of the two addends is ever nonzero in practice.
+// Str-0 starting attributes) dealt zero damage while its weapon (Backsword)
+// had no real physical_attack stat of its own either. Callers summed
+// physicalAttack + magicAttack uniformly for every class as a stopgap; once
+// Backsword got a real physical_attack value (2026-10-17 reference retune),
+// callers (useCombatStore.runTick/resolve-combat) switched to branching
+// instead — physicalAttack-only with no skill active, magicAttack-only while
+// one fires — since every other weapon family has only ever had
+// physicalAttack anyway. This function itself is unaffected either way; it
+// just applies the floor to whatever `attack` value a caller passes in.
 const MIN_DAMAGE_PERCENT_OF_ATTACK = 0.1
 
 // Monster Defense — formula-derived from level (not stored on EnemyTypeDef

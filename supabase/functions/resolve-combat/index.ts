@@ -1047,13 +1047,12 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const physicalSubtotal = derived.physicalAttack * (1 + accountAttackBonusPct / 100) + compositionPhysicalAttackBonus
   const magicSubtotal =
     derived.magicAttack * (1 + accountAttackBonusPct / 100) + compositionMagicAttackBonus + (activeSkill?.effectDamage ?? 0)
-  // Magic-only while a skill is active (drops physicalSubtotal entirely) —
-  // mirrors useCombatStore.runTick exactly, including deliberately NOT
-  // falling back to physical-only for a skill-less Wuxia (see that file's
-  // own comment on why).
+  // Magic-only while a skill is active, physical-only otherwise (2026-11 bug
+  // fix) — mirrors useCombatStore.runTick exactly, see that file's own
+  // comment for the full reasoning.
   const attackMidpoint = activeSkill
     ? magicSubtotal * (1 + emberBonusPct / 100)
-    : physicalSubtotal * (1 + drakeBonusPct / 100) + magicSubtotal * (1 + emberBonusPct / 100)
+    : physicalSubtotal * (1 + drakeBonusPct / 100)
   // Same White/Green/Red/Black level-diff EXP multiplier applied to both
   // kill EXP and damage-dealt EXP below (see EXP_MULTIPLIER_BY_COLOR/
   // getLevelDiffColor), precomputed once here.
