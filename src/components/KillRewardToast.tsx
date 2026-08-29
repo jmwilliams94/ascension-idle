@@ -56,14 +56,28 @@ function KillRewardToastItem({ toast }: { toast: KillRewardToastEntry }) {
 // (2026-08-29, requested by the user) — a background AFK resolve can still
 // fire a toast-worthy response while the player is on another tab entirely
 // (Forge, Marketplace, etc.) or on Mining/Events within Combat, which read
-// as spammy/irrelevant there. Toasts queued while hidden are simply dropped
-// (the store still clears them via their own timeout), not queued for later.
+// as spammy/irrelevant there. useKillRewardToastStore.show() itself refuses
+// to queue a toast while hidden (see its own comment), so nothing can build
+// up there — but a toast already showing at the moment the player switches
+// away still needs handling: this component unmounts its children
+// (`KillRewardToastItem`'s dismiss `setTimeout` is cancelled on unmount),
+// which would otherwise leave it stuck in the store to reappear with a full
+// fresh timer whenever the player switches back. The effect below clears the
+// store outright on that hidden transition instead (2026-08-29, bug fix
+// reported by the user — "switched back and the screen was filled with
+// them").
 export default function KillRewardToast() {
   const toasts = useKillRewardToastStore((state) => state.toasts)
+  const clearToasts = useKillRewardToastStore((state) => state.clear)
   const activeTab = useTabStore((state) => state.activeTab)
   const combatMode = useCombatModeStore((state) => state.mode)
+  const visible = activeTab === 'combat' && combatMode === 'hunting'
 
-  if (activeTab !== 'combat' || combatMode !== 'hunting') {
+  useEffect(() => {
+    if (!visible) clearToasts()
+  }, [visible, clearToasts])
+
+  if (!visible) {
     return null
   }
 

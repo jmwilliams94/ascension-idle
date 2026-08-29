@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.119.2",
+    "date": "2026-08-29",
+    "changes": [
+      "Fixed the kill-reward toast building up while you were on another tab and all appearing at once when you switched back"
+    ]
+  },
+  {
     "version": "1.119.1",
     "date": "2026-08-29",
     "changes": [
