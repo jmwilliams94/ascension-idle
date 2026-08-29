@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.119.5",
+    "date": "2026-08-29",
+    "changes": [
+      "Toned down the Gold Donation Event's socket-unlock-chance buff — now a smaller x1.00-x1.99 boost lasting only 5-10 minutes, instead of the same x2-x5/30-60 minute range as its other bonuses"
+    ]
+  },
+  {
     "version": "1.119.4",
     "date": "2026-08-29",
     "changes": [
