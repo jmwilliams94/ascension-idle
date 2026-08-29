@@ -3,7 +3,14 @@ import { supabase } from '../../lib/supabaseClient'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 import { useInventoryStore, type ItemInstance } from '../items/useInventoryStore'
-import { characterTierIndexReached, accountTierIndexReached, zoneTierCompletions } from './achievementData'
+import {
+  characterTierIndexReached,
+  accountTierIndexReached,
+  zoneTierCompletions,
+  tierIndexReached,
+  ACHIEVEMENT_TIERS,
+  ACCOUNT_TIER_THRESHOLDS,
+} from './achievementData'
 import { ZONES, ZONE_ORDER } from '../zones/zoneData'
 
 // Achievements & Pets — client-side cache of the four server-authoritative
@@ -80,10 +87,25 @@ interface AchievementsState {
   pets: Set<string>
   loaded: boolean
   busy: boolean
+  // Separate from `busy` — that flag flips on/off around each individual RPC
+  // call (including the ones claimAll itself drives), so it can't be used
+  // alone to disable the Claim All button/badge for the whole run without
+  // it flickering enabled between claims. claimAllBusy stays true for the
+  // entire loop below.
+  claimAllBusy: boolean
   loadAchievements: (characterId: string, accountId: string) => Promise<void>
   claimCharacterTier: (characterId: string, monsterId: string) => Promise<ClaimCharacterTierResult>
   claimAccountTier: (accountId: string, monsterId: string) => Promise<ClaimAccountTierResult>
   claimZoneTier: (characterId: string, zoneId: string) => Promise<ClaimZoneTierResult>
+  // Claims every currently-claimable tier (character ladder, zone ladder,
+  // account ladder) in one go. The server never lets a specific tier be
+  // picked — each RPC call only ever advances claimed_tier_index by one — so
+  // this just repeats the same per-entry claim call until that entry's
+  // claimed_tier_index catches up to its reached tier index, for every
+  // monster/zone with anything outstanding. accountId undefined (session not
+  // resolved yet, same edge case AccountMonsterCard already guards against)
+  // skips the account ladder entirely.
+  claimAll: (characterId: string, accountId: string | undefined) => Promise<void>
   // Called from resolveCombat.ts with a resolve-combat response's
   // monsterId/characterKillCount/accountKillCount/petObtained — reflects the
   // server's already-confirmed result without a refetch, same pattern
@@ -103,6 +125,7 @@ export const useAchievementsStore = create<AchievementsState>((set, get) => ({
   pets: new Set(),
   loaded: false,
   busy: false,
+  claimAllBusy: false,
 
   loadAchievements: async (characterId, accountId) => {
     const [characterResult, accountResult, petsResult, zoneProgressResult] = await Promise.all([
@@ -245,6 +268,42 @@ export const useAchievementsStore = create<AchievementsState>((set, get) => ({
     }
 
     return result
+  },
+
+  claimAll: async (characterId, accountId) => {
+    set({ claimAllBusy: true })
+
+    for (const monsterId of Object.keys(get().characterKills)) {
+      let entry = get().characterKills[monsterId]
+      while (entry && tierIndexReached(entry.kills, ACHIEVEMENT_TIERS) > entry.claimedTierIndex) {
+        const result = await get().claimCharacterTier(characterId, monsterId)
+        if (!result.ok) break
+        entry = get().characterKills[monsterId]
+      }
+    }
+
+    for (const zoneId of ZONE_ORDER) {
+      const zoneMonsterKills = ZONES[zoneId].monsterOrder.map((monsterId) => get().characterKills[monsterId]?.kills ?? 0)
+      let { zoneTier } = zoneTierCompletions(zoneMonsterKills)
+      while (zoneTier > (get().zoneClaims[zoneId] ?? 0)) {
+        const result = await get().claimZoneTier(characterId, zoneId)
+        if (!result.ok) break
+        zoneTier = zoneTierCompletions(ZONES[zoneId].monsterOrder.map((monsterId) => get().characterKills[monsterId]?.kills ?? 0)).zoneTier
+      }
+    }
+
+    if (accountId) {
+      for (const monsterId of Object.keys(get().accountKills)) {
+        let entry = get().accountKills[monsterId]
+        while (entry && tierIndexReached(entry.kills, ACCOUNT_TIER_THRESHOLDS) > entry.claimedTierIndex) {
+          const result = await get().claimAccountTier(accountId, monsterId)
+          if (!result.ok) break
+          entry = get().accountKills[monsterId]
+        }
+      }
+    }
+
+    set({ claimAllBusy: false })
   },
 
   applyResolveResult: (monsterId, characterKillCount, accountKillCount, petObtained) => {

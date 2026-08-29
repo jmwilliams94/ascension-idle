@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.119.4",
+    "date": "2026-08-29",
+    "changes": [
+      "Added a Claim All button on the Achievements page — only shows up when you have rewards waiting"
+    ]
+  },
+  {
     "version": "1.119.3",
     "date": "2026-08-29",
     "changes": [

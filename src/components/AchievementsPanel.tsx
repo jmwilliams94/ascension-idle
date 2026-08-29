@@ -306,7 +306,7 @@ function TierSegmentBar({
 // already paid for it.
 function CharacterMonsterCard({ characterId, monsterId, displayName }: { characterId: string; monsterId: EnemyTypeId; displayName: string }) {
   const entry = useAchievementsStore((state) => state.characterKills[monsterId])
-  const busy = useAchievementsStore((state) => state.busy)
+  const busy = useAchievementsStore((state) => state.busy || state.claimAllBusy)
   const claimCharacterTier = useAchievementsStore((state) => state.claimCharacterTier)
 
   // Fractional now (2026-08-11 expected-value rewrite — see CLAUDE.md's
@@ -352,7 +352,7 @@ function CharacterMonsterCard({ characterId, monsterId, displayName }: { charact
 // simply disabled until then.
 function AccountMonsterCard({ accountId, monsterId, displayName }: { accountId: string | undefined; monsterId: EnemyTypeId; displayName: string }) {
   const entry = useAchievementsStore((state) => state.accountKills[monsterId])
-  const busy = useAchievementsStore((state) => state.busy)
+  const busy = useAchievementsStore((state) => state.busy || state.claimAllBusy)
   const claimAccountTier = useAchievementsStore((state) => state.claimAccountTier)
 
   const kills = entry?.kills ?? 0
@@ -434,7 +434,7 @@ function PetTile({ monsterId, displayName }: { monsterId: EnemyTypeId; displayNa
 function ZoneTierSection({ characterId, zoneId }: { characterId: string; zoneId: ZoneId }) {
   const characterKills = useAchievementsStore((state) => state.characterKills)
   const claimedZoneTier = useAchievementsStore((state) => state.zoneClaims[zoneId] ?? 0)
-  const busy = useAchievementsStore((state) => state.busy)
+  const busy = useAchievementsStore((state) => state.busy || state.claimAllBusy)
   const claimZoneTier = useAchievementsStore((state) => state.claimZoneTier)
 
   const zoneMonsterKills = ZONES[zoneId].monsterOrder.map((monsterId) => characterKills[monsterId]?.kills ?? 0)
@@ -679,10 +679,13 @@ export default function AchievementsPanel({ characterId, accountId }: { characte
   const accountKills = useAchievementsStore((state) => state.accountKills)
   const zoneClaims = useAchievementsStore((state) => state.zoneClaims)
   const pets = useAchievementsStore((state) => state.pets)
+  const claimAllBusy = useAchievementsStore((state) => state.claimAllBusy)
+  const claimAll = useAchievementsStore((state) => state.claimAll)
   const [tab, setTab] = useState<AchievementsTab>('player')
 
   const characterClaimable = totalClaimable(characterKills, ACHIEVEMENT_TIERS) + totalZoneTierClaimable(characterKills, zoneClaims)
   const accountClaimable = totalClaimable(accountKills, ACCOUNT_TIER_THRESHOLDS)
+  const anyClaimable = characterClaimable + accountClaimable > 0
 
   const TABS: { id: AchievementsTab; label: string; badge: number }[] = [
     { id: 'player', label: characterName || 'Character', badge: characterClaimable },
@@ -696,13 +699,23 @@ export default function AchievementsPanel({ characterId, accountId }: { characte
       <AscensionCard>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-slate-500">Track progress and claim one-time rewards for grinding a monster.</p>
-          <div className="flex gap-4 text-xs text-slate-400">
+          <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400">
             <span>
               Pets: <span className="font-semibold text-amber-300">{pets.size}</span> / 40
             </span>
             <span>
               Claimable: <span className="font-semibold text-amber-300">{characterClaimable + accountClaimable}</span>
             </span>
+            {anyClaimable && (
+              <button
+                type="button"
+                disabled={claimAllBusy}
+                onClick={() => void claimAll(characterId, accountId)}
+                className="btn-gold h-8 px-3 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {claimAllBusy ? 'Claiming…' : 'Claim All'}
+              </button>
+            )}
           </div>
         </div>
       </AscensionCard>
