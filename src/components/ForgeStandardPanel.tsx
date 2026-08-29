@@ -495,7 +495,6 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
               {confirmVisible ? (
                 <div className="flex flex-col items-center gap-2">
                   <div className="flex justify-center gap-2">
-                    {materialMode === 'level' && autoRepeatButton}
                     <Button variant="primary" disabled={confirmBusy} onClick={() => void handleConfirm()}>
                       {confirmBusy ? 'Working…' : 'Confirm'}
                     </Button>
@@ -503,6 +502,11 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
                       Cancel
                     </Button>
                   </div>
+                  {/* Its own row, not squeezed into the Confirm/Cancel line —
+                      Auto-Repeat is noticeably wider than Cancel, and sharing
+                      a row threw off Confirm/Cancel's usual centered-pair
+                      look (reported by the user 2026-08-29). */}
+                  {materialMode === 'level' && <div className="flex justify-center">{autoRepeatButton}</div>}
                   {autoRepeatSummary && <p className="text-center text-[11px] text-amber-400/80">{autoRepeatSummary}</p>}
                 </div>
               ) : (

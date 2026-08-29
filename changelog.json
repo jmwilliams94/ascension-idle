@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.119.9",
+    "date": "2026-08-29",
+    "changes": [
+      "Moved Forge's Auto-Repeat button to its own row below Confirm/Cancel — sharing a row with them threw off their usual centered look"
+    ]
+  },
+  {
     "version": "1.119.8",
     "date": "2026-08-29",
     "changes": [
