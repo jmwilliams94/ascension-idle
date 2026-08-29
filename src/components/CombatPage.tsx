@@ -28,6 +28,7 @@ import MiningModePanel from './MiningModePanel'
 import { MINING_PICKAXE_DROP_ZONE } from './PickaxeEquipSlot'
 import { useMiningStore } from '../game/mining/useMiningStore'
 import { useIdleModeStore } from '../game/mining/useIdleModeStore'
+import { useCombatModeStore } from '../game/combat/useCombatModeStore'
 import { equipPickaxe } from '../game/mining/pickaxeEquipActions'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
@@ -314,8 +315,10 @@ export default function CombatPage() {
 
   // Hunting (today's existing view) / Mining (coming-soon placeholder) /
   // Events (World Boss) — an in-page sub-mode, not a top-level TabId (see
-  // CombatModeSwitcher above).
-  const [mode, setMode] = useState<CombatMode>('hunting')
+  // CombatModeSwitcher above). Lifted into useCombatModeStore (2026-08-29)
+  // so KillRewardToast can gate on it without prop-drilling.
+  const mode = useCombatModeStore((state) => state.mode)
+  const setMode = useCombatModeStore((state) => state.setMode)
 
   // Mining tab's drag-and-drop equip slot (2026-10-24, requested by the
   // user) — dragging an Inventory tile onto PickaxeEquipSlot resolves here

@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.119.1",
+    "date": "2026-08-29",
+    "changes": [
+      "Fixed a bug where a losing fight (repeatedly getting knocked out, or out of mana) could still grant gold/EXP/kills as if you'd been fighting successfully the whole time",
+      "The kill-reward toast now only appears while you're on the Hunting view, not from other tabs"
+    ]
+  },
+  {
     "version": "1.119.0",
     "date": "2026-08-29",
     "changes": [

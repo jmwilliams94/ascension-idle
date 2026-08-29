@@ -161,18 +161,32 @@ const BASE_ATTACK_SPEED = 1.0
 
 function computeDerivedStats(
   attributes: Attributes,
-  equipmentBonus: { physicalAttack?: number; magicAttack?: number; dexterity?: number },
+  equipmentBonus: {
+    physicalAttack?: number
+    magicAttack?: number
+    dexterity?: number
+    physicalDefense?: number
+    dodge?: number
+  },
 ) {
   const hp = BASE_HP + attributes.vitality * 24 + attributes.strength * 3 + attributes.agility * 3 + attributes.spirit * 3
   const physicalAttack = attributes.strength * PHYSICAL_ATTACK_PER_STRENGTH + (equipmentBonus.physicalAttack ?? 0)
   const magicAttack = attributes.spirit * MAGIC_ATTACK_PER_SPIRIT + (equipmentBonus.magicAttack ?? 0)
   // Mirrors derivedStats.ts — 1 dexterity per Agility point plus Bows'/Rings'
-  // own dexterity stat (a separate gear pool from dodge, which is Boots-only
-  // and not tracked here at all — see the equipmentBonus comment above for
-  // why incoming mitigation isn't simulated server-side). Used here for
-  // outgoing hit chance only (see the deterministic hitChance calc below).
+  // own dexterity stat (a separate gear pool from dodge, which is Boots-only).
+  // Used here for outgoing hit chance (see the deterministic hitChance calc
+  // below).
   const dexterity = attributes.agility * 1 + (equipmentBonus.dexterity ?? 0)
-  return { hp, physicalAttack, magicAttack, attackSpeed: BASE_ATTACK_SPEED, dexterity }
+  // Incoming-mitigation stats (2026-08-29, see the player-survivability cycle
+  // model further below) — physicalDefense is gear-only (necklace/hat/coat),
+  // dodge is 1-per-Agility-point plus Boots' own dodge stat, mirrors
+  // derivedStats.ts exactly. Previously never computed server-side at all
+  // (player HP/knockout had no server concept), which is what let a fight the
+  // character was actually losing still get billed as continuous successful
+  // attacking for its entire real-world duration — see cycleTimeMs below.
+  const physicalDefense = equipmentBonus.physicalDefense ?? 0
+  const dodge = attributes.agility * 1 + (equipmentBonus.dodge ?? 0)
+  return { hp, physicalAttack, magicAttack, attackSpeed: BASE_ATTACK_SPEED, dexterity, physicalDefense, dodge }
 }
 
 // Mirrors src/game/skills/skillData.ts — must stay in sync. See
@@ -250,17 +264,24 @@ function compositionBonusStat(
 // Socketed gem bonuses (2026-08-26, requested by the user) — mirrors
 // src/game/items/gemCatalog.ts's GEM_TYPES/parseGemStorageKey/
 // sumSocketedGemBonusPct. Drake (Physical Attack), Ember (Magic Attack), and
-// Iris (Character EXP) are all read here — Bastion (Damage Reduction) isn't,
-// since it has no incoming-damage concept server-side at all (player HP has
-// never been simulated here, see the file header). Multiple gems of the
-// same type across different gear pieces stack additively.
-const GEM_PERCENT_BY_TIER: Record<'drake' | 'ember' | 'iris', Record<string, number>> = {
+// Iris (Character EXP) are all read here. Bastion (Damage Reduction) joined
+// them 2026-08-29 alongside the player-survivability cycle model below (see
+// damageReductionPct's own comment) — sockets were already fetched for the
+// other three gems, so this was free once incoming damage had somewhere to
+// apply it. Multiple gems of the same type across different gear pieces
+// stack additively. Enchantress "Bless" (item_instances.enchant.blessPct) is
+// a separate, still-unmirrored bonus — the gather query doesn't select
+// `enchant` at all, a known, disclosed gap (Bastion-geared characters get an
+// accurate survivability estimate here, Bless-geared ones get a slightly
+// pessimistic one).
+const GEM_PERCENT_BY_TIER: Record<'drake' | 'ember' | 'iris' | 'bastion', Record<string, number>> = {
   drake: { normal: 5, tempered: 10, ascended: 15 },
   ember: { normal: 5, tempered: 10, ascended: 15 },
   iris: { normal: 5, tempered: 10, ascended: 15 },
+  bastion: { normal: 5, tempered: 10, ascended: 15 },
 }
 
-function sumSocketedGemBonusPct(sockets: (string | null)[] | undefined, gemId: 'drake' | 'ember' | 'iris'): number {
+function sumSocketedGemBonusPct(sockets: (string | null)[] | undefined, gemId: 'drake' | 'ember' | 'iris' | 'bastion'): number {
   let total = 0
   for (const socket of sockets ?? []) {
     if (!socket) continue
@@ -311,11 +332,40 @@ const DURABILITY_TARGET_HOURS_TO_EMPTY_MS = 18 * 60 * 60 * 1000
 // useCombatStore.ts's own RESPAWN_GAP_MS, must stay in sync.
 const RESPAWN_GAP_MS = 10_000
 
+// Player knockout lockout (2026-08-29, see the player-survivability cycle
+// model below) — mirrors useCombatStore.ts's own KNOCKOUT_LOCKOUT_MS, must
+// stay in sync.
+const KNOCKOUT_LOCKOUT_MS = 10_000
+
+// Monster attack-back cadence — mirrors combatResolver.ts's
+// MONSTER_ATTACK_INTERVAL_MS (PLACEHOLDER fixed once-per-second, no monster
+// "attack speed" concept exists yet).
+const MONSTER_ATTACK_INTERVAL_MS = 1000
+
 // Mirrors src/game/combat/combatResolver.ts
 const RARE_CHANCE = 0.05
 const RARE_HP_MULTIPLIER = 2
 const RARE_REWARD_MULTIPLIER = 5
 const MIN_DAMAGE_PERCENT_OF_ATTACK = 0.1
+
+// Incoming-side level-gap Defense debuff (2026-08-05, steepened 2026-08-07) —
+// mirrors combatResolver.ts's PLAYER_DEFENSE_MULTIPLIER_BY_COLOR. The
+// character's own physicalDefense is reduced when the monster outlevels it
+// (Red/Black), left alone otherwise — the incoming-side sibling of
+// MONSTER_DEFENSE_MULTIPLIER_BY_COLOR below.
+const PLAYER_DEFENSE_MULTIPLIER_BY_COLOR: Record<LevelDiffColor, number> = {
+  green: 1,
+  white: 1,
+  red: 0.5,
+  black: 0.1,
+}
+
+const MAX_DAMAGE_REDUCTION_PCT = 90
+
+function applyDamageReduction(damage: number, reductionPct: number): number {
+  const clampedPct = Math.min(Math.max(reductionPct, 0), MAX_DAMAGE_REDUCTION_PCT)
+  return Math.max(1, Math.round(damage * (1 - clampedPct / 100)))
+}
 
 // Expected-value combat reward rewrite (2026-08-11, see CLAUDE.md's Combat
 // section) — the reward loop below no longer rolls "is this specific spawn
@@ -453,9 +503,11 @@ interface EnemyType {
   max_hp: number
   gold_reward: number
   zone_id: string | null
-  // exp_reward/attack_damage columns still exist on enemy_types but are
-  // deliberately not read here — see expRewardForLevel above / the
-  // player-HP-never-simulated-server-side note elsewhere in this file.
+  // Read since 2026-08-29 by the player-survivability cycle model below (see
+  // cycleTimeMs) — was previously deliberately unread since incoming damage
+  // had no server-side concept at all. exp_reward still isn't read — see
+  // expRewardForLevel above.
+  attack_damage: number
 }
 
 function rollIsRare(): boolean {
@@ -951,10 +1003,18 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // monster Dodge (see the deterministic hitChance calc below), which
   // affects real kill counts/rewards, unlike incoming mitigation.
   const attributes = getAttributesForLevel(character.class ?? 'hunter', character.level)
-  const equipmentBonus: { physicalAttack: number; magicAttack: number; dexterity: number } = {
+  const equipmentBonus: {
+    physicalAttack: number
+    magicAttack: number
+    dexterity: number
+    physicalDefense: number
+    dodge: number
+  } = {
     physicalAttack: 0,
     magicAttack: 0,
     dexterity: 0,
+    physicalDefense: 0,
+    dodge: 0,
   }
   // Kept out of equipmentBonus.physicalAttack/magicAttack — those feed
   // attackMidpoint, which the account-wide attack bonus % multiplies below;
@@ -967,9 +1027,11 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   let drakeBonusPct = 0
   let emberBonusPct = 0
   // Socketed Iris gem bonus % (Character EXP) — applied as the final
-  // multiplier on total EXP gained, see expGained below. Bastion isn't
-  // tracked here at all — see the gem-bonus comment above.
+  // multiplier on total EXP gained, see expGained below.
   let irisBonusPct = 0
+  // Socketed Bastion gem bonus % (Damage Reduction) — feeds damageReductionPct
+  // below, see the player-survivability cycle model further down.
+  let bastionBonusPct = 0
 
   // Durability decay results for this window (see computeMaxDurability above)
   // — collected here, applied via resolve_combat_apply_results' own
@@ -997,11 +1059,14 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     equipmentBonus.physicalAttack += scaledStat(item.base_stats, 'physical_attack', item.quality_tier) ?? 0
     equipmentBonus.magicAttack += scaledStat(item.base_stats, 'magic_attack', item.quality_tier) ?? 0
     equipmentBonus.dexterity += scaledStat(item.base_stats, 'dexterity', item.quality_tier) ?? 0
+    equipmentBonus.physicalDefense += scaledStat(item.base_stats, 'physical_defense', item.quality_tier) ?? 0
+    equipmentBonus.dodge += scaledStat(item.base_stats, 'dodge', item.quality_tier) ?? 0
     compositionPhysicalAttackBonus += compositionBonusStat(item.base_stats, 'physical_attack', item.slot_type, item.composition_level)
     compositionMagicAttackBonus += compositionBonusStat(item.base_stats, 'magic_attack', item.slot_type, item.composition_level)
     drakeBonusPct += sumSocketedGemBonusPct(item.sockets, 'drake')
     emberBonusPct += sumSocketedGemBonusPct(item.sockets, 'ember')
     irisBonusPct += sumSocketedGemBonusPct(item.sockets, 'iris')
+    bastionBonusPct += sumSocketedGemBonusPct(item.sockets, 'bastion')
   }
 
   const derived = computeDerivedStats(attributes, equipmentBonus)
@@ -1068,9 +1133,61 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const effectiveHp = monster.max_hp * RARE_BLENDED_HP_FACTOR
   const dps = (hitChance * expectedDamagePerHit) / attackIntervalMs
   const timeToKillMs = effectiveHp / dps
-  const cycleTimeMs = timeToKillMs + RESPAWN_GAP_MS
+
+  // Player-survivability cycle model (2026-08-29, bug fix reported by the
+  // user — a Wuxia stuck dealing no damage against Ridgeback Simian [MP
+  // exhausted, blocked client-side] kept getting gold/EXP/kill credit every
+  // ~4s resolve anyway, and separately a real "2x kills" toast fired the
+  // instant a death timer ended, crediting a window the character spent
+  // entirely dead). Root cause: cycleTimeMs below used to be just
+  // timeToKillMs + RESPAWN_GAP_MS, which assumes the player is continuously,
+  // successfully attacking for the whole window bar the fixed respawn gap —
+  // it had no notion of the player's own HP or the 10s knockout lockout
+  // (KNOCKOUT_LOCKOUT_MS, see useCombatStore.ts's reviveAt) at all, since
+  // incoming damage/player HP had never been simulated server-side (a
+  // previously-accepted gap). If the character can't reliably out-damage the
+  // monster before the monster kills it first, real play looks like repeated
+  // (fight until knocked out) -> (10s lockout) -> revive cycles, most of
+  // which is dead time — but any resolve call whose elapsedMs window spans
+  // one of those cycles used to bill the whole thing as active combat.
+  //
+  // Fixed by deterministically estimating whether the character can survive
+  // long enough to land a kill within one life, using the same closed-form
+  // EV approach as the rest of this model (no RNG re-added): incomingDps is
+  // derived from the monster's own attack_damage and the character's
+  // physicalDefense/dodge (mirrors useCombatStore.runTick's incoming-damage
+  // branch, ported server-side for the first time), giving
+  // timeToPlayerDeathMs = playerMaxHp / incomingDps. If that's shorter than
+  // timeToKillMs, the character statistically loses the fight before
+  // finishing it — livesNeeded is how many death-interrupted attempts it
+  // actually takes to land effectiveHp worth of cumulative damage, each of
+  // the first (livesNeeded - 1) followed by a real KNOCKOUT_LOCKOUT_MS pause
+  // (the last life ends in the kill itself, no trailing knockout).
+  // cycleTimeMs grows to include those extra pauses; total *active*
+  // attacking time (timeToKillMs) does not, so activeAttackFraction below
+  // correctly shrinks too — which also stops the MP-gating block just below
+  // from over-estimating mana spent during a death spiral, not just
+  // gold/EXP/kills. Enchantress "Bless" (item_instances.enchant.blessPct)
+  // isn't folded into damageReductionPct here — the gather query doesn't
+  // select `enchant` — a small, disclosed gap (a Bless-geared character's
+  // real survival odds are slightly better than this estimates).
+  const effectivePlayerDefense = Math.round(
+    derived.physicalDefense * PLAYER_DEFENSE_MULTIPLIER_BY_COLOR[getLevelDiffColor(character.level, monster.level)],
+  )
+  const incomingHitChance = 1 - Math.min(derived.dodge * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
+  const damageReductionPct = bastionBonusPct
+  const expectedIncomingDamagePerHit = applyDamageReduction(
+    resolvePhysicalDamage(monster.attack_damage, effectivePlayerDefense),
+    damageReductionPct,
+  )
+  const incomingDps = (incomingHitChance * expectedIncomingDamagePerHit) / MONSTER_ATTACK_INTERVAL_MS
+  const playerMaxHp = derived.hp
+  const timeToPlayerDeathMs = incomingDps > 0 ? playerMaxHp / incomingDps : Infinity
+  const livesNeeded =
+    timeToKillMs <= timeToPlayerDeathMs ? 1 : Math.max(1, Math.ceil(timeToKillMs / timeToPlayerDeathMs))
+  const cycleTimeMs = timeToKillMs + (livesNeeded - 1) * KNOCKOUT_LOCKOUT_MS + RESPAWN_GAP_MS
   // Fraction of a full kill cycle actually spent attacking rather than
-  // waiting out the respawn gap — always in (0, 1].
+  // sitting out the respawn gap or a knockout lockout — always in (0, 1].
   const activeAttackFraction = timeToKillMs / cycleTimeMs
 
   // Hunter must have the Quiver equipped to attack at all (confirmed with the

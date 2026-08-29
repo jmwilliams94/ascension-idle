@@ -2,6 +2,8 @@ import { useEffect, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useKillRewardToastStore, type KillRewardToastEntry } from '../game/hud/useKillRewardToastStore'
+import { useTabStore } from '../game/hud/useTabStore'
+import { useCombatModeStore } from '../game/combat/useCombatModeStore'
 
 const TOAST_DISPLAY_MS = 2200
 
@@ -42,8 +44,7 @@ function KillRewardToastItem({ toast }: { toast: KillRewardToastEntry }) {
 }
 
 // Small centered "kill confirmed" toast (see useKillRewardToastStore.ts's own
-// comment for the full rationale/timing) — a portaled, fixed overlay so it
-// reads the same no matter which tab triggered it, dead-centered on screen
+// comment for the full rationale/timing), dead-centered on screen
 // (2026-08-29, requested by the user — was previously top-32) via
 // `inset-0 flex items-center justify-center` rather than LevelUpBanner's own
 // top-anchored `inset-x-0 top-20`. Uses the app's own tinted chamfered chip
@@ -51,8 +52,20 @@ function KillRewardToastItem({ toast }: { toast: KillRewardToastEntry }) {
 // plain rounded-lg/rounded-full pill, matching the "our styling" ask — same
 // primitive VIP's own badge uses for its violet tint. pointer-events-none on
 // the wrapper, same "never intercepts clicks" precedent as GainToastHost.
+// Only rendered while actually viewing the Combat tab's Hunting sub-mode
+// (2026-08-29, requested by the user) — a background AFK resolve can still
+// fire a toast-worthy response while the player is on another tab entirely
+// (Forge, Marketplace, etc.) or on Mining/Events within Combat, which read
+// as spammy/irrelevant there. Toasts queued while hidden are simply dropped
+// (the store still clears them via their own timeout), not queued for later.
 export default function KillRewardToast() {
   const toasts = useKillRewardToastStore((state) => state.toasts)
+  const activeTab = useTabStore((state) => state.activeTab)
+  const combatMode = useCombatModeStore((state) => state.mode)
+
+  if (activeTab !== 'combat' || combatMode !== 'hunting') {
+    return null
+  }
 
   return createPortal(
     <div className="pointer-events-none fixed inset-0 z-[75] flex flex-col items-center justify-center gap-1.5 px-4">
