@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import InventoryPanel from './InventoryPanel'
 import { AscensionCard } from './ui/AscensionCard'
@@ -130,16 +130,65 @@ export function DeadOverlay({
   )
 }
 
+// Fighting-game-style "damage trail" (2026-11, requested by the user —
+// "like Tekken... you see the brief yellow before it collapses to the new
+// HP"). Holds an amber chunk at the pre-hit width for DAMAGE_TRAIL_HOLD_MS,
+// then eases it down to the real value — only on a decrease; a heal just
+// snaps the trail straight to the new (higher) value, no chunk.
+const DAMAGE_TRAIL_HOLD_MS = 400
+const DAMAGE_TRAIL_CATCHUP_S = 0.5
+
 // Exported — also reused by WorldBossCard.tsx for the boss's own HP bar.
 export function HpBar({ current, max, barColorClass = 'bg-emerald-500' }: { current: number; max: number; barColorClass?: string }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0
+  const [trailPct, setTrailPct] = useState(pct)
+  // High-water mark the trail is currently pinned to — read/written only
+  // inside the effect below, so a hit landing mid-hold (before the previous
+  // catch-up timer fires) correctly extends the same hold against the
+  // latest pct instead of stacking a second, competing animation.
+  const trailPctRef = useRef(pct)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (pct >= trailPctRef.current) {
+      // Heal, or nothing left to chase down — snap immediately, no trail.
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
+      trailPctRef.current = pct
+      setTrailPct(pct)
+      return
+    }
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+    timeoutRef.current = setTimeout(() => {
+      trailPctRef.current = pct
+      setTrailPct(pct)
+      timeoutRef.current = null
+    }, DAMAGE_TRAIL_HOLD_MS)
+  }, [pct])
+
+  useEffect(
+    () => () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    },
+    [],
+  )
 
   return (
-    <div className="h-3 w-full overflow-hidden rounded-full bg-slate-800">
+    <div className="relative h-3 w-full overflow-hidden rounded-full bg-slate-800">
       <motion.div
-        className={`h-full rounded-full ${barColorClass}`}
+        className="absolute inset-y-0 left-0 h-full rounded-full bg-amber-400"
+        animate={{ width: `${trailPct}%` }}
+        transition={{ duration: DAMAGE_TRAIL_CATCHUP_S, ease: 'easeOut' }}
+      />
+      <motion.div
+        className={`absolute inset-y-0 left-0 h-full rounded-full ${barColorClass}`}
         animate={{ width: `${pct}%` }}
-        transition={{ type: 'spring', stiffness: 140, damping: 22 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 26 }}
       />
     </div>
   )

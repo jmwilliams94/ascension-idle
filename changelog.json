@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.117.3",
+    "date": "2026-08-29",
+    "changes": [
+      "HP (and Mana) bars now show a brief 'damage trail' when hit — a fighting-game-style flash of the health you just lost before it settles to the new total"
+    ]
+  },
+  {
     "version": "1.117.2",
     "date": "2026-08-29",
     "changes": [
