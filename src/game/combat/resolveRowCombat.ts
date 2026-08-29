@@ -9,6 +9,7 @@ import { usePetToastStore } from '../achievements/usePetToastStore'
 import { useKillRewardToastStore } from '../hud/useKillRewardToastStore'
 import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
 import { useRowCombatStore, type ServerRowSlot } from './useRowCombatStore'
+import { serializeByKey } from './serializeByKey'
 
 // Row Combat's sole grantor of real rewards — mirrors resolveCombat.ts's own
 // role/shape exactly, but for resolve-row-combat. Always effectively "live
@@ -34,7 +35,20 @@ export interface ResolveRowCombatResult {
   killCountUpdates?: { monster_id: string; character_kills: number | string; account_kills: number | string }[]
 }
 
-export async function resolveRowCombat(
+// Serialized per character — mirrors resolveCombat.ts's own fix, see
+// serializeByKey.ts for the full race this closes. Queueing rather than
+// dropping an overlapping call matters here specifically because
+// RowCombatPanel.tsx awaits this directly for a Multi-Shot button click —
+// a "skip if busy" guard would silently eat that click if the periodic
+// engine tick happened to be in flight at the same moment.
+export function resolveRowCombat(
+  characterId: string,
+  options?: { fireMultiShot?: boolean },
+): Promise<ResolveRowCombatResult | null> {
+  return serializeByKey(characterId, () => resolveRowCombatInner(characterId, options))
+}
+
+async function resolveRowCombatInner(
   characterId: string,
   options?: { fireMultiShot?: boolean },
 ): Promise<ResolveRowCombatResult | null> {

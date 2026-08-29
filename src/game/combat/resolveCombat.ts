@@ -10,6 +10,7 @@ import { usePetToastStore } from '../achievements/usePetToastStore'
 import { useKillRewardToastStore } from '../hud/useKillRewardToastStore'
 import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
 import { useCombatStore } from './useCombatStore'
+import { serializeByKey } from './serializeByKey'
 
 // The single client-side entry point into the resolve-combat Edge Function —
 // see supabase/functions/resolve-combat/index.ts and CLAUDE.md's Loot section.
@@ -65,7 +66,14 @@ export interface ResolveCombatResult {
   durabilityUpdates?: { id: string; durability: number }[]
 }
 
-export async function resolveCombat(characterId: string, mode: ResolveCombatMode): Promise<ResolveCombatResult | null> {
+// Serialized per character (see serializeByKey.ts for the full race this
+// closes — resolve-combat's kills-delta race could otherwise double-credit
+// gold/EXP/kill-count within a single visible respawn gap).
+export function resolveCombat(characterId: string, mode: ResolveCombatMode): Promise<ResolveCombatResult | null> {
+  return serializeByKey(characterId, () => resolveCombatInner(characterId, mode))
+}
+
+async function resolveCombatInner(characterId: string, mode: ResolveCombatMode): Promise<ResolveCombatResult | null> {
   const { data, error } = await supabase.functions.invoke('resolve-combat', { body: { characterId, mode } })
 
   if (error) {

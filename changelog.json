@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.118.17",
+    "date": "2026-08-29",
+    "changes": [
+      "New Wuxia characters now start with Thunder equipped and a few Mana potions",
+      "Fixed a bug where gold/EXP/kill count could be granted twice for the same stretch of combat"
+    ]
+  },
+  {
     "version": "1.118.16",
     "date": "2026-08-29",
     "changes": [
