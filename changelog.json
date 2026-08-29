@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.119.0",
+    "date": "2026-08-29",
+    "changes": [
+      "Rescaled gear prices: weapons now sell for 100-25,000 gold and armor for 250-75,000 gold across levels 1-130 (Chest is the most valuable slot, then Head, Ring, Necklace, and Boots)",
+      "Selling an item now pays less if it's worn down — full durability gets full price",
+      "Newly dropped gear now starts with a random amount of durability instead of always full",
+      "Monster drops are no longer limited to your own class or exact level — any kill can now drop gear from a wide range of classes and levels below it",
+      "Kill gold now scales from 10 at level 1 up to about 250 at level 129"
+    ]
+  },
+  {
     "version": "1.118.19",
     "date": "2026-08-29",
     "changes": [

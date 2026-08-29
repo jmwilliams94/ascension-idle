@@ -1232,21 +1232,23 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     let killsProcessed = 0
 
     if (wholeKillsThisWindow > 0) {
-      // Level-appropriate selection (confirmed with the user, 2026-07-30):
-      // picks a random gear family available to the character's class
-      // (excluding the standalone 'sword' family and 'quiver'/'lucky-bow'/
-      // 'money-bag'/'gem-bag'/'promotion-gear'/'promotion-material'), then
-      // the template in that family whose
-      // required_level is closest to the monster's own level. Done as a
-      // single indexed SQL query now (pick_drop_template, see the
-      // migration) instead of transferring the whole eligible-template
-      // list over the wire — called only when a drop roll actually
-      // succeeds below (rare), not once per resolve. Mirrors
-      // pickLevelAppropriateTemplate in useInventoryStore.ts — must stay
-      // in sync, same pattern as this file's other client/server mirrors.
+      // Level-ranged, class-agnostic selection (2026-08-29, requested by the
+      // user — supersedes the earlier "own class only, single closest
+      // level" version): picks a random gear family (excluding the
+      // standalone 'sword' family and 'quiver'/'lucky-bow'/'money-bag'/
+      // 'gem-bag'/'promotion-gear'/'promotion-material'), then a random
+      // template in that family whose required_level falls within
+      // [monster.level - 40, monster.level] (floored at 1) — no
+      // required_class filter, so any class's gear can drop. Done as a
+      // single indexed SQL query (pick_drop_template, see
+      // 20261110030000_class_agnostic_level_range_drops.sql) instead of
+      // transferring the whole eligible-template list over the wire —
+      // called only when a drop roll actually succeeds below (rare), not
+      // once per resolve. Mirrors pickLevelAppropriateTemplate in
+      // useInventoryStore.ts — must stay in sync, same pattern as this
+      // file's other client/server mirrors.
       const pickDropTemplate = async (): Promise<{ id: string; required_level: number; slot_type: string } | null> => {
         const { data, error } = await db.rpc('pick_drop_template', {
-          p_class: character.class,
           p_level: monster.level,
         })
         if (error) {

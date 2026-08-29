@@ -7,6 +7,7 @@ import TooltipActionPopover from './TooltipActionPopover'
 import { Button } from './ui/Button'
 import {
   buildGearTooltip,
+  computeMaxDurability,
   formatBaseStats,
   formatItemDisplayName,
   formatItemLevel,
@@ -1041,7 +1042,9 @@ export default function InventoryPanel({
 
   const normalJunkTotal = normalJunkItems.reduce((sum, item) => {
     const template = templates.find((entry) => entry.id === item.template_id)
-    return sum + previewSellPrice(template?.price ?? 0, item.quality_tier)
+    const maxDurability = template ? computeMaxDurability(template.slot_type, template.required_level) : null
+    const durabilityFraction = maxDurability ? Math.min(1, (item.durability ?? 0) / maxDurability) : 1
+    return sum + previewSellPrice(template?.price ?? 0, item.quality_tier, durabilityFraction)
   }, 0)
 
   const sellAllNormal = async () => {
@@ -1898,7 +1901,14 @@ export default function InventoryPanel({
         !equipPopoverEnabled &&
         !enableBankDeposit &&
         selectedTemplate?.item_family !== 'money-bag' &&
-        selectedTemplate?.item_family !== 'gem-bag' && (
+        selectedTemplate?.item_family !== 'gem-bag' && (() => {
+        const selectedMaxDurability = selectedTemplate
+          ? computeMaxDurability(selectedTemplate.slot_type, selectedTemplate.required_level)
+          : null
+        const selectedDurabilityFraction = selectedMaxDurability
+          ? Math.min(1, (selectedItem.durability ?? 0) / selectedMaxDurability)
+          : 1
+        return (
         <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
           <div className="flex items-center gap-3">
             <div
@@ -1963,12 +1973,13 @@ export default function InventoryPanel({
                 ? 'Locked'
                 : sellBusy
                   ? 'Selling…'
-                  : `Sell (${previewSellPrice(selectedTemplate?.price ?? 0, selectedItem.quality_tier)} gold)`}
+                  : `Sell (${previewSellPrice(selectedTemplate?.price ?? 0, selectedItem.quality_tier, selectedDurabilityFraction)} gold)`}
             </Button>
           )}
           {sellError && <p className="mt-2 text-xs text-amber-400">{sellError}</p>}
         </div>
-      )}
+        )
+      })()}
 
       {equipPopoverEnabled && selectedItem && popoverAnchorRect && (
         <GearEquipPopover

@@ -295,13 +295,15 @@ export function computeGearScoreFromSnapshots(
 }
 
 // Client-side mirror of sell_item's SQL formula (see
-// 20260730060000_add_sell_item.sql) — must stay in sync, same pattern as
-// every other Forge/Shop cost preview in this codebase. PLACEHOLDER: half of
-// the template's buy price, scaled by quality — unresolved per CLAUDE.md like
-// the rest of this economy, and deliberately ignores composition level for
-// now (a minimal first pass, not a full item-valuation redesign).
-export function previewSellPrice(price: number, qualityTier: string): number {
-  return Math.round(price * 0.5 * (QUALITY_STAT_MULTIPLIERS[qualityTier] ?? 1))
+// 20261110010000_sell_price_durability_scaling.sql) — must stay in sync,
+// same pattern as every other Forge/Shop cost preview in this codebase: half
+// of the template's buy price, scaled by quality and by how much durability
+// the item has left (durabilityFraction, 1 = full — the default, since most
+// callers don't have real durability data on hand). Deliberately ignores
+// composition level for now (a minimal first pass, not a full
+// item-valuation redesign).
+export function previewSellPrice(price: number, qualityTier: string, durabilityFraction = 1): number {
+  return Math.round(price * 0.5 * (QUALITY_STAT_MULTIPLIERS[qualityTier] ?? 1) * durabilityFraction)
 }
 
 // Client-side mirror of salvage_item's SQL case statement (see

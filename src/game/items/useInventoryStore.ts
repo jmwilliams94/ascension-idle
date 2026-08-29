@@ -9,7 +9,6 @@ import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 import { useItemTemplatesStore, type ItemTemplate } from './useItemTemplatesStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
-import { useCharacterStore } from '../stats/useCharacterStore'
 import { useGemStore } from './useGemStore'
 import { useMarketplaceStore } from '../marketplace/useMarketplaceStore'
 import { useMailStore } from '../marketplace/useMailStore'
@@ -75,36 +74,38 @@ export interface ItemInstance {
 // about how often something was actually found.
 const DROP_CHANCE = 1 / 150
 
-// Level-appropriate drop selection (confirmed with the user, 2026-07-30) —
-// supersedes the earlier "always the first template" placeholder. Picks a
-// random gear family available to the character's class (excluding the
-// standalone 'sword' family — the legacy Wooden Sword freebie isn't meant to
-// drop from monsters — and 'quiver', a starter/shop-only item for the same
-// reason), then the template in that family whose required_level is closest
-// to the monster's own level. Mirrored server-side in
-// supabase/functions/resolve-combat (the actual grant), since Deno can't
-// import this file directly — must stay in sync, same pattern as
+// Level-ranged, class-agnostic drop selection (2026-08-29, requested by the
+// user — supersedes the earlier "own class only, single closest level"
+// version). Picks a random gear family (excluding the standalone 'sword'
+// family — the legacy Wooden Sword freebie isn't meant to drop from
+// monsters — and 'quiver', a starter/shop-only item for the same reason),
+// then a random template in that family within [monsterLevel-40,
+// monsterLevel] (floored at 1) — no required_class filter at all, so a kill
+// can drop any class's gear. Equip-time class gating is untouched (still
+// enforced wherever a template is actually equipped/shown in the Shop). A
+// level-129/130 kill can thus drop gear as low as level ~90; every zone/
+// level follows the same rule. Mirrored server-side in
+// supabase/functions/resolve-combat (the actual grant, via pick_drop_template
+// — see 20261110030000_class_agnostic_level_range_drops.sql), since Deno
+// can't import this file directly — must stay in sync, same pattern as
 // combatResolver.ts's other server/client mirrors.
 export const NON_DROPPABLE_FAMILIES = ['sword', 'quiver', 'lucky-bow', 'money-bag', 'gem-bag', 'promotion-gear', 'promotion-material', 'pickaxe', 'ore']
 
-export function pickLevelAppropriateTemplate(templates: ItemTemplate[], monsterLevel: number, classId: string): ItemTemplate | null {
-  const candidates = templates.filter(
-    (template) =>
-      !NON_DROPPABLE_FAMILIES.includes(template.item_family ?? '') &&
-      (template.required_class === null || template.required_class === classId),
-  )
+export function pickLevelAppropriateTemplate(templates: ItemTemplate[], monsterLevel: number): ItemTemplate | null {
+  const droppable = templates.filter((template) => !NON_DROPPABLE_FAMILIES.includes(template.item_family ?? ''))
+  const minLevel = Math.max(1, monsterLevel - 40)
+  const inRange = droppable.filter((template) => template.required_level >= minLevel && template.required_level <= monsterLevel)
+  const pool = inRange.length > 0 ? inRange : droppable
 
-  if (candidates.length === 0) {
+  if (pool.length === 0) {
     return null
   }
 
-  const families = [...new Set(candidates.map((template) => template.item_family))]
+  const families = [...new Set(pool.map((template) => template.item_family))]
   const family = families[Math.floor(Math.random() * families.length)]
-  const inFamily = candidates.filter((template) => template.item_family === family)
+  const inFamily = pool.filter((template) => template.item_family === family)
 
-  return inFamily.reduce((closest, template) =>
-    Math.abs(template.required_level - monsterLevel) < Math.abs(closest.required_level - monsterLevel) ? template : closest,
-  )
+  return inFamily[Math.floor(Math.random() * inFamily.length)]
 }
 
 // Fixed for now — the real scaling-by-level model (30 up to 40 slots, see CLAUDE.md's
@@ -291,7 +292,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       return null
     }
 
-    const template = pickLevelAppropriateTemplate(templates, monsterLevel, useCharacterStore.getState().selectedClassId)
+    const template = pickLevelAppropriateTemplate(templates, monsterLevel)
     return template ? { template } : null
   },
 

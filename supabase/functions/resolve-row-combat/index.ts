@@ -779,7 +779,7 @@ async function handleResolveRowCombat(req: Request): Promise<Response> {
     const accountDropMultiplier = accountDropMultiplierForZone(type.zone_id)
 
     if (Math.random() < DROP_CHANCE) {
-      const { data: dropped } = await db.rpc('pick_drop_template', { p_class: character.class, p_level: type.level })
+      const { data: dropped } = await db.rpc('pick_drop_template', { p_level: type.level })
       const template = dropped as { id: string; required_level: number; slot_type: string } | null
       if (template) {
         if (occupied < INVENTORY_SLOT_CAP) {
