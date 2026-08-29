@@ -41,9 +41,26 @@ export default function CombatEngine() {
     // a saved zone/monster selection on load, since isFighting is still false
     // at that point (GameShell only calls start() after its own load effect
     // and the offline-progress check both finish).
+    //
+    // Also skips while no monster is actually present — a respawn gap
+    // (respawnReadyAt > 0) or a knockout (reviveAt > 0), the same "neither
+    // side acts" states runTick itself gates on (v1.118.18, bug fix reported
+    // by the user: "I got experience/gold toast 1 second after killing the
+    // enemy and also 2 seconds before a new one spawned"). resolve-combat's
+    // reward math is a continuous elapsed-time average (see
+    // CLAUDE.combat-and-loot.md's cycle-time model) — it has no notion of
+    // "a monster is currently up," so a periodic tick landing mid-gap can
+    // legitimately cross a whole-kill threshold purely from background
+    // clock time elapsing, showing a second reward toast with nothing new
+    // having happened on screen. Skipping here doesn't lose anything —
+    // combat_last_resolved_at simply keeps accumulating unclaimed until the
+    // next call that isn't mid-gap, and the kill trigger further down calls
+    // resolveCombat directly (bypassing this same gate) so a real kill is
+    // never delayed by it.
     const resolve = () => {
       const characterId = useActiveCharacterStore.getState().characterId
-      if (characterId && useCombatStore.getState().isFighting) {
+      const combatState = useCombatStore.getState()
+      if (characterId && combatState.isFighting && combatState.respawnReadyAt === 0 && combatState.reviveAt === 0) {
         void resolveCombat(characterId, 'live')
       }
     }
@@ -84,10 +101,17 @@ export default function CombatEngine() {
     // flips from 0 to a real timestamp at exactly that visual moment (see
     // its own field comment) — triggering a resolve right then ties the two
     // together as tightly as this architecture allows, without reverting to
-    // a much shorter (egress-costly) polling interval.
+    // a much shorter (egress-costly) polling interval. Deliberately bypasses
+    // resolve()'s own respawnReadyAt gate above (calls resolveCombat
+    // directly, same pattern as the stop trigger below) — by the time this
+    // fires, respawnReadyAt has already flipped to nonzero, so resolve()
+    // would always skip it.
     const unsubscribeRespawn = useCombatStore.subscribe((state, prevState) => {
       if (state.respawnReadyAt > 0 && prevState.respawnReadyAt === 0) {
-        resolve()
+        const characterId = useActiveCharacterStore.getState().characterId
+        if (characterId) {
+          void resolveCombat(characterId, 'live')
+        }
       }
     })
     // Deliberately bypasses resolve()'s own isFighting guard above — by the

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.118.18",
+    "date": "2026-08-29",
+    "changes": [
+      "Fixed gold/EXP sometimes being confirmed a second time while waiting for the next monster to spawn"
+    ]
+  },
+  {
     "version": "1.118.17",
     "date": "2026-08-29",
     "changes": [
