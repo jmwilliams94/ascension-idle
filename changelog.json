@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.120.0",
+    "date": "2026-08-30",
+    "changes": [
+      "Every secondary/Cancel-style button app-wide is now bold and uppercase like the gold Confirm/CTA buttons, just in steel-grey instead of gold — previously plain and mixed-case, which looked inconsistent next to a bold CTA"
+    ]
+  },
+  {
     "version": "1.119.9",
     "date": "2026-08-29",
     "changes": [
