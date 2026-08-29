@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.120.1",
+    "date": "2026-08-30",
+    "changes": [
+      "Mana potions now restore much more MP (75/140/200/350/500/750/1000/1500 across the 8 tiers, up from 8-130) to match how large MP pools get at higher levels"
+    ]
+  },
+  {
     "version": "1.120.0",
     "date": "2026-08-30",
     "changes": [
