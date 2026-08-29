@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import CombatEngine from '../game/combat/CombatEngine'
 import RowCombatEngine from '../game/combat/RowCombatEngine'
 import MiningEngine from '../game/mining/MiningEngine'
@@ -31,7 +31,6 @@ import VipSettingsModal from './VipSettingsModal'
 import VipAutomationEngine from '../game/vip/VipAutomationEngine'
 import SalvageRevealToast from './SalvageRevealToast'
 import FireworkOverlay from './FireworkOverlay'
-import FxLayer from '../game/fx/FxLayer'
 import LevelUpBanner from './LevelUpBanner'
 import UnclaimedLootBadge from './UnclaimedLootBadge'
 import SettingsModal from './SettingsModal'
@@ -66,6 +65,19 @@ import { useMineStore } from '../game/mining/useMineStore'
 import { useMiningStore } from '../game/mining/useMiningStore'
 import { useIdleModeStore } from '../game/mining/useIdleModeStore'
 import { runOfflineMiningProgressCheck } from '../game/mining/offlineMiningProgress'
+
+// Lazy (2026-11, bug fix) — WarpLayer pulls in @react-three/fiber + three
+// directly (the same heavy toolchain RenderingTestPanel.tsx's own lazy-load
+// comment already warns about), and FxLayer's effects pull in html-to-image
+// via screenCapture.ts. Both were previously imported eagerly here despite
+// being inert until a Settings > FX preview is actually triggered (not wired
+// to any real gameplay trigger yet), pushing the main bundle to 2.11MB and
+// hard-failing the production build outright (vite-plugin-pwa's Workbox
+// precache manifest has a hard 2MiB-per-asset limit, not just a size
+// warning). A `null` Suspense fallback is fine — both are invisible overlay
+// layers with nothing to show while their code loads.
+const FxLayer = lazy(() => import('../game/fx/FxLayer'))
+const WarpLayer = lazy(() => import('../game/fx/WarpLayer'))
 
 // Rendered once a character is active (see App.tsx) — everything that was the whole
 // app before the character-slots restructure. Account-level concerns (What's New,
@@ -547,7 +559,10 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <MoneyBagRevealModal />
       <SalvageRevealToast />
       <FireworkOverlay />
-      <FxLayer />
+      <Suspense fallback={null}>
+        <WarpLayer />
+        <FxLayer />
+      </Suspense>
       <LevelUpBanner />
       <UnclaimedLootBadge />
       <GainToastHost />

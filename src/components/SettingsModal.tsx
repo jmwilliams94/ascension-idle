@@ -6,7 +6,6 @@ import { useSuggestionStore, countOpenSuggestions } from '../game/suggestions/us
 import AdminMailSection from './AdminMailSection'
 import ChangelogEntries from './ChangelogEntries'
 import ItemEffectGallery from './ItemEffectGallery'
-import FxTestPanel from './FxTestPanel'
 import PlanPanel from './PlanPanel'
 import SuggestionsPanel from './SuggestionsPanel'
 import BugReportPanel from './BugReportPanel'
@@ -21,6 +20,11 @@ import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 // dev/debug tool, not gameplay UI, so no one should pay for it unless they
 // open it.
 const RenderingTestPanel = lazy(() => import('./RenderingTestPanel'))
+// Lazy for the same reason (2026-11, bug fix — this tab was added eagerly
+// imported, pushing the main chunk to 2.11MB and hard-failing the build the
+// same way the comment above warns about; caught while investigating an
+// unrelated deploy failure).
+const FxTestPanel = lazy(() => import('./FxTestPanel'))
 
 interface SettingsSection {
   id: string
@@ -60,7 +64,15 @@ export default function SettingsModal({ characterId, onClose }: { characterId: s
   // ToggleRow.tsx) was deleted rather than left as dead UI.
   const sections: SettingsSection[] = [
     { id: 'effects', label: 'Item Effects', content: <ItemEffectGallery /> },
-    { id: 'fx', label: 'FX', content: <FxTestPanel /> },
+    {
+      id: 'fx',
+      label: 'FX',
+      content: (
+        <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
+          <FxTestPanel />
+        </Suspense>
+      ),
+    },
     { id: 'changelog', label: 'Changelog', content: <ChangelogEntries entries={changelogNewestFirst()} /> },
     { id: 'plans', label: 'Plans', content: <PlanPanel /> },
     {
