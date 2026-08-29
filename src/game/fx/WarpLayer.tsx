@@ -61,6 +61,11 @@ function WarpMesh({ warp }: { warp: ActiveWarp }) {
     tex.colorSpace = THREE.SRGBColorSpace
     tex.minFilter = THREE.LinearFilter
     tex.magFilter = THREE.LinearFilter
+    // The plane always shows this at native 1:1 scale (full-screen quad,
+    // captured canvas ~= viewport size) -- mipmaps only pay off when a
+    // texture is minified, so generating a full chain here is pure wasted
+    // GPU work on every single trigger.
+    tex.generateMipmaps = false
     return tex
   }, [warp.canvas])
 

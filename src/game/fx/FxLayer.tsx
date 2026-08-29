@@ -22,10 +22,16 @@ import type { FxEffect } from './effects/types'
 // loop via plain FxEffect objects (update/draw, see effects/types.ts) held
 // in a ref array -- never in React state -- so a live effect never causes a
 // React re-render, and this component itself only re-renders if remounted.
-// New requests are drained from useFxStore's queue each frame via
-// getState/setState rather than a subscription, since polling once per RAF
-// tick is simpler than wiring a subscribe callback and costs nothing extra
-// (the loop is already running every frame regardless).
+//
+// The loop only actually runs while there's something to draw -- it stops
+// itself (no further requestAnimationFrame call) the moment `live` empties
+// out, and a useFxStore subscription wakes it back up on the next trigger()
+// call. An earlier version rescheduled unconditionally forever, running a
+// full-screen clearRect at 60fps for this component's entire mounted
+// lifetime (i.e. the whole time a player has the game open) even with zero
+// active effects -- a real, continuous, always-on cost competing with
+// combat/animation work for no reason, reported by the user as general FPS
+// issues that predated any of the FX actually firing.
 export default function FxLayer() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -58,6 +64,7 @@ export default function FxLayer() {
     const live: FxEffect[] = []
     let lastTime = performance.now()
     let raf = 0
+    let running = false
 
     const tick = (time: number) => {
       const dt = Math.min((time - lastTime) / 1000, 0.05)
@@ -81,12 +88,40 @@ export default function FxLayer() {
         live[i].draw(ctx, width, height)
       }
 
+      if (live.length > 0) {
+        raf = requestAnimationFrame(tick)
+      } else {
+        running = false
+      }
+    }
+
+    const ensureRunning = () => {
+      if (running) {
+        return
+      }
+      running = true
+      lastTime = performance.now()
       raf = requestAnimationFrame(tick)
     }
-    raf = requestAnimationFrame(tick)
+
+    // Covers both a fresh trigger() arriving while idle (this fires
+    // synchronously inside trigger()'s own set() call) and the loop already
+    // running (a no-op there, since `running` is already true).
+    const unsubscribe = useFxStore.subscribe((state) => {
+      if (state.queue.length > 0) {
+        ensureRunning()
+      }
+    })
+
+    // Covers whatever's already queued (or mid-flight, on a HMR remount) at
+    // mount time.
+    if (useFxStore.getState().queue.length > 0) {
+      ensureRunning()
+    }
 
     return () => {
       cancelAnimationFrame(raf)
+      unsubscribe()
       window.removeEventListener('resize', resize)
     }
   }, [])

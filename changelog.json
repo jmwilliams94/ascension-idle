@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.118.4",
+    "date": "2026-08-29",
+    "changes": [
+      "Fixed the FX preview canvas silently running a full-screen redraw loop at all times (even completely idle), and reduced the Comet Impact effect's cost (cheaper glow rendering, a lighter/bounded screen capture for the shockwave) — should meaningfully help frame rate, in Settings > FX and in general"
+    ]
+  },
+  {
     "version": "1.118.3",
     "date": "2026-08-29",
     "changes": [

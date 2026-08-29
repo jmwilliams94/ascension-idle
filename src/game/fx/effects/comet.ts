@@ -79,12 +79,19 @@ export function createComet(width: number, height: number, seed: number, options
         for (let i = 0; i < trail.length; i += 1) {
           const point = trail[i]
           const t = 1 - i / trail.length
+          const radius = 3 + t * 5
+          // A radial gradient standing in for shadowBlur's glow -- shadowBlur
+          // is a real per-pixel blur the browser recomputes every draw call,
+          // expensive enough with ~14 of these per frame during flight that
+          // it was a likely source of the FPS drop reported before the warp
+          // shader even existed. A gradient is just a fill, no blur pass.
           ctx.globalAlpha = t * 0.8
-          ctx.fillStyle = COLOR
-          ctx.shadowColor = COLOR
-          ctx.shadowBlur = 14
+          const glow = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, radius * 2.5)
+          glow.addColorStop(0, COLOR)
+          glow.addColorStop(1, 'transparent')
+          ctx.fillStyle = glow
           ctx.beginPath()
-          ctx.arc(point.x, point.y, 3 + t * 5, 0, Math.PI * 2)
+          ctx.arc(point.x, point.y, radius * 2.5, 0, Math.PI * 2)
           ctx.fill()
         }
       } else {
@@ -96,13 +103,21 @@ export function createComet(width: number, height: number, seed: number, options
           if (ringT <= 0 || ringT >= 1) {
             continue
           }
-          ctx.globalAlpha = (1 - ringT) * 0.5
+          // Same shadowBlur-avoidance as the trail above: a crisp core
+          // stroke plus a wider, fainter one underneath fakes a soft glow
+          // edge for a fraction of the cost.
+          const ringRadius = ringT * maxRadius
+          const baseAlpha = (1 - ringT) * 0.5
+          ctx.globalAlpha = baseAlpha * 0.4
           ctx.strokeStyle = COLOR
-          ctx.lineWidth = 3
-          ctx.shadowColor = COLOR
-          ctx.shadowBlur = 10
+          ctx.lineWidth = 9
           ctx.beginPath()
-          ctx.arc(targetX, targetY, ringT * maxRadius, 0, Math.PI * 2)
+          ctx.arc(targetX, targetY, ringRadius, 0, Math.PI * 2)
+          ctx.stroke()
+          ctx.globalAlpha = baseAlpha
+          ctx.lineWidth = 3
+          ctx.beginPath()
+          ctx.arc(targetX, targetY, ringRadius, 0, Math.PI * 2)
           ctx.stroke()
         }
 
