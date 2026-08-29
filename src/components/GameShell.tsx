@@ -31,6 +31,7 @@ import VipSettingsModal from './VipSettingsModal'
 import VipAutomationEngine from '../game/vip/VipAutomationEngine'
 import SalvageRevealToast from './SalvageRevealToast'
 import FireworkOverlay from './FireworkOverlay'
+import FxLayer from '../game/fx/FxLayer'
 import LevelUpBanner from './LevelUpBanner'
 import UnclaimedLootBadge from './UnclaimedLootBadge'
 import SettingsModal from './SettingsModal'
@@ -546,6 +547,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <MoneyBagRevealModal />
       <SalvageRevealToast />
       <FireworkOverlay />
+      <FxLayer />
       <LevelUpBanner />
       <UnclaimedLootBadge />
       <GainToastHost />

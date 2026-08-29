@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.118.0",
+    "date": "2026-08-29",
+    "changes": [
+      "Added an FX preview tab (Settings > FX) for testing new full-screen effects — a lightning strike, a comet impact, and a screen-wide ripple pulse. Not wired to any real gameplay trigger yet, just for previewing"
+    ]
+  },
+  {
     "version": "1.117.6",
     "date": "2026-08-29",
     "changes": [

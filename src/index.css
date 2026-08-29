@@ -251,6 +251,40 @@ a,
   animation: effect-core-pulse 2.2s ease-in-out infinite;
 }
 
+/* FX layer screen-shake (2026-08-29) — driven by FxLayer.tsx's comet-impact
+   effect (see game/fx/effects/comet.ts), toggled on document.documentElement
+   directly rather than a React-managed class, since it's a one-shot fire-and
+   forget animation with no state to track. Transforming <html> creates a new
+   containing block for every position:fixed descendant for the animation's
+   duration (nav bar, HUD, modals, the FX canvas itself all shake with it) —
+   that's the intended "everything on screen shakes" look, but it's the same
+   fixed-positioning territory as the backdrop-blur iOS Safari bug (see
+   gotcha_backdrop_blur_mobile_nav_drift memory), so treat this as unverified
+   on a real device until it's actually wired into a live gameplay trigger. */
+@keyframes fx-screen-shake {
+  0% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(-6px, 3px);
+  }
+  40% {
+    transform: translate(5px, -4px);
+  }
+  60% {
+    transform: translate(-4px, 2px);
+  }
+  80% {
+    transform: translate(3px, -2px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+.fx-screen-shake {
+  animation: fx-screen-shake 0.35s ease-out;
+}
+
 /* Themed scrollbar (2026-08-07, confirmed with the user) — replaces the
    default chunky light-gray browser scrollbar (jarring against this game's
    near-black UI) with a slim, mostly-invisible track that only tints up on

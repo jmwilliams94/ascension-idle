@@ -6,6 +6,7 @@ import { useSuggestionStore, countOpenSuggestions } from '../game/suggestions/us
 import AdminMailSection from './AdminMailSection'
 import ChangelogEntries from './ChangelogEntries'
 import ItemEffectGallery from './ItemEffectGallery'
+import FxTestPanel from './FxTestPanel'
 import PlanPanel from './PlanPanel'
 import SuggestionsPanel from './SuggestionsPanel'
 import BugReportPanel from './BugReportPanel'
@@ -59,6 +60,7 @@ export default function SettingsModal({ characterId, onClose }: { characterId: s
   // ToggleRow.tsx) was deleted rather than left as dead UI.
   const sections: SettingsSection[] = [
     { id: 'effects', label: 'Item Effects', content: <ItemEffectGallery /> },
+    { id: 'fx', label: 'FX', content: <FxTestPanel /> },
     { id: 'changelog', label: 'Changelog', content: <ChangelogEntries entries={changelogNewestFirst()} /> },
     { id: 'plans', label: 'Plans', content: <PlanPanel /> },
     {
