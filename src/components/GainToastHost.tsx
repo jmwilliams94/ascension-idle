@@ -21,7 +21,7 @@ function GainToastItem({ toast }: { toast: GainToastEntry }) {
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 24 }}
       transition={{ duration: 0.2 }}
-      className="flex items-center gap-2 rounded-lg border bg-slate-900/95 px-3 py-1.5 text-xs font-medium text-slate-100 shadow-lg lg:backdrop-blur"
+      className="flex items-center gap-2 rounded-lg border bg-slate-900/95 px-3 py-1.5 text-xs font-medium text-slate-100 shadow-lg backdrop-blur will-change-transform"
       style={{ borderColor: `${color}80` }}
     >
       {toast.iconSrc ? (

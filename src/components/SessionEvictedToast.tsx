@@ -24,7 +24,7 @@ export default function SessionEvictedToast() {
 
   return (
     <div className="fixed inset-x-0 top-4 z-50 flex justify-center px-4">
-      <div className="rounded-lg border border-amber-400/60 bg-amber-400/10 px-3 py-1.5 text-center text-xs font-semibold text-amber-300 lg:backdrop-blur">
+      <div className="rounded-lg border border-amber-400/60 bg-amber-400/10 px-3 py-1.5 text-center text-xs font-semibold text-amber-300 backdrop-blur will-change-transform">
         You were signed out because this account was accessed from another session.
       </div>
     </div>

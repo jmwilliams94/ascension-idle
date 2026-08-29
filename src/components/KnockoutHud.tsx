@@ -32,7 +32,7 @@ export default function KnockoutHud() {
   const remainingSeconds = Math.max(0, Math.ceil((reviveAt - nowMs) / 1000))
 
   return (
-    <div className="shrink-0 rounded-lg border border-red-500 bg-red-500/20 px-3 py-1.5 text-xs font-medium text-red-200 lg:backdrop-blur">
+    <div className="shrink-0 rounded-lg border border-red-500 bg-red-500/20 px-3 py-1.5 text-xs font-medium text-red-200 backdrop-blur will-change-transform">
       Knocked out — reviving in {remainingSeconds}s
     </div>
   )

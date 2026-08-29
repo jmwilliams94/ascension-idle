@@ -123,7 +123,7 @@ function AnnouncementHistoryDropdown() {
   const loaded = useAnnouncementHistoryStore((state) => state.loaded)
 
   return (
-    <div className="absolute left-0 top-full z-50 mt-1 w-72 rounded-lg border border-slate-700 bg-slate-900/95 p-2 shadow-xl sm:w-80 lg:backdrop-blur">
+    <div className="absolute left-0 top-full z-50 mt-1 w-72 rounded-lg border border-slate-700 bg-slate-900/95 p-2 shadow-xl sm:w-80 backdrop-blur will-change-transform">
       <p className="px-1 pb-1.5 text-[10px] uppercase tracking-wide text-slate-500">Recent Activity</p>
       {!loaded ? (
         <p className="px-1 py-2 text-xs text-slate-500">Loading…</p>
@@ -186,7 +186,7 @@ export default function GlobalAnnouncementTicker() {
         onClick={() => setCollapsed(false)}
         aria-label="Show latest announcement"
         title="Show latest announcement"
-        className="shrink-0 rounded-lg border border-slate-700 bg-slate-900/60 px-2 py-1.5 text-xs text-slate-400 hover:border-slate-500 hover:text-slate-200 lg:px-3 lg:py-2 lg:text-sm lg:backdrop-blur"
+        className="shrink-0 rounded-lg border border-slate-700 bg-slate-900/60 px-2 py-1.5 text-xs text-slate-400 hover:border-slate-500 hover:text-slate-200 lg:px-3 lg:py-2 lg:text-sm backdrop-blur will-change-transform"
       >
         📣 ▸
       </button>
@@ -195,7 +195,7 @@ export default function GlobalAnnouncementTicker() {
 
   return (
     <div className="relative min-w-0 max-w-full shrink sm:max-w-sm">
-      <div className="flex items-center gap-2 rounded-lg border border-amber-600/50 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-200 lg:gap-3 lg:px-4 lg:py-2 lg:text-sm lg:backdrop-blur">
+      <div className="flex items-center gap-2 rounded-lg border border-amber-600/50 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-200 lg:gap-3 lg:px-4 lg:py-2 lg:text-sm backdrop-blur will-change-transform">
         <AnnouncementIcon kind={announcement.kind} message={announcement.message} imgClassName="h-4 w-4 shrink-0 object-contain lg:h-5 lg:w-5" />
         <span className="min-w-0 flex-1 truncate">{announcement.message}</span>
         <button

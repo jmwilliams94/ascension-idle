@@ -35,7 +35,7 @@ export default function InventoryFullWarningHud() {
   const toneClass = flashing ? 'border-red-500 bg-red-500/30 text-red-200' : 'border-amber-600 bg-amber-500/10 text-amber-300'
 
   return (
-    <div className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors lg:backdrop-blur ${toneClass}`}>
+    <div className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors backdrop-blur will-change-transform ${toneClass}`}>
       Inventory full
     </div>
   )

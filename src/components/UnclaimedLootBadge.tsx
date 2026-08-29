@@ -27,11 +27,15 @@ export default function UnclaimedLootBadge() {
       type="button"
       onClick={openModal}
       aria-label={`${count} unclaimed item${count === 1 ? '' : 's'} — tap to review`}
-      className="fixed bottom-20 left-3 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-amber-500 bg-slate-950/90 text-xl shadow-lg shadow-black/50 hover:bg-slate-900 lg:bottom-4 lg:backdrop-blur"
+      className="fixed bottom-20 left-3 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-amber-500 bg-slate-950/90 text-xl shadow-lg shadow-black/50 hover:bg-slate-900 lg:bottom-4 backdrop-blur"
       // translateZ(0), same fix as MobileBottomNav.tsx -- see its comment.
-      // backdrop-blur is lg-only (re-added 2026-08-29) -- MobileBottomNav is
-      // `lg:hidden` so the iOS Safari fixed+blur detach bug never has a nav
-      // bar to detach below lg, and blur never activates below lg anyway.
+      // backdrop-blur restored on mobile too (2026-08-29) -- the nav's own
+      // translateZ(0) mitigation didn't stop this recurring when blur lived
+      // on *other* elements (VipStatusHud, then a 13-component sweep), so
+      // this element's own translateZ(0) below (already present, not just
+      // the nav's) is the actual bet this time: promote every blurred
+      // element to its own compositing layer, not just the fixed nav bar.
+      // If the drift bug returns, this is the theory that failed.
       style={{ transform: 'translateZ(0)' }}
     >
       🎁
