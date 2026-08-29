@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.118.6",
+    "date": "2026-08-29",
+    "changes": [
+      "Fixed the FX shockwave preview popping in with a dark flash and cutting back to the page abruptly at the end — it now fades in and out smoothly"
+    ]
+  },
+  {
     "version": "1.118.5",
     "date": "2026-08-29",
     "changes": [

@@ -24,6 +24,19 @@ const VERTEX_SHADER = /* glsl */ `
 // outward along the ring (a real distortion of the captured screen texture,
 // not a shape drawn on top of it) plus a small per-channel offset for a
 // glassy chromatic-aberration edge on the ring itself.
+//
+// fadeAlpha ramps this whole plane in over the first 8% of progress and back
+// out over the last 30% -- without it, the plane pops in at full opacity the
+// instant the WebGL context has anything to show (a visible dark flash, since
+// the default GL clear color is opaque black before the first real frame)
+// and then hard-cuts back to the live page the instant progress hits 1 and
+// WarpLayer unmounts, which read as a jarring "flick" (reported by the
+// user) -- made worse because the ring has already traveled off-screen well
+// before progress=1, so for a stretch beforehand the plane is just showing
+// the captured "photo" undistorted, and that photo is a slightly degraded
+// stand-in for the live page (see screenCapture.ts's skipFonts/image-skip
+// comments) -- fading it out cross-fades into the correct live page instead
+// of holding on the flawed one and then cutting.
 const FRAGMENT_SHADER = /* glsl */ `
   uniform sampler2D uTexture;
   uniform vec2 uResolution;
@@ -48,7 +61,11 @@ const FRAGMENT_SHADER = /* glsl */ `
     float g = texture2D(uTexture, vUv + offset).g;
     float b = texture2D(uTexture, vUv + offset * 0.85).b;
 
-    gl_FragColor = vec4(r, g, b, 1.0);
+    float fadeIn = smoothstep(0.0, 0.08, uProgress);
+    float fadeOut = 1.0 - smoothstep(0.7, 1.0, uProgress);
+    float fadeAlpha = fadeIn * fadeOut;
+
+    gl_FragColor = vec4(r, g, b, fadeAlpha);
   }
 `
 
@@ -116,6 +133,7 @@ function WarpMesh({ warp }: { warp: ActiveWarp }) {
         uniforms={uniforms}
         vertexShader={VERTEX_SHADER}
         fragmentShader={FRAGMENT_SHADER}
+        transparent
         depthTest={false}
         depthWrite={false}
         toneMapped={false}
@@ -127,13 +145,14 @@ function WarpMesh({ warp }: { warp: ActiveWarp }) {
 // WebGL counterpart to FxLayer.tsx's 2D canvas -- the only way to actually
 // distort the real on-screen UI (a true "force wave" push through the
 // screen), rather than draw glow/particles on top of it. Presents as a
-// full-screen opaque "photo" of the page at the moment a warp is triggered
-// (see useWarpStore.ts/screenCapture.ts), distorts that photo, then
-// unmounts to reveal the real live page again -- it never touches the
-// actual DOM pixels underneath, which is what keeps this technique clear of
-// the backdrop-filter + position:fixed iOS Safari bug that bit this game's
+// full-screen "photo" of the page at the moment a warp is triggered (see
+// useWarpStore.ts/screenCapture.ts), distorts that photo (fading in/out at
+// the edges, see FRAGMENT_SHADER's fadeAlpha), then unmounts to reveal the
+// real live page again -- it never touches the actual DOM pixels
+// underneath, which is what keeps this technique clear of the
+// backdrop-filter + position:fixed iOS Safari bug that bit this game's
 // toasts/HUD repeatedly (see the backdrop-blur gotcha memory): there's no
-// backdrop-filter here at all, just an ordinary opaque WebGL canvas.
+// backdrop-filter here at all, just an ordinary WebGL canvas.
 //
 // Only mounts a <Canvas> (and therefore only runs a WebGL render loop)
 // while a warp is actually active -- an idle background render loop for an
@@ -164,7 +183,15 @@ export default function WarpLayer() {
       style={{ position: 'fixed', inset: 0 }}
       orthographic
       dpr={1}
-      gl={{ alpha: false, antialias: false, toneMapping: THREE.NoToneMapping }}
+      // alpha: true + a zero-alpha clear color (below) means the brief gap
+      // between this canvas mounting and its first real frame rendering
+      // (shader compile, first CanvasTexture upload) shows the real live
+      // page through it instead of an opaque black flash -- the default GL
+      // clear is opaque black regardless of the context's own alpha
+      // support, so alpha: true alone isn't enough, the renderer's clear
+      // color has to be told explicitly too.
+      gl={{ alpha: true, antialias: false, toneMapping: THREE.NoToneMapping }}
+      onCreated={({ gl }) => gl.setClearColor(0x000000, 0)}
     >
       <WarpMesh key={active.id} warp={active} />
     </Canvas>,
