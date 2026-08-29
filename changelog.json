@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.118.8",
+    "date": "2026-08-29",
+    "changes": [
+      "Fixed a bug where nothing on the page could be clicked, including the What's New popup's 'Got it' button — an invisible full-screen layer from a recent behind-the-scenes change was silently swallowing every click"
+    ]
+  },
+  {
     "version": "1.118.7",
     "date": "2026-08-29",
     "changes": [

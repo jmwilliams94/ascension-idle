@@ -175,16 +175,24 @@ export default function WarpLayer() {
   return createPortal(
     <Canvas
       data-fx-exclude="true"
-      className="pointer-events-none z-[88]"
+      className="z-[88]"
       // Canvas applies its own inline `position: relative; width/height:
-      // 100%` to this wrapper div by default -- an inline style always beats
-      // a class-based utility in the cascade regardless of specificity, so
-      // `fixed inset-0` in className above silently loses to it (confirmed
-      // via getComputedStyle while building this: position read back as
-      // "relative", and the canvas sized itself to a content-driven 150px
-      // fallback height instead of the viewport). Passing position/inset
-      // here explicitly is what actually wins.
-      style={{ position: 'fixed', inset: 0 }}
+      // 100%; pointer-events: auto` to this wrapper div by default -- an
+      // inline style always beats a class-based utility in the cascade
+      // regardless of specificity, so `fixed inset-0 pointer-events-none` in
+      // className would silently lose to it (confirmed via
+      // getComputedStyle while building this: position read back as
+      // "relative" with a content-driven 150px fallback height instead of
+      // the viewport, and separately -- once this became a permanently-
+      // mounted element in v1.118.7, not just a ~900ms one -- pointer-events
+      // read back as "auto" everywhere down to the actual <canvas>,
+      // silently swallowing every click on the page the whole time the game
+      // was open, including the What's New modal's "Got it" button;
+      // Playwright's own click-retry log named the culprit directly: "…
+      // subtree intercepts pointer events"). Passing position/inset/
+      // pointerEvents here explicitly is what actually wins over Canvas's
+      // own defaults.
+      style={{ position: 'fixed', inset: 0, pointerEvents: 'none' }}
       orthographic
       dpr={1}
       // alpha: true + a zero-alpha clear color (below) means whenever the
