@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.118.5",
+    "date": "2026-08-29",
+    "changes": [
+      "Comet Impact and Upgrade Ripple FX previews now show only the screen-warp shockwave, with the old ring/flash overlay removed so the distortion effect is easier to see on its own"
+    ]
+  },
+  {
     "version": "1.118.4",
     "date": "2026-08-29",
     "changes": [
