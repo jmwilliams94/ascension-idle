@@ -21,6 +21,7 @@ import ExpBar from './ExpBar'
 import PetToast from './PetToast'
 import HuntingTakeoverToast from './HuntingTakeoverToast'
 import GainToastHost from './GainToastHost'
+import KillRewardToast from './KillRewardToast'
 import ForgePanel from './ForgePanel'
 import InventoryFullModal from './InventoryFullModal'
 import MarketplacePanel from './MarketplacePanel'
@@ -567,6 +568,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
         <FxLayer />
       </Suspense>
       <LevelUpBanner />
+      <KillRewardToast />
       <UnclaimedLootBadge />
       <GainToastHost />
       <CombatEngine />

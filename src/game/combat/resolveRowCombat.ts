@@ -6,6 +6,7 @@ import { useInventoryFullWarningStore } from '../items/useInventoryFullWarningSt
 import { markDropSourced } from '../items/dropSourceTracking'
 import { useAchievementsStore } from '../achievements/useAchievementsStore'
 import { usePetToastStore } from '../achievements/usePetToastStore'
+import { useKillRewardToastStore } from '../hud/useKillRewardToastStore'
 import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
 import { useRowCombatStore, type ServerRowSlot } from './useRowCombatStore'
 
@@ -59,6 +60,20 @@ export async function resolveRowCombat(
   })
   useCurrencyStore.getState().setComets(result.character.comets)
   useCurrencyStore.getState().setFallenStars(result.character.fallenStars)
+
+  // "Kill confirmed" toast (see useKillRewardToastStore.ts) — always live for
+  // Row Combat (no offline path exists for it, see this file's own header),
+  // so no mode check needed here unlike resolveCombat.ts's own version. One
+  // toast per resolve call already totals every row slot's kills this window
+  // covered, not one per slot.
+  if (result.gained && result.gained.kills > 0) {
+    useKillRewardToastStore.getState().show({
+      gold: result.gained.gold,
+      exp: result.gained.exp,
+      kills: result.gained.kills,
+      rareKills: result.gained.rareKills,
+    })
+  }
 
   for (const item of result.itemsGranted ?? []) {
     useInventoryStore.getState().addItem(item)

@@ -7,6 +7,7 @@ import { useLootHoldingStore } from '../items/useLootHoldingStore'
 import { markDropSourced } from '../items/dropSourceTracking'
 import { useAchievementsStore } from '../achievements/useAchievementsStore'
 import { usePetToastStore } from '../achievements/usePetToastStore'
+import { useKillRewardToastStore } from '../hud/useKillRewardToastStore'
 import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
 import { useCombatStore } from './useCombatStore'
 
@@ -88,6 +89,20 @@ export async function resolveCombat(characterId: string, mode: ResolveCombatMode
   useCurrencyStore.getState().setCometScrolls(result.character.cometScrolls)
   if (typeof result.character.currentMp === 'number') {
     useCombatStore.getState().syncPlayerMp(result.character.currentMp)
+  }
+
+  // Live-only "kill confirmed" toast (2026-08-29, requested by the user —
+  // see useKillRewardToastStore.ts's own comment) — fires only once this
+  // response has actually confirmed a real kill, never predictively. Offline
+  // catch-up gets its own dedicated OfflineProgressModal summary instead;
+  // firing this too on login would be a redundant, out-of-place popup.
+  if (mode === 'live' && result.gained && result.gained.kills > 0) {
+    useKillRewardToastStore.getState().show({
+      gold: result.gained.gold,
+      exp: result.gained.exp,
+      kills: result.gained.kills,
+      rareKills: result.gained.rareKills,
+    })
   }
 
   for (const item of result.itemsGranted ?? []) {

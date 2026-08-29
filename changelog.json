@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.118.15",
+    "date": "2026-08-29",
+    "changes": [
+      "Added a small toast confirming gold/EXP the moment a kill is actually credited"
+    ]
+  },
+  {
     "version": "1.118.14",
     "date": "2026-08-29",
     "changes": [

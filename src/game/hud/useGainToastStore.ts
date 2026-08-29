@@ -11,6 +11,13 @@ import { create } from 'zustand'
 // single slot (unlike usePetToastStore's one-off celebration banner), since
 // a bulk action (Sell Selected, Salvage Selected) can produce several gains
 // in the same instant.
+//
+// Combat kills DO now get their own toast (2026-08-29, see
+// useKillRewardToastStore.ts) — a separate, centered component, not routed
+// through this one. The "would be spam" concern above no longer applies:
+// it fires once per real resolve-combat/resolve-row-combat confirmation
+// (a multi-second batch of the respawn-gap-paced cycle-time model), not
+// once per attack or per predictive tick.
 export interface GainToastEntry {
   id: string
   label: string
