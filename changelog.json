@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.122.8",
+    "date": "2026-08-30",
+    "changes": [
+      "Fixed the Mail popup getting cut off at the top and bottom when a message had a lot of rewards, sometimes hiding the Claim button entirely"
+    ]
+  },
+  {
     "version": "1.122.7",
     "date": "2026-08-30",
     "changes": [

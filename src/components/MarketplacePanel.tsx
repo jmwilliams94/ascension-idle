@@ -769,10 +769,10 @@ function MailDetailModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-xs space-y-3 rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-2xl"
+        className="flex max-h-[85dvh] w-full max-w-xs min-h-0 flex-col rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start justify-between gap-2 p-4 pb-0">
           <div>
             <p className="text-[11px] uppercase tracking-wide text-slate-500">From: {mailGroupSender(group)}</p>
             <p className="text-sm font-semibold text-slate-100">{mailGroupSubject(group)}</p>
@@ -782,23 +782,27 @@ function MailDetailModal({
           </button>
         </div>
 
-        {message && <p className="whitespace-pre-wrap text-xs text-slate-400">{message}</p>}
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+          {message && <p className="whitespace-pre-wrap text-xs text-slate-400">{message}</p>}
 
-        {rewardEntries.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-1.5">
-            {rewardEntries.map((entry) => (
-              <MailEntryTile key={entry.id} entry={entry} templates={templates} />
-            ))}
-          </div>
-        )}
+          {rewardEntries.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {rewardEntries.map((entry) => (
+                <MailEntryTile key={entry.id} entry={entry} templates={templates} />
+              ))}
+            </div>
+          )}
+        </div>
 
-        {canClaim ? (
-          <Button variant="primary" disabled={busy} onClick={onClaim} className="w-full">
-            {busy ? 'Claiming…' : 'Claim'}
-          </Button>
-        ) : (
-          <p className="text-center text-[11px] text-slate-600">Claimed</p>
-        )}
+        <div className="p-4 pt-0">
+          {canClaim ? (
+            <Button variant="primary" disabled={busy} onClick={onClaim} className="w-full">
+              {busy ? 'Claiming…' : 'Claim'}
+            </Button>
+          ) : (
+            <p className="text-center text-[11px] text-slate-600">Claimed</p>
+          )}
+        </div>
       </div>
     </div>
   )
