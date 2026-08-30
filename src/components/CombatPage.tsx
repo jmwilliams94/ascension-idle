@@ -196,7 +196,7 @@ export function HpBar({ current, max, barColorClass = 'bg-emerald-500' }: { curr
 
 type CombatMode = 'hunting' | 'mining' | 'events'
 
-const MODE_BUTTON_CLASS = 'relative w-full rounded-lg px-3 py-1.5 text-xs font-medium'
+const MODE_BUTTON_CLASS = 'relative w-full rounded-lg px-3 py-1.5 font-heading text-xs font-bold uppercase tracking-[0.08em]'
 
 // In-page sub-mode switcher (2026-08-26) — same "sub-navigation inside one
 // top-level tab" convention MarketplacePanel's Browse/My Listings/Mail and

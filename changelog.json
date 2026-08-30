@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.122.10",
+    "date": "2026-08-30",
+    "changes": [
+      "Updated more sub-tab buttons to the app's fantasy heading font: Idling's Hunting/Mining/Events switcher, Market's Browse/My Listings/Mail tabs, Shop's category tabs, Bank's character/Account toggle, and Achievements' nav tabs"
+    ]
+  },
+  {
     "version": "1.122.9",
     "date": "2026-08-30",
     "changes": [

@@ -909,29 +909,29 @@ export default function MarketplacePanel() {
     <div className="space-y-3">
       <div className="grid grid-cols-3 gap-2">
         {tab === 'browse' ? (
-          <button type="button" onClick={() => setTab('browse')} className="rounded-lg border border-slate-300 bg-slate-300/10 px-3 py-1.5 text-xs font-medium text-slate-100">
+          <button type="button" onClick={() => setTab('browse')} className="rounded-lg border border-slate-300 bg-slate-300/10 px-3 py-1.5 font-heading text-xs font-bold uppercase tracking-[0.08em] text-slate-100">
             Browse
           </button>
         ) : (
           <div className="ascension-chip-frame is-interactive">
-            <button type="button" onClick={() => setTab('browse')} className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-slate-100">
+            <button type="button" onClick={() => setTab('browse')} className="ascension-chip-inner w-full px-3 py-1.5 font-heading text-xs font-bold uppercase tracking-[0.08em] text-slate-300 hover:text-slate-100">
               Browse
             </button>
           </div>
         )}
         {tab === 'my-listings' ? (
-          <button type="button" onClick={() => setTab('my-listings')} className="rounded-lg border border-slate-300 bg-slate-300/10 px-3 py-1.5 text-xs font-medium text-slate-100">
+          <button type="button" onClick={() => setTab('my-listings')} className="rounded-lg border border-slate-300 bg-slate-300/10 px-3 py-1.5 font-heading text-xs font-bold uppercase tracking-[0.08em] text-slate-100">
             My Listings
           </button>
         ) : (
           <div className="ascension-chip-frame is-interactive">
-            <button type="button" onClick={() => setTab('my-listings')} className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-slate-100">
+            <button type="button" onClick={() => setTab('my-listings')} className="ascension-chip-inner w-full px-3 py-1.5 font-heading text-xs font-bold uppercase tracking-[0.08em] text-slate-300 hover:text-slate-100">
               My Listings
             </button>
           </div>
         )}
         {tab === 'mail' ? (
-          <button type="button" onClick={() => setTab('mail')} className="relative rounded-lg border border-slate-300 bg-slate-300/10 px-3 py-1.5 text-xs font-medium text-slate-100">
+          <button type="button" onClick={() => setTab('mail')} className="relative rounded-lg border border-slate-300 bg-slate-300/10 px-3 py-1.5 font-heading text-xs font-bold uppercase tracking-[0.08em] text-slate-100">
             Mail
             {mailCount > 0 && (
               <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-slate-950">
@@ -941,7 +941,7 @@ export default function MarketplacePanel() {
           </button>
         ) : (
           <div className="ascension-chip-frame is-interactive relative">
-            <button type="button" onClick={() => setTab('mail')} className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-slate-100">
+            <button type="button" onClick={() => setTab('mail')} className="ascension-chip-inner w-full px-3 py-1.5 font-heading text-xs font-bold uppercase tracking-[0.08em] text-slate-300 hover:text-slate-100">
               Mail
             </button>
             {mailCount > 0 && (

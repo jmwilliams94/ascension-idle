@@ -30,7 +30,7 @@ export default function BankPanel({ characterId }: { characterId: string }) {
           <button
             type="button"
             onClick={() => setView('inventory')}
-            className="rounded-xl border border-slate-300 bg-slate-300/10 px-4 py-2 text-sm font-medium text-slate-100"
+            className="rounded-xl border border-slate-300 bg-slate-300/10 px-4 py-2 font-heading text-sm font-bold uppercase tracking-[0.08em] text-slate-100"
           >
             {characterName || 'Character'}
           </button>
@@ -39,7 +39,7 @@ export default function BankPanel({ characterId }: { characterId: string }) {
             <button
               type="button"
               onClick={() => setView('inventory')}
-              className="ascension-chip-inner w-full px-4 py-2 text-sm font-medium text-slate-300 hover:text-slate-100"
+              className="ascension-chip-inner w-full px-4 py-2 font-heading text-sm font-bold uppercase tracking-[0.08em] text-slate-300 hover:text-slate-100"
             >
               {characterName || 'Character'}
             </button>
@@ -49,7 +49,7 @@ export default function BankPanel({ characterId }: { characterId: string }) {
           <button
             type="button"
             onClick={() => setView('storage')}
-            className="rounded-xl border border-slate-300 bg-slate-300/10 px-4 py-2 text-sm font-medium text-slate-100"
+            className="rounded-xl border border-slate-300 bg-slate-300/10 px-4 py-2 font-heading text-sm font-bold uppercase tracking-[0.08em] text-slate-100"
           >
             Account
           </button>
@@ -58,7 +58,7 @@ export default function BankPanel({ characterId }: { characterId: string }) {
             <button
               type="button"
               onClick={() => setView('storage')}
-              className="ascension-chip-inner w-full px-4 py-2 text-sm font-medium text-slate-300 hover:text-slate-100"
+              className="ascension-chip-inner w-full px-4 py-2 font-heading text-sm font-bold uppercase tracking-[0.08em] text-slate-300 hover:text-slate-100"
             >
               Account
             </button>

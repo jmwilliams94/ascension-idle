@@ -398,7 +398,7 @@ export default function ShopPanel() {
               <button
                 key={entry.id}
                 type="button"
-                className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border border-slate-300 bg-slate-300/10 text-[11px] font-medium text-slate-100 lg:gap-1.5 lg:text-sm"
+                className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border border-slate-300 bg-slate-300/10 font-heading text-[11px] font-bold uppercase tracking-wide text-slate-100 lg:gap-1.5 lg:text-sm"
               >
                 <img src={entry.icon} alt="" className="h-7 w-7 object-contain lg:h-10 lg:w-10" />
                 {entry.label}
@@ -408,7 +408,7 @@ export default function ShopPanel() {
                 <button
                   type="button"
                   onClick={() => setTab(entry.id)}
-                  className="ascension-chip-inner flex h-full w-full flex-col items-center justify-center gap-1 text-[11px] font-medium text-slate-300 hover:text-slate-100 lg:gap-1.5 lg:text-sm"
+                  className="ascension-chip-inner flex h-full w-full flex-col items-center justify-center gap-1 font-heading text-[11px] font-bold uppercase tracking-wide text-slate-300 hover:text-slate-100 lg:gap-1.5 lg:text-sm"
                 >
                   <img src={entry.icon} alt="" className="h-7 w-7 object-contain lg:h-10 lg:w-10" />
                   {entry.label}
