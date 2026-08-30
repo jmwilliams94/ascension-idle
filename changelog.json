@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.121.2",
+    "date": "2026-08-30",
+    "changes": [
+      "Added scene art for the last 3 Zone Bosses (Nyxharrow, Twistpath Warden, Glacius) — all 8 now have real art"
+    ]
+  },
+  {
     "version": "1.121.1",
     "date": "2026-08-30",
     "changes": [
