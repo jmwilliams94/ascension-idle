@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.122.7",
+    "date": "2026-08-30",
+    "changes": [
+      "Replaced Settings > FX's WebGL shader previews (which weren't animating reliably) with 10 non-WebGL candidates -- 5 SVG-filter effects and 5 Framer Motion effects, shown side by side"
+    ]
+  },
+  {
     "version": "1.122.6",
     "date": "2026-08-30",
     "changes": [
