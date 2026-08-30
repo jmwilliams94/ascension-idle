@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.122.0",
+    "date": "2026-08-30",
+    "changes": [
+      "Zone Boss rewards now scale with your actual contribution instead of fixed 1st/2nd/3rd prizes — each boss has its own pool of Lottery Tickets, Fallen Stars, and Comet Scrolls (bigger pools for tougher bosses), split by exactly how much damage you dealt as a share of the boss's HP",
+      "The strongest attacker can no longer sweep the reward pool solo — rewards are capped to what you actually contributed, and any leftover share from an under-attended fight simply isn't handed out to anyone"
+    ]
+  },
+  {
     "version": "1.121.4",
     "date": "2026-08-30",
     "changes": [
