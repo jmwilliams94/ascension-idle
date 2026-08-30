@@ -16,6 +16,11 @@ const FREE_ATTEMPT_CAP = 10
 const PAID_ATTEMPT_CAP = 10
 const PAID_ATTEMPT_AP_COST = 2
 const ATTACK_COOLDOWN_MS = 5 * 60 * 1000
+// Per-character contribution cap (2026-11-14) — mirrors apply_world_boss_attack's
+// own v_cap := round(v_max_hp * 0.34). Guarantees killing any boss needs
+// damage from at least 3 distinct characters (3 * 34% > 100%), and whoever
+// hits their own cap first is guaranteed the spawn's top total_damage.
+const DAMAGE_CAP_PCT = 0.34
 
 const ERROR_MESSAGES: Record<string, string> = {
   spawn_changed: 'The boss changed — try again.',
@@ -24,6 +29,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   on_cooldown: 'Still on cooldown.',
   not_enough_ap: 'Not enough Ascension Points.',
   no_attempts_remaining: "You're out of attempts for this boss.",
+  damage_cap_reached: "You've already dealt your max damage to this boss.",
   quiver_required: 'Equip a Quiver to attack.',
   not_owner: "Couldn't verify your character.",
   rpc_failed: 'Something went wrong — try again.',
@@ -106,7 +112,10 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
   const windowEndsAtMs = new Date(spawn.windowEndsAt).getTime()
   const windowEnded = windowEndsAtMs <= now
   const bossDefeated = spawn.currentHp <= 0
-  const canAttack = spawn.status === 'active' && !windowEnded && !bossDefeated && !outOfAttempts && !onCooldown && !busy
+  const damageCap = Math.round(spawn.maxHp * DAMAGE_CAP_PCT)
+  const damageCapReached = (participation?.totalDamage ?? 0) >= damageCap
+  const canAttack =
+    spawn.status === 'active' && !windowEnded && !bossDefeated && !outOfAttempts && !onCooldown && !damageCapReached && !busy
 
   // Broken (0-durability) gear contributes nothing to combat stats (see
   // equipmentBonus.ts) — attacking the Zone Boss with it equipped would
@@ -195,7 +204,13 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
         </div>
       </div>
 
-      {onCooldown && <p className="mt-2 text-center text-xs text-slate-500">Next attempt in {formatCountdown(cooldownEndsAtMs - now)}</p>}
+      {onCooldown && !damageCapReached && (
+        <p className="mt-2 text-center text-xs text-slate-500">Next attempt in {formatCountdown(cooldownEndsAtMs - now)}</p>
+      )}
+
+      {damageCapReached && !bossDefeated && !windowEnded && (
+        <p className="mt-2 text-center text-xs text-slate-500">You've dealt your max damage to this boss — let others finish it off.</p>
+      )}
 
       {hasBrokenGear && <p className="mt-2 text-center text-xs text-rose-400">Some of your gear is broken — repair it before fighting.</p>}
 
@@ -212,7 +227,9 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
       )}
 
       {participation && (
-        <p className="mt-2 text-center text-xs text-slate-500">Your total damage: {participation.totalDamage.toLocaleString()}</p>
+        <p className="mt-2 text-center text-xs text-slate-500">
+          Your total damage: {participation.totalDamage.toLocaleString()} / {damageCap.toLocaleString()} cap
+        </p>
       )}
 
       {leaderboardOpen && (

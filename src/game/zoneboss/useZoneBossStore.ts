@@ -41,6 +41,7 @@ export interface ZoneBossAttackResult {
     | 'on_cooldown'
     | 'not_enough_ap'
     | 'no_attempts_remaining'
+    | 'damage_cap_reached'
     | 'quiver_required'
     | 'not_owner'
     | 'rpc_failed'

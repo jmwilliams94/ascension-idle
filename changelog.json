@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.121.4",
+    "date": "2026-08-30",
+    "changes": [
+      "No single character can deal more than 34% of a Zone Boss's total HP anymore — every boss now needs at least 3 different players to bring it down, so a strong character can no longer defeat a low-tier boss before anyone else gets a hit in"
+    ]
+  },
+  {
     "version": "1.121.3",
     "date": "2026-08-30",
     "changes": [
