@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.122.13",
+    "date": "2026-08-30",
+    "changes": [
+      "Fixed a bug where landing the killing blow on a Zone Boss would fail with an error instead of actually finishing it off -- boss kills now go through correctly"
+    ]
+  },
+  {
     "version": "1.122.12",
     "date": "2026-08-30",
     "changes": [
