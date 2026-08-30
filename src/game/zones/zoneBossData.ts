@@ -24,7 +24,13 @@ export interface ZoneBossDef {
   // other side's round(base * 1.3), see the migration) — display-only here,
   // shown as flavor text so a player knows what kind of gear does well.
   defenseProfile: 'physical' | 'magical'
-  portraitUrl: string
+  // A single full 16:9 scene (creature + its own backdrop baked in, e.g.
+  // public/bosses/mourncrow.webp) — NOT a cutout portrait over a separate
+  // zone background. ZoneBossCard renders this alone via bg-cover fill; it
+  // replaced the original mourncrow-only object-contain-portrait-over-
+  // zone-background layout once real per-boss scene art existed for all 8.
+  // Same webp/sharp compression convention as ZONES[].backgroundUrl.
+  imageUrl: string
 }
 
 export const ZONE_BOSSES: Record<ZoneBossId, ZoneBossDef> = {
@@ -33,56 +39,56 @@ export const ZONE_BOSSES: Record<ZoneBossId, ZoneBossDef> = {
     displayName: 'Mourncrow',
     zoneId: 'windhollow',
     defenseProfile: 'magical',
-    portraitUrl: `${import.meta.env.BASE_URL}bosses/mourncrow.png`,
+    imageUrl: `${import.meta.env.BASE_URL}bosses/mourncrow.webp`,
   },
   emberroot: {
     id: 'emberroot',
     displayName: 'Emberroot',
     zoneId: 'cinderleaf',
     defenseProfile: 'physical',
-    portraitUrl: `${import.meta.env.BASE_URL}bosses/emberroot.png`,
+    imageUrl: `${import.meta.env.BASE_URL}bosses/emberroot.webp`,
   },
   thundermane: {
     id: 'thundermane',
     displayName: 'Thundermane',
     zoneId: 'stormvale',
     defenseProfile: 'magical',
-    portraitUrl: `${import.meta.env.BASE_URL}bosses/thundermane.png`,
+    imageUrl: `${import.meta.env.BASE_URL}bosses/thundermane.webp`,
   },
   karthos: {
     id: 'karthos',
     displayName: 'Karthos',
     zoneId: 'sunscar-wastes',
     defenseProfile: 'physical',
-    portraitUrl: `${import.meta.env.BASE_URL}bosses/karthos.png`,
+    imageUrl: `${import.meta.env.BASE_URL}bosses/karthos.webp`,
   },
   skytalon: {
     id: 'skytalon',
     displayName: 'Skytalon',
     zoneId: 'talon-isle',
     defenseProfile: 'physical',
-    portraitUrl: `${import.meta.env.BASE_URL}bosses/skytalon.png`,
+    imageUrl: `${import.meta.env.BASE_URL}bosses/skytalon.webp`,
   },
   nyxharrow: {
     id: 'nyxharrow',
     displayName: 'Nyxharrow',
     zoneId: 'duskspire-keep',
     defenseProfile: 'magical',
-    portraitUrl: `${import.meta.env.BASE_URL}bosses/nyxharrow.png`,
+    imageUrl: `${import.meta.env.BASE_URL}bosses/nyxharrow.webp`,
   },
   'twistpath-warden': {
     id: 'twistpath-warden',
     displayName: 'Twistpath Warden',
     zoneId: 'twistpath-ruins',
     defenseProfile: 'physical',
-    portraitUrl: `${import.meta.env.BASE_URL}bosses/twistpath-warden.png`,
+    imageUrl: `${import.meta.env.BASE_URL}bosses/twistpath-warden.webp`,
   },
   glacius: {
     id: 'glacius',
     displayName: 'Glacius',
     zoneId: 'rimehollow',
     defenseProfile: 'magical',
-    portraitUrl: `${import.meta.env.BASE_URL}bosses/glacius.png`,
+    imageUrl: `${import.meta.env.BASE_URL}bosses/glacius.webp`,
   },
 }
 

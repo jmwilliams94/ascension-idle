@@ -10,7 +10,6 @@ import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { itemHasDurability } from '../game/items/equipmentBonus'
 import { useLockBodyScroll } from '../lib/useLockBodyScroll'
-import { ZONES } from '../game/zones/zoneData'
 import { zoneBossForId } from '../game/zones/zoneBossData'
 
 const FREE_ATTEMPT_CAP = 10
@@ -94,7 +93,6 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
   }
 
   const boss = zoneBossForId(spawn.bossId)
-  const zoneBackgroundUrl = ZONES[boss.zoneId].backgroundUrl
 
   const freeUsed = participation?.freeAttemptsUsed ?? 0
   const paidUsed = participation?.paidAttemptsUsed ?? 0
@@ -156,14 +154,13 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
       </div>
 
       <div
-        className={`relative mt-3 aspect-[16/9] w-full overflow-hidden rounded-2xl border-2 border-slate-700 bg-slate-950 bg-cover bg-center ${
+        role="img"
+        aria-label={boss.displayName}
+        className={`mt-3 aspect-[16/9] w-full overflow-hidden rounded-2xl border-2 border-slate-700 bg-slate-950 bg-cover bg-center ${
           bossDefeated ? 'opacity-40 grayscale' : ''
         }`}
-        style={zoneBackgroundUrl ? { backgroundImage: `url(${zoneBackgroundUrl})` } : undefined}
-      >
-        {zoneBackgroundUrl && <div className="absolute inset-0 bg-slate-950/40" />}
-        <img src={boss.portraitUrl} alt={boss.displayName} className="relative h-full w-full object-contain p-[16%]" />
-      </div>
+        style={{ backgroundImage: `url(${boss.imageUrl})` }}
+      />
 
       <p className="mt-2 text-center text-xs text-slate-500">
         {boss.defenseProfile === 'physical' ? 'High physical defense — magic attacks fare better' : 'High magical defense — physical attacks fare better'}

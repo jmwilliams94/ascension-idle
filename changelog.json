@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.121.1",
+    "date": "2026-08-30",
+    "changes": [
+      "Added real scene art for 5 of the 8 Zone Bosses (Mourncrow, Emberroot, Thundermane, Karthos, Skytalon) — each boss now fills its whole card with a single illustrated scene instead of a plain background"
+    ]
+  },
+  {
     "version": "1.121.0",
     "date": "2026-08-30",
     "changes": [
