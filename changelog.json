@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.122.20",
+    "date": "2026-08-30",
+    "changes": [
+      "Fixed the Zone Boss event indicator staying lit after the boss was already defeated",
+      "The Zone Boss card now shows a results screen (top damage dealer, rewards mailed out) once the boss is defeated, instead of a dead fight screen"
+    ]
+  },
+  {
     "version": "1.122.19",
     "date": "2026-08-30",
     "changes": [

@@ -25,7 +25,9 @@ export default function EventsCardStack({ characterId }: { characterId?: string 
     return () => window.clearInterval(id)
   }, [])
 
-  const bossActive = spawn ? spawn.status === 'active' && new Date(spawn.windowEndsAt).getTime() > now : false
+  // currentHp > 0 excludes a killed-but-not-yet-'ended' spawn — see the same
+  // check in useEventEmberColor.ts.
+  const bossActive = spawn ? spawn.status === 'active' && spawn.currentHp > 0 && new Date(spawn.windowEndsAt).getTime() > now : false
   const zoneBossColor: EventEmberColor | null = bossActive ? 'boss' : null
 
   const goldDonationColor: EventEmberColor | null = getActiveGoldDonationEvent(pool, now)

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabaseClient'
 import { AscensionCard } from './ui/AscensionCard'
 import { Button } from './ui/Button'
 import { IconButton, HelpCircleIcon } from './ui/IconButton'
@@ -68,6 +69,10 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
   const [leaderboardOpen, setLeaderboardOpen] = useState(false)
   const [rewardsInfoOpen, setRewardsInfoOpen] = useState(false)
   const [showRepairAlert, setShowRepairAlert] = useState(false)
+  // Top-damage entry for the "who won" line on the defeated-boss results
+  // card below — fetched from the same leaderboard RPC the trophy modal
+  // uses, just for rank 1, once the boss has actually died.
+  const [winner, setWinner] = useState<{ name: string; damage: number } | null>(null)
   useLockBodyScroll(showRepairAlert)
   // Own 1s tick for the cooldown countdown — independent of CombatPage's
   // own 200ms floating-number tick, which this card doesn't use.
@@ -93,6 +98,37 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [characterId, spawn?.id, loadParticipation])
 
+  const defeated = !!spawn && spawn.currentHp <= 0
+
+  useEffect(() => {
+    if (!defeated || !spawn) {
+      setWinner(null)
+      return
+    }
+    let cancelled = false
+    void supabase
+      .rpc('get_world_boss_leaderboard', { p_character_id: characterId, p_spawn_id: spawn.id })
+      .then(({ data, error }) => {
+        if (cancelled) return
+        if (error) {
+          console.error('get_world_boss_leaderboard call failed', error)
+          return
+        }
+        const result = data as { ok: boolean; entries: { character_name: string; total_damage: number }[] }
+        if (result.ok && result.entries.length > 0) {
+          setWinner({ name: result.entries[0].character_name, damage: result.entries[0].total_damage })
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+    // spawn (the whole object) deliberately excluded — same reasoning as the
+    // loadParticipation effect above, this should only refetch when the
+    // defeated-ness or the spawn itself actually changes, not on every HP
+    // tick broadcast while the fight is still live.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defeated, spawn?.id, characterId])
+
   if (!spawn) {
     return (
       <AscensionCard>
@@ -102,6 +138,44 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
   }
 
   const boss = zoneBossForId(spawn.bossId)
+
+  // Defeated (killed before its window ran out) gets a distinct results
+  // card instead of the fight UI — nothing left to attack, and status stays
+  // 'active' on the spawn row until the full window elapses (see
+  // useZoneBossStore.ts), so the fight UI would otherwise linger showing a
+  // 0 HP bar and a disabled Attack button for hours after the kill.
+  if (defeated) {
+    return (
+      <AscensionCard>
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-heading-label" style={{ fontSize: '1.4rem' }}>
+            {boss.displayName} Defeated
+          </p>
+          <IconButton icon="🏆" title="Leaderboard" accent="amber" onClick={() => setLeaderboardOpen(true)} />
+        </div>
+
+        <div
+          role="img"
+          aria-label={boss.displayName}
+          className="mt-3 aspect-[16/9] w-full overflow-hidden rounded-2xl border-2 border-slate-700 bg-slate-950 bg-cover bg-center opacity-40 grayscale"
+          style={{ backgroundImage: `url(${boss.imageUrl})` }}
+        />
+
+        <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-center">
+          <p className="text-sm font-medium text-amber-200">
+            {winner ? `🏆 ${winner.name} led the assault with ${winner.damage.toLocaleString()} damage` : 'Tallying the results…'}
+          </p>
+        </div>
+
+        <p className="mt-3 text-center text-xs text-slate-500">Rewards have been mailed out to everyone who took part.</p>
+        <p className="mt-1 text-center text-xs text-slate-500">A new Zone Boss will appear within the next few hours.</p>
+
+        {leaderboardOpen && (
+          <ZoneBossLeaderboardModal characterId={characterId} spawnId={spawn.id} bossName={boss.displayName} onClose={() => setLeaderboardOpen(false)} />
+        )}
+      </AscensionCard>
+    )
+  }
 
   const freeUsed = participation?.freeAttemptsUsed ?? 0
   const paidUsed = participation?.paidAttemptsUsed ?? 0
@@ -114,11 +188,9 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
 
   const windowEndsAtMs = new Date(spawn.windowEndsAt).getTime()
   const windowEnded = windowEndsAtMs <= now
-  const bossDefeated = spawn.currentHp <= 0
   const damageCap = Math.round(spawn.maxHp * DAMAGE_CAP_PCT)
   const damageCapReached = (participation?.totalDamage ?? 0) >= damageCap
-  const canAttack =
-    spawn.status === 'active' && !windowEnded && !bossDefeated && !outOfAttempts && !onCooldown && !damageCapReached && !busy
+  const canAttack = spawn.status === 'active' && !windowEnded && !outOfAttempts && !onCooldown && !damageCapReached && !busy
 
   // Broken (0-durability) gear contributes nothing to combat stats (see
   // equipmentBonus.ts) — attacking the Zone Boss with it equipped would
@@ -154,13 +226,7 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
               onClick={() => setRewardsInfoOpen(true)}
             />
           </p>
-          <p className="mt-1 text-xs text-slate-500">
-            {bossDefeated
-              ? 'Defeated — rewards have been mailed out'
-              : windowEnded
-                ? 'Fight ended'
-                : `Active — ends in ${formatCountdown(windowEndsAtMs - now)}`}
-          </p>
+          <p className="mt-1 text-xs text-slate-500">{windowEnded ? 'Fight ended' : `Active — ends in ${formatCountdown(windowEndsAtMs - now)}`}</p>
         </div>
         <IconButton icon="🏆" title="Leaderboard" accent="amber" onClick={() => setLeaderboardOpen(true)} />
       </div>
@@ -168,9 +234,7 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
       <div
         role="img"
         aria-label={boss.displayName}
-        className={`mt-3 aspect-[16/9] w-full overflow-hidden rounded-2xl border-2 border-slate-700 bg-slate-950 bg-cover bg-center ${
-          bossDefeated ? 'opacity-40 grayscale' : ''
-        }`}
+        className="mt-3 aspect-[16/9] w-full overflow-hidden rounded-2xl border-2 border-slate-700 bg-slate-950 bg-cover bg-center"
         style={{ backgroundImage: `url(${boss.imageUrl})` }}
       />
 
@@ -211,7 +275,7 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
         <p className="mt-2 text-center text-xs text-slate-500">Next attempt in {formatCountdown(cooldownEndsAtMs - now)}</p>
       )}
 
-      {damageCapReached && !bossDefeated && !windowEnded && (
+      {damageCapReached && !windowEnded && (
         <p className="mt-2 text-center text-xs text-slate-500">You've dealt your max damage to this boss — let others finish it off.</p>
       )}
 

@@ -20,7 +20,12 @@ export function useActiveEventEmberColor(): EventEmberColor | null {
     return () => window.clearInterval(id)
   }, [])
 
-  const bossActive = spawn ? spawn.status === 'active' && new Date(spawn.windowEndsAt).getTime() > now : false
+  // currentHp > 0 excludes a boss that's already been killed but whose spawn
+  // row hasn't flipped to 'ended' yet (status only transitions on window
+  // expiry, not on the killing blow — see useZoneBossStore.ts) — otherwise
+  // the ember kept showing "fight live" for a defeated boss with nothing
+  // left to attack, for as long as the rest of its 6-8h window ran.
+  const bossActive = spawn ? spawn.status === 'active' && spawn.currentHp > 0 && new Date(spawn.windowEndsAt).getTime() > now : false
   if (bossActive) {
     return 'boss'
   }
