@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.122.22",
+    "date": "2026-08-31",
+    "changes": [
+      "Monsters now have a real, separate Magic Defense stat — magic-attack skills (Wuxia's Thunder) were doing far more damage than intended at every level, since they were only being reduced by the same Defense number physical attacks use"
+    ]
+  },
+  {
     "version": "1.122.21",
     "date": "2026-08-30",
     "changes": [

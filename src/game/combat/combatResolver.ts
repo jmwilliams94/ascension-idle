@@ -237,6 +237,99 @@ export function monsterDefense(type: EnemyTypeDef, characterLevel: number): numb
   return Math.round(base * monsterDefenseMultiplierForLevelDiff(characterLevel, type.level))
 }
 
+// Monster Magic Defense (2026-11, bug fix reported by the user — a Wuxia
+// with Thunder equipped was 1-2-shotting same-level monsters regardless of
+// gear quality). Root cause: monsterDefense above was the ONLY Defense
+// concept for monsters, applied identically to physical and magic attacks —
+// fine for every physical class (Bow/Club/Longsword/Blade attack is
+// weapon-dominated, Strength contributes only a modest flat amount via
+// PHYSICAL_ATTACK_PER_STRENGTH), but Wuxia's magicAttack gets a much larger
+// flat contribution from Spirit (TAOIST_ANCHORS in classes.ts grows to 265 at
+// level 130, vs. Archer's Strength topping out at 84) on top of Backsword/
+// Bracelet's own item curves, which also outpace Bow/Ring's late-game growth.
+// The Nov 2026 HP/Defense rebalance (see CLAUDE.combat-and-loot.md) was
+// calibrated only against Hunter's Bow, so it never accounted for that.
+//
+// MONSTER_MAGIC_DEFENSE_ANCHORS is a level-interpolated table (same
+// linear-interpolation-between-anchors shape as classes.ts's
+// getAttributesForLevel), each point computed as: physicalDefenseBase(level)
+// + [Infused-quality, level-matched Wuxia raw magicAttack (Spirit×2 +
+// Backsword + Bracelet) minus Infused-quality, level-matched Hunter raw
+// physicalAttack (Strength×2 + Bow + Ring)] / 0.75 — the /0.75 accounts for
+// monsterDefenseMultiplierForLevelDiff's White-band multiplier (the
+// level-matched reference case both classes' HP/Defense targets are
+// validated against) being applied to the *whole* defense number afterward,
+// not just the base — without it, the same 25% Defense-strip that leaves a
+// physical class's net damage on-target would strip a proportionally much
+// bigger *absolute* amount off the larger magic Defense number, silently
+// re-introducing the overshoot instead of closing it. Verified: at every
+// anchor level this makes a level-matched Infused Hunter and a level-matched
+// Infused Thunder-Wuxia land the same net damage per hit (both landing the
+// ~6-9 hit pacing target from the Nov rebalance), instead of magic
+// overshooting it by 2-4x.
+//
+// Not a clean closed-form curve (unlike monsterDefense's flat `level * 1.5`)
+// since it's downstream of two independently hand-tuned weapon-item tables
+// that don't grow at the same rate — Backsword's own magic_attack curve
+// accelerates sharply past level 110 in particular (a separate, unexplained
+// irregularity in that item family's own numbers, flagged but not touched
+// here — Option 1, a monster-side magic-defense counter, was the requested
+// fix, not a weapon-curve re-derivation). Recompute this table (see
+// scratchpad methodology in the commit that added it) if Backsword/
+// Bracelet/Bow/Ring's base_stats or the Spirit/Strength attribute anchors
+// ever change.
+const MONSTER_MAGIC_DEFENSE_ANCHORS: [level: number, magicDefense: number][] = [
+  [1, 7],
+  [5, 25],
+  [10, 30],
+  [15, 68],
+  [20, 103],
+  [25, 143],
+  [30, 172],
+  [35, 213],
+  [40, 257],
+  [45, 312],
+  [50, 350],
+  [55, 406],
+  [60, 439],
+  [65, 502],
+  [70, 540],
+  [75, 634],
+  [80, 675],
+  [85, 773],
+  [90, 822],
+  [95, 943],
+  [100, 993],
+  [105, 1135],
+  [110, 1188],
+  [115, 1437],
+  [120, 1584],
+  [125, 2249],
+  [130, 2987],
+]
+
+function monsterMagicDefenseBase(monsterLevel: number): number {
+  const anchors = MONSTER_MAGIC_DEFENSE_ANCHORS
+  const level = Math.min(Math.max(monsterLevel, anchors[0][0]), anchors[anchors.length - 1][0])
+
+  for (let i = 0; i < anchors.length; i += 1) {
+    const [anchorLevel, anchorDefense] = anchors[i]
+    if (level === anchorLevel) return anchorDefense
+    if (level < anchorLevel) {
+      const [prevLevel, prevDefense] = anchors[i - 1]
+      const t = (level - prevLevel) / (anchorLevel - prevLevel)
+      return Math.round(prevDefense + (anchorDefense - prevDefense) * t)
+    }
+  }
+  return anchors[anchors.length - 1][1]
+}
+
+// Same level-gap multiplier treatment as monsterDefense above (a comfortably
+// outleveled monster loses magic Defense too, proportionally).
+export function monsterMagicDefense(type: EnemyTypeDef, characterLevel: number): number {
+  return Math.round(monsterMagicDefenseBase(type.level) * monsterDefenseMultiplierForLevelDiff(characterLevel, type.level))
+}
+
 // Now that armor slots are functional (2026-07-31), a player's Defense is no
 // longer always 0 — monsterAttackDamage's mitigation happens in
 // useCombatStore.runTick, the same place player HP already lives (incoming

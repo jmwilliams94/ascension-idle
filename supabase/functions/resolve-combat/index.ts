@@ -519,6 +519,60 @@ function monsterDefense(type: EnemyType, characterLevel: number): number {
   return Math.round(base * MONSTER_DEFENSE_MULTIPLIER_BY_COLOR[getLevelDiffColor(characterLevel, type.level)])
 }
 
+// Mirrors combatResolver.ts's monsterMagicDefense (2026-11 bug fix) — must
+// stay in sync. See that file's own comment for the full derivation; the
+// anchor table below is the identical data, just re-typed for this file's
+// plain-array style.
+const MONSTER_MAGIC_DEFENSE_ANCHORS: Array<[number, number]> = [
+  [1, 7],
+  [5, 25],
+  [10, 30],
+  [15, 68],
+  [20, 103],
+  [25, 143],
+  [30, 172],
+  [35, 213],
+  [40, 257],
+  [45, 312],
+  [50, 350],
+  [55, 406],
+  [60, 439],
+  [65, 502],
+  [70, 540],
+  [75, 634],
+  [80, 675],
+  [85, 773],
+  [90, 822],
+  [95, 943],
+  [100, 993],
+  [105, 1135],
+  [110, 1188],
+  [115, 1437],
+  [120, 1584],
+  [125, 2249],
+  [130, 2987],
+]
+
+function monsterMagicDefenseBase(monsterLevel: number): number {
+  const anchors = MONSTER_MAGIC_DEFENSE_ANCHORS
+  const level = Math.min(Math.max(monsterLevel, anchors[0][0]), anchors[anchors.length - 1][0])
+
+  for (let i = 0; i < anchors.length; i += 1) {
+    const [anchorLevel, anchorDefense] = anchors[i]
+    if (level === anchorLevel) return anchorDefense
+    if (level < anchorLevel) {
+      const [prevLevel, prevDefense] = anchors[i - 1]
+      const t = (level - prevLevel) / (anchorLevel - prevLevel)
+      return Math.round(prevDefense + (anchorDefense - prevDefense) * t)
+    }
+  }
+  return anchors[anchors.length - 1][1]
+}
+
+function monsterMagicDefense(type: EnemyType, characterLevel: number): number {
+  return Math.round(monsterMagicDefenseBase(type.level) * MONSTER_DEFENSE_MULTIPLIER_BY_COLOR[getLevelDiffColor(characterLevel, type.level)])
+}
+
 // Mirrors combatResolver.ts's monsterDodge (2026-08-02) — must stay in
 // sync. Feeds the deterministic hitChance calc in the main reward math
 // below, which changes how much of a resolve window's expected damage
@@ -1133,7 +1187,13 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const hitChance = activeSkill
     ? 1
     : 1 - Math.min(Math.max(0, monsterDodge(monster) - derived.dexterity) * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
-  const expectedDamagePerHit = resolvePhysicalDamage(attackMidpoint, monsterDefense(monster, character.level))
+  // Magic attacks mitigate against monsterMagicDefense, not the
+  // physical-only monsterDefense (2026-11 bug fix — see that function's own
+  // comment). Mirrors useCombatStore.runTick exactly.
+  const expectedDamagePerHit = resolvePhysicalDamage(
+    attackMidpoint,
+    activeSkill ? monsterMagicDefense(monster, character.level) : monsterDefense(monster, character.level),
+  )
   const effectiveHp = monster.max_hp * RARE_BLENDED_HP_FACTOR
   const dps = (hitChance * expectedDamagePerHit) / attackIntervalMs
   const timeToKillMs = effectiveHp / dps

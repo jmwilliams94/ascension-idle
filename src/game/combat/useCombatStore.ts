@@ -19,6 +19,7 @@ import {
   killRewards,
   monsterAttackDamage,
   monsterDefense,
+  monsterMagicDefense,
   monsterDodge,
   playerDefenseMultiplierForLevelDiff,
   resolvePhysicalDamage,
@@ -563,8 +564,13 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     // min/max range (see rollDamageInRange), not a flat number, off
     // attackMidpoint (already scaled by the account attack buff above).
     // monsterDefense now also takes characterLevel (level-gap Defense
-    // debuff, 2026-08-05).
-    const damage = resolvePhysicalDamage(rollDamageInRange(attackMidpoint), monsterDefense(type, characterLevel))
+    // debuff, 2026-08-05). Magic attacks (activeSkill window) mitigate
+    // against monsterMagicDefense instead of the physical-only monsterDefense
+    // (2026-11 bug fix — see that function's own comment).
+    const damage = resolvePhysicalDamage(
+      rollDamageInRange(attackMidpoint),
+      activeSkill ? monsterMagicDefense(type, characterLevel) : monsterDefense(type, characterLevel),
+    )
     const nextHp = Math.max(0, state.currentHp - damage)
 
     set((s) => ({
