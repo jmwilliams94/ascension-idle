@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AscensionCard } from './ui/AscensionCard'
 import { Button } from './ui/Button'
-import { IconButton } from './ui/IconButton'
+import { IconButton, HelpCircleIcon } from './ui/IconButton'
 import { HpBar } from './CombatPage'
 import { useZoneBossStore, type ZoneBossAttackResult } from '../game/zoneboss/useZoneBossStore'
 import ZoneBossLeaderboardModal from './ZoneBossLeaderboardModal'
@@ -156,7 +156,7 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <IconButton icon="❓" title="How rewards work" accent="sky" onClick={() => setRewardsInfoOpen(true)} />
+          <IconButton icon={<HelpCircleIcon />} title="How rewards work" accent="sky" onClick={() => setRewardsInfoOpen(true)} />
           <IconButton icon="🏆" title="Leaderboard" accent="amber" onClick={() => setLeaderboardOpen(true)} />
         </div>
       </div>

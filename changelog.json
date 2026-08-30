@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.122.2",
+    "date": "2026-08-30",
+    "changes": [
+      "Replaced the red question-mark emoji on Zone Boss's help button with a clean blue outline icon"
+    ]
+  },
+  {
     "version": "1.122.1",
     "date": "2026-08-30",
     "changes": [
