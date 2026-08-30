@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.122.5",
+    "date": "2026-08-30",
+    "changes": [
+      "Replaced Settings > FX's plain-CSS event-indicator preview with 6 real WebGL shader effects (with adjustable bloom glow) -- still preview only, not live anywhere yet"
+    ]
+  },
+  {
     "version": "1.122.4",
     "date": "2026-08-30",
     "changes": [

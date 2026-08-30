@@ -1,7 +1,12 @@
-import { useRef } from 'react'
+import { lazy, Suspense, useRef } from 'react'
 import { useFxStore, type FxKind } from '../game/fx/useFxStore'
 import { useWarpStore } from '../game/fx/useWarpStore'
-import EmberCandidateGallery from './EmberCandidateGallery'
+
+// Lazy -- pulls in three.js/@react-three/fiber/postprocessing, same reason
+// SettingsModal.tsx lazy-loads RenderingTestPanel/FxTestPanel itself (see
+// that file's header comment on the Workbox 2MB precache limit). Opening
+// Settings > FX still shouldn't force everyone to download three.js.
+const WebglEmberGallery = lazy(() => import('./three/WebglEmberGallery'))
 
 const EXAMPLES: { kind: FxKind; label: string; caption: string }[] = [
   { kind: 'lightning', label: '⚡ Lightning Strike', caption: 'Procedural branching bolt (Wuxia attack flavor) -- midpoint displacement, not a canned shape' },
@@ -90,7 +95,9 @@ export default function FxTestPanel() {
       </div>
 
       <div className="border-t border-slate-800 pt-4">
-        <EmberCandidateGallery />
+        <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
+          <WebglEmberGallery />
+        </Suspense>
       </div>
     </div>
   )
