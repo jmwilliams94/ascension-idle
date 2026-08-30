@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.122.16",
+    "date": "2026-08-30",
+    "changes": [
+      "Fixed the Mail popup still getting cut off top and bottom on the Market tab -- it was being clipped by the tab's own frame instead of centering on the full screen"
+    ]
+  },
+  {
     "version": "1.122.15",
     "date": "2026-08-30",
     "changes": [

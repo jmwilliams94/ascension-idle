@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import InventoryPanel from './InventoryPanel'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import MarketplaceListingSlot, { type ListingDraftTarget } from './MarketplaceListingSlot'
@@ -766,7 +767,15 @@ function MailDetailModal({
   // just an emptiness check, but filtering is defensive either way.
   const rewardEntries = group.entries.filter((entry) => entry.item_id !== null || entry.currency_type !== null)
 
-  return (
+  // Portal to document.body (2026-08-30, fix) -- rendered inline this div's
+  // `fixed inset-0` was being contained by .ascension-card-frame's own
+  // clip-path (every tab's outer wrapper, see index.css), which -- like
+  // `transform`/`filter` -- establishes a containing block for `position:
+  // fixed` descendants AND clips them to its own chamfered box. That made
+  // the modal center within (and get clipped to) the tab card's bounds
+  // instead of the real viewport, cutting the header/Claim button off
+  // top/bottom. BankActionModal.tsx already portals for the same reason.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4" onClick={onClose}>
       <div
         className="flex max-h-[85dvh] w-full max-w-xs min-h-0 flex-col rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl"
@@ -804,7 +813,8 @@ function MailDetailModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
