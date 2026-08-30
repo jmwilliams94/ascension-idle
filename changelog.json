@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.122.14",
+    "date": "2026-08-30",
+    "changes": [
+      "Fixed the Market panel's unread-mail count badge getting clipped off by the Mail sub-tab button's own corner when it isn't selected"
+    ]
+  },
+  {
     "version": "1.122.13",
     "date": "2026-08-30",
     "changes": [

@@ -940,10 +940,12 @@ export default function MarketplacePanel() {
             )}
           </button>
         ) : (
-          <div className="ascension-chip-frame is-interactive relative">
-            <button type="button" onClick={() => setTab('mail')} className="ascension-chip-inner w-full px-3 py-1.5 font-heading text-xs font-bold uppercase tracking-[0.08em] text-slate-300 hover:text-slate-100">
-              Mail
-            </button>
+          <div className="relative">
+            <div className="ascension-chip-frame is-interactive">
+              <button type="button" onClick={() => setTab('mail')} className="ascension-chip-inner w-full px-3 py-1.5 font-heading text-xs font-bold uppercase tracking-[0.08em] text-slate-300 hover:text-slate-100">
+                Mail
+              </button>
+            </div>
             {mailCount > 0 && (
               <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-slate-950">
                 {mailCount}
