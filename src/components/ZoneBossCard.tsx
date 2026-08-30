@@ -133,7 +133,7 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-heading-label" style={{ fontSize: '1.4rem' }}>
-            Zone Boss — {boss.displayName}
+            {boss.displayName}
           </p>
           <p className="mt-1 text-xs text-slate-500">
             {bossDefeated
@@ -162,9 +162,14 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
         style={{ backgroundImage: `url(${boss.imageUrl})` }}
       />
 
-      <p className="mt-2 text-center text-xs text-slate-500">
-        {boss.defenseProfile === 'physical' ? 'High physical defense — magic attacks fare better' : 'High magical defense — physical attacks fare better'}
-      </p>
+      <div className="mt-2 flex items-center justify-center gap-2">
+        <span className="rounded-full border border-emerald-500 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300">
+          {boss.defenseProfile === 'physical' ? 'High Def' : 'High M-Def'}
+        </span>
+        <span className="rounded-full border border-rose-500 bg-rose-500/10 px-2 py-0.5 text-[10px] font-medium text-rose-300">
+          {boss.defenseProfile === 'physical' ? 'Low M-Def' : 'Low Def'}
+        </span>
+      </div>
 
       <div className="mt-3">
         <p className="text-xs text-slate-500">

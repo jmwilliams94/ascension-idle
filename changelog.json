@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.121.3",
+    "date": "2026-08-30",
+    "changes": [
+      "Zone Boss card now shows just the boss's own name (no more \"Zone Boss —\" prefix), and its defense specialty is now two small green/red pills instead of a line of text — green for its strong side, red for its weak side"
+    ]
+  },
+  {
     "version": "1.121.2",
     "date": "2026-08-30",
     "changes": [
