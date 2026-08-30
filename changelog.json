@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.122.17",
+    "date": "2026-08-30",
+    "changes": [
+      "Fixed a permission error during combat that could block gear durability and drop rewards from being applied"
+    ]
+  },
+  {
     "version": "1.122.16",
     "date": "2026-08-30",
     "changes": [
