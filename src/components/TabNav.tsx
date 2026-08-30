@@ -24,7 +24,8 @@ const TAB_ITEMS: { id: TabId; label: string }[] = [
 // for the idle state, .btn-gold-active in place of it (never alongside) for
 // whichever tab is currently open, since .btn-gold-active is the permanently-
 // lit variant of .btn-gold's own :hover state.
-const TAB_BUTTON_CLASS = 'flex flex-col items-center justify-center gap-1.5 rounded-xl px-3 py-3 text-sm font-medium'
+const TAB_BUTTON_CLASS =
+  'flex flex-col items-center justify-center gap-1.5 rounded-xl px-3 py-3 text-sm font-heading font-bold uppercase tracking-[0.08em]'
 
 // badge (2026-08-06, Achievements rework) — a small count bubble in the
 // corner, currently only used for the Achievements tab (claimable tier

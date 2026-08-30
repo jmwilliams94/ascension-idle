@@ -77,7 +77,7 @@ function NavButton({ id, label, badge }: { id: TabId; label: string; badge?: num
       className="relative flex flex-1 flex-col items-center justify-center rounded-lg py-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400/50"
     >
       <span
-        className={`flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[10px] font-medium leading-tight transition-all ${
+        className={`flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 font-heading text-[10px] font-bold uppercase tracking-wide leading-tight transition-all ${
           active ? 'nav-pill-active' : 'text-slate-400'
         }`}
       >
@@ -117,7 +117,7 @@ function LuckyNavButton({ label }: { label: string }) {
       className="relative flex flex-[0.85] flex-col items-center justify-center rounded-lg py-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400/50"
     >
       <span
-        className={`flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[10px] font-medium leading-tight transition-all ${
+        className={`flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 font-heading text-[10px] font-bold uppercase tracking-wide leading-tight transition-all ${
           active ? 'nav-pill-active' : 'text-slate-400'
         }`}
       >
@@ -187,7 +187,11 @@ function IdlingNavButton() {
         </span>
         <EventEmberBorder color={emberColor} count={20} />
       </span>
-      <span className={`text-[10px] font-semibold leading-tight ${active ? 'text-slate-100' : 'text-slate-400'}`}>Idling</span>
+      <span
+        className={`font-heading text-[10px] font-bold uppercase tracking-wide leading-tight ${active ? 'text-slate-100' : 'text-slate-400'}`}
+      >
+        Idling
+      </span>
     </button>
   )
 }
@@ -271,7 +275,7 @@ function TavernNavButton({ badges }: { badges: Partial<Record<TabId, number>> })
                         setActiveTab(item.id)
                         setExpanded(false)
                       }}
-                      className={`relative flex items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-left text-xs font-medium ${
+                      className={`relative flex items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-left font-heading text-xs font-bold uppercase tracking-[0.06em] ${
                         activeTab === item.id ? 'bg-slate-300/10 text-slate-100' : 'text-slate-300 hover:bg-slate-800/80'
                       }`}
                     >
@@ -297,7 +301,7 @@ function TavernNavButton({ badges }: { badges: Partial<Record<TabId, number>> })
         className="relative flex h-full w-full flex-col items-center justify-center rounded-lg py-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400/50"
       >
         <span
-          className={`flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 text-[10px] font-medium leading-tight transition-all ${
+          className={`flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 font-heading text-[10px] font-bold uppercase tracking-wide leading-tight transition-all ${
             active || expanded ? 'nav-pill-active' : 'text-slate-400'
           }`}
         >
