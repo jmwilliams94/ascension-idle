@@ -20,6 +20,12 @@ export interface ZoneBossSpawn {
   currentHp: number
   physicalDefense: number
   magicDefense: number
+  // Total reward pool per currency for this spawn (Lottery Ticket/Fallen
+  // Star/Comet Scroll today) — computed server-side once at roll time from
+  // the boss's zone level, see zone_boss_reward_pool_for_level in the
+  // proportional-rewards migration. Keyed by MailCurrencyType, loosely typed
+  // here since it's parsed straight from a jsonb column.
+  rewardPool: Record<string, number>
   windowStartedAt: string
   windowEndsAt: string
   status: 'active' | 'ended'
@@ -65,6 +71,7 @@ function toSpawn(row: Record<string, unknown>): ZoneBossSpawn {
     currentHp: Number(row.current_hp),
     physicalDefense: Number(row.physical_defense),
     magicDefense: Number(row.magic_defense),
+    rewardPool: (row.reward_pool as Record<string, number>) ?? {},
     windowStartedAt: row.window_started_at as string,
     windowEndsAt: row.window_ends_at as string,
     status: row.status as 'active' | 'ended',

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { AscensionCard } from './ui/AscensionCard'
 import { Button } from './ui/Button'
+import { IconButton } from './ui/IconButton'
 import { HpBar } from './CombatPage'
 import { useZoneBossStore, type ZoneBossAttackResult } from '../game/zoneboss/useZoneBossStore'
 import ZoneBossLeaderboardModal from './ZoneBossLeaderboardModal'
+import ZoneBossRewardsInfoModal from './ZoneBossRewardsInfoModal'
 import type { EventEmberColor } from '../game/hud/useEventEmberColor'
 import { useEquipmentStore, EQUIP_SLOTS } from '../game/items/useEquipmentStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
@@ -64,6 +66,7 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
 
   const [lastResult, setLastResult] = useState<ZoneBossAttackResult | null>(null)
   const [leaderboardOpen, setLeaderboardOpen] = useState(false)
+  const [rewardsInfoOpen, setRewardsInfoOpen] = useState(false)
   const [showRepairAlert, setShowRepairAlert] = useState(false)
   useLockBodyScroll(showRepairAlert)
   // Own 1s tick for the cooldown countdown — independent of CombatPage's
@@ -152,14 +155,10 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
                 : `Active — ends in ${formatCountdown(windowEndsAtMs - now)}`}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setLeaderboardOpen(true)}
-          title="Leaderboard"
-          className="shrink-0 rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-lg hover:bg-amber-500/20"
-        >
-          🏆
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <IconButton icon="❓" title="How rewards work" accent="sky" onClick={() => setRewardsInfoOpen(true)} />
+          <IconButton icon="🏆" title="Leaderboard" accent="amber" onClick={() => setLeaderboardOpen(true)} />
+        </div>
       </div>
 
       <div
@@ -234,6 +233,10 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
 
       {leaderboardOpen && (
         <ZoneBossLeaderboardModal characterId={characterId} spawnId={spawn.id} bossName={boss.displayName} onClose={() => setLeaderboardOpen(false)} />
+      )}
+
+      {rewardsInfoOpen && (
+        <ZoneBossRewardsInfoModal bossName={boss.displayName} rewardPool={spawn.rewardPool} onClose={() => setRewardsInfoOpen(false)} />
       )}
 
       {showRepairAlert && (

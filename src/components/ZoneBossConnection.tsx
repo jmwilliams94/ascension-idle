@@ -12,6 +12,7 @@ function toSpawn(row: Record<string, unknown>): ZoneBossSpawn {
     currentHp: Number(row.current_hp),
     physicalDefense: Number(row.physical_defense),
     magicDefense: Number(row.magic_defense),
+    rewardPool: (row.reward_pool as Record<string, number>) ?? {},
     windowStartedAt: row.window_started_at as string,
     windowEndsAt: row.window_ends_at as string,
     status: row.status as 'active' | 'ended',

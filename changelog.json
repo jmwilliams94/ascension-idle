@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.122.1",
+    "date": "2026-08-30",
+    "changes": [
+      "Added a ❓ help button next to the Zone Boss trophy button, explaining how rewards work and showing this fight's actual reward pool as item icons"
+    ]
+  },
+  {
     "version": "1.122.0",
     "date": "2026-08-30",
     "changes": [
