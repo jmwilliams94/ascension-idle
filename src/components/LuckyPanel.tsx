@@ -493,25 +493,31 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
 
       {!paymentChoice && !board && (
         <AscensionCard contentClassName="p-3">
-          {/* 2x2 grid of square buttons (2026-08-23, requested by the user —
-              a 4th option needed room without stretching the button row into
-              a cluttered 4-across line). max-w-[220px] + mx-auto keeps the
-              grid narrower than the card, leaving visible spacing on both
-              sides rather than filling the container edge to edge. Left
+          {/* 2x2 grid of square buttons on mobile (2026-08-23, requested by
+              the user — a 4th option needed room without stretching the
+              button row into a cluttered 4-across line); a single row of 4 on
+              desktop (2026-08-30, requested by the user — desktop has the
+              horizontal room mobile doesn't). max-w-[220px] + mx-auto keeps
+              the mobile grid narrower than the card, leaving visible spacing
+              on both sides rather than filling the container edge to edge;
+              lg:max-w-[480px] widens it back out for the 4-across row. Left
               column pays with Lottery Tickets (both gold, same Button
               primary treatment — same currency, same color, per
               CLAUDE.visual-design.md's guardrail); right column pays with
               Ascension Points (purple = single entry, emerald = bulk,
               unchanged from before). Top row = single draw, bottom row =
-              9-for-8 bulk. "Choose how to pay" label removed 2026-08-28,
+              9-for-8 bulk. Desktop reorders via lg:order-* to read Lottery
+              Ticket / 9-for-8 / One Entry / 160 AP left to right (requested
+              by the user) without touching the mobile 2x2 order, which stays
+              DOM order. "Choose how to pay" label removed 2026-08-28,
               requested by the user — the four payment buttons below are
               self-explanatory without it. */}
-          <div className="mx-auto grid max-w-[220px] grid-cols-2 gap-2">
+          <div className="mx-auto grid max-w-[220px] grid-cols-2 gap-2 lg:max-w-[480px] lg:grid-cols-4">
             <Button
               variant="primary"
               disabled={busy || !canAffordTicket}
               onClick={() => setPaymentChoice('lottery_ticket')}
-              className="flex aspect-square flex-col items-center justify-center gap-0.5 text-center leading-tight"
+              className="flex aspect-square flex-col items-center justify-center gap-0.5 text-center leading-tight lg:order-1"
             >
               <span>Lottery</span>
               <span>Ticket</span>
@@ -522,7 +528,7 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
               disabled={busy || !canAffordPoints}
               onClick={() => setPaymentChoice('ascension_points')}
               style={{ '--glow-bright': '#c084fc', '--glow-base': '#a855f7', '--glow-dark': '#7e22ce' } as CSSProperties}
-              className="btn-glow flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-2.5 text-center font-heading text-sm font-bold uppercase leading-tight tracking-[0.12em] disabled:cursor-not-allowed"
+              className="btn-glow flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-2.5 text-center font-heading text-sm font-bold uppercase leading-tight tracking-[0.12em] disabled:cursor-not-allowed lg:order-3"
             >
               <span>One</span>
               <span>Entry</span>
@@ -540,7 +546,7 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
               type="button"
               disabled={busy || !canAffordBulkTickets}
               onClick={() => void handleBulkDraw(true)}
-              className="btn-gold flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-2.5 text-center font-heading text-sm font-bold uppercase leading-tight tracking-[0.12em] disabled:cursor-not-allowed"
+              className="btn-gold flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-2.5 text-center font-heading text-sm font-bold uppercase leading-tight tracking-[0.12em] disabled:cursor-not-allowed lg:order-2"
             >
               <span>9 for 8</span>
               <span className="text-[10px] font-normal normal-case tracking-normal text-amber-200/70">{LUCKY_BULK_TICKET_COST} Tickets</span>
@@ -550,7 +556,7 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
               disabled={busy || !canAffordBulk}
               onClick={() => void handleBulkDraw(false)}
               style={{ '--glow-bright': '#34d399', '--glow-base': '#10b981', '--glow-dark': '#047857' } as CSSProperties}
-              className="btn-glow flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-2.5 text-center font-heading text-sm font-bold uppercase leading-tight tracking-[0.12em] disabled:cursor-not-allowed"
+              className="btn-glow flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-2.5 text-center font-heading text-sm font-bold uppercase leading-tight tracking-[0.12em] disabled:cursor-not-allowed lg:order-4"
             >
               <span>9 for 8</span>
               <span className="text-[10px] font-normal normal-case tracking-normal text-emerald-300/70">{LUCKY_BULK_AP_COST} AP</span>

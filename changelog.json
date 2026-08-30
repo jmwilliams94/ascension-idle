@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.122.11",
+    "date": "2026-08-30",
+    "changes": [
+      "LuckyLad's 4 payment buttons (Lottery Ticket / 9 for 8 / One Entry / 160 AP) now lay out in a single row on desktop, in that order, instead of a 2x2 grid -- mobile is unchanged"
+    ]
+  },
+  {
     "version": "1.122.10",
     "date": "2026-08-30",
     "changes": [
