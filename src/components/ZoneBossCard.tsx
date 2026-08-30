@@ -144,8 +144,15 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
     <AscensionCard activeEventColor={emberColor}>
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-heading-label" style={{ fontSize: '1.4rem' }}>
+          <p className="flex items-center gap-1.5 text-heading-label" style={{ fontSize: '1.4rem' }}>
             {boss.displayName}
+            <IconButton
+              icon={<HelpCircleIcon className="h-4 w-4" />}
+              title="How rewards work"
+              accent="sky"
+              variant="bare"
+              onClick={() => setRewardsInfoOpen(true)}
+            />
           </p>
           <p className="mt-1 text-xs text-slate-500">
             {bossDefeated
@@ -155,10 +162,7 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
                 : `Active — ends in ${formatCountdown(windowEndsAtMs - now)}`}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <IconButton icon={<HelpCircleIcon />} title="How rewards work" accent="sky" onClick={() => setRewardsInfoOpen(true)} />
-          <IconButton icon="🏆" title="Leaderboard" accent="amber" onClick={() => setLeaderboardOpen(true)} />
-        </div>
+        <IconButton icon="🏆" title="Leaderboard" accent="amber" onClick={() => setLeaderboardOpen(true)} />
       </div>
 
       <div
