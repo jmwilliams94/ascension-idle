@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { useFxStore, type FxKind } from '../game/fx/useFxStore'
 import { useWarpStore } from '../game/fx/useWarpStore'
+import EmberCandidateGallery from './EmberCandidateGallery'
 
 const EXAMPLES: { kind: FxKind; label: string; caption: string }[] = [
   { kind: 'lightning', label: '⚡ Lightning Strike', caption: 'Procedural branching bolt (Wuxia attack flavor) -- midpoint displacement, not a canned shape' },
@@ -86,6 +87,10 @@ export default function FxTestPanel() {
             🗡️
           </button>
         </div>
+      </div>
+
+      <div className="border-t border-slate-800 pt-4">
+        <EmberCandidateGallery />
       </div>
     </div>
   )

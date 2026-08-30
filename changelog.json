@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.122.4",
+    "date": "2026-08-30",
+    "changes": [
+      "Settings > FX now previews 10 alternative event-indicator effects for the nav buttons alongside the current one (not live anywhere yet, just for comparison)"
+    ]
+  },
+  {
     "version": "1.122.3",
     "date": "2026-08-30",
     "changes": [
