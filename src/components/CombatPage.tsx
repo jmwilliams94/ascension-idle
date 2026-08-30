@@ -132,44 +132,77 @@ export function DeadOverlay({
 
 // Fighting-game-style "damage trail" (2026-11, requested by the user —
 // "like Tekken... you see the brief yellow before it collapses to the new
-// HP"). Holds an amber chunk at the pre-hit width for DAMAGE_TRAIL_HOLD_MS,
-// then eases it down to the real value — only on a decrease; a heal just
-// snaps the trail straight to the new (higher) value, no chunk.
-const DAMAGE_TRAIL_HOLD_MS = 400
-const DAMAGE_TRAIL_CATCHUP_S = 0.5
+// HP"). Holds an amber chunk at the pre-hit width for FLASH_HOLD_MS, then
+// eases it down to the real value while the real-color bar drops immediately.
+//
+// A heal (e.g. drinking a potion, 2026-11) runs the same effect in reverse:
+// the light flash colour (healFlashColorClass) jumps to the new, higher width
+// immediately, and the real-color bar holds at the old width for
+// FLASH_HOLD_MS before catching up and filling in underneath it. Same two
+// layers, same timings, just which layer leads and which one trails swaps
+// with the direction of change.
+const FLASH_HOLD_MS = 400
+const FLASH_CATCHUP_S = 0.5
 
 // Exported — also reused by ZoneBossCard.tsx for the boss's own HP bar.
-export function HpBar({ current, max, barColorClass = 'bg-emerald-500' }: { current: number; max: number; barColorClass?: string }) {
+export function HpBar({
+  current,
+  max,
+  barColorClass = 'bg-emerald-500',
+  healFlashColorClass = 'bg-emerald-300',
+}: {
+  current: number
+  max: number
+  barColorClass?: string
+  // Light "leading" colour used for the reverse-flash effect on a heal —
+  // should read as a paler tint of barColorClass. Defaults to a light green
+  // to match the default emerald bar; callers with a different barColorClass
+  // (player HP's rose, MP's sky) should pass a matching light variant.
+  healFlashColorClass?: string
+}) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0
-  const [trailPct, setTrailPct] = useState(pct)
-  // High-water mark the trail is currently pinned to — read/written only
-  // inside the effect below, so a hit landing mid-hold (before the previous
-  // catch-up timer fires) correctly extends the same hold against the
-  // latest pct instead of stacking a second, competing animation.
-  const trailPctRef = useRef(pct)
+  const [frontPct, setFrontPct] = useState(pct)
+  const [flashPct, setFlashPct] = useState(pct)
+  const [flashColorClass, setFlashColorClass] = useState(barColorClass)
+  // Last value both layers have settled on — read/written only inside the
+  // effect below, so a change landing mid-hold (before the previous
+  // catch-up timer fires) correctly compares against the latest pct instead
+  // of stacking a second, competing animation.
+  const committedPctRef = useRef(pct)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    if (pct >= trailPctRef.current) {
-      // Heal, or nothing left to chase down — snap immediately, no trail.
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-        timeoutRef.current = null
-      }
-      trailPctRef.current = pct
-      setTrailPct(pct)
-      return
-    }
+    const oldPct = committedPctRef.current
+    if (pct === oldPct) return
+    committedPctRef.current = pct
 
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
-    }
-    timeoutRef.current = setTimeout(() => {
-      trailPctRef.current = pct
-      setTrailPct(pct)
       timeoutRef.current = null
-    }, DAMAGE_TRAIL_HOLD_MS)
-  }, [pct])
+    }
+
+    if (pct < oldPct) {
+      // Damage: real bar drops immediately, amber flash holds at the old
+      // (higher) width then eases down to match.
+      setFlashColorClass('bg-amber-400')
+      setFlashPct(oldPct)
+      setFrontPct(pct)
+      timeoutRef.current = setTimeout(() => {
+        setFlashPct(pct)
+        timeoutRef.current = null
+      }, FLASH_HOLD_MS)
+    } else {
+      // Heal: light flash jumps to the new (higher) width immediately, real
+      // bar holds at the old width then catches up, filling in behind it.
+      setFlashColorClass(healFlashColorClass)
+      setFlashPct(pct)
+      setFrontPct(oldPct)
+      timeoutRef.current = setTimeout(() => {
+        setFrontPct(pct)
+        timeoutRef.current = null
+      }, FLASH_HOLD_MS)
+    }
+  }, [pct, healFlashColorClass])
 
   useEffect(
     () => () => {
@@ -181,13 +214,13 @@ export function HpBar({ current, max, barColorClass = 'bg-emerald-500' }: { curr
   return (
     <div className="relative h-3 w-full overflow-hidden rounded-full bg-slate-800">
       <motion.div
-        className="absolute inset-y-0 left-0 h-full rounded-full bg-amber-400"
-        animate={{ width: `${trailPct}%` }}
-        transition={{ duration: DAMAGE_TRAIL_CATCHUP_S, ease: 'easeOut' }}
+        className={`absolute inset-y-0 left-0 h-full rounded-full ${flashColorClass}`}
+        animate={{ width: `${flashPct}%` }}
+        transition={{ duration: FLASH_CATCHUP_S, ease: 'easeOut' }}
       />
       <motion.div
         className={`absolute inset-y-0 left-0 h-full rounded-full ${barColorClass}`}
-        animate={{ width: `${pct}%` }}
+        animate={{ width: `${frontPct}%` }}
         transition={{ type: 'spring', stiffness: 260, damping: 26 }}
       />
     </div>
@@ -569,7 +602,7 @@ export default function CombatPage() {
                 {currentPlayerHp} / {maxPlayerHp} HP
               </p>
               <div className="mt-1">
-                <HpBar current={currentPlayerHp} max={maxPlayerHp} barColorClass="bg-rose-500" />
+                <HpBar current={currentPlayerHp} max={maxPlayerHp} barColorClass="bg-rose-500" healFlashColorClass="bg-rose-300" />
               </div>
               <AnimatePresence>
                 {playerFloatingNumbers.map((entry) => (
@@ -601,7 +634,7 @@ export default function CombatPage() {
                   {currentPlayerMp} / {maxPlayerMp} MP
                 </p>
                 <div className="mt-1">
-                  <HpBar current={currentPlayerMp} max={maxPlayerMp} barColorClass="bg-sky-500" />
+                  <HpBar current={currentPlayerMp} max={maxPlayerMp} barColorClass="bg-sky-500" healFlashColorClass="bg-sky-300" />
                 </div>
               </div>
             )}
@@ -826,7 +859,7 @@ export default function CombatPage() {
                 {currentPlayerHp} / {maxPlayerHp} HP
               </p>
               <div className="mt-1">
-                <HpBar current={currentPlayerHp} max={maxPlayerHp} barColorClass="bg-rose-500" />
+                <HpBar current={currentPlayerHp} max={maxPlayerHp} barColorClass="bg-rose-500" healFlashColorClass="bg-rose-300" />
               </div>
               <AnimatePresence>
                 {playerFloatingNumbers.map((entry) => (
@@ -852,7 +885,7 @@ export default function CombatPage() {
                   {currentPlayerMp} / {maxPlayerMp} MP
                 </p>
                 <div className="mt-1">
-                  <HpBar current={currentPlayerMp} max={maxPlayerMp} barColorClass="bg-sky-500" />
+                  <HpBar current={currentPlayerMp} max={maxPlayerMp} barColorClass="bg-sky-500" healFlashColorClass="bg-sky-300" />
                 </div>
               </div>
             )}

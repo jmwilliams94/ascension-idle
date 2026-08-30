@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.122.19",
+    "date": "2026-08-30",
+    "changes": [
+      "HP and Mana bars now flash when a potion heals them, filling in with the real bar colour -- the mirror image of the damage flash"
+    ]
+  },
+  {
     "version": "1.122.18",
     "date": "2026-08-30",
     "changes": [
