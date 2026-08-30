@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as THREE from 'three'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
+import { KernelSize } from 'postprocessing'
 import { EVENT_EMBER_HEX } from '../../game/hud/eventEmberBorderData'
 import type { EventEmberColor } from '../../game/hud/useEventEmberColor'
 import { PLANE_VERTEX, FRAG_PLASMA, FRAG_AURORA, FRAG_FRESNEL, FRAG_PULSE, FRAG_CHROMA, POINT_VERTEX, POINT_FRAGMENT } from './emberShaderData'
@@ -48,7 +49,14 @@ function FullscreenPlane({ fragmentShader, color }: { fragmentShader: string; co
   return (
     <mesh scale={[viewport.width, viewport.height, 1]}>
       <planeGeometry args={[1, 1]} />
-      <shaderMaterial transparent depthWrite={false} uniforms={uniforms} vertexShader={PLANE_VERTEX} fragmentShader={fragmentShader} />
+      <shaderMaterial
+        transparent
+        depthWrite={false}
+        toneMapped={false}
+        uniforms={uniforms}
+        vertexShader={PLANE_VERTEX}
+        fragmentShader={fragmentShader}
+      />
     </mesh>
   )
 }
@@ -98,6 +106,7 @@ function ParticleHalo({ color }: { color: string }) {
         <shaderMaterial
           transparent
           depthWrite={false}
+          toneMapped={false}
           blending={THREE.AdditiveBlending}
           uniforms={uniforms}
           vertexShader={POINT_VERTEX}
@@ -108,13 +117,24 @@ function ParticleHalo({ color }: { color: string }) {
   )
 }
 
+// mipmapBlur's blur radius is tuned for full-screen scenes -- on a 96px
+// tile it blows the whole thing into a solid blob (reported 2026-08-30
+// after the first pass shipped washed-out/oversaturated). A small fixed
+// kernel + a high luminance threshold keeps bloom to a thin glow along the
+// already-bright band instead of amplifying the entire semi-transparent
+// canvas. R3F's Canvas also defaults gl.toneMapping to ACESFilmicToneMapping,
+// which can hue-shift saturated over-1.0 colors (our uColor multipliers
+// intentionally exceed 1.0 so Bloom's threshold catches them) toward
+// cyan/white -- disabled below via both the Canvas gl prop and each
+// material's toneMapped=false, since either alone should suffice but this
+// is unverified without a real device/browser to check against.
 function BloomLayer({ enabled, intensity }: { enabled: boolean; intensity: number }) {
   if (!enabled) {
     return null
   }
   return (
     <EffectComposer>
-      <Bloom intensity={intensity} luminanceThreshold={0.15} luminanceSmoothing={0.4} mipmapBlur />
+      <Bloom intensity={intensity} luminanceThreshold={0.75} luminanceSmoothing={0.2} mipmapBlur={false} kernelSize={KernelSize.SMALL} />
     </EffectComposer>
   )
 }
@@ -127,7 +147,11 @@ function ShaderTile({ children }: { children: ReactNode }) {
     >
       ⛏️
       <div className="pointer-events-none absolute inset-0">
-        <Canvas gl={{ alpha: true, antialias: true }} dpr={[1, 2]} camera={{ position: [0, 0, 5], fov: 50 }}>
+        <Canvas
+          gl={{ alpha: true, antialias: true, toneMapping: THREE.NoToneMapping }}
+          dpr={[1, 2]}
+          camera={{ position: [0, 0, 5], fov: 50 }}
+        >
           {children}
         </Canvas>
       </div>
@@ -150,8 +174,8 @@ function Candidate({ id, label, caption, children }: { id: string; label: string
 
 export default function WebglEmberGallery() {
   const [color, setColor] = useState<EventEmberColor>('collecting')
-  const [bloomEnabled, setBloomEnabled] = useState(true)
-  const [bloomIntensity, setBloomIntensity] = useState(1.2)
+  const [bloomEnabled, setBloomEnabled] = useState(false)
+  const [bloomIntensity, setBloomIntensity] = useState(0.6)
   const hex = EVENT_EMBER_HEX[color]
 
   return (

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.122.6",
+    "date": "2026-08-30",
+    "changes": [
+      "Fixed the FX tab's WebGL shader previews rendering as washed-out solid color blobs instead of distinct effects (disabled tone mapping, tuned down bloom, Bloom now off by default)"
+    ]
+  },
+  {
     "version": "1.122.5",
     "date": "2026-08-30",
     "changes": [

@@ -112,17 +112,23 @@ export const FRAG_CHROMA = `
   varying vec2 vUv;
   void main() {
     vec2 p = vUv * 2.0 - 1.0;
-    float dR = sdRoundRect(p - vec2(0.014, 0.0), vec2(0.78), 0.24);
+    // Offset large enough (0.05 of the -1..1 span) to actually read as
+    // color-fringed at a ~96px tile -- an earlier 0.014 offset was
+    // sub-pixel at this resolution and just looked like a plain white ring.
+    float dR = sdRoundRect(p - vec2(0.05, 0.0), vec2(0.78), 0.24);
     float dG = sdRoundRect(p, vec2(0.78), 0.24);
-    float dB = sdRoundRect(p + vec2(0.014, 0.0), vec2(0.78), 0.24);
+    float dB = sdRoundRect(p + vec2(0.05, 0.0), vec2(0.78), 0.24);
     float bandR = smoothstep(0.1, 0.0, abs(dR + 0.02));
     float bandG = smoothstep(0.1, 0.0, abs(dG + 0.02));
     float bandB = smoothstep(0.1, 0.0, abs(dB + 0.02));
     float pulse = 0.7 + 0.3 * sin(uTime * 2.0);
-    vec3 rgbSplit = vec3(bandR, bandG, bandB) * pulse;
-    float coverage = (bandR + bandG + bandB) / 3.0;
-    vec3 col = rgbSplit + uColor * 0.35 * coverage;
-    gl_FragColor = vec4(col, clamp(coverage * 0.8, 0.0, 1.0));
+    float coverage = clamp(bandR + bandG + bandB, 0.0, 1.0);
+    // Tint the split channels toward uColor rather than raw RGB primaries,
+    // so it reads as "this event's color with a chromatic edge" instead of
+    // a color-neutral rainbow fringe.
+    vec3 rgbSplit = mix(vec3(bandR, bandG, bandB), uColor, 0.5) * pulse;
+    vec3 col = rgbSplit + uColor * 0.25 * coverage;
+    gl_FragColor = vec4(col, coverage * 0.85);
   }
 `
 
