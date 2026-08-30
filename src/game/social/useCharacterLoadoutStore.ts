@@ -13,7 +13,7 @@ export interface LoadoutItem {
   level: number
   composition_level: number
   sockets: (null | string)[]
-  durability: number
+  durability: number | null
   enchant: { hp?: number; blessPct?: number } | null
 }
 

@@ -47,8 +47,10 @@ export interface ItemInstance {
   // per-window decay (see resolve-combat's own comment) accumulates exactly.
   // Only ever decremented server-side (resolve_combat_apply_rewards' own
   // p_durability_updates param) or reset to max (repair_all_items) — never
-  // write it via a normal update(). N/A for Quiver (always 0, never read).
-  durability: number
+  // write it via a normal update(). Null for anything with no durability
+  // concept (Quiver, Money Bag, Gem Bag, etc.) — enforced DB-side by a
+  // trigger, see 20261117010000_quiver_no_durability_value.sql.
+  durability: number | null
   created_at: string
   // Bank Storage (confirmed with the user, 2026-08-03, replaces the earlier
   // fungible warehouse_items token model for gear) — a genuinely additive

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.122.12",
+    "date": "2026-08-30",
+    "changes": [
+      "Internal cleanup: items with no durability (Quiver, Money Bags, Gem Bags, etc.) no longer store a stray 0 durability value -- no gameplay effect, just cleaner data"
+    ]
+  },
+  {
     "version": "1.122.11",
     "date": "2026-08-30",
     "changes": [
