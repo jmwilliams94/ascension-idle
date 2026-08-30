@@ -8,7 +8,9 @@ import GoldDonationModal from './GoldDonationModal'
 import GoldDonationLeaderboardModal from './GoldDonationLeaderboardModal'
 import type { EventEmberColor } from '../game/hud/useEventEmberColor'
 
-const BUFF_CATEGORY_LABEL: Record<GoldDonationBuffCategory, string> = {
+// Exported — also reused by GoldDonationBuffBanner.tsx for the dismissable
+// top-of-screen banner covering the same active buff.
+export const BUFF_CATEGORY_LABEL: Record<GoldDonationBuffCategory, string> = {
   exp: 'EXP gain',
   socket_unlock: 'Socket unlock chance',
   comet: 'Comet drop chance',
@@ -16,7 +18,7 @@ const BUFF_CATEGORY_LABEL: Record<GoldDonationBuffCategory, string> = {
   quality_tier: 'Quality/composition drop chance',
 }
 
-function formatDuration(ms: number): string {
+export function formatDuration(ms: number): string {
   if (ms <= 0) return '0m'
   const totalMinutes = Math.floor(ms / 60000)
   const hours = Math.floor(totalMinutes / 60)

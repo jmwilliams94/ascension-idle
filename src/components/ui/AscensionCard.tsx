@@ -75,9 +75,21 @@ export function AscensionCard({
   )
 
   if (activeEventColor) {
+    // `w-full` only, not `h-full` — the wrapper's height must stay
+    // content-driven (auto) so EventEmberBorder's percentage-based anchors
+    // (positioned against this wrapper, since it's the frame's nearest
+    // `relative` ancestor) still hug the frame's actual visible edges. A
+    // forced `h-full` used to also stretch to fill whatever height a CSS
+    // Grid parent handed this column (align-items: stretch is the grid
+    // default) — harmless for ZoneBossCard, whose content roughly fills that
+    // height anyway, but blew GoldDonationCard's finished-event state up to
+    // match its much-taller Inventory-panel sibling (reported by the user,
+    // screenshot showed a mostly-empty card). Neither card actually needs
+    // the two to match heights — they're always stacked vertically, never
+    // side-by-side.
     return (
-      <div className={`relative h-full w-full ${className}`}>
-        <div className="ascension-card-frame h-full w-full" style={eventBorderTintStyle(activeEventColor)}>
+      <div className={`relative w-full ${className}`}>
+        <div className="ascension-card-frame w-full" style={eventBorderTintStyle(activeEventColor)}>
           {content}
         </div>
         <EventEmberBorder color={activeEventColor} />

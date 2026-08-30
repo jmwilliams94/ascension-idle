@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.122.21",
+    "date": "2026-08-30",
+    "changes": [
+      "Fixed the Gold Donation Event card being oversized once its buff is active",
+      "Added a dismissable banner at the top of the screen for an active Gold Donation buff, visible from any tab"
+    ]
+  },
+  {
     "version": "1.122.20",
     "date": "2026-08-30",
     "changes": [
