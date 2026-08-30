@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useTabStore, type TabId } from '../game/hud/useTabStore'
 import { TAB_ICONS } from '../game/hud/navIcons'
@@ -331,8 +331,44 @@ export default function MobileBottomNav() {
   const mailEntries = useMailStore((state) => state.entries)
   const mailBadge = countUnreadMail(mailEntries)
 
+  const navRef = useRef<HTMLElement>(null)
+
+  // Resume-repaint nudge (2026-08-31, reported by the user: this bar comes
+  // "unstuck" -- floats mid-content instead of pinned to the bottom -- after
+  // the app is minimized and brought back). A distinct bug from the
+  // scroll-triggered detach this bar's own translateZ(0) below already
+  // guards against (see gotcha_backdrop_blur_mobile_nav_drift memory): iOS
+  // Safari can leave a GPU-promoted position:fixed layer (translateZ(0) is
+  // exactly that) painted at its stale pre-background composited position
+  // after the page resumes, until something forces a recompute. Nudging the
+  // transform value (not toggling display/layout) is layout-free -- it just
+  // invalidates this element's own compositing layer so WebKit repaints it
+  // at its real current position.
+  useEffect(() => {
+    const nudge = () => {
+      const el = navRef.current
+      if (!el) return
+      el.style.transform = 'translateZ(0.001px)'
+      requestAnimationFrame(() => {
+        if (navRef.current) navRef.current.style.transform = 'translateZ(0)'
+      })
+    }
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') nudge()
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', nudge)
+    window.addEventListener('pageshow', nudge)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', nudge)
+      window.removeEventListener('pageshow', nudge)
+    }
+  }, [])
+
   return (
     <nav
+      ref={navRef}
       className="ascension-edge-t fixed inset-x-0 bottom-0 z-40 rounded-b-[3rem] bg-[linear-gradient(180deg,_var(--ascension-ink-soft)_0%,_var(--ascension-ink)_100%)] lg:hidden"
       // translateZ(0) (2026-08-19, reported by the user: nav bar drifting
       // upward with the page mid-scroll on mobile) forces this onto its own

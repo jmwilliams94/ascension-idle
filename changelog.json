@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.122.24",
+    "date": "2026-08-31",
+    "changes": [
+      "Fixed the mobile bottom nav bar sometimes floating mid-screen instead of staying pinned to the bottom, after minimizing and reopening the app"
+    ]
+  },
+  {
     "version": "1.122.23",
     "date": "2026-08-31",
     "changes": [
