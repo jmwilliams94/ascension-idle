@@ -192,7 +192,7 @@ export default function BankGrid({ characterId }: BankGridProps) {
                     icon={icon}
                     iconSrc={iconSrc}
                     compositionLevel={item.composition_level}
-                    broken={itemHasDurability(template?.slot_type) ? item.durability <= 0 : undefined}
+                    broken={itemHasDurability(template?.slot_type) ? (item.durability ?? 0) <= 0 : undefined}
                     label={template?.name ?? 'Unknown item'}
                     tooltip={buildGearTooltip(item, template)}
                     selected={selectedBankedSlot?.kind === 'item' && selectedBankedSlot.id === item.id}

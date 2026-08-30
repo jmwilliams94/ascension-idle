@@ -83,7 +83,7 @@ export default function MarketplaceListingSlot({ target, onRemove }: Marketplace
           icon={item ? icon : currencyVisual?.icon}
           iconSrc={item ? iconSrc : currencyVisual?.iconSrc}
           compositionLevel={item?.composition_level}
-          broken={item && itemHasDurability(template?.slot_type) ? item.durability <= 0 : undefined}
+          broken={item && itemHasDurability(template?.slot_type) ? (item.durability ?? 0) <= 0 : undefined}
           label={label}
           tooltip={item ? buildGearTooltip(item, template ?? undefined) : undefined}
           draggable={drag.draggable}

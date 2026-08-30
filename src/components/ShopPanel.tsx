@@ -361,10 +361,10 @@ export default function ShopPanel() {
       return []
     }
     const max = computeMaxDurability(template.slot_type, template.required_level)
-    if (max === null || item.durability >= max) {
+    if (max === null || (item.durability ?? 0) >= max) {
       return []
     }
-    return [{ item, template, cost: computeRepairCost(template.required_level, item.quality_tier, item.durability, max) }]
+    return [{ item, template, cost: computeRepairCost(template.required_level, item.quality_tier, item.durability ?? 0, max) }]
   })
   const repairTotalCost = damagedItems.reduce((sum, entry) => sum + entry.cost, 0)
   const canAffordRepair = gold >= repairTotalCost
@@ -590,7 +590,7 @@ export default function ShopPanel() {
                           icon={getItemIcon(template.slot_type)}
                           iconSrc={getGearIconSrc(template.name)}
                           qualityColor={getQualityColor(item.quality_tier)}
-                          broken={item.durability <= 0}
+                          broken={(item.durability ?? 0) <= 0}
                           label={template.name}
                           tooltip={buildGearTooltip(item, template)}
                         />

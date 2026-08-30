@@ -1603,7 +1603,7 @@ export default function InventoryPanel({
               iconSrc,
               label,
               compositionLevel: item.composition_level,
-              broken: itemHasDurability(template?.slot_type) ? item.durability <= 0 : undefined,
+              broken: itemHasDurability(template?.slot_type) ? (item.durability ?? 0) <= 0 : undefined,
               locked: item.locked,
               // Hover/long-press peek works normally (2026-08-04 fix: "plain
               // mouseover should still show the normal tooltip") except while

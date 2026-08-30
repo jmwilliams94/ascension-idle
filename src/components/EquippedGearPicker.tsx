@@ -1,5 +1,5 @@
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
-import { buildGearTooltip, getGearIconSrc, getItemIcon, getQualityColor } from '../game/items/equipmentBonus'
+import { buildGearTooltip, getGearIconSrc, getItemIcon, getQualityColor, itemHasDurability } from '../game/items/equipmentBonus'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { useEquipmentStore, type EquipSlot } from '../game/items/useEquipmentStore'
@@ -62,7 +62,7 @@ export default function EquippedGearPicker({ onSelect }: EquippedGearPickerProps
               iconSrc={getGearIconSrc(template?.name, item?.quality_tier)}
               qualityColor={item ? getQualityColor(item.quality_tier) : undefined}
               compositionLevel={item?.composition_level}
-              broken={item ? item.durability <= 0 : undefined}
+              broken={item && itemHasDurability(template?.slot_type) ? (item.durability ?? 0) <= 0 : undefined}
               tooltip={item ? buildGearTooltip(item, template ?? undefined) : undefined}
               label={EQUIP_SLOT_LABELS[slot]}
               onClick={() => item && onSelect(itemId)}

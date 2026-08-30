@@ -190,7 +190,7 @@ export function computeEquipmentBonus(
     // Broken gear (2026-08-14, Durability) contributes nothing at all — same
     // as if the slot were empty — mirrored in resolve-combat/index.ts's own
     // equipped-items loop for the server-authoritative side.
-    if (item.durability <= 0) continue
+    if ((item.durability ?? 0) <= 0) continue
 
     const itemEnchant = item.enchant as { hp?: number; blessPct?: number } | null
     bonus.enchantHpBonus += itemEnchant?.hp ?? 0
@@ -1015,7 +1015,10 @@ export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | un
   const maxDurability = template ? computeMaxDurability(template.slot_type, template.required_level) : null
   const durabilityLine: TooltipLine | null =
     maxDurability !== null
-      ? { text: `Dura: ${Math.ceil(item.durability)}/${maxDurability}`, color: item.durability <= 0 ? QUALITY_COLORS.ascended : TOOLTIP_WHITE }
+      ? {
+          text: `Dura: ${Math.ceil(item.durability ?? 0)}/${maxDurability}`,
+          color: (item.durability ?? 0) <= 0 ? QUALITY_COLORS.ascended : TOOLTIP_WHITE,
+        }
       : null
 
   // Lock (requested by the user) — a locked item can't be Sold/Salvaged/

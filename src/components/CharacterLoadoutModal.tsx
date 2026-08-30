@@ -151,7 +151,7 @@ export default function CharacterLoadoutModal() {
                     filled={Boolean(equipped)}
                     qualityColor={equipped ? getQualityColor(glowQualityTier ?? 'normal') : undefined}
                     compositionLevel={equipped?.item.composition_level}
-                    broken={equipped && itemHasDurability(equipped.template.slot_type) ? equipped.item.durability <= 0 : undefined}
+                    broken={equipped && itemHasDurability(equipped.template.slot_type) ? (equipped.item.durability ?? 0) <= 0 : undefined}
                     tooltip={
                       equipped
                         ? buildGearTooltip(

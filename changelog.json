@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.122.18",
+    "date": "2026-08-30",
+    "changes": [
+      "Fixed a broken deploy that had silently blocked every update since v1.122.11 from reaching the live game"
+    ]
+  },
+  {
     "version": "1.122.17",
     "date": "2026-08-30",
     "changes": [

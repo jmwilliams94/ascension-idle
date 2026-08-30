@@ -174,7 +174,7 @@ function ListingTile({ listing, templates }: { listing: MarketplaceListing; temp
       // Keyed off the real live item, not `resolved` (which can fall back to
       // snapshotPreviewItem's synthetic durability: 0 for an unavailable
       // historical listing) — a snapshot preview has no real durability data.
-      broken={listing.item && itemHasDurability(template?.slot_type) ? listing.item.durability <= 0 : undefined}
+      broken={listing.item && itemHasDurability(template?.slot_type) ? (listing.item.durability ?? 0) <= 0 : undefined}
       label={label}
       tooltip={resolved ? buildGearTooltip(resolved, template) : undefined}
     />
@@ -689,7 +689,7 @@ function MailEntryTile({
       // Keyed off the real live item, not `resolved` (which can be
       // mailSnapshotItem's synthetic durability: 0) — the snapshot has no
       // real durability data, same reasoning ListingTile's broken prop uses.
-      broken={entry.item && itemHasDurability(template?.slot_type) ? entry.item.durability <= 0 : undefined}
+      broken={entry.item && itemHasDurability(template?.slot_type) ? (entry.item.durability ?? 0) <= 0 : undefined}
       label={mailEntryLabel(entry, templates)}
       tooltip={resolved ? buildGearTooltip(resolved, template) : undefined}
       selected={selected}

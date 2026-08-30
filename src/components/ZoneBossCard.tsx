@@ -128,7 +128,7 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
     const item = itemId ? items.find((entry) => entry.id === itemId) : null
     if (!item) return false
     const template = templates.find((entry) => entry.id === item.template_id)
-    return itemHasDurability(template?.slot_type) && item.durability <= 0
+    return itemHasDurability(template?.slot_type) && (item.durability ?? 0) <= 0
   })
 
   const handleAttack = async () => {

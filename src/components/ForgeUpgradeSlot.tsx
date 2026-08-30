@@ -60,7 +60,7 @@ export default function ForgeUpgradeSlot({ item, template, onRemove, hold, onHol
           icon={item ? icon : undefined}
           iconSrc={item ? iconSrc : undefined}
           compositionLevel={item?.composition_level}
-          broken={item && itemHasDurability(template?.slot_type) ? item.durability <= 0 : undefined}
+          broken={item && itemHasDurability(template?.slot_type) ? (item.durability ?? 0) <= 0 : undefined}
           label={item ? (template ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level) : 'Unknown item') : undefined}
           tooltip={item ? buildGearTooltip(item, template ?? undefined) : undefined}
           draggable={drag.draggable}
