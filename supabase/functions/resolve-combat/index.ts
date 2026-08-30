@@ -800,6 +800,14 @@ interface GatherStateResult {
   ok: boolean
   error?: string
   claimed?: boolean
+  // Session fencing (see the 20261119000000_resolve_combat_session_fencing.sql
+  // migration) — set when this call's sessionId doesn't match whichever
+  // session most recently claimed the account via claim_account_session.
+  // Distinct from a plain `claimed: false` (a normal overlapping-call race,
+  // see the claim-rollback migration) — this one specifically means "you are
+  // not the active session," so the caller signs itself out instead of just
+  // quietly retrying next tick.
+  session_superseded?: boolean
   // Exact timestamp resolve_combat_gather_state's claim UPDATE wrote (and
   // the pre-claim value it overwrote) — see the claim-rollback migration.
   // Absent/null when claimed is false (nothing was written to release).
@@ -861,11 +869,21 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // Loot-Holding-overflow behavior) if a caller ever omits it, rather than
   // failing the request outright.
   let mode: 'live' | 'offline' = 'offline'
+  // Session fencing (see the 20261119000000_resolve_combat_session_fencing.sql
+  // migration) — the calling tab's own stable id (resolveCombat.ts's
+  // getTabSessionId()). Optional/undefined for an old, not-yet-updated
+  // client bundle — resolve_combat_gather_state treats a missing sessionId
+  // the same as a not-yet-claimed account (enforcement skipped, never
+  // blocked), so this never hard-breaks mid-rollout.
+  let sessionId: string | undefined
   try {
     const body = await req.json()
     characterId = body.characterId
     if (body.mode === 'live' || body.mode === 'offline') {
       mode = body.mode
+    }
+    if (typeof body.sessionId === 'string') {
+      sessionId = body.sessionId
     }
   } catch {
     // fall through to the missing-characterId check below
@@ -902,6 +920,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // room-check counts, kill rows, pet/player state) in the same call.
   const { data: gatherData, error: gatherError } = await db.rpc('resolve_combat_gather_state', {
     p_character_id: characterId,
+    p_session_id: sessionId ?? null,
   })
 
   if (gatherError || !gatherData) {
@@ -910,6 +929,13 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   }
 
   const gathered = gatherData as GatherStateResult
+
+  // Checked before the ownership/`claimed` checks below — a superseded
+  // session should sign itself out regardless of whatever else this window
+  // would otherwise have looked like (see resolveCombat.ts's own handling).
+  if (gathered.session_superseded) {
+    return json({ ok: false, error: 'session_superseded' })
+  }
 
   if (!gathered.ok) {
     if (gathered.error === 'not_found') {

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.122.25",
+    "date": "2026-08-31",
+    "changes": [
+      "Fixed Hunting sometimes earning no Gold/EXP on the session you're actively watching if another session for your account was left open elsewhere — the game now enforces one active session server-side instead of only asking the other tab to sign itself out"
+    ]
+  },
+  {
     "version": "1.122.24",
     "date": "2026-08-31",
     "changes": [

@@ -5,6 +5,7 @@ import { useAnnouncementHistoryStore } from '../game/social/useAnnouncementHisto
 import { useChatStore, toChatMessage } from '../game/social/useChatStore'
 import { useSessionConflictStore } from '../game/social/useSessionConflictStore'
 import { useTabActivityStore } from '../lib/useTabActivityStore'
+import { getTabSessionId } from '../lib/tabSessionId'
 
 function toAnnouncement(row: Record<string, unknown>): GlobalAnnouncement {
   return {
@@ -14,25 +15,6 @@ function toAnnouncement(row: Record<string, unknown>): GlobalAnnouncement {
     message: row.message as string,
     createdAt: row.created_at as string,
   }
-}
-
-const TAB_SESSION_ID_KEY = 'ascension-tab-session-id'
-
-// sessionStorage (not localStorage) is scoped to this one tab and survives a
-// reload/navigation within it, but a genuinely different tab or device always
-// gets a fresh sessionStorage of its own. That's exactly the distinction the
-// session-conflict check below needs: a refresh must recognize its own
-// leftover presence entry as itself, even though that old connection's leave
-// can lag behind the new one's first sync (see the pagehide comment below) --
-// a random id per mount was treating every refresh as a second session.
-function getTabSessionId(): string {
-  const existing = sessionStorage.getItem(TAB_SESSION_ID_KEY)
-  if (existing) {
-    return existing
-  }
-  const id = crypto.randomUUID()
-  sessionStorage.setItem(TAB_SESSION_ID_KEY, id)
-  return id
 }
 
 // Non-visual, mounted unconditionally in GameShell alongside CombatEngine --
@@ -91,9 +73,18 @@ export default function GlobalActivityConnection({ accountId }: { accountId: str
     })
 
     // Lets SessionConflictModal (which has no access to this closure's
-    // channel) ask this tab to broadcast an eviction on its behalf.
+    // channel) ask this tab to broadcast an eviction on its behalf. Also
+    // claims the account's server-side current_session_id (see the
+    // 20261119000000_resolve_combat_session_fencing.sql migration) -- the
+    // broadcast alone only stops the other tab if it's actively connected
+    // and processes the message right then; claiming here means resolve-
+    // combat itself will refuse that other session's calls going forward
+    // even if the broadcast is missed entirely (reported by the user: an old
+    // session kept earning real rewards after "Sign Out Other Session" was
+    // clicked, because its tab never received the broadcast).
     useSessionConflictStore.getState().setRequestEvictOthers((targetSessionIds) => {
       void channel.send({ type: 'broadcast', event: 'session-evicted', payload: { targetSessionIds } })
+      void supabase.rpc('claim_account_session', { p_session_id: sessionIdRef.current })
     })
 
     const trackPresence = () => {
@@ -144,6 +135,17 @@ export default function GlobalActivityConnection({ accountId }: { accountId: str
             .filter((id): id is string => !!id && id !== sessionIdRef.current)
           if (otherSessionIds.length > 0) {
             useSessionConflictStore.getState().setOtherSessions(otherSessionIds)
+          } else {
+            // No conflict -- this tab is (as far as presence can tell) the
+            // only session, so it claims the account's server-side
+            // current_session_id itself. Covers both a genuinely first
+            // session and a fresh tab opened after a previous one closed
+            // uncleanly (crash, killed process) without ever releasing its
+            // presence -- either way, nothing else will ever reclaim this on
+            // this tab's behalf, and skipping it would leave resolve-combat
+            // permanently fencing this tab out against a stale id from a
+            // session that no longer exists.
+            void supabase.rpc('claim_account_session', { p_session_id: sessionIdRef.current })
           }
         }
       })

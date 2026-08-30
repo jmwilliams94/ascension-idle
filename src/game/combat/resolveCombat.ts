@@ -11,6 +11,8 @@ import { useKillRewardToastStore } from '../hud/useKillRewardToastStore'
 import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
 import { useCombatStore } from './useCombatStore'
 import { serializeByKey } from './serializeByKey'
+import { getTabSessionId } from '../../lib/tabSessionId'
+import { useSessionConflictStore } from '../social/useSessionConflictStore'
 
 // The single client-side entry point into the resolve-combat Edge Function —
 // see supabase/functions/resolve-combat/index.ts and CLAUDE.md's Loot section.
@@ -74,7 +76,9 @@ export function resolveCombat(characterId: string, mode: ResolveCombatMode): Pro
 }
 
 async function resolveCombatInner(characterId: string, mode: ResolveCombatMode): Promise<ResolveCombatResult | null> {
-  const { data, error } = await supabase.functions.invoke('resolve-combat', { body: { characterId, mode } })
+  const { data, error } = await supabase.functions.invoke('resolve-combat', {
+    body: { characterId, mode, sessionId: getTabSessionId() },
+  })
 
   if (error) {
     console.error('resolve-combat call failed', error)
@@ -82,6 +86,21 @@ async function resolveCombatInner(characterId: string, mode: ResolveCombatMode):
   }
 
   const result = data as ResolveCombatResult
+
+  // Server-side session fencing (see the 20261119000000_resolve_combat_
+  // session_fencing.sql migration) -- this tab's account_session_id no
+  // longer matches whichever session most recently claimed the account, so
+  // the server refused to grant anything (or even advance the resolve
+  // clock). Signs this tab out the same way a real-time eviction broadcast
+  // does (see useSessionConflictStore/SessionEvictedToast) rather than
+  // silently retrying forever with no rewards ever landing -- the realtime
+  // broadcast is the fast, cooperative path for this same signal, but a
+  // dropped/backgrounded connection can miss it entirely; this is the hard
+  // fallback that doesn't depend on it.
+  if (result.error === 'session_superseded') {
+    useSessionConflictStore.getState().setEvictedByOther()
+    return result
+  }
 
   if (!result.ok || !result.character) {
     return result
