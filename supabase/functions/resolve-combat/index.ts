@@ -329,7 +329,10 @@ const DURABILITY_TARGET_HOURS_TO_EMPTY_MS = 18 * 60 * 60 * 1000
 
 // Monster respawn gap (2026-08-17, requested by the user; raised 2s -> 10s
 // 2026-11 alongside the weapon-curve/enemy-HP rebalance) — mirrors
-// useCombatStore.ts's own RESPAWN_GAP_MS, must stay in sync.
+// useCombatStore.ts's own RESPAWN_GAP_MS, must stay in sync. **No longer
+// additive on top of the fight (2026-11, requested by the user)** — see
+// cycleTimeMs below, this is now a floor on the whole spawn-to-next-spawn
+// duration, not extra time tacked on after the kill.
 const RESPAWN_GAP_MS = 10_000
 
 // Player knockout lockout (2026-08-29, see the player-survivability cycle
@@ -1249,7 +1252,19 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const timeToPlayerDeathMs = incomingDps > 0 ? playerMaxHp / incomingDps : Infinity
   const livesNeeded =
     timeToKillMs <= timeToPlayerDeathMs ? 1 : Math.max(1, Math.ceil(timeToKillMs / timeToPlayerDeathMs))
-  const cycleTimeMs = timeToKillMs + (livesNeeded - 1) * KNOCKOUT_LOCKOUT_MS + RESPAWN_GAP_MS
+  // Real wall-clock duration of the fight itself, spawn to kill (including
+  // any knockout/revive stalls along the way) — this is what the respawn gap
+  // now runs concurrently against, not what it gets added on top of.
+  const fightDurationMs = timeToKillMs + (livesNeeded - 1) * KNOCKOUT_LOCKOUT_MS
+  // Respawn gap now runs concurrently with the fight (2026-11, requested by
+  // the user), not additively after it — mirrors useCombatStore.runTick's
+  // own currentMonsterSpawnedAt/respawnEligibleAt handling. A monster that's
+  // still alive is never touched by this timer; it only ever gates how long
+  // the *next* monster waits to appear once the current one actually dies,
+  // so a fast kill still eats the full RESPAWN_GAP_MS gap (same pacing cap
+  // as before), while a fight that already ran longer than RESPAWN_GAP_MS
+  // sees the next monster appear the instant this one dies, no added gap.
+  const cycleTimeMs = Math.max(fightDurationMs, RESPAWN_GAP_MS)
   // Fraction of a full kill cycle actually spent attacking rather than
   // sitting out the respawn gap or a knockout lockout — always in (0, 1].
   const activeAttackFraction = timeToKillMs / cycleTimeMs
@@ -1379,10 +1394,12 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     // formula can't express (it implicitly assumes 100% of elapsed time is
     // spent attacking). Rather than rewriting this into a discrete-event
     // walk (like Row Combat's resolve-row-combat needed for its genuinely
-    // different per-attack targets), a single monster with a FIXED gap
-    // reduces to simple cycle-time math: time to whittle down one
-    // (blended-rare) effective HP pool at this character's DPS, plus the
-    // fixed gap, is one full "kill cycle" — how many of those fit in the
+    // different per-attack targets), a single monster with a gap reduces to
+    // simple cycle-time math: whichever is longer of (a) the time to whittle
+    // down one (blended-rare) effective HP pool at this character's DPS, or
+    // (b) the fixed gap (the gap runs concurrently with the fight, not
+    // after it — see cycleTimeMs's own comment above), is one full "kill
+    // cycle" — how many of those fit in the
     // elapsed window is the kill count. No per-attack overkill cap is
     // needed anymore either (the old bug this fixed — a level-100+
     // character idling a level-1 monster racking up 12,493 "kills" — can't

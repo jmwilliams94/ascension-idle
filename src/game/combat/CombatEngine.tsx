@@ -97,17 +97,21 @@ export default function CombatEngine() {
     // the periodic RESOLVE_INTERVAL_MS poll above has no relationship to the
     // actual kill/respawn cycle's phase, so which poll happens to cross the
     // server's own deterministic "a kill completed" threshold is essentially
-    // random relative to the client's own visual kill moment. respawnReadyAt
-    // flips from 0 to a real timestamp at exactly that visual moment (see
-    // its own field comment) — triggering a resolve right then ties the two
-    // together as tightly as this architecture allows, without reverting to
-    // a much shorter (egress-costly) polling interval. Deliberately bypasses
-    // resolve()'s own respawnReadyAt gate above (calls resolveCombat
-    // directly, same pattern as the stop trigger below) — by the time this
-    // fires, respawnReadyAt has already flipped to nonzero, so resolve()
-    // would always skip it.
-    const unsubscribeRespawn = useCombatStore.subscribe((state, prevState) => {
-      if (state.respawnReadyAt > 0 && prevState.respawnReadyAt === 0) {
+    // random relative to the client's own visual kill moment.
+    // lastKillSignal (a monotonically increasing counter, bumped on every
+    // real kill) is the trigger — triggering a resolve right then ties the
+    // two together as tightly as this architecture allows, without
+    // reverting to a much shorter (egress-costly) polling interval.
+    // Deliberately bypasses resolve()'s own respawnReadyAt/reviveAt gate
+    // above (calls resolveCombat directly, same pattern as the stop trigger
+    // below). **Was respawnReadyAt's own 0->nonzero transition until 2026-11
+    // (requested by the user — the respawn gap now runs concurrently with
+    // the fight, see RESPAWN_GAP_MS's own comment)**: once a fight can run
+    // longer than the gap and skip the visible waiting state entirely on a
+    // kill, respawnReadyAt no longer reliably transitions on every kill, so
+    // a dedicated always-increments counter replaced it as the trigger.
+    const unsubscribeKill = useCombatStore.subscribe((state, prevState) => {
+      if (state.lastKillSignal !== prevState.lastKillSignal) {
         const characterId = useActiveCharacterStore.getState().characterId
         if (characterId) {
           void resolveCombat(characterId, 'live')
@@ -135,7 +139,7 @@ export default function CombatEngine() {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('beforeunload', handleBeforeUnload)
       unsubscribeZone()
-      unsubscribeRespawn()
+      unsubscribeKill()
       unsubscribeCombat()
     }
   }, [])

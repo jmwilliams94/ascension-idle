@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.122.23",
+    "date": "2026-08-31",
+    "changes": [
+      "The respawn timer between kills now starts counting the moment a monster appears instead of after it dies — a quick kill still waits the full gap, but a longer fight eats into that wait instead of adding more downtime on top"
+    ]
+  },
+  {
     "version": "1.122.22",
     "date": "2026-08-31",
     "changes": [
