@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.124.1",
+    "date": "2026-08-31",
+    "changes": [
+      "Settings > FX now previews 8 quick 'meteor flash' candidates (for a comet landing in the inventory after a kill) alongside the lightning strike -- removed the older comet/ripple/ember-border previews to make room, not live anywhere yet"
+    ]
+  },
+  {
     "version": "1.124.0",
     "date": "2026-08-31",
     "changes": [

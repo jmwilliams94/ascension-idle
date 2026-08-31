@@ -1,7 +1,18 @@
 import { create } from 'zustand'
 import type { FxEffectOptions } from './effects/types'
 
-export type FxKind = 'lightning' | 'comet' | 'ripple'
+export type FxKind =
+  | 'lightning'
+  | 'comet'
+  | 'ripple'
+  | 'flash-bloom'
+  | 'flash-strobe'
+  | 'flash-column'
+  | 'flash-chromatic'
+  | 'flash-double'
+  | 'flash-ring'
+  | 'flash-streak'
+  | 'flash-flicker'
 
 export interface FxRequest {
   id: number
