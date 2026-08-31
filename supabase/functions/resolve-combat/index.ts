@@ -677,8 +677,14 @@ function requiredExpForLevel(level: number): number {
 // ~20% of the pace this table was built for (10s-gap-dominated cycle at 100%
 // EXP vs. the original 3s cycle at 150% EXP). Every value divided by 5 to
 // restore it — see expCurve.ts's own comment for the full derivation.
+//
+// Further cut on top (2026-11, requested by the user as an explicit deeper
+// speedup) — each tier reduced by a steeper percentage than the last: -60%/
+// -50%/-40%/-30%/-20%/-20%/-10% (40/70/130/260/520/1040/2000 ->
+// 16/35/78/182/416/832/1800). See expCurve.ts's own comment for the full
+// derivation; both tables must stay in sync.
 const PROMOTION_TIER_ANCHORS = [1, 15, 40, 70, 100, 110, 120]
-const KILLS_PER_LEVEL_BY_TIER = [40, 70, 130, 260, 520, 1040, 2000]
+const KILLS_PER_LEVEL_BY_TIER = [16, 35, 78, 182, 416, 832, 1800]
 
 // Idle/offline EXP rate — confirmed with the user, 2026-08-05: live play
 // keeps the full expRewardForLevel/damage-dealt-EXP rate above; the once-at-

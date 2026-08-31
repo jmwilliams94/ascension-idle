@@ -104,10 +104,17 @@ export function requiredExpForLevel(level: number): number {
 // pacing this table was built for, a hidden 5x slowdown nothing here
 // compensated for. Every value below divided by 5 (200/350/650/1300/2600/
 // 5200/10000 → 40/70/130/260/520/1040/2000) to restore the originally-stated
-// real-time-per-level pacing under the new 10s-gap-dominated cycle. Must stay
-// in sync with the mirrored copy in resolve-combat/index.ts.
+// real-time-per-level pacing under the new 10s-gap-dominated cycle.
+//
+// Further cut on top (2026-11, requested by the user as an explicit deeper
+// speedup, not another parity fix) — each tier reduced by a bigger percentage
+// than the last, steepest at the low end: tier1 -60%, tier2 -50%, tier3 -40%,
+// tier4 -30%, tier5/6 -20%, tier7 -10% (40/70/130/260/520/1040/2000 →
+// 16/35/78/182/416/832/1800). Brings total 1-130 active kill-time from ~137.9
+// hours down to ~109.3 hours. Must stay in sync with the mirrored copy in
+// resolve-combat/index.ts.
 const PROMOTION_TIER_ANCHORS = [1, 15, 40, 70, 100, 110, 120]
-const KILLS_PER_LEVEL_BY_TIER = [40, 70, 130, 260, 520, 1040, 2000]
+const KILLS_PER_LEVEL_BY_TIER = [16, 35, 78, 182, 416, 832, 1800]
 
 function killsPerLevelForLevel(level: number): number {
   let tierIndex = 0

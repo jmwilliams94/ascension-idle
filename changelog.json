@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.3",
+    "date": "2026-08-31",
+    "changes": [
+      "Leveling sped up further on top of the previous fix, with an extra boost at low levels tapering off toward the endgame"
+    ]
+  },
+  {
     "version": "1.125.2",
     "date": "2026-08-31",
     "changes": [
