@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.124.9",
+    "date": "2026-08-31",
+    "changes": [
+      "PvP: turn timer temporarily disabled for testing a full round without racing the clock — will come back before this is opened up to players"
+    ]
+  },
+  {
     "version": "1.124.8",
     "date": "2026-08-31",
     "changes": [
