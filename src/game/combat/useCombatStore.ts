@@ -201,6 +201,27 @@ interface CombatState {
   // kill/reward long before the client's own MP bar showed empty). No-ops
   // before lazy-init (0/0 sentinel), same as healPlayerHp/restorePlayerMp.
   syncPlayerMp: (amount: number) => void
+  // Reconciles the visual fight to resolve-combat's own real tracked
+  // instance (v1.123.0 per-instance rewrite, bug fix reported by the user —
+  // a toast landed mid-fight against a monster the client still showed
+  // alive, "every ~10 seconds"). The client's own currentHp/isRareInstance
+  // above are rolled independently (own RNG, own timing) purely for instant
+  // visual feedback — without this, they can diverge arbitrarily far from
+  // resolve-combat's own real instance, which now drives real reward
+  // crediting on its own real timing regardless of what's on screen. Called
+  // by resolveCombat.ts on every live response that carries a real instance
+  // (mode: 'live' only — offline resolves happen before start() ever runs,
+  // which always spawns fresh anyway). No-ops if the response is for a
+  // different monster than what's currently selected, or if not actively
+  // fighting at all (a local switch/stop already in flight shouldn't be
+  // stomped by a stale response for the old monster).
+  syncMonsterInstance: (instance: {
+    monster_id: string
+    hp: number
+    is_rare: boolean
+    spawned_at: string | null
+    respawn_at: string | null
+  }) => void
   // Called by resolveCombat.ts when a live (not offline) resolve-combat
   // response reports inventoryFull — a kill rolled a drop that had nowhere
   // to go, so the fight stops outright rather than silently discarding it or
@@ -731,6 +752,38 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         return {}
       }
       return { currentPlayerMp: Math.min(state.maxPlayerMp, Math.max(0, amount)) }
+    })
+  },
+
+  syncMonsterInstance: (instance) => {
+    set((state) => {
+      const monsterTypeId = state.monsterTypeId
+      if (!state.isFighting || !monsterTypeId || monsterTypeId !== instance.monster_id) {
+        return {}
+      }
+      const type = ENEMY_TYPES[monsterTypeId]
+
+      if (instance.hp > 0) {
+        return {
+          monsterInstanceKey: state.monsterInstanceKey + 1,
+          currentHp: instance.hp,
+          maxHp: spawnMonsterHp(type, instance.is_rare),
+          isRareInstance: instance.is_rare,
+          currentMonsterSpawnedAt: instance.spawned_at ? new Date(instance.spawned_at).getTime() : Date.now(),
+          respawnReadyAt: 0,
+        }
+      }
+
+      // Dead, waiting out the real respawn gap (or already past it — a null
+      // respawn_at here would be a resolve-combat invariant violation, but
+      // falls back to "spawn on the very next tick" rather than a stuck
+      // fight if it ever happens).
+      return {
+        monsterInstanceKey: state.monsterInstanceKey + 1,
+        currentHp: 0,
+        maxHp: 0,
+        respawnReadyAt: instance.respawn_at ? new Date(instance.respawn_at).getTime() : Date.now(),
+      }
     })
   },
 

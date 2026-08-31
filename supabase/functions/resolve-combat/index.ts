@@ -1956,6 +1956,16 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     // equipped items decayed this window, so the client can patch its local
     // copy without a refetch. Empty when nothing was equipped/nothing decayed.
     durabilityUpdates,
+    // Live-only reconciliation for the client's own visual fight (v1.123.0
+    // per-instance rewrite bug fix, reported by the user — a toast landed
+    // mid-fight against a monster the client still showed alive, "every ~10
+    // seconds"). The client's local useCombatStore rolls its own independent
+    // rare flag/HP for instant visual feedback — with no sync, that display
+    // and this function's own real tracked instance can diverge arbitrarily
+    // far apart (the server's own real instance can die and grant a real
+    // toast for a kill the player never visually saw). Null when nothing was
+    // walked this call (effectiveElapsedMs was 0) — nothing to reconcile to.
+    monsterInstance: monsterInstanceState,
   })
   } catch (err) {
     // Anything that threw between the claim above and the successful return

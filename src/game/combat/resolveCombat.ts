@@ -66,6 +66,21 @@ export interface ResolveCombatResult {
   // why this piggybacks on resolve_combat_apply_rewards rather than a
   // separate RPC). Empty/absent when nothing was equipped or nothing decayed.
   durabilityUpdates?: { id: string; durability: number }[]
+  // Per-instance combat rewrite (v1.123.0) — resolve-combat's own real
+  // tracked monster instance (real HP/rare-flag/timing), echoed back so the
+  // client's local visual fight (useCombatStore.ts, independent RNG, only
+  // ever predictive/cosmetic) can reconcile to it — see resolveCombatInner's
+  // own comment on why this is needed (without it, the two can diverge
+  // arbitrarily far, since resolve-combat's own real instance now drives
+  // real reward crediting independently of whatever's on screen). Null when
+  // nothing was walked this call (nothing to reconcile to).
+  monsterInstance?: {
+    monster_id: string
+    hp: number
+    is_rare: boolean
+    spawned_at: string | null
+    respawn_at: string | null
+  } | null
 }
 
 // Serialized per character (see serializeByKey.ts for the full race this
@@ -116,6 +131,16 @@ async function resolveCombatInner(characterId: string, mode: ResolveCombatMode):
   useCurrencyStore.getState().setCometScrolls(result.character.cometScrolls)
   if (typeof result.character.currentMp === 'number') {
     useCombatStore.getState().syncPlayerMp(result.character.currentMp)
+  }
+
+  // Live-only monster-instance reconciliation (v1.123.0, see this file's own
+  // ResolveCombatResult.monsterInstance comment) — offline-mode resolves
+  // happen before GameShell's own useCombatStore.start() ever runs, which
+  // always spawns fresh regardless, so syncing there would just be
+  // overwritten a moment later; live is the only mode where the client
+  // actually has a fight on screen to reconcile.
+  if (mode === 'live' && result.monsterInstance) {
+    useCombatStore.getState().syncMonsterInstance(result.monsterInstance)
   }
 
   // Live-only "kill confirmed" toast (2026-08-29, requested by the user —

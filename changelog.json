@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.123.1",
+    "date": "2026-08-31",
+    "changes": [
+      "Fixed a follow-up from the Hunting rewards rework: the monster you see fighting could silently drift out of sync with the one actually being tracked for rewards, causing a reward toast to pop for a kill you couldn't see (most noticeable during a rare fight) — the display now syncs to the real tracked fight on every check"
+    ]
+  },
+  {
     "version": "1.123.0",
     "date": "2026-08-31",
     "changes": [
