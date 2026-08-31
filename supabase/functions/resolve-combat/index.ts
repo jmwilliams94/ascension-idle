@@ -686,6 +686,12 @@ function requiredExpForLevel(level: number): number {
 const PROMOTION_TIER_ANCHORS = [1, 15, 40, 70, 100, 110, 120]
 const KILLS_PER_LEVEL_BY_TIER = [16, 35, 78, 182, 416, 832, 1800]
 
+// Levels 1-14 ramp instead of tier 1's flat 16 — linear from 4 kills at level
+// 1 to 16 at level 14, so it hands off to level 15's tier-2 jump (35) with no
+// discontinuity. See expCurve.ts's own comment for the full derivation; both
+// copies must stay in sync.
+const RAMP_KILLS_LEVELS_1_TO_14 = [4, 5, 6, 7, 8, 9, 10, 10, 11, 12, 13, 14, 15, 16]
+
 // Idle/offline EXP rate — confirmed with the user, 2026-08-05: live play
 // keeps the full expRewardForLevel/damage-dealt-EXP rate above; the once-at-
 // login offline catch-up (mode === 'offline') earns EXP at half that rate,
@@ -698,6 +704,10 @@ const KILLS_PER_LEVEL_BY_TIER = [16, 35, 78, 182, 416, 832, 1800]
 const IDLE_EXP_MULTIPLIER = 0.5
 
 function killsPerLevelForLevel(level: number): number {
+  if (level < 15) {
+    return RAMP_KILLS_LEVELS_1_TO_14[Math.max(0, level - 1)]
+  }
+
   let tierIndex = 0
   for (let i = 0; i < PROMOTION_TIER_ANCHORS.length; i += 1) {
     if (level >= PROMOTION_TIER_ANCHORS[i]) {

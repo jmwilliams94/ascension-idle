@@ -116,7 +116,21 @@ export function requiredExpForLevel(level: number): number {
 const PROMOTION_TIER_ANCHORS = [1, 15, 40, 70, 100, 110, 120]
 const KILLS_PER_LEVEL_BY_TIER = [16, 35, 78, 182, 416, 832, 1800]
 
+// Levels 1-14 ramp instead of using tier 1's flat 16 (2026-11, requested by
+// the user for a steeper very-early curve than a flat per-tier rate can give)
+// — linear from 4 kills at level 1 to 16 at level 14 (the pre-existing tier-1
+// endpoint, so it hands off to the level-15 tier-2 jump to 35 with no
+// discontinuity at the top end). Overrides killsPerLevelForLevel below only
+// for level < 15; tier 1's own 16 in KILLS_PER_LEVEL_BY_TIER is kept as-is
+// since it's still this ramp's own endpoint value, not dead. Total kills 1->15
+// drops from 224 (14 x flat 16) to 140.
+const RAMP_KILLS_LEVELS_1_TO_14 = [4, 5, 6, 7, 8, 9, 10, 10, 11, 12, 13, 14, 15, 16]
+
 function killsPerLevelForLevel(level: number): number {
+  if (level < 15) {
+    return RAMP_KILLS_LEVELS_1_TO_14[Math.max(0, level - 1)]
+  }
+
   let tierIndex = 0
   for (let i = 0; i < PROMOTION_TIER_ANCHORS.length; i += 1) {
     if (level >= PROMOTION_TIER_ANCHORS[i]) {

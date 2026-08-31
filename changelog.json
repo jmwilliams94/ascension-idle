@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.4",
+    "date": "2026-09-01",
+    "changes": [
+      "Your very first few levels now fly by — leveling from 1 to 2 takes just a handful of kills, ramping up smoothly until level 15"
+    ]
+  },
+  {
     "version": "1.125.3",
     "date": "2026-08-31",
     "changes": [
