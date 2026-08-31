@@ -1370,7 +1370,13 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const accountKillsBefore = Number(gathered.account_kills?.kills ?? 0)
   const petAlreadyUnlocked = Boolean(gathered.pet_exists)
 
-  let killsThisWindow = 0
+  // The real, continuous amount to advance character_monster_kills/
+  // account_monster_kills.kills by this call — see its own assignment below
+  // for why this must NOT just be `kills` (a bug fix, reported by the user:
+  // watching a full fight with healthy mana, 8 back-to-back live resolve
+  // calls each showing gained.kills: 0, only crediting once a 9th call's own
+  // elapsed window happened to be long enough by itself).
+  let killsDeltaToPersist = 0
   let petObtained = false
 
   const stoneSlotCount = Object.values(character.composition_stones ?? {}).reduce(
@@ -1627,10 +1633,33 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     // Iris gem bonus % applied last, after every other EXP multiplier —
     // mirrors combatResolver.ts's expectedRewardPerAttack exactly.
     expGained += Math.round(killExp * (1 + irisBonusPct / 100) * eventExpMultiplier)
-    // Feeds resolve_combat_apply_results — character_monster_kills/
-    // account_monster_kills.kills stay `numeric` (from the 2026-08-11
-    // widening) but only ever hold whole integers again now.
-    killsThisWindow = killsProcessed
+
+    // The running character_monster_kills/account_monster_kills.kills total
+    // must advance by this window's real fractional contribution
+    // (expectedKillsThisWindow), not just `kills` rounded down to whole
+    // kills — bug fix, reported by the user (watching a full fight with
+    // healthy mana, 8 back-to-back live resolve calls each showing
+    // gained.kills: 0, only crediting once a 9th call's own window happened
+    // to exceed a full cycleTimeMs by itself). Root cause: CombatEngine
+    // resolves roughly every ~4s (or immediately on a kill), far shorter than
+    // a real kill cycle (cycleTimeMs, ~10s+) — resolve_combat_apply_results
+    // only ever wrote character_monster_kills when p_kills_delta (previously
+    // the same whole-kill-only `kills` value) was > 0, so every short call
+    // whose own window didn't independently cross a whole kill silently
+    // discarded its fraction instead of carrying it into the next call.
+    // combat_last_resolved_at (the time baseline) was always advancing
+    // correctly, but the DB's own characterKillsBefore never accumulated
+    // anything in between, so it took a lucky, unusually large single window
+    // (a polling gap) to ever cross a boundary at all. A live inventoryFull
+    // break is the one case that must NOT carry the full fraction forward —
+    // combat genuinely stopped at whichever whole kill triggered it, so the
+    // persisted total resets to exactly that boundary (floor(characterKillsBefore)
+    // + killsProcessed) rather than including fictional extra fractional
+    // progress for time that was never actually fought.
+    const newRunningTotal = inventoryFull
+      ? Math.floor(characterKillsBefore) + killsProcessed
+      : characterKillsBefore + expectedKillsThisWindow
+    killsDeltaToPersist = newRunningTotal - characterKillsBefore
   }
 
   // Idle/offline EXP rate (see IDLE_EXP_MULTIPLIER above) — applied once to
@@ -1757,7 +1786,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     p_account_id: character.account_id,
     p_monster_id: character.selected_monster_id,
     p_mode: mode,
-    p_kills_delta: killsThisWindow,
+    p_kills_delta: killsDeltaToPersist,
     p_gold_delta: goldGained,
     p_exp: exp,
     p_level: level,
@@ -1781,14 +1810,16 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const apply = applyData as ApplyResultsResponse
 
   // apply is guaranteed present past the throw above; these ?? fallbacks
-  // only cover killsThisWindow legitimately being 0 (character_kills/
-  // account_kills are only set by the RPC when p_kills_delta > 0).
+  // only cover killsDeltaToPersist legitimately being 0 (character_kills/
+  // account_kills are only set by the RPC when p_kills_delta > 0) — true
+  // only when effectiveElapsedMs itself was 0 this call (nothing to persist
+  // at all), not merely when no whole kill happened.
   const newGold = apply.gold ?? character.gold + goldGained
   const newComets = apply.comet_count ?? character.comet_count + cometsToGrant
   const newFallenStars = apply.fallen_star_count ?? character.fallen_star_count + fallenStarsToGrant
   const newCometScrolls = apply.comet_scroll_count ?? character.comet_scroll_count
-  const characterKillCount = apply.character_kills != null ? Number(apply.character_kills) : characterKillsBefore + killsThisWindow
-  const accountKillCount = apply.account_kills != null ? Number(apply.account_kills) : accountKillsBefore + killsThisWindow
+  const characterKillCount = apply.character_kills != null ? Number(apply.character_kills) : characterKillsBefore + killsDeltaToPersist
+  const accountKillCount = apply.account_kills != null ? Number(apply.account_kills) : accountKillsBefore + killsDeltaToPersist
   const itemsGranted = apply.granted_items ?? []
 
   return json({

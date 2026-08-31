@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.122.26",
+    "date": "2026-08-31",
+    "changes": [
+      "Fixed Hunting kill progress getting silently wiped out between the frequent background reward checks that happen while you're actively fighting — kills now reliably land roughly once per kill cycle instead of only occasionally, at random"
+    ]
+  },
+  {
     "version": "1.122.25",
     "date": "2026-08-31",
     "changes": [
