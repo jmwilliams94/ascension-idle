@@ -766,7 +766,15 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       if (instance.hp > 0) {
         return {
           monsterInstanceKey: state.monsterInstanceKey + 1,
-          currentHp: instance.hp,
+          // resolve-combat's own hp is real, unrounded floating-point math
+          // (fractional damage-per-ms accumulation) — the client's own local
+          // sim always dealt whole-number damage (resolvePhysicalDamage
+          // rounds), so currentHp has always been an integer everywhere else
+          // this store touches it. Round here, at the one place a raw server
+          // value enters this field, rather than teaching every display site
+          // to defensively round (bug: the HP bar briefly showed
+          // "369.6199785156251 / 684 HP" without this).
+          currentHp: Math.max(1, Math.round(instance.hp)),
           maxHp: spawnMonsterHp(type, instance.is_rare),
           isRareInstance: instance.is_rare,
           currentMonsterSpawnedAt: instance.spawned_at ? new Date(instance.spawned_at).getTime() : Date.now(),

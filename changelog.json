@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.123.2",
+    "date": "2026-08-31",
+    "changes": [
+      "Fixed the monster HP display briefly showing a long raw decimal number instead of a clean whole number after syncing to the real tracked fight"
+    ]
+  },
+  {
     "version": "1.123.1",
     "date": "2026-08-31",
     "changes": [
