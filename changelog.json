@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.124.7",
+    "date": "2026-08-31",
+    "changes": [
+      "PvP: a guess now always ends your turn, hit or miss — a miss hands the other player the turn (and they now hide instead), instead of letting you keep guessing the same hiding spot"
+    ]
+  },
+  {
     "version": "1.124.6",
     "date": "2026-08-31",
     "changes": [

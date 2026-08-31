@@ -130,7 +130,9 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
       const relY = y - duel.zoneOriginY
       if (relX < 0 || relX >= ZONE_SIZE || relY < 0 || relY >= ZONE_SIZE) return
       const tile = relY * ZONE_SIZE + relX
-      if (duel.eliminatedTiles.includes(tile)) return
+      // A guess is a single attempt per zone (hit or miss, the turn ends
+      // either way — 2026-08-31 mechanic change), so there's no "already
+      // guessed this tile" state to guard against within one zone anymore.
       void guess(characterId, tile).then((result) => {
         if (!result.ok) setActionError(result.detail ?? result.error ?? 'action_failed')
       })
@@ -195,12 +197,10 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
                 y < showZoneHighlight.y + ZONE_SIZE
 
               const relTile = inZone ? (y - (showZoneHighlight as { x: number; y: number }).y) * ZONE_SIZE + (x - (showZoneHighlight as { x: number; y: number }).x) : -1
-              const isEliminated = duel.phase === 'awaiting_guess' && inZone && duel.eliminatedTiles.includes(relTile)
               const isPendingSecretTile = isDefender && pendingZone && pendingTile === relTile && inZone
 
               const clickable =
-                (isDefender && duel.phase === 'awaiting_zone') ||
-                (isAttacker && duel.phase === 'awaiting_guess' && inZone && !isEliminated)
+                (isDefender && duel.phase === 'awaiting_zone') || (isAttacker && duel.phase === 'awaiting_guess' && inZone)
 
               return (
                 <button
@@ -211,15 +211,11 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
                   className={`aspect-square rounded-sm border text-[10px] transition ${
                     isPendingSecretTile
                       ? 'border-amber-400 bg-amber-400/40'
-                      : isEliminated
-                        ? 'border-slate-800 bg-slate-900/80 text-rose-500'
-                        : inZone
-                          ? 'border-amber-500/60 bg-amber-500/10'
-                          : 'border-slate-800 bg-slate-900/40'
+                      : inZone
+                        ? 'border-amber-500/60 bg-amber-500/10'
+                        : 'border-slate-800 bg-slate-900/40'
                   } ${clickable ? 'cursor-pointer hover:border-amber-400' : 'cursor-default'}`}
-                >
-                  {isEliminated ? '✕' : ''}
-                </button>
+                />
               )
             }),
           )}
