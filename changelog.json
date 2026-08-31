@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.123.0",
+    "date": "2026-08-31",
+    "changes": [
+      "Reworked how Hunting rewards are calculated: the server now tracks the exact monster you're fighting (real HP, real rare-or-not) instead of estimating an average pace — kills are credited the moment they actually happen, rare monsters correctly take longer and pay their full bonus, and normal kills no longer carry a small always-on padding to compensate"
+    ]
+  },
+  {
     "version": "1.122.26",
     "date": "2026-08-31",
     "changes": [

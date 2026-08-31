@@ -183,7 +183,7 @@ function computeDerivedStats(
   // derivedStats.ts exactly. Previously never computed server-side at all
   // (player HP/knockout had no server concept), which is what let a fight the
   // character was actually losing still get billed as continuous successful
-  // attacking for its entire real-world duration — see cycleTimeMs below.
+  // attacking for its entire real-world duration — see walkCombat below.
   const physicalDefense = equipmentBonus.physicalDefense ?? 0
   const dodge = attributes.agility * 1 + (equipmentBonus.dodge ?? 0)
   return { hp, physicalAttack, magicAttack, attackSpeed: BASE_ATTACK_SPEED, dexterity, physicalDefense, dodge }
@@ -331,7 +331,7 @@ const DURABILITY_TARGET_HOURS_TO_EMPTY_MS = 18 * 60 * 60 * 1000
 // 2026-11 alongside the weapon-curve/enemy-HP rebalance) — mirrors
 // useCombatStore.ts's own RESPAWN_GAP_MS, must stay in sync. **No longer
 // additive on top of the fight (2026-11, requested by the user)** — see
-// cycleTimeMs below, this is now a floor on the whole spawn-to-next-spawn
+// walkCombat below, this is now a floor on the whole spawn-to-next-spawn
 // duration, not extra time tacked on after the kill.
 const RESPAWN_GAP_MS = 10_000
 
@@ -370,20 +370,26 @@ function applyDamageReduction(damage: number, reductionPct: number): number {
   return Math.max(1, Math.round(damage * (1 - clampedPct / 100)))
 }
 
-// Expected-value combat reward rewrite (2026-08-11, see CLAUDE.md's Combat
-// section) — the reward loop below no longer rolls "is this specific spawn
-// rare" per kill for gold/EXP/kill-count purposes (that's still rolled, but
-// only for the cosmetic rare-monster glow/toast/log flavor and the
-// response's informational rareKills count). Reward math instead folds
-// rare's 5% chance / 2x HP / 5x reward into a blended expected-value
-// multiplier, since tying reward math to an individual random roll is
-// exactly the kind of per-window RNG divergence this rewrite removes — a
-// single rare kill landing on one side of a resolve-window boundary but not
-// the other would reintroduce it, worse (a 5x swing instead of a 1x one).
-// Each factor is `(1 - RARE_CHANCE) + RARE_CHANCE * <rare's own multiplier
-// for that quantity>` — the expected value of the rare/not-rare coin flip.
-const RARE_BLENDED_HP_FACTOR = (1 - RARE_CHANCE) + RARE_CHANCE * RARE_HP_MULTIPLIER // 1.05
-const RARE_BLENDED_REWARD_FACTOR = (1 - RARE_CHANCE) + RARE_CHANCE * RARE_REWARD_MULTIPLIER // 1.2
+// Per-instance combat resolution (v1.123.0, replaces the 2026-08-11
+// blended-expected-value rewrite — see CLAUDE.combat-and-loot.md) — the walk
+// below (walkCombat) now tracks one real monster instance at a time
+// (characters.current_monster_hp/current_monster_is_rare, persisted between
+// calls), the same way useCombatStore.ts already does client-side for its
+// own visual display. rollIsRare() is evaluated once per real spawn and its
+// result genuinely drives that instance's own HP/reward, not blended into an
+// average — this was the direct fix for a reported bug: a real rare fight
+// (genuinely ~2x longer) could cross two whole-kill thresholds under the old
+// blended model (2 EXP toasts for one fight) because the model never knew
+// that specific instance was rare. This doesn't reintroduce the client/server
+// RNG-divergence risk the 2026-08-11 rewrite was built to prevent — that risk
+// lived in per-attack damage RNG (expectedDamagePerHit/dps below are still
+// deterministic expected values, no random damage rolls added server-side).
+// The only new randomness is one rollIsRare() coin-flip per real kill, not
+// per attack — the client already independently rolls its own copy of this
+// same flip locally for cosmetic display (a divergence that already existed
+// and was never load-bearing, since the client hasn't predicted rewards
+// since the 2026-11 "reward-on-kill" rewrite). See rollIsRare/spawnInstanceHp
+// below for the actual per-instance spawn.
 // Comet/Fallen Star kill-drop odds — confirmed, flat (reverted 2026-08-03: a
 // same-day earlier attempt scaled *this* base rate by monster level, but the
 // user clarified that was the wrong lever — the base rate was never the
@@ -506,8 +512,8 @@ interface EnemyType {
   max_hp: number
   gold_reward: number
   zone_id: string | null
-  // Read since 2026-08-29 by the player-survivability cycle model below (see
-  // cycleTimeMs) — was previously deliberately unread since incoming damage
+  // Read since 2026-08-29 by the player-survivability inputs below (see
+  // walkCombat) — was previously deliberately unread since incoming damage
   // had no server-side concept at all. exp_reward still isn't read — see
   // expRewardForLevel above.
   attack_damage: number
@@ -515,6 +521,15 @@ interface EnemyType {
 
 function rollIsRare(): boolean {
   return Math.random() < RARE_CHANCE
+}
+
+// Real per-instance spawn HP — mirrors combatResolver.ts's spawnMonsterHp
+// exactly. Replaces the old blended-average effectiveHp (see this file's own
+// header comment on the per-instance rewrite) now that a specific instance's
+// real rare-ness is tracked (characters.current_monster_is_rare), not
+// assumed at a flat 5% rate.
+function spawnInstanceHp(type: EnemyType, isRare: boolean): number {
+  return isRare ? type.max_hp * RARE_HP_MULTIPLIER : type.max_hp
 }
 
 function monsterDefense(type: EnemyType, characterLevel: number): number {
@@ -782,6 +797,20 @@ interface CharacterSnapshot {
   // null means never tracked yet, lazy-initialized to a full pool the same
   // way the client's own currentPlayerMp does.
   current_mp: number | null
+  // Per-instance combat state (see this file's own header comment on the
+  // per-instance rewrite) — mirrors useCombatStore.ts's currentHp/
+  // isRareInstance/currentMonsterSpawnedAt/respawnReadyAt, persisted here as
+  // the server-side source of truth for reward crediting. current_monster_id
+  // is compared against selected_monster_id at the top of every resolve —
+  // any mismatch (monster switched, or no instance yet) means "spawn fresh,"
+  // same as the client's own start(). current_monster_hp: null = no instance
+  // yet, 0 = dead and waiting out current_monster_respawn_at, >0 = real
+  // remaining HP.
+  current_monster_id: string | null
+  current_monster_hp: number | string | null
+  current_monster_is_rare: boolean
+  current_monster_spawned_at: string | null
+  current_monster_respawn_at: string | null
 }
 
 interface EquippedItemRow {
@@ -853,6 +882,175 @@ interface ApplyResultsResponse {
   character_kills?: number | string | null
   account_kills?: number | string | null
   granted_items?: GrantedItemRow[]
+}
+
+// Per-instance combat state carried between resolve calls — see this file's
+// header comment on the per-instance rewrite, and characters.current_monster_*
+// (20261120000000_per_instance_combat_state.sql). hp === null means "no
+// instance yet, spawn fresh" (first fight, or the persisted monster_id didn't
+// match — see loadInstance below); hp === 0 means dead and waiting out
+// respawnAt; hp > 0 is real remaining HP.
+interface MonsterInstanceState {
+  hp: number | null
+  isRare: boolean
+  spawnedAt: number
+  respawnAt: number | null
+}
+
+interface KillEvent {
+  isRare: boolean
+}
+
+interface WalkResult {
+  killEvents: KillEvent[]
+  final: MonsterInstanceState
+  // Real ms of actual attacking time the walk consumed — only meaningful
+  // when affordableAttackMs was finite (an MP-costing skill was active);
+  // NaN otherwise (Infinity - Infinity), which is fine since the caller only
+  // reads it in that same case.
+  attackTimeConsumedMs: number
+}
+
+// Loads whatever instance state is persisted on the character row, or a
+// fresh "spawn on first use" state if the monster switched (or there's no
+// instance yet) — mirrors useCombatStore.ts's start() always spawning fresh
+// regardless of whatever a stale instance looked like. No separate reset
+// hook is needed anywhere else for a monster/zone switch; this comparison
+// alone covers it every call.
+function loadInstance(character: CharacterSnapshot, monsterId: string): MonsterInstanceState {
+  if (character.current_monster_id !== monsterId) {
+    return { hp: null, isRare: false, spawnedAt: 0, respawnAt: null }
+  }
+  return {
+    hp: character.current_monster_hp == null ? null : Number(character.current_monster_hp),
+    isRare: character.current_monster_is_rare,
+    spawnedAt: character.current_monster_spawned_at ? new Date(character.current_monster_spawned_at).getTime() : 0,
+    respawnAt: character.current_monster_respawn_at ? new Date(character.current_monster_respawn_at).getTime() : null,
+  }
+}
+
+// Advances a real per-instance kill/respawn walk across [windowStart,
+// windowEnd) — replaces the old blended-average "expectedKillsThisWindow =
+// elapsedMs / cycleTimeMs" estimate with a real simulation of one specific
+// monster instance at a time (real HP, real rare flag), so a kill is
+// credited exactly when it happens rather than smoothed into an average
+// (see this file's header comment for the full rationale — this is the
+// direct fix for a reported bug where a genuinely longer rare fight could
+// cross two whole-kill thresholds under the old model).
+//
+// Bounded/cheap: loop iterations are O(real kills in the window) — the same
+// complexity class as the old per-kill drop-roll loop, already proven fine
+// up to the ~12h/~4300-kill AFK-cap worst case (see AFK_CAP_MS_BY_ACCOUNT_TIER).
+// dps/timeToPlayerDeathMs stay the same deterministic expected-value inputs
+// as before, fixed for the whole call (no per-attack RNG added — the only
+// new randomness is one rollIsRare() per real spawn, not per attack, so this
+// doesn't reintroduce the client/server reward-divergence risk the
+// 2026-08-11 closed-form rewrite was built to prevent).
+async function walkCombat(params: {
+  windowStart: number
+  windowEnd: number
+  monster: EnemyType
+  dps: number
+  timeToPlayerDeathMs: number
+  initial: MonsterInstanceState
+  // Ms of real attacking time still affordable given current MP — Infinity
+  // when no MP-costing skill is active.
+  affordableAttackMs: number
+  // Called once per real kill, in order — performs that kill's drop/pet/
+  // currency rolls (and gold/EXP crediting, using the kill's own real isRare
+  // flag) and returns true if combat should stop right here (live-mode
+  // inventory full).
+  onKill: (event: KillEvent) => Promise<boolean>
+}): Promise<WalkResult> {
+  let t = params.windowStart
+  let hp = params.initial.hp
+  let isRare = params.initial.isRare
+  let spawnedAt = params.initial.spawnedAt
+  let respawnAt = params.initial.respawnAt
+  let remainingAffordable = params.affordableAttackMs
+  const killEvents: KillEvent[] = []
+
+  while (t < params.windowEnd) {
+    if (hp === null) {
+      isRare = rollIsRare()
+      hp = spawnInstanceHp(params.monster, isRare)
+      spawnedAt = t
+    }
+
+    if (hp <= 0) {
+      // Dead, waiting out the respawn gap.
+      if (respawnAt === null || respawnAt > params.windowEnd) break
+      t = respawnAt
+      isRare = rollIsRare()
+      hp = spawnInstanceHp(params.monster, isRare)
+      spawnedAt = t
+      respawnAt = null
+      continue
+    }
+
+    if (remainingAffordable <= 0) break // out of mana, nothing more happens this window
+
+    // Fighting phase — timeToKillMs/livesNeeded/fightDurationMs computed off
+    // THIS instance's real remaining hp (the fix for the rare-fight bug: a
+    // real rare instance's own 2x hp correctly takes ~2x as long here, where
+    // the old blended average could not represent that).
+    const timeToKillMs = hp / params.dps
+    const livesNeeded =
+      timeToKillMs <= params.timeToPlayerDeathMs ? 1 : Math.ceil(timeToKillMs / params.timeToPlayerDeathMs)
+    const fightDurationMs = timeToKillMs + (livesNeeded - 1) * KNOCKOUT_LOCKOUT_MS
+    const wallClockBudget = params.windowEnd - t
+
+    if (timeToKillMs > remainingAffordable) {
+      // MP runs out before this instance would die — spend exactly the
+      // affordable attack time and stop (no MP regen exists, so nothing
+      // else can happen this window regardless).
+      hp -= remainingAffordable * params.dps
+      remainingAffordable = 0
+      break
+    }
+    if (fightDurationMs > wallClockBudget) {
+      // Wall-clock budget runs out first — partial progress, proportional
+      // to the pure-attack fraction of whatever budget remains (knockout
+      // downtime eats budget without reducing hp).
+      const attackFraction = timeToKillMs / fightDurationMs
+      const attackTimeUsed = wallClockBudget * attackFraction
+      hp -= attackTimeUsed * params.dps
+      remainingAffordable -= attackTimeUsed
+      t = params.windowEnd
+      break
+    }
+
+    // Real kill.
+    t += fightDurationMs
+    remainingAffordable -= timeToKillMs
+    const killedRare = isRare
+    hp = 0
+    killEvents.push({ isRare: killedRare })
+
+    // Determine the next instance's timing regardless of whether onKill
+    // signals a stop below — the monster's own lifecycle is already fully
+    // determined by deterministic math and doesn't wait on the player, so a
+    // live-mode inventory-full stop still leaves a coherent, resumable state
+    // (either a freshly-spawned instance or a real pending respawn deadline)
+    // rather than a dead end that could never spawn again.
+    const respawnEligibleAt = spawnedAt + RESPAWN_GAP_MS
+    if (respawnEligibleAt <= t) {
+      isRare = rollIsRare()
+      hp = spawnInstanceHp(params.monster, isRare)
+      spawnedAt = t
+    } else {
+      respawnAt = respawnEligibleAt
+    }
+
+    const stop = await params.onKill({ isRare: killedRare })
+    if (stop) break
+  }
+
+  return {
+    killEvents,
+    final: { hp, isRare, spawnedAt, respawnAt },
+    attackTimeConsumedMs: params.affordableAttackMs - remainingAffordable,
+  }
 }
 
 async function handleResolveCombat(req: Request): Promise<Response> {
@@ -1206,10 +1404,12 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // getLevelDiffColor), precomputed once here.
   const expMultiplier = EXP_MULTIPLIER_BY_COLOR[getLevelDiffColor(character.level, monster.level)]
 
-  // Cycle-time model (see the full write-up further below, by the kill-
-  // processing loop) — hoisted up here too, since MP-gating below needs to
-  // know what fraction of a kill cycle is actually spent attacking vs.
-  // sitting in the fixed RESPAWN_GAP_MS gap between kills.
+  // Per-window-fixed combat inputs (attributes/gear are already fixed for
+  // the whole window, same "not retroactively changed mid-window" precedent
+  // as everywhere else in this function) — fed into walkCombat below, which
+  // is what now actually turns these into real per-instance kills instead of
+  // a window-wide closed-form estimate (see this file's header comment on
+  // the per-instance rewrite).
   // Magic attacks (activeSkill window) always land — dodge only ever applies
   // to physical attacks (2026-11-25, requested by the user). Mirrors
   // useCombatStore.runTick's own rollAttackLands gate exactly.
@@ -1223,47 +1423,19 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     attackMidpoint,
     activeSkill ? monsterMagicDefense(monster, character.level) : monsterDefense(monster, character.level),
   )
-  const effectiveHp = monster.max_hp * RARE_BLENDED_HP_FACTOR
   const dps = (hitChance * expectedDamagePerHit) / attackIntervalMs
-  const timeToKillMs = effectiveHp / dps
 
-  // Player-survivability cycle model (2026-08-29, bug fix reported by the
-  // user — a Wuxia stuck dealing no damage against Ridgeback Simian [MP
-  // exhausted, blocked client-side] kept getting gold/EXP/kill credit every
-  // ~4s resolve anyway, and separately a real "2x kills" toast fired the
-  // instant a death timer ended, crediting a window the character spent
-  // entirely dead). Root cause: cycleTimeMs below used to be just
-  // timeToKillMs + RESPAWN_GAP_MS, which assumes the player is continuously,
-  // successfully attacking for the whole window bar the fixed respawn gap —
-  // it had no notion of the player's own HP or the 10s knockout lockout
-  // (KNOCKOUT_LOCKOUT_MS, see useCombatStore.ts's reviveAt) at all, since
-  // incoming damage/player HP had never been simulated server-side (a
-  // previously-accepted gap). If the character can't reliably out-damage the
-  // monster before the monster kills it first, real play looks like repeated
-  // (fight until knocked out) -> (10s lockout) -> revive cycles, most of
-  // which is dead time — but any resolve call whose elapsedMs window spans
-  // one of those cycles used to bill the whole thing as active combat.
-  //
-  // Fixed by deterministically estimating whether the character can survive
-  // long enough to land a kill within one life, using the same closed-form
-  // EV approach as the rest of this model (no RNG re-added): incomingDps is
-  // derived from the monster's own attack_damage and the character's
-  // physicalDefense/dodge (mirrors useCombatStore.runTick's incoming-damage
-  // branch, ported server-side for the first time), giving
-  // timeToPlayerDeathMs = playerMaxHp / incomingDps. If that's shorter than
-  // timeToKillMs, the character statistically loses the fight before
-  // finishing it — livesNeeded is how many death-interrupted attempts it
-  // actually takes to land effectiveHp worth of cumulative damage, each of
-  // the first (livesNeeded - 1) followed by a real KNOCKOUT_LOCKOUT_MS pause
-  // (the last life ends in the kill itself, no trailing knockout).
-  // cycleTimeMs grows to include those extra pauses; total *active*
-  // attacking time (timeToKillMs) does not, so activeAttackFraction below
-  // correctly shrinks too — which also stops the MP-gating block just below
-  // from over-estimating mana spent during a death spiral, not just
-  // gold/EXP/kills. Enchantress "Bless" (item_instances.enchant.blessPct)
-  // isn't folded into damageReductionPct here — the gather query doesn't
-  // select `enchant` — a small, disclosed gap (a Bless-geared character's
-  // real survival odds are slightly better than this estimates).
+  // Player-survivability inputs (2026-08-29, bug fix reported by the user —
+  // a Wuxia stuck dealing no damage against Ridgeback Simian [MP exhausted,
+  // blocked client-side] kept getting gold/EXP/kill credit every ~4s resolve
+  // anyway) — incomingDps/timeToPlayerDeathMs feed walkCombat's own
+  // per-instance livesNeeded/fightDurationMs calc below, same deterministic
+  // EV approach as before (no RNG re-added), just evaluated per real
+  // instance now instead of once against a blended-average HP. Enchantress
+  // "Bless" (item_instances.enchant.blessPct) isn't folded into
+  // damageReductionPct here — the gather query doesn't select `enchant` — a
+  // small, disclosed gap (a Bless-geared character's real survival odds are
+  // slightly better than this estimates).
   const effectivePlayerDefense = Math.round(
     derived.physicalDefense * PLAYER_DEFENSE_MULTIPLIER_BY_COLOR[getLevelDiffColor(character.level, monster.level)],
   )
@@ -1276,24 +1448,6 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const incomingDps = (incomingHitChance * expectedIncomingDamagePerHit) / MONSTER_ATTACK_INTERVAL_MS
   const playerMaxHp = derived.hp
   const timeToPlayerDeathMs = incomingDps > 0 ? playerMaxHp / incomingDps : Infinity
-  const livesNeeded =
-    timeToKillMs <= timeToPlayerDeathMs ? 1 : Math.max(1, Math.ceil(timeToKillMs / timeToPlayerDeathMs))
-  // Real wall-clock duration of the fight itself, spawn to kill (including
-  // any knockout/revive stalls along the way) — this is what the respawn gap
-  // now runs concurrently against, not what it gets added on top of.
-  const fightDurationMs = timeToKillMs + (livesNeeded - 1) * KNOCKOUT_LOCKOUT_MS
-  // Respawn gap now runs concurrently with the fight (2026-11, requested by
-  // the user), not additively after it — mirrors useCombatStore.runTick's
-  // own currentMonsterSpawnedAt/respawnEligibleAt handling. A monster that's
-  // still alive is never touched by this timer; it only ever gates how long
-  // the *next* monster waits to appear once the current one actually dies,
-  // so a fast kill still eats the full RESPAWN_GAP_MS gap (same pacing cap
-  // as before), while a fight that already ran longer than RESPAWN_GAP_MS
-  // sees the next monster appear the instant this one dies, no added gap.
-  const cycleTimeMs = Math.max(fightDurationMs, RESPAWN_GAP_MS)
-  // Fraction of a full kill cycle actually spent attacking rather than
-  // sitting out the respawn gap or a knockout lockout — always in (0, 1].
-  const activeAttackFraction = timeToKillMs / cycleTimeMs
 
   // Hunter must have the Quiver equipped to attack at all (confirmed with the
   // user, 2026-07-31 — supersedes the earlier ammo-stack/consumption model
@@ -1302,18 +1456,24 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const isHunter = character.class === 'hunter'
   const canAttackAtAll = !(isHunter && !character.equipped_quiver_id)
 
-  // MP gating (2026-11 fix) — mirrors useCombatStore.runTick's 'no-mana'
-  // block, which blocks the attack outright with no fallback once MP runs
-  // out. No regen exists, so startingMp lazy-inits to a full pool only the
-  // first time (character.current_mp is null), then persists for real.
-  // effectiveElapsedMs only diverges from elapsedMs when the Hunter-no-
-  // quiver gate above blocks everything, or MP genuinely ran dry mid-window
-  // — kept at full elapsedMs precision otherwise, rather than always
-  // rounding to attack-interval boundaries. This is also what the reward
-  // block below actually gates on now (not a naive attack count — see why
-  // below).
-  let effectiveElapsedMs = canAttackAtAll ? elapsedMs : 0
+  // MP gating (folded into walkCombat below, v1.123.0 — was previously a
+  // separate up-front statistical estimate scaling effectiveElapsedMs by
+  // activeAttackFraction; see this file's header comment on the per-instance
+  // rewrite). effectiveElapsedMs now only diverges from elapsedMs via the
+  // Hunter-no-quiver gate — MP running dry mid-window is handled by the walk
+  // stopping exactly when mpAffordableAttackMs is exhausted, which is a
+  // strict accuracy improvement over the old ratio-based estimate (the old
+  // version's own comment already disclosed it could over/under-estimate
+  // mana spent during a knockout death-spiral; the walk now knows exactly
+  // how much wall-clock time was spent attacking vs. waiting/knocked out,
+  // because it's simulating those phases directly rather than estimating a
+  // fraction).
+  const effectiveElapsedMs = canAttackAtAll ? elapsedMs : 0
   let newCurrentMp: number | null = null
+  // Infinity = no MP-costing skill active, walkCombat's own budget check
+  // (timeToKillMs > remainingAffordable) never trips.
+  let mpAffordableAttackMs = Infinity
+  let startingMp = 0
   if (canAttackAtAll && activeSkill && activeSkill.mpCost > 0) {
     const maxMp = BASE_MP + attributes.spirit * MP_PER_SPIRIT
     // Clamped to maxMp — use_potion_stack adds a potion's flat restore
@@ -1321,34 +1481,9 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     // would mean duplicating the whole attribute-interpolation table into
     // SQL just for this), so an over-full persisted value is possible and
     // corrected here rather than there.
-    const startingMp = Math.min(character.current_mp ?? maxMp, maxMp)
-    // Real bug fix (2026-11, reported by the user — "still losing mana even
-    // when no enemy present," and a fresh Wuxia getting no EXP for a real
-    // kill). attacksInWindow used to be Math.floor(elapsedMs /
-    // attackIntervalMs) with no activeAttackFraction scaling, which assumed
-    // an attack landed every single attackIntervalMs across the ENTIRE
-    // elapsed window — including the RESPAWN_GAP_MS dead time between kills
-    // (and any knockout lockout), when nothing is actually being attacked.
-    // That wildly over-counted attacks for any window spanning more than one
-    // kill cycle, which silently over-drained current_mp far faster than
-    // real combat ever could: for a fresh low-level Wuxia this could exhaust
-    // the entire MP pool (starving gold/EXP for the window too, via
-    // effectiveElapsedMs below) within the very first resolve call, then
-    // keep it pinned at 0 forever after since MP never regenerates on its
-    // own. Scaling by activeAttackFraction here counts only the portion of
-    // elapsedMs actually spent mid-fight as attack time.
-    const attacksInWindow = Math.floor((elapsedMs * activeAttackFraction) / attackIntervalMs)
+    startingMp = Math.min(character.current_mp ?? maxMp, maxMp)
     const castsAffordable = Math.floor(startingMp / activeSkill.mpCost)
-    let attacksUsed = attacksInWindow
-    if (castsAffordable < attacksInWindow) {
-      attacksUsed = castsAffordable
-      // Real wall-clock time this many actual attacks consume, including
-      // their proportional share of respawn-gap dead time — the inverse of
-      // the activeAttackFraction scaling above, so a genuine MP exhaustion
-      // clamps this window the same principled way an elapsedMs cap would.
-      effectiveElapsedMs = (attacksUsed * attackIntervalMs) / activeAttackFraction
-    }
-    newCurrentMp = Math.max(0, startingMp - attacksUsed * activeSkill.mpCost)
+    mpAffordableAttackMs = castsAffordable * attackIntervalMs
   }
 
   let kills = 0
@@ -1370,12 +1505,13 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const accountKillsBefore = Number(gathered.account_kills?.kills ?? 0)
   const petAlreadyUnlocked = Boolean(gathered.pet_exists)
 
-  // The real, continuous amount to advance character_monster_kills/
-  // account_monster_kills.kills by this call — see its own assignment below
-  // for why this must NOT just be `kills` (a bug fix, reported by the user:
-  // watching a full fight with healthy mana, 8 back-to-back live resolve
-  // calls each showing gained.kills: 0, only crediting once a 9th call's own
-  // elapsed window happened to be long enough by itself).
+  // Whole-integer count of real kills walkCombat processed this call — the
+  // per-instance rewrite (see this file's header comment) means partial
+  // progress between calls is now carried by characters.current_monster_hp
+  // instead of a fractional running total here, so this goes back to being
+  // a plain per-call increment (character_monster_kills/account_monster_
+  // kills.kills only needed to be fractional to support the old blended
+  // model's own carry-forward, which no longer exists).
   let killsDeltaToPersist = 0
   let petObtained = false
 
@@ -1408,258 +1544,199 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // the post-loop pass reaches it.
   let projectedOccupied = occupied
 
+  // Persisted per-instance state carried between calls (see this file's
+  // header comment on the per-instance rewrite) — null/no-op when nothing
+  // happens this call (effectiveElapsedMs === 0), matching the existing
+  // p_current_mp: null "nothing changed" convention.
+  let monsterInstanceState: {
+    monster_id: string
+    hp: number
+    is_rare: boolean
+    spawned_at: string | null
+    respawn_at: string | null
+  } | null = null
+
   if (effectiveElapsedMs > 0) {
-    // Deterministic expected-value reward math (2026-08-11 rewrite, see
-    // CLAUDE.md's Combat section) — closed-form math computed once for the
-    // whole window rather than per-attack RNG simulation. This is what
-    // makes the client's own prediction (see combatResolver.ts's mirrored
-    // functions) match this server-confirmed result almost exactly — two
-    // independent RNG simulations of the same window can disagree by a
-    // kill or two, but two evaluations of the same formula over the same
-    // elapsed time cannot.
-    //
-    // Cycle-time model (2026-08-17, requested by the user, replaces the old
-    // continuous-fighting formula) — a monster respawn gap (RESPAWN_GAP_MS,
-    // mirrored in useCombatStore.ts) now sits between a kill and the next
-    // monster appearing, which the old "totalAttacks * hitChance *
-    // expectedDamagePerHit, capped at one monster's worth of HP per attack"
-    // formula can't express (it implicitly assumes 100% of elapsed time is
-    // spent attacking). Rather than rewriting this into a discrete-event
-    // walk (like Row Combat's resolve-row-combat needed for its genuinely
-    // different per-attack targets), a single monster with a gap reduces to
-    // simple cycle-time math: whichever is longer of (a) the time to whittle
-    // down one (blended-rare) effective HP pool at this character's DPS, or
-    // (b) the fixed gap (the gap runs concurrently with the fight, not
-    // after it — see cycleTimeMs's own comment above), is one full "kill
-    // cycle" — how many of those fit in the
-    // elapsed window is the kill count. No per-attack overkill cap is
-    // needed anymore either (the old bug this fixed — a level-100+
-    // character idling a level-1 monster racking up 12,493 "kills" — can't
-    // recur here, since kills are now bounded by wall-clock cycle time, not
-    // by raw damage output divided by HP). hitChance/expectedDamagePerHit/
-    // effectiveHp/dps/timeToKillMs/cycleTimeMs are now computed earlier (see
-    // activeAttackFraction above) since MP-gating needs them too — only
-    // expectedKillsThisWindow itself still belongs here, since it depends on
-    // effectiveElapsedMs (only final once MP-gating has run).
-    const expectedKillsThisWindow = effectiveElapsedMs / cycleTimeMs
-
-    // How many WHOLE kills this window actually crosses, combining the
-    // fractional running total already on the row (characterKillsBefore,
-    // now a numeric column — see the migration that widened it) with this
-    // window's own fractional contribution, the same "carry the remainder
-    // forward" idea the EXP level-up loop already uses. Bounded/small (real
-    // kills, not attacks), so looping this many times for drop/currency/pet
-    // rolls only is cheap even though the underlying attack count can be
-    // large for a fast weak monster.
-    const wholeKillsThisWindow = Math.floor(characterKillsBefore + expectedKillsThisWindow) - Math.floor(characterKillsBefore)
-
-    // Real, integer count of kills actually processed this window — the
-    // reward-crediting unit now (2026-11, requested by the user: "reward the
-    // actual exp when an enemy dies," not a smoothed continuous estimate).
-    // Bounded by wholeKillsThisWindow above, but can stop earlier in live
-    // mode if a drop can't fit (see the inventoryFull break below) — "a
-    // kill's own reward still counts, the rest of the window doesn't."
-    let killsProcessed = 0
-
-    if (wholeKillsThisWindow > 0) {
-      // Level-ranged, class-agnostic selection (2026-08-29, requested by the
-      // user — supersedes the earlier "own class only, single closest
-      // level" version): picks a random gear family (excluding the
-      // standalone 'sword' family and 'quiver'/'lucky-bow'/'money-bag'/
-      // 'gem-bag'/'promotion-gear'/'promotion-material'), then a random
-      // template in that family whose required_level falls within
-      // [monster.level - 40, monster.level] (floored at 1) — no
-      // required_class filter, so any class's gear can drop. Done as a
-      // single indexed SQL query (pick_drop_template, see
-      // 20261110030000_class_agnostic_level_range_drops.sql) instead of
-      // transferring the whole eligible-template list over the wire —
-      // called only when a drop roll actually succeeds below (rare), not
-      // once per resolve. Mirrors pickLevelAppropriateTemplate in
-      // useInventoryStore.ts — must stay in sync, same pattern as this
-      // file's other client/server mirrors.
-      const pickDropTemplate = async (): Promise<{ id: string; required_level: number; slot_type: string } | null> => {
-        const { data, error } = await db.rpc('pick_drop_template', {
-          p_level: monster.level,
-        })
-        if (error) {
-          console.error('resolve-combat pick_drop_template call failed:', error.message)
-          return null
-        }
-        return (data as { id: string; required_level: number; slot_type: string } | null) ?? null
+    // Level-ranged, class-agnostic selection (2026-08-29, requested by the
+    // user — supersedes the earlier "own class only, single closest level"
+    // version): picks a random gear family (excluding the standalone
+    // 'sword' family and 'quiver'/'lucky-bow'/'money-bag'/'gem-bag'/
+    // 'promotion-gear'/'promotion-material'), then a random template in
+    // that family whose required_level falls within [monster.level - 40,
+    // monster.level] (floored at 1) — no required_class filter, so any
+    // class's gear can drop. Done as a single indexed SQL query
+    // (pick_drop_template, see 20261110030000_class_agnostic_level_range_
+    // drops.sql) instead of transferring the whole eligible-template list
+    // over the wire — called only when a drop roll actually succeeds below
+    // (rare), not once per resolve. Mirrors pickLevelAppropriateTemplate in
+    // useInventoryStore.ts — must stay in sync, same pattern as this file's
+    // other client/server mirrors.
+    const pickDropTemplate = async (): Promise<{ id: string; required_level: number; slot_type: string } | null> => {
+      const { data, error } = await db.rpc('pick_drop_template', {
+        p_level: monster.level,
+      })
+      if (error) {
+        console.error('resolve-combat pick_drop_template call failed:', error.message)
+        return null
       }
-
-      // Jade Shard's own template lookup — a single fixed item, not a
-      // family/level pick like pickDropTemplate above, so a plain select is
-      // enough. Called only when the flat-chance roll below actually
-      // succeeds (rare, same lazy-fetch discipline as pickDropTemplate).
-      let jadeShardTemplate: { id: string; required_level: number; slot_type: string } | null | undefined
-      const pickJadeShardTemplate = async (): Promise<{ id: string; required_level: number; slot_type: string } | null> => {
-        if (jadeShardTemplate !== undefined) {
-          return jadeShardTemplate
-        }
-        const { data, error } = await db
-          .from('item_templates')
-          .select('id, required_level, slot_type')
-          .eq('name', 'Jade Shard')
-          .maybeSingle()
-        if (error) {
-          console.error('resolve-combat Jade Shard template lookup failed:', error.message)
-          jadeShardTemplate = null
-        } else {
-          jadeShardTemplate = (data as { id: string; required_level: number; slot_type: string } | null) ?? null
-        }
-        return jadeShardTemplate
-      }
-
-      for (let i = 0; i < wholeKillsThisWindow; i += 1) {
-        // Rare status is still rolled per whole kill here — but purely for
-        // the cosmetic rareKills count in the response (e.g. an
-        // offline-summary "X rare kills" callout). It no longer feeds
-        // gold/EXP math at all (see RARE_BLENDED_REWARD_FACTOR above).
-        if (rollIsRare()) rareKills += 1
-
-        killsProcessed += 1
-
-        if (!petAlreadyUnlocked && !petObtained && Math.random() < PET_DROP_CHANCE) {
-          petObtained = true
-        }
-
-        // Per-zone quality-only drop bonus (2026-08-07, confirmed with the
-        // user — supersedes the old flat, drop-FREQUENCY-boosting
-        // account_drop_bonus_pct). accountDropMultiplier is now derived
-        // from whichever zone this monster belongs to and is deliberately
-        // NOT applied to the base drop roll anymore — a claimed zone's
-        // bonus no longer makes a normal item drop more often, only
-        // improves its odds of rolling a higher quality tier once a drop
-        // already happened. Comet/Fallen Star drop chance (just below)
-        // still uses the same multiplier, now zone-scoped instead of flat.
-        if (Math.random() < DROP_CHANCE) {
-          const dropped = await pickDropTemplate()
-          if (dropped) {
-            // Quality (and now composition +1, 2026-08-12) is rolled once, at
-            // drop time, and carried with the template through to whichever
-            // table (item_instances or loot_holding) ends up actually
-            // receiving it below.
-            const withQuality = {
-              ...dropped,
-              qualityTier: rollDroppedQualityTier(accountDropMultiplier * eventQualityMultiplier),
-              compositionLevel: rollDroppedCompositionLevel(accountDropMultiplier * eventQualityMultiplier),
-            }
-            if (mode === 'live') {
-              if (projectedOccupied < INVENTORY_SLOT_CAP) {
-                droppedTemplates.push(withQuality)
-                projectedOccupied += 1
-              } else {
-                inventoryFull = true
-              }
-            } else {
-              droppedTemplates.push(withQuality)
-            }
-          }
-        }
-
-        const bonusCurrency = rollBonusCurrencyDrops(
-          accountDropMultiplier * eventCometMultiplier,
-          accountDropMultiplier * eventFallenStarMultiplier,
-        )
-        if (mode === 'live') {
-          if (bonusCurrency.comets > 0) {
-            if (projectedOccupied < INVENTORY_SLOT_CAP) {
-              cometsGained += bonusCurrency.comets
-              projectedOccupied += 1
-            } else {
-              inventoryFull = true
-            }
-          }
-          if (bonusCurrency.fallenStars > 0) {
-            if (projectedOccupied < INVENTORY_SLOT_CAP) {
-              fallenStarsGained += bonusCurrency.fallenStars
-              projectedOccupied += 1
-            } else {
-              inventoryFull = true
-            }
-          }
-        } else {
-          cometsGained += bonusCurrency.comets
-          fallenStarsGained += bonusCurrency.fallenStars
-        }
-
-        if (
-          character.selected_monster_id !== null &&
-          JADE_SHARD_MONSTER_IDS.includes(character.selected_monster_id) &&
-          Math.random() < JADE_SHARD_DROP_CHANCE
-        ) {
-          const jadeShard = await pickJadeShardTemplate()
-          if (jadeShard) {
-            const jadeShardDrop = { ...jadeShard, qualityTier: 'normal', compositionLevel: 0 }
-            if (mode === 'live') {
-              if (projectedOccupied < INVENTORY_SLOT_CAP) {
-                droppedTemplates.push(jadeShardDrop)
-                projectedOccupied += 1
-              } else {
-                inventoryFull = true
-              }
-            } else {
-              droppedTemplates.push(jadeShardDrop)
-            }
-          }
-        }
-
-        // Live mode stops the whole window right here — matches "you'd have
-        // stopped fighting the moment you couldn't carry any more loot" —
-        // killsProcessed below stays wherever the break left it, crediting
-        // exactly the kills that actually completed and nothing more.
-        if (mode === 'live' && inventoryFull) {
-          break
-        }
-      }
+      return (data as { id: string; required_level: number; slot_type: string } | null) ?? null
     }
 
-    // Reward-on-kill (2026-11 rewrite, requested by the user) — gold/EXP are
-    // now a flat multiple of killsProcessed, the real integer number of
-    // kills that completed this window, replacing the old fractional
-    // "expectedKillsThisWindow * creditedFraction" estimate that credited a
-    // slice of progress every ~4s resolve regardless of whether a kill had
-    // actually finished. Deliberately NOT a revert to the pre-2026-08-11
-    // per-attack RNG simulation that rewrite fixed — this is still the same
-    // deterministic, no-roll math (hitChance/expectedDamagePerHit above),
-    // just counted in whole-kill units instead of a continuous rate, so
-    // there's no client/server RNG-divergence risk reintroduced. The client
-    // mirror (combatResolver.ts) no longer predicts a smooth in-between
-    // value either — see its own comment.
-    kills = killsProcessed
-    goldGained += Math.round(killsProcessed * monster.gold_reward * RARE_BLENDED_REWARD_FACTOR)
-    const killExp = killsProcessed * expRewardForLevel(monster.level) * expMultiplier * RARE_BLENDED_REWARD_FACTOR
-    // Iris gem bonus % applied last, after every other EXP multiplier —
-    // mirrors combatResolver.ts's expectedRewardPerAttack exactly.
-    expGained += Math.round(killExp * (1 + irisBonusPct / 100) * eventExpMultiplier)
+    // Jade Shard's own template lookup — a single fixed item, not a
+    // family/level pick like pickDropTemplate above, so a plain select is
+    // enough. Called only when the flat-chance roll below actually succeeds
+    // (rare, same lazy-fetch discipline as pickDropTemplate).
+    let jadeShardTemplate: { id: string; required_level: number; slot_type: string } | null | undefined
+    const pickJadeShardTemplate = async (): Promise<{ id: string; required_level: number; slot_type: string } | null> => {
+      if (jadeShardTemplate !== undefined) {
+        return jadeShardTemplate
+      }
+      const { data, error } = await db
+        .from('item_templates')
+        .select('id, required_level, slot_type')
+        .eq('name', 'Jade Shard')
+        .maybeSingle()
+      if (error) {
+        console.error('resolve-combat Jade Shard template lookup failed:', error.message)
+        jadeShardTemplate = null
+      } else {
+        jadeShardTemplate = (data as { id: string; required_level: number; slot_type: string } | null) ?? null
+      }
+      return jadeShardTemplate
+    }
 
-    // The running character_monster_kills/account_monster_kills.kills total
-    // must advance by this window's real fractional contribution
-    // (expectedKillsThisWindow), not just `kills` rounded down to whole
-    // kills — bug fix, reported by the user (watching a full fight with
-    // healthy mana, 8 back-to-back live resolve calls each showing
-    // gained.kills: 0, only crediting once a 9th call's own window happened
-    // to exceed a full cycleTimeMs by itself). Root cause: CombatEngine
-    // resolves roughly every ~4s (or immediately on a kill), far shorter than
-    // a real kill cycle (cycleTimeMs, ~10s+) — resolve_combat_apply_results
-    // only ever wrote character_monster_kills when p_kills_delta (previously
-    // the same whole-kill-only `kills` value) was > 0, so every short call
-    // whose own window didn't independently cross a whole kill silently
-    // discarded its fraction instead of carrying it into the next call.
-    // combat_last_resolved_at (the time baseline) was always advancing
-    // correctly, but the DB's own characterKillsBefore never accumulated
-    // anything in between, so it took a lucky, unusually large single window
-    // (a polling gap) to ever cross a boundary at all. A live inventoryFull
-    // break is the one case that must NOT carry the full fraction forward —
-    // combat genuinely stopped at whichever whole kill triggered it, so the
-    // persisted total resets to exactly that boundary (floor(characterKillsBefore)
-    // + killsProcessed) rather than including fictional extra fractional
-    // progress for time that was never actually fought.
-    const newRunningTotal = inventoryFull
-      ? Math.floor(characterKillsBefore) + killsProcessed
-      : characterKillsBefore + expectedKillsThisWindow
-    killsDeltaToPersist = newRunningTotal - characterKillsBefore
+    // Real per-kill reward/drop/pet handling — called once per real
+    // killEvent by walkCombat, in order, using that kill's own real isRare
+    // flag (2026-11-30 per-instance rewrite: replaces the old flattened
+    // RARE_BLENDED_REWARD_FACTOR applied to every kill regardless of
+    // rare-ness — confirmed with the user: normal kills pay their true
+    // amount, rare kills pay their true full 5x, same long-run average
+    // income but correctly bursty instead of smoothed). Returns true to
+    // signal walkCombat to stop (live-mode inventory full) — matches "you'd
+    // have stopped fighting the moment you couldn't carry any more loot."
+    const onKill = async (event: KillEvent): Promise<boolean> => {
+      kills += 1
+      if (event.isRare) rareKills += 1
+
+      const rareMultiplier = event.isRare ? RARE_REWARD_MULTIPLIER : 1
+      goldGained += Math.round(monster.gold_reward * rareMultiplier)
+      const killExp = expRewardForLevel(monster.level) * expMultiplier * rareMultiplier
+      // Iris gem bonus % applied last, after every other EXP multiplier —
+      // mirrors combatResolver.ts's expectedRewardPerAttack exactly.
+      expGained += Math.round(killExp * (1 + irisBonusPct / 100) * eventExpMultiplier)
+
+      if (!petAlreadyUnlocked && !petObtained && Math.random() < PET_DROP_CHANCE) {
+        petObtained = true
+      }
+
+      // Per-zone quality-only drop bonus (2026-08-07, confirmed with the
+      // user — supersedes the old flat, drop-FREQUENCY-boosting
+      // account_drop_bonus_pct). accountDropMultiplier is now derived from
+      // whichever zone this monster belongs to and is deliberately NOT
+      // applied to the base drop roll anymore — a claimed zone's bonus no
+      // longer makes a normal item drop more often, only improves its odds
+      // of rolling a higher quality tier once a drop already happened.
+      // Comet/Fallen Star drop chance (just below) still uses the same
+      // multiplier, now zone-scoped instead of flat.
+      if (Math.random() < DROP_CHANCE) {
+        const dropped = await pickDropTemplate()
+        if (dropped) {
+          // Quality (and now composition +1, 2026-08-12) is rolled once, at
+          // drop time, and carried with the template through to whichever
+          // table (item_instances or loot_holding) ends up actually
+          // receiving it below.
+          const withQuality = {
+            ...dropped,
+            qualityTier: rollDroppedQualityTier(accountDropMultiplier * eventQualityMultiplier),
+            compositionLevel: rollDroppedCompositionLevel(accountDropMultiplier * eventQualityMultiplier),
+          }
+          if (mode === 'live') {
+            if (projectedOccupied < INVENTORY_SLOT_CAP) {
+              droppedTemplates.push(withQuality)
+              projectedOccupied += 1
+            } else {
+              inventoryFull = true
+            }
+          } else {
+            droppedTemplates.push(withQuality)
+          }
+        }
+      }
+
+      const bonusCurrency = rollBonusCurrencyDrops(
+        accountDropMultiplier * eventCometMultiplier,
+        accountDropMultiplier * eventFallenStarMultiplier,
+      )
+      if (mode === 'live') {
+        if (bonusCurrency.comets > 0) {
+          if (projectedOccupied < INVENTORY_SLOT_CAP) {
+            cometsGained += bonusCurrency.comets
+            projectedOccupied += 1
+          } else {
+            inventoryFull = true
+          }
+        }
+        if (bonusCurrency.fallenStars > 0) {
+          if (projectedOccupied < INVENTORY_SLOT_CAP) {
+            fallenStarsGained += bonusCurrency.fallenStars
+            projectedOccupied += 1
+          } else {
+            inventoryFull = true
+          }
+        }
+      } else {
+        cometsGained += bonusCurrency.comets
+        fallenStarsGained += bonusCurrency.fallenStars
+      }
+
+      if (
+        character.selected_monster_id !== null &&
+        JADE_SHARD_MONSTER_IDS.includes(character.selected_monster_id) &&
+        Math.random() < JADE_SHARD_DROP_CHANCE
+      ) {
+        const jadeShard = await pickJadeShardTemplate()
+        if (jadeShard) {
+          const jadeShardDrop = { ...jadeShard, qualityTier: 'normal', compositionLevel: 0 }
+          if (mode === 'live') {
+            if (projectedOccupied < INVENTORY_SLOT_CAP) {
+              droppedTemplates.push(jadeShardDrop)
+              projectedOccupied += 1
+            } else {
+              inventoryFull = true
+            }
+          } else {
+            droppedTemplates.push(jadeShardDrop)
+          }
+        }
+      }
+
+      return mode === 'live' && inventoryFull
+    }
+
+    const walkResult = await walkCombat({
+      windowStart: lastResolvedMs,
+      windowEnd: lastResolvedMs + effectiveElapsedMs,
+      monster,
+      dps,
+      timeToPlayerDeathMs,
+      initial: loadInstance(character, character.selected_monster_id as string),
+      affordableAttackMs: mpAffordableAttackMs,
+      onKill,
+    })
+
+    killsDeltaToPersist = walkResult.killEvents.length
+    monsterInstanceState = {
+      monster_id: character.selected_monster_id as string,
+      hp: walkResult.final.hp ?? 0,
+      is_rare: walkResult.final.isRare,
+      spawned_at: walkResult.final.hp !== null && walkResult.final.hp > 0 ? new Date(walkResult.final.spawnedAt).toISOString() : null,
+      respawn_at: walkResult.final.respawnAt !== null ? new Date(walkResult.final.respawnAt).toISOString() : null,
+    }
+
+    if (activeSkill && activeSkill.mpCost > 0) {
+      const castsUsed = Math.floor(walkResult.attackTimeConsumedMs / attackIntervalMs)
+      newCurrentMp = Math.max(0, startingMp - castsUsed * activeSkill.mpCost)
+    }
   }
 
   // Idle/offline EXP rate (see IDLE_EXP_MULTIPLIER above) — applied once to
@@ -1797,6 +1874,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     p_item_drops: itemDropsPayload,
     p_currency_drops: currencyDropsPayload,
     p_current_mp: newCurrentMp,
+    p_monster_instance_state: monsterInstanceState,
   })
 
   if (applyError || !applyData) {
