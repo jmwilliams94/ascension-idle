@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.6",
+    "date": "2026-09-01",
+    "changes": [
+      "Item icons (Inventory, Forge, Equipment, Bank) got a visual polish — a rounded metallic border instead of the old flat colored outline"
+    ]
+  },
+  {
     "version": "1.125.5",
     "date": "2026-09-01",
     "changes": [

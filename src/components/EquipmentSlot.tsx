@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import HoverTooltip from './HoverTooltip'
 import ItemTooltip from './ItemTooltip'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
@@ -108,6 +108,11 @@ export default function EquipmentSlot({
   // (not available here) — fine since only one tile per slot is ever shown
   // at once, unlike the Inventory grid's many-at-a-time case.
   const emberCount = filled ? emberCountForColor(qualityColor) : 0
+  // Same rounded gradient-border frame as InventorySlot.tsx (2026-09-01) —
+  // only applied when filled, matching the flat-border version this
+  // replaces (an empty/unfilled slot keeps its plain dashed placeholder
+  // look, same as InventorySlot's own empty-tile early return).
+  const frameStyle: CSSProperties = filled && qualityColor ? ({ '--item-tier-color': qualityColor } as CSSProperties) : {}
 
   const button = (
     <button
@@ -116,19 +121,25 @@ export default function EquipmentSlot({
       title={tooltip ? undefined : label}
       aria-label={label}
       disabled={!onClick}
-      className={`relative flex items-center justify-center overflow-hidden rounded-lg border-2 text-lg ${sizeClassName} ${
-        filled ? 'bg-slate-800' : 'border-dashed border-slate-700 bg-slate-950/40'
+      className={`relative flex items-center justify-center text-lg ${sizeClassName} ${
+        filled ? 'item-quality-frame' : 'overflow-hidden rounded-lg border-2 border-dashed border-slate-700 bg-slate-950/40'
       } ${selected ? 'ring-2 ring-sky-400' : ''} ${!onClick ? 'cursor-default' : ''}`}
-      style={filled ? { borderColor: qualityColor, backgroundColor: qualityColor ? `${qualityColor}22` : undefined } : undefined}
+      style={frameStyle}
     >
-      {emberCount > 0 && <TierEmberEffect color={qualityColor as string} count={emberCount} seed={seedFromId(label)} />}
-      {showIconImage ? (
-        <img
-          src={iconSrc}
-          alt=""
-          className="relative z-10 h-4/5 w-4/5 object-contain"
-          onError={() => setIconLoadFailed(true)}
-        />
+      {filled ? (
+        <div className="item-quality-frame-inner relative flex h-full w-full items-center justify-center overflow-hidden">
+          {emberCount > 0 && <TierEmberEffect color={qualityColor as string} count={emberCount} seed={seedFromId(label)} />}
+          {showIconImage ? (
+            <img
+              src={iconSrc}
+              alt=""
+              className="relative z-10 h-4/5 w-4/5 object-contain"
+              onError={() => setIconLoadFailed(true)}
+            />
+          ) : (
+            <span className="relative z-10">{icon}</span>
+          )}
+        </div>
       ) : showPlaceholderImage ? (
         <img
           src={placeholderIconSrc}

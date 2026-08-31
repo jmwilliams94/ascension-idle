@@ -913,6 +913,42 @@ a,
   );
 }
 
+/* Item icon tile frame (2026-09-01, design-reviewed live in Settings >
+   Item Effects before rollout) — a rounded-corner variant of the
+   gradient-border-via-padding technique .ascension-chip-frame already
+   uses, replacing the old flat border-2 + inline borderColor on every real
+   gear/material tile: InventorySlot.tsx (the shared grid tile — Inventory,
+   Forge, Bank, Loot Holding), EquipmentSlot.tsx (paper-doll, a separate
+   bespoke component), and dragDrop.tsx's floating drag ghost. Every other
+   bordered container in the app (cards, chips, the FAB) deliberately keeps
+   chamfered/cut corners — this is the one place curved corners are wanted
+   instead, so it's its own class pair rather than a variant of
+   .ascension-chip-frame. Parameterized by --item-tier-color (not the
+   UI-chrome --ascension-tint var) so it stays a separate system from
+   .is-tinted, per the "never repaint gameplay-data color coding with this
+   system" guardrail in CLAUDE.visual-design.md — a tile's quality-tier
+   color drives this, not a UI accent choice. Defaults to a neutral steel
+   gray so a colorless tile (Normal quality, items with no qualityColor at
+   all) still gets the metallic frame look; real tiles override
+   --item-tier-color inline the same way qualityColor already drove the old
+   flat border/background. */
+.item-quality-frame {
+  position: relative;
+  padding: 2px;
+  border-radius: 0.75rem;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--item-tier-color, #94a3b8) 70%, white) 0%,
+    var(--item-tier-color, #94a3b8) 50%,
+    color-mix(in srgb, var(--item-tier-color, #94a3b8) 55%, black) 100%
+  );
+}
+
+.item-quality-frame-inner {
+  border-radius: 0.5rem;
+  background: linear-gradient(180deg, var(--ascension-ink-soft) 0%, var(--ascension-ink) 100%);
+}
+
 /* Dark inset frame for the custom <select> wrapper (Select.tsx) — border
    brightens gold on hover/focus, matching .select-box from the mockup. */
 .select-frame {

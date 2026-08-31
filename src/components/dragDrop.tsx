@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import type { ComponentProps, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
+import type { ComponentProps, CSSProperties, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import { DragDropContext, queryDropZoneRects, resolveDropTarget, useDraggableTile } from './dragDropContext'
@@ -81,7 +81,11 @@ export function DragDropProvider({ children }: { children: ReactNode }) {
         createPortal(
           <div
             ref={ghostRef}
-            className={`pointer-events-none fixed z-[9999] flex items-center justify-center rounded-lg border-2 border-slate-500 bg-slate-800/90 text-lg shadow-xl ${SLOT_SIZE_CLASS}`}
+            // Same rounded gradient-border frame as InventorySlot.tsx/
+            // EquipmentSlot.tsx (2026-09-01) — kept consistent so the tile
+            // doesn't visibly change shape/border style the instant it's
+            // picked up.
+            className={`item-quality-frame pointer-events-none fixed z-[9999] shadow-xl ${SLOT_SIZE_CLASS}`}
             style={{
               left: activeDrag.x,
               top: activeDrag.y,
@@ -91,13 +95,15 @@ export function DragDropProvider({ children }: { children: ReactNode }) {
               // too, not just the raw pointer, so releasing wherever the icon
               // visibly sits counts as a drop.
               transform: 'translate(-50%, calc(-50% - 56px))',
-              borderColor: activeDrag.qualityColor,
+              ...(activeDrag.qualityColor ? ({ '--item-tier-color': activeDrag.qualityColor } as CSSProperties) : {}),
             }}
           >
-            {activeDrag.iconSrc ? <img src={activeDrag.iconSrc} alt="" className="h-4/5 w-4/5 object-contain" /> : activeDrag.icon}
-            {activeDrag.badge && (
-              <span className="absolute bottom-0.5 right-1 text-[9px] font-semibold text-slate-200">{activeDrag.badge}</span>
-            )}
+            <div className="item-quality-frame-inner relative flex h-full w-full items-center justify-center text-lg opacity-90">
+              {activeDrag.iconSrc ? <img src={activeDrag.iconSrc} alt="" className="h-4/5 w-4/5 object-contain" /> : activeDrag.icon}
+              {activeDrag.badge && (
+                <span className="absolute bottom-0.5 right-1 text-[9px] font-semibold text-slate-200">{activeDrag.badge}</span>
+              )}
+            </div>
           </div>,
           document.body,
         )}

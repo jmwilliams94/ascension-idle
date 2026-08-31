@@ -1,4 +1,4 @@
-import { useEffect, useState, type DragEvent, type MouseEvent as ReactMouseEvent, type PointerEvent } from 'react'
+import { useEffect, useState, type CSSProperties, type DragEvent, type MouseEvent as ReactMouseEvent, type PointerEvent } from 'react'
 import CompareTooltipRow from './CompareTooltipRow'
 import HoverTooltip from './HoverTooltip'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
@@ -194,6 +194,13 @@ export default function InventorySlot({
   // compute/render unconditionally rather than needing its own extra guard
   // at every call site.
   const emberCount = emberCountForColor(qualityColor)
+  // Rounded gradient-border-via-padding frame (2026-09-01, design-reviewed
+  // in Settings > Item Effects before rollout) — replaces the old flat
+  // border-2 + inline borderColor. --item-tier-color falls back to a
+  // neutral steel gray in CSS (index.css) when qualityColor is undefined
+  // (Normal quality), so every tile gets the frame look, not just rare
+  // ones. Frame/inner split mirrors .ascension-chip-frame's own technique.
+  const frameStyle: CSSProperties = qualityColor ? ({ '--item-tier-color': qualityColor } as CSSProperties) : {}
 
   const button = (
     <button
@@ -217,22 +224,24 @@ export default function InventorySlot({
       onPointerCancel={onPointerCancel}
       title={tooltip ? undefined : label}
       aria-label={label}
-      className={`relative flex items-center justify-center overflow-hidden rounded-lg border-2 border-slate-700 bg-slate-800 text-lg ${sizingClassName} ${
+      className={`item-quality-frame relative flex items-center justify-center text-lg ${sizingClassName} ${
         selected ? 'ring-2 ring-sky-400' : ''
       } ${draggable ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${dragging ? 'opacity-40' : ''}`}
-      style={{ borderColor: qualityColor, backgroundColor: qualityColor ? `${qualityColor}22` : undefined }}
+      style={frameStyle}
     >
-      {emberCount > 0 && <TierEmberEffect color={qualityColor as string} count={emberCount} seed={seedFromId(slotId)} />}
-      {showIconImage ? (
-        <img
-          src={iconSrc}
-          alt=""
-          className={`relative z-10 object-contain ${iconSizeClassName}`}
-          onError={() => setIconLoadFailed(true)}
-        />
-      ) : (
-        <span className="relative z-10">{icon}</span>
-      )}
+      <div className="item-quality-frame-inner relative flex h-full w-full items-center justify-center overflow-hidden">
+        {emberCount > 0 && <TierEmberEffect color={qualityColor as string} count={emberCount} seed={seedFromId(slotId)} />}
+        {showIconImage ? (
+          <img
+            src={iconSrc}
+            alt=""
+            className={`relative z-10 object-contain ${iconSizeClassName}`}
+            onError={() => setIconLoadFailed(true)}
+          />
+        ) : (
+          <span className="relative z-10">{icon}</span>
+        )}
+      </div>
       {broken && (
         <span className="absolute left-1.5 top-1 z-10 text-[15px] leading-none text-red-500" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}>
           🛡
