@@ -6,19 +6,17 @@ const LIGHTNING: { kind: FxKind; label: string; caption: string } = {
   caption: 'Procedural branching bolt (Wuxia attack flavor) -- midpoint displacement, not a canned shape',
 }
 
-// Meteor-flash sketches (2026-08-31, requested by the user -- reference:
-// Warcraft 3 Reign of Chaos' golem-drop flash) for a comet material landing
-// in the inventory after a kill. Plain 2D canvas, no WebGL warp -- see
-// meteorFlash.ts for what each one is going for.
+// Flash-streak family (2026-08-31, requested by the user -- reference:
+// Warcraft 3 Reign of Chaos' golem-drop flash, and a shooting star) for a
+// comet material landing in the inventory after a kill. Plain 2D canvas,
+// no WebGL warp -- see meteorFlash.ts for what each one is going for. The
+// original 8-variant set was replaced with these after the user picked
+// Flash Streak as the only one that read as polished, not cheap.
 const FLASH_EXAMPLES: { kind: FxKind; label: string; caption: string }[] = [
-  { kind: 'flash-bloom', label: '✨ Flash Bloom', caption: 'One clean bright pulse -- attack, brief hold, decay' },
-  { kind: 'flash-strobe', label: '🌩️ Flash Strobe', caption: 'Several quick uneven strobes, like it flickered as it passed' },
-  { kind: 'flash-column', label: '🕯️ Flash Column', caption: 'Vertical beam reveals top-down, then flashes bright at its base' },
-  { kind: 'flash-chromatic', label: '🔥 Flash Chromatic', caption: 'White-hot core with a delayed cool-blue rim -- reads as physically hot' },
-  { kind: 'flash-double', label: '📸 Flash Double Pulse', caption: 'Small warning flash, a beat of dark, then a bigger brighter one' },
-  { kind: 'flash-ring', label: '💥 Flash Ring Burst', caption: 'Core flash plus a thin expanding ring, no screen-warp needed' },
-  { kind: 'flash-streak', label: '☄️ Flash Streak', caption: 'Short bright streak sweeps in from off-screen and ends in a burst' },
-  { kind: 'flash-flicker', label: '💡 Flash Flicker', caption: 'Irregular seeded flicker -- an unstable/faulty-light read' },
+  { kind: 'flash-streak', label: '☄️ Flash Streak', caption: 'Short bright streak sweeps in from off-screen and ends in a burst (the original)' },
+  { kind: 'flash-streak-purple', label: '💜 Flash Streak — Purple', caption: 'Layered violet glow/core, glinting sparkle trail, thin expanding ring finish' },
+  { kind: 'flash-streak-shooting-star', label: '🌠 Shooting Star', caption: 'Dark blue-to-pink arc with twinkling sparkles, fades out instead of exploding' },
+  { kind: 'flash-streak-crater', label: '🕳️ Comet Crater', caption: 'Streaks in and embeds -- impact flare, fracture cracks, drifting dust, a dark crater' },
 ]
 
 // FX Test (2026-08-29, requested by the user) -- dev/debug tab for
@@ -32,11 +30,11 @@ const FLASH_EXAMPLES: { kind: FxKind; label: string; caption: string }[] = [
 // aren't wired to any real trigger (a Wuxia attack, an Ascend, a Comet
 // drop) yet, this is purely for eyeballing what the system can do.
 //
-// Pared back to just Lightning + the meteor-flash sketches (2026-08-31,
+// Pared back to just Lightning + the flash-streak family (2026-08-31,
 // requested by the user -- everything else previously here, comet/ripple/
-// the SVG-filter+Framer-Motion ember gallery, is gone; comet.ts/ripple.ts
-// still exist for their confirmed future gameplay use, just not previewed
-// here anymore).
+// the SVG-filter+Framer-Motion ember gallery, and the original 8-variant
+// flash set, is gone; comet.ts/ripple.ts still exist for their confirmed
+// future gameplay use, just not previewed here anymore).
 export default function FxTestPanel() {
   const trigger = useFxStore((state) => state.trigger)
 

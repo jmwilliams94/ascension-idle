@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.124.2",
+    "date": "2026-08-31",
+    "changes": [
+      "Settings > FX's 'meteor flash' previews narrowed to the Flash Streak family: the original, a more polished purple version, a dark blue/pink shooting star, and a comet that embeds into the screen with a small crater -- still previews only, not live anywhere yet"
+    ]
+  },
+  {
     "version": "1.124.1",
     "date": "2026-08-31",
     "changes": [

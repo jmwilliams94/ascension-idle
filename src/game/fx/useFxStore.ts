@@ -5,14 +5,10 @@ export type FxKind =
   | 'lightning'
   | 'comet'
   | 'ripple'
-  | 'flash-bloom'
-  | 'flash-strobe'
-  | 'flash-column'
-  | 'flash-chromatic'
-  | 'flash-double'
-  | 'flash-ring'
   | 'flash-streak'
-  | 'flash-flicker'
+  | 'flash-streak-purple'
+  | 'flash-streak-shooting-star'
+  | 'flash-streak-crater'
 
 export interface FxRequest {
   id: number
