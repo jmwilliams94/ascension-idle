@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.123.3",
+    "date": "2026-08-31",
+    "changes": [
+      "Fixed a kill/respawn sometimes visually reverting mid-fight back to the previous low-health enemy, and small monster HP corrections now blend into your next hit instead of popping the bar on its own"
+    ]
+  },
+  {
     "version": "1.123.2",
     "date": "2026-08-31",
     "changes": [

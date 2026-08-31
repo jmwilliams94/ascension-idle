@@ -7,7 +7,7 @@ import { Select } from './ui/Select'
 import { ENEMY_TYPES, ZONES, ZONE_ORDER, type EnemyTypeId, type ZoneId } from '../game/zones/zoneData'
 import { useZoneStore } from '../game/zones/useZoneStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
-import { touchCombatLastResolvedAt, claimHuntingSlot } from '../game/combat/resolveCombat'
+import { resolveCombat, touchCombatLastResolvedAt, claimHuntingSlot } from '../game/combat/resolveCombat'
 import { useHuntingTakeoverToastStore } from '../game/combat/useHuntingTakeoverToastStore'
 import { getLevelDiffColor } from '../game/combat/combatResolver'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
@@ -447,16 +447,36 @@ export default function CombatPage() {
     // Hunting and Mining can never both be active (confirmed by the user) —
     // mirrors MiningModePanel's own stopHuntingIfActive. stop() triggers
     // MiningEngine's own subscription-driven final resolve, closing out
-    // Mining's own trailing window — but combat_last_resolved_at sits frozen
-    // the whole time Mining was active, so without the touch call below,
-    // resuming Hunting here would replay that entire Mining session as a
-    // Hunting catch-up (bug, reported by the user, fixed 2026-09-30 — see
-    // the migration's own comment).
+    // Mining's own trailing window (a separate clock, mining_last_resolved_at
+    // — unaffected by the combat-clock reset below, order between the two
+    // doesn't matter).
     if (useMiningStore.getState().isMining) {
       useMiningStore.getState().stop()
-      if (characterId) {
-        void touchCombatLastResolvedAt(characterId)
-      }
+    }
+    // Give the server an honest spawn timestamp for whatever's about to
+    // start (v1.123.3, per-instance sync follow-up, reported by the user —
+    // kill/respawn moments visually reverting). resolve-combat's own
+    // walkCombat stamps a freshly-spawned instance's spawnedAt from
+    // combat_last_resolved_at — without resetting that clock here, EVERY
+    // monster switch (not just the Mining->Hunting one this used to be
+    // scoped to) left it pointed at whenever the *previous* monster last
+    // resolved, backdating the new instance's timestamp and making
+    // useCombatStore's own anti-regression ordering check (syncMonsterInstance)
+    // wrongly treat the server's very first honest-looking confirmation as
+    // stale. resolveCombat() first (closes out whatever the previous monster
+    // earned up to this exact moment) THEN touchCombatLastResolvedAt —
+    // in that order, via .then, not concurrently — so resetting the clock
+    // can never erase an unresolved trailing window. Safe against
+    // CombatEngine.tsx's own "resolve on switch" trigger firing independently
+    // around the same time — both go through serializeByKey, which already
+    // serializes concurrent resolve calls per character; whichever lands
+    // first does the real work, the other is a harmless near-zero-elapsed
+    // no-op. Also incidentally fixes two previously-disclosed gaps for free:
+    // a fresh character's very first-ever fight, and Stop -> re-Fight on the
+    // same monster not resetting the clock — both now go through this same
+    // unconditional path, not just a "genuine switch."
+    if (characterId) {
+      void resolveCombat(characterId, 'live').then(() => touchCombatLastResolvedAt(characterId))
     }
     // Hunting Slot exclusivity (see resolveCombat.ts's own comment) — claims
     // the account-wide slot for this character, silently displacing whoever

@@ -165,6 +165,18 @@ interface CombatState {
   // a slow fight can skip the waiting state entirely) to trigger an
   // immediate server reconcile right on the kill moment.
   lastKillSignal: number
+  // Small same-instance HP drift from resolve-combat's own real tracked
+  // instance, deferred rather than snapped instantly (v1.123.3, see
+  // syncMonsterInstance's own comment) — folded into the *next* real local
+  // hit's damage number instead, so the correction reads as "that hit landed
+  // a bit harder/softer than usual" rather than an unexplained bar jump.
+  // Positive means the real monster has *more* HP than currently shown
+  // (reduce the next hit's effective damage); negative means less (the next
+  // hit lands harder). Always cleared to 0 whenever the instance itself
+  // changes (kill, respawn, fresh start, or a forward resync) — a correction
+  // computed against one instance's HP scale is meaningless against a
+  // different one's.
+  pendingHpAdjustment: number
   log: CombatLogEntry[]
   lastAttackAt: number
   lastMonsterAttackAt: number
@@ -267,6 +279,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
   respawnReadyAt: 0,
   currentMonsterSpawnedAt: 0,
   lastKillSignal: 0,
+  pendingHpAdjustment: 0,
   log: [],
   lastAttackAt: 0,
   lastMonsterAttackAt: 0,
@@ -291,6 +304,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       reviveAt: 0,
       respawnReadyAt: 0,
       currentMonsterSpawnedAt: nowMs,
+      pendingHpAdjustment: 0,
       log: appendLog(state.log, {
         kind: 'engage',
         message: isRare ? `A rare ${type.displayName} appears!` : `You engage a ${type.displayName}.`,
@@ -357,6 +371,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         currentHp: nextHpValue,
         maxHp: nextHpValue,
         isRareInstance: nextIsRare,
+        pendingHpAdjustment: 0,
         // Reset both attack cadences to the spawn moment (bug fix, reported
         // by the user, 2026-08-17) — previously left untouched through the
         // gap, so on respawn the very next 100ms tick's cooldown check
@@ -630,16 +645,25 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     // debuff, 2026-08-05). Magic attacks (activeSkill window) mitigate
     // against monsterMagicDefense instead of the physical-only monsterDefense
     // (2026-11 bug fix — see that function's own comment).
-    const damage = resolvePhysicalDamage(
+    const rawDamage = resolvePhysicalDamage(
       rollDamageInRange(attackMidpoint),
       activeSkill ? monsterMagicDefense(type, characterLevel) : monsterDefense(type, characterLevel),
     )
+    // Fold in any small pending correction from the last resolve-combat sync
+    // (v1.123.3, see pendingHpAdjustment's own field comment) into this
+    // hit's own damage instead of snapping the bar on its own — positive
+    // pending means the real monster has more HP than shown (this hit does
+    // less), negative means less (this hit does more). Clamped so a large
+    // pending can never show as a healing/negative hit — it just absorbs as
+    // much as this one hit safely can.
+    const damage = Math.max(1, Math.round(rawDamage - state.pendingHpAdjustment))
     const nextHp = Math.max(0, state.currentHp - damage)
 
     set((s) => ({
       lastAttackAt: nowMs,
       currentHp: nextHp,
       currentPlayerMp: nextPlayerMp,
+      pendingHpAdjustment: 0,
       log: appendLog(s.log, { kind: 'damage', message: `You hit ${type.displayName} for ${damage}.`, amount: damage }),
     }))
 
@@ -710,6 +734,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
           lastAttackAt: nowMs,
           lastMonsterAttackAt: nowMs,
           lastKillSignal: s.lastKillSignal + 1,
+          pendingHpAdjustment: 0,
           log: appendLog(
             s.log,
             nextIsRare
@@ -723,6 +748,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
           maxHp: 0,
           respawnReadyAt: respawnEligibleAt,
           lastKillSignal: s.lastKillSignal + 1,
+          pendingHpAdjustment: 0,
         }))
       }
     }
@@ -763,7 +789,71 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       }
       const type = ENEMY_TYPES[monsterTypeId]
 
+      // Anti-regression ordering (v1.123.3, bug fix reported by the user —
+      // "I watch the enemy die and a new one spawn but then it rubber-bands
+      // back to the low-health enemy"). Both currentMonsterSpawnedAt (this
+      // tab's own local walk) and instance.spawned_at/respawn_at (resolve-
+      // combat's own independent walk) are just "the latest spawn moment
+      // each side's simulation has reached so far," progressing over the
+      // same shared real elapsed time — even though the two sides are
+      // tracking different specific (independently rolled) instances, that
+      // makes comparing them a meaningful proxy for "has my own display
+      // already progressed further in real time than what this response
+      // describes." The dead/waiting branch has no spawned_at of its own
+      // (nulled whenever hp<=0) — reconstruct it from respawn_at, which the
+      // server always sets as spawnedAt + RESPAWN_GAP_MS for a dead instance.
+      const impliedSpawnedAtMs =
+        instance.hp > 0
+          ? instance.spawned_at
+            ? new Date(instance.spawned_at).getTime()
+            : null
+          : instance.respawn_at
+            ? new Date(instance.respawn_at).getTime() - RESPAWN_GAP_MS
+            : null
+
+      // Only a genuine invariant violation (documented in resolve-combat's
+      // own comment) reaches here with no timestamp to order against at all
+      // — fail open (apply immediately) rather than get stuck, same as the
+      // pre-v1.123.3 behavior.
+      if (impliedSpawnedAtMs !== null && impliedSpawnedAtMs < state.currentMonsterSpawnedAt) {
+        return {}
+      }
+
+      // "Same" real fight moment is a tolerance window, not exact equality —
+      // two fully independent simulations landing on the exact same
+      // millisecond would essentially never happen by chance, which would
+      // make the diffusion path below dead code. Anything within half a
+      // respawn gap counts as "still describing the fight currently on
+      // screen" (timing/latency noise between the two sides, not a genuinely
+      // different kill generation) — guaranteed not to straddle two real
+      // kills, since consecutive real spawns are always >= RESPAWN_GAP_MS
+      // apart.
+      const isSameFightMoment =
+        impliedSpawnedAtMs !== null && Math.abs(impliedSpawnedAtMs - state.currentMonsterSpawnedAt) <= RESPAWN_GAP_MS / 2
+
       if (instance.hp > 0) {
+        // Same real fight moment, same rare-ness — small drift gets diffused
+        // into the next real hit instead of snapping the bar on its own
+        // (v1.123.3 Part 3). A rare-vs-normal mismatch at the same moment is
+        // a different, larger kind of disagreement (still a known, disclosed
+        // gap — see CLAUDE.combat-and-loot.md) — falls through to a hard
+        // snap below, same as before.
+        if (isSameFightMoment && instance.is_rare === state.isRareInstance) {
+          const discrepancy = instance.hp - state.currentHp
+          const netPending = state.pendingHpAdjustment + discrepancy
+          const diffuseCap = state.maxHp * 0.1
+          if (Math.abs(netPending) <= diffuseCap) {
+            return { pendingHpAdjustment: netPending }
+          }
+          // Accumulated past the point of plausibly hiding inside one hit —
+          // hard-set instead of letting it grow further.
+          return {
+            monsterInstanceKey: state.monsterInstanceKey + 1,
+            currentHp: Math.max(1, Math.round(instance.hp)),
+            pendingHpAdjustment: 0,
+          }
+        }
+
         return {
           monsterInstanceKey: state.monsterInstanceKey + 1,
           // resolve-combat's own hp is real, unrounded floating-point math
@@ -777,8 +867,9 @@ export const useCombatStore = create<CombatState>((set, get) => ({
           currentHp: Math.max(1, Math.round(instance.hp)),
           maxHp: spawnMonsterHp(type, instance.is_rare),
           isRareInstance: instance.is_rare,
-          currentMonsterSpawnedAt: instance.spawned_at ? new Date(instance.spawned_at).getTime() : Date.now(),
+          currentMonsterSpawnedAt: impliedSpawnedAtMs ?? Date.now(),
           respawnReadyAt: 0,
+          pendingHpAdjustment: 0,
         }
       }
 
@@ -790,6 +881,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         monsterInstanceKey: state.monsterInstanceKey + 1,
         currentHp: 0,
         maxHp: 0,
+        pendingHpAdjustment: 0,
         respawnReadyAt: instance.respawn_at ? new Date(instance.respawn_at).getTime() : Date.now(),
       }
     })
