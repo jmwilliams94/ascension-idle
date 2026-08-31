@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.124.3",
+    "date": "2026-08-31",
+    "changes": [
+      "Shrunk Flash Streak — Purple's burst circle and ring in Settings > FX -- still previews only, not live anywhere yet"
+    ]
+  },
+  {
     "version": "1.124.2",
     "date": "2026-08-31",
     "changes": [

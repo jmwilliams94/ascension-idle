@@ -182,9 +182,9 @@ export function createFlashStreakPurple(width: number, height: number, seed: num
 
       const burstElapsed = elapsed - FLIGHT_MS
       const alpha = Math.max(0, 1 - burstElapsed / BURST_MS)
-      screenWash(ctx, w, h, PURPLE_GLOW, alpha * 0.08)
-      radialGlow(ctx, targetX, targetY, Math.max(w, h) * 0.15, PURPLE_CORE, alpha)
-      radialGlow(ctx, targetX, targetY, Math.max(w, h) * 0.34, PURPLE_GLOW, alpha * 0.6)
+      screenWash(ctx, w, h, PURPLE_GLOW, alpha * 0.04)
+      radialGlow(ctx, targetX, targetY, Math.max(w, h) * 0.07, PURPLE_CORE, alpha)
+      radialGlow(ctx, targetX, targetY, Math.max(w, h) * 0.16, PURPLE_GLOW, alpha * 0.6)
 
       const ringT = Math.min(1, burstElapsed / BURST_MS)
       const ringAlpha = Math.max(0, 1 - ringT) * 0.8
@@ -195,7 +195,7 @@ export function createFlashStreakPurple(width: number, height: number, seed: num
         ctx.strokeStyle = PURPLE_MID
         ctx.lineWidth = 4 * (1 - ringT) + 1
         ctx.beginPath()
-        ctx.arc(targetX, targetY, Math.max(w, h) * 0.04 + ringT * Math.max(w, h) * 0.22, 0, Math.PI * 2)
+        ctx.arc(targetX, targetY, Math.max(w, h) * 0.02 + ringT * Math.max(w, h) * 0.1, 0, Math.PI * 2)
         ctx.stroke()
         ctx.restore()
       }
