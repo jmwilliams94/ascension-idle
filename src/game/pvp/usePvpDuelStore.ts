@@ -61,6 +61,12 @@ export function defenderIdFor(duel: PvpDuel): string {
 export interface PvpActionResult {
   ok: boolean
   error?: string
+  // Only populated for a transport-level failure (rpc_failed) — the
+  // Edge Function's own unwrapped error/detail text, so a failure is
+  // actionable from the UI alone rather than only visible in Supabase's
+  // function logs (see resolve-pvp-duel's own error.context unwrap
+  // convention, mirrored below).
+  detail?: string
   hit?: boolean
   damageDealt?: number
   forfeited?: boolean
@@ -102,7 +108,7 @@ async function submitAction(
       }
     }
     console.error('resolve-pvp-duel call failed', detail ?? error)
-    return { ok: false, error: 'rpc_failed' }
+    return { ok: false, error: 'rpc_failed', detail }
   }
 
   const result = data as { ok: boolean; error?: string; hit?: boolean; damage_dealt?: number; forfeited?: boolean; duel?: Record<string, unknown> }

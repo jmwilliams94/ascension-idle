@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.124.6",
+    "date": "2026-08-31",
+    "changes": [
+      "Fixed PvP duel actions failing with a permission error every time — placing your hiding zone now works",
+      "PvP: picking your 3x3 hiding zone now centers it on the tile you clicked, instead of using that tile as the top-left corner"
+    ]
+  },
+  {
     "version": "1.124.5",
     "date": "2026-08-31",
     "changes": [

@@ -103,9 +103,16 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
 
     if (isDefender && duel.phase === 'awaiting_zone') {
       if (!pendingZone) {
+        // Clicked cell becomes the zone's center, not its top-left corner —
+        // clamped so the whole 3x3 stays on the board (a click near an edge
+        // naturally shifts the zone inward rather than being off-center).
+        const centerOffset = Math.floor(ZONE_SIZE / 2)
         setPendingSelection({
           turnNumber: duel.turnNumber,
-          zone: { x: Math.min(x, MAX_ZONE_ORIGIN), y: Math.min(y, MAX_ZONE_ORIGIN) },
+          zone: {
+            x: Math.min(Math.max(x - centerOffset, 0), MAX_ZONE_ORIGIN),
+            y: Math.min(Math.max(y - centerOffset, 0), MAX_ZONE_ORIGIN),
+          },
           tile: null,
         })
         return
@@ -125,7 +132,7 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
       const tile = relY * ZONE_SIZE + relX
       if (duel.eliminatedTiles.includes(tile)) return
       void guess(characterId, tile).then((result) => {
-        if (!result.ok) setActionError(result.error ?? 'action_failed')
+        if (!result.ok) setActionError(result.detail ?? result.error ?? 'action_failed')
       })
     }
   }
@@ -134,7 +141,7 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
     if (!pendingZone || pendingTile === null) return
     setActionError(null)
     void placeZone(characterId, pendingZone.x, pendingZone.y, pendingTile).then((result) => {
-      if (!result.ok) setActionError(result.error ?? 'action_failed')
+      if (!result.ok) setActionError(result.detail ?? result.error ?? 'action_failed')
     })
   }
 
