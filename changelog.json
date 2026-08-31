@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.124.8",
+    "date": "2026-08-31",
+    "changes": [
+      "PvP: both players now hide at the same time and take turns shooting at each other's spot, instead of one shared hiding spot that passed back and forth — misses against your opponent's hiding zone are now remembered every time it comes back around to your turn, and only reset once you actually land a hit on them"
+    ]
+  },
+  {
     "version": "1.124.7",
     "date": "2026-08-31",
     "changes": [

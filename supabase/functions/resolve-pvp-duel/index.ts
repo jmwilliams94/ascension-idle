@@ -282,12 +282,12 @@ interface GatherStateResult {
   error?: string
   active?: boolean
   forfeited?: boolean
-  duel?: Record<string, unknown>
-  is_attacker?: boolean
-  attacker_character?: CharacterSnapshot
-  attacker_equipped_items?: EquippedItemRow[]
-  defender_character?: CharacterSnapshot
-  defender_equipped_items?: EquippedItemRow[]
+  duel?: { player_a_character_id?: string; player_b_character_id?: string } & Record<string, unknown>
+  required_action?: 'place_zone' | 'guess'
+  player_a_character?: CharacterSnapshot
+  player_a_equipped_items?: EquippedItemRow[]
+  player_b_character?: CharacterSnapshot
+  player_b_equipped_items?: EquippedItemRow[]
 }
 
 async function handlePvpDuelAction(req: Request): Promise<Response> {
@@ -355,9 +355,16 @@ async function handlePvpDuelAction(req: Request): Promise<Response> {
     return json(gathered)
   }
 
-  const actingCharacter = gathered.is_attacker ? gathered.attacker_character : gathered.defender_character
+  // No fixed "attacker/defender" labels anymore — both players hide
+  // simultaneously (see the symmetric-hiding migration). Figure out which
+  // of the two gathered character snapshots is the caller's own.
+  const isPlayerA = gathered.duel?.player_a_character_id === characterId
+  const myCharacter = isPlayerA ? gathered.player_a_character : gathered.player_b_character
+  const opponentCharacter = isPlayerA ? gathered.player_b_character : gathered.player_a_character
+  const myEquippedItems = isPlayerA ? gathered.player_a_equipped_items : gathered.player_b_equipped_items
+  const opponentEquippedItems = isPlayerA ? gathered.player_b_equipped_items : gathered.player_a_equipped_items
 
-  if (!actingCharacter || actingCharacter.account_id !== user.id) {
+  if (!myCharacter || myCharacter.account_id !== user.id) {
     return json({ ok: false, error: 'not_owner' }, 403)
   }
 
@@ -366,12 +373,13 @@ async function handlePvpDuelAction(req: Request): Promise<Response> {
     // The secret tile itself never reaches this function — only the apply
     // RPC (running fully inside Postgres) compares against it. This is
     // purely "what damage WOULD this deal if the upcoming SQL comparison
-    // says it's a hit" — discarded server-side on a miss.
-    if (!gathered.attacker_character || !gathered.defender_character) {
+    // says it's a hit" — discarded server-side on a miss. A guess always
+    // targets the opponent's zone (the only other participant in a 1v1).
+    if (!opponentCharacter) {
       return json({ ok: false, error: 'missing_combat_snapshot' }, 500)
     }
-    const rolledAttack = rollAttackerDamage(gathered.attacker_character, gathered.attacker_equipped_items ?? [])
-    const defense = computeDefenderPhysicalDefense(gathered.defender_equipped_items ?? [])
+    const rolledAttack = rollAttackerDamage(myCharacter, myEquippedItems ?? [])
+    const defense = computeDefenderPhysicalDefense(opponentEquippedItems ?? [])
     potentialDamage = Math.max(1, Math.round(resolvePhysicalDamage(rolledAttack, defense) * PVP_DAMAGE_MULTIPLIER))
   }
 

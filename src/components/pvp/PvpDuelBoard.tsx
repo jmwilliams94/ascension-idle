@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import { AscensionCard } from '../ui/AscensionCard'
 import { Button } from '../ui/Button'
-import { usePvpDuelStore, defenderIdFor } from '../../game/pvp/usePvpDuelStore'
+import { usePvpDuelStore, opponentIdFor, zoneFor, requiredActionFor } from '../../game/pvp/usePvpDuelStore'
 import { BOARD_SIZE, ZONE_SIZE, MAX_ZONE_ORIGIN } from '../../game/pvp/pvpConstants'
 import PvpTurnTimer from './PvpTurnTimer'
 
@@ -12,6 +12,15 @@ import PvpTurnTimer from './PvpTurnTimer'
 // the same 9x9 grid rendering and there wasn't enough independent logic in
 // each to earn its own file for a first pass; can still be split out later
 // if either grows.
+//
+// Both players hide simultaneously (2026-08-31 mechanic change) — there's
+// no fixed "attacker/defender," just whoever's turn it is and whether their
+// own zone is currently set (see requiredActionFor). The board only ever
+// shows ONE zone at a time, whichever is relevant to what's happening right
+// now: my own pending/placed zone while it's my turn to hide, the
+// opponent's zone (with their eliminated tiles crossed out) while it's my
+// turn to guess, or just my own standing zone as a passive reference while
+// waiting on the opponent.
 
 function useCharacterNames(ids: (string | null | undefined)[]): Record<string, string> {
   const key = ids.filter(Boolean).sort().join(',')
@@ -72,15 +81,11 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
   const isPlayerA = duel.playerACharacterId === characterId
   const myHp = isPlayerA ? duel.playerAHp : duel.playerBHp
   const myMaxHp = isPlayerA ? duel.playerAMaxHp : duel.playerBMaxHp
-  const opponentId = isPlayerA ? duel.playerBCharacterId : duel.playerACharacterId
+  const opponentId = opponentIdFor(duel, characterId)
   const opponentHp = isPlayerA ? duel.playerBHp : duel.playerAHp
   const opponentMaxHp = isPlayerA ? duel.playerBMaxHp : duel.playerAMaxHp
   const myName = names[characterId] ?? 'You'
   const opponentName = names[opponentId] ?? 'Opponent'
-
-  const defenderId = defenderIdFor(duel)
-  const isAttacker = duel.currentAttackerId === characterId
-  const isDefender = defenderId === characterId
 
   if (duel.status !== 'active') {
     const wonText =
@@ -98,10 +103,16 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
     )
   }
 
+  const isMyTurn = duel.currentTurnCharacterId === characterId
+  const myRequiredAction = requiredActionFor(duel, characterId)
+  const myZone = zoneFor(duel, characterId)
+  const opponentZone = zoneFor(duel, opponentId)
+
   const handleGridClick = (x: number, y: number) => {
+    if (!isMyTurn) return
     setActionError(null)
 
-    if (isDefender && duel.phase === 'awaiting_zone') {
+    if (myRequiredAction === 'place_zone') {
       if (!pendingZone) {
         // Clicked cell becomes the zone's center, not its top-left corner —
         // clamped so the whole 3x3 stays on the board (a click near an edge
@@ -125,18 +136,16 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
       return
     }
 
-    if (isAttacker && duel.phase === 'awaiting_guess' && duel.zoneOriginX !== null && duel.zoneOriginY !== null) {
-      const relX = x - duel.zoneOriginX
-      const relY = y - duel.zoneOriginY
-      if (relX < 0 || relX >= ZONE_SIZE || relY < 0 || relY >= ZONE_SIZE) return
-      const tile = relY * ZONE_SIZE + relX
-      // A guess is a single attempt per zone (hit or miss, the turn ends
-      // either way — 2026-08-31 mechanic change), so there's no "already
-      // guessed this tile" state to guard against within one zone anymore.
-      void guess(characterId, tile).then((result) => {
-        if (!result.ok) setActionError(result.detail ?? result.error ?? 'action_failed')
-      })
-    }
+    // myRequiredAction === 'guess' — always targets the opponent's zone.
+    if (opponentZone.zoneX === null || opponentZone.zoneY === null) return
+    const relX = x - opponentZone.zoneX
+    const relY = y - opponentZone.zoneY
+    if (relX < 0 || relX >= ZONE_SIZE || relY < 0 || relY >= ZONE_SIZE) return
+    const tile = relY * ZONE_SIZE + relX
+    if (opponentZone.eliminatedTiles.includes(tile)) return
+    void guess(characterId, tile).then((result) => {
+      if (!result.ok) setActionError(result.detail ?? result.error ?? 'action_failed')
+    })
   }
 
   const confirmZone = () => {
@@ -147,21 +156,29 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
     })
   }
 
-  const showZoneHighlight = duel.phase === 'awaiting_guess' && duel.zoneOriginX !== null && duel.zoneOriginY !== null
-    ? { x: duel.zoneOriginX, y: duel.zoneOriginY }
-    : pendingZone
+  // Which zone the board actually shows right now: my in-progress pick while
+  // I'm hiding, the opponent's zone while I'm guessing, or my own standing
+  // zone as a passive reference while it's their turn.
+  const showZoneHighlight =
+    isMyTurn && myRequiredAction === 'place_zone'
+      ? pendingZone
+      : isMyTurn && myRequiredAction === 'guess'
+        ? opponentZone.zoneX !== null && opponentZone.zoneY !== null
+          ? { x: opponentZone.zoneX, y: opponentZone.zoneY }
+          : null
+        : myZone.zoneX !== null && myZone.zoneY !== null
+          ? { x: myZone.zoneX, y: myZone.zoneY }
+          : null
 
-  const isMyTurn = (isDefender && duel.phase === 'awaiting_zone') || (isAttacker && duel.phase === 'awaiting_guess')
+  const eliminatedForHighlight = isMyTurn && myRequiredAction === 'guess' ? opponentZone.eliminatedTiles : myZone.eliminatedTiles
 
   let statusLine: string
-  if (isDefender && duel.phase === 'awaiting_zone') {
+  if (isMyTurn && myRequiredAction === 'place_zone') {
     statusLine = pendingZone ? 'Pick your hiding tile inside the zone' : 'Pick a 3x3 zone to hide in'
-  } else if (isAttacker && duel.phase === 'awaiting_guess') {
-    statusLine = 'Guess a tile inside the zone'
-  } else if (duel.phase === 'awaiting_zone') {
-    statusLine = `Waiting for ${opponentName} to hide...`
+  } else if (isMyTurn && myRequiredAction === 'guess') {
+    statusLine = 'Guess a tile inside their zone'
   } else {
-    statusLine = `Waiting for ${opponentName} to guess...`
+    statusLine = `Waiting for ${opponentName}...`
   }
 
   return (
@@ -197,10 +214,12 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
                 y < showZoneHighlight.y + ZONE_SIZE
 
               const relTile = inZone ? (y - (showZoneHighlight as { x: number; y: number }).y) * ZONE_SIZE + (x - (showZoneHighlight as { x: number; y: number }).x) : -1
-              const isPendingSecretTile = isDefender && pendingZone && pendingTile === relTile && inZone
+              const isEliminated = inZone && eliminatedForHighlight.includes(relTile)
+              const isPendingSecretTile = isMyTurn && myRequiredAction === 'place_zone' && pendingZone && pendingTile === relTile && inZone
 
               const clickable =
-                (isDefender && duel.phase === 'awaiting_zone') || (isAttacker && duel.phase === 'awaiting_guess' && inZone)
+                isMyTurn &&
+                ((myRequiredAction === 'place_zone') || (myRequiredAction === 'guess' && inZone && !isEliminated))
 
               return (
                 <button
@@ -211,17 +230,21 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
                   className={`aspect-square rounded-sm border text-[10px] transition ${
                     isPendingSecretTile
                       ? 'border-amber-400 bg-amber-400/40'
-                      : inZone
-                        ? 'border-amber-500/60 bg-amber-500/10'
-                        : 'border-slate-800 bg-slate-900/40'
+                      : isEliminated
+                        ? 'border-slate-800 bg-slate-900/80 text-rose-500'
+                        : inZone
+                          ? 'border-amber-500/60 bg-amber-500/10'
+                          : 'border-slate-800 bg-slate-900/40'
                   } ${clickable ? 'cursor-pointer hover:border-amber-400' : 'cursor-default'}`}
-                />
+                >
+                  {isEliminated ? '✕' : ''}
+                </button>
               )
             }),
           )}
         </div>
 
-        {isDefender && duel.phase === 'awaiting_zone' && pendingZone && (
+        {isMyTurn && myRequiredAction === 'place_zone' && pendingZone && (
           <div className="flex items-center justify-center gap-2">
             <Button variant="secondary" onClick={() => setPendingSelection(null)}>
               Reposition Zone

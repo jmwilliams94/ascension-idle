@@ -2,13 +2,19 @@ import { create } from 'zustand'
 import { supabase } from '../../lib/supabaseClient'
 
 // PvP Duel client state — see CLAUDE.md's plan nifty-riding-journal (Phase
-// 2). Mirrors public.pvp_duels exactly (20261121000000_pvp_duel_core.sql) —
+// 2). Mirrors public.pvp_duels exactly (20261124000000_pvp_duel_symmetric_hiding.sql) —
 // this store never computes damage/hit results itself, only ever applies
 // whatever resolve-pvp-duel / the realtime subscription (PvpDuelConnection)
 // hands back, same "server is the sole source of truth" convention as
 // useZoneBossStore.ts.
+//
+// Both players hide simultaneously now (2026-08-31 mechanic change) — there
+// is no more single shared "current defender," each side has their own
+// zone/eliminated-tiles state. Turn always alternates to the other player
+// after every action; what YOUR action must be is derived from whether your
+// own zone is currently set (place_zone if not, guess — always targeting
+// the opponent's zone — if it is), same derivation the SQL functions use.
 
-export type PvpDuelPhase = 'awaiting_zone' | 'awaiting_guess' | 'finished'
 export type PvpDuelStatus = 'active' | 'completed' | 'forfeited'
 
 export interface PvpDuel {
@@ -19,11 +25,13 @@ export interface PvpDuel {
   playerBHp: number
   playerAMaxHp: number
   playerBMaxHp: number
-  currentAttackerId: string
-  phase: PvpDuelPhase
-  zoneOriginX: number | null
-  zoneOriginY: number | null
-  eliminatedTiles: number[]
+  currentTurnCharacterId: string
+  playerAZoneX: number | null
+  playerAZoneY: number | null
+  playerAEliminatedTiles: number[]
+  playerBZoneX: number | null
+  playerBZoneY: number | null
+  playerBEliminatedTiles: number[]
   turnDeadline: string | null
   turnNumber: number
   winnerCharacterId: string | null
@@ -31,6 +39,7 @@ export interface PvpDuel {
 }
 
 export function toDuel(row: Record<string, unknown>): PvpDuel {
+  const num = (v: unknown): number | null => (v === null || v === undefined ? null : Number(v))
   return {
     id: row.id as string,
     playerACharacterId: row.player_a_character_id as string,
@@ -39,11 +48,13 @@ export function toDuel(row: Record<string, unknown>): PvpDuel {
     playerBHp: Number(row.player_b_hp),
     playerAMaxHp: Number(row.player_a_max_hp),
     playerBMaxHp: Number(row.player_b_max_hp),
-    currentAttackerId: row.current_attacker_id as string,
-    phase: row.phase as PvpDuelPhase,
-    zoneOriginX: row.zone_origin_x === null || row.zone_origin_x === undefined ? null : Number(row.zone_origin_x),
-    zoneOriginY: row.zone_origin_y === null || row.zone_origin_y === undefined ? null : Number(row.zone_origin_y),
-    eliminatedTiles: (row.eliminated_tiles as number[] | null) ?? [],
+    currentTurnCharacterId: row.current_turn_character_id as string,
+    playerAZoneX: num(row.player_a_zone_x),
+    playerAZoneY: num(row.player_a_zone_y),
+    playerAEliminatedTiles: (row.player_a_eliminated_tiles as number[] | null) ?? [],
+    playerBZoneX: num(row.player_b_zone_x),
+    playerBZoneY: num(row.player_b_zone_y),
+    playerBEliminatedTiles: (row.player_b_eliminated_tiles as number[] | null) ?? [],
     turnDeadline: (row.turn_deadline as string | null) ?? null,
     turnNumber: Number(row.turn_number),
     winnerCharacterId: (row.winner_character_id as string | null) ?? null,
@@ -51,11 +62,30 @@ export function toDuel(row: Record<string, unknown>): PvpDuel {
   }
 }
 
-// Derives which of the duel's two characters is currently defending — the
-// duel row only stores current_attacker_id, same "derive, don't duplicate"
-// approach as the SQL functions.
-export function defenderIdFor(duel: PvpDuel): string {
-  return duel.currentAttackerId === duel.playerACharacterId ? duel.playerBCharacterId : duel.playerACharacterId
+export function opponentIdFor(duel: PvpDuel, characterId: string): string {
+  return duel.playerACharacterId === characterId ? duel.playerBCharacterId : duel.playerACharacterId
+}
+
+interface ZoneState {
+  zoneX: number | null
+  zoneY: number | null
+  eliminatedTiles: number[]
+}
+
+export function zoneFor(duel: PvpDuel, characterId: string): ZoneState {
+  const isA = duel.playerACharacterId === characterId
+  return {
+    zoneX: isA ? duel.playerAZoneX : duel.playerBZoneX,
+    zoneY: isA ? duel.playerAZoneY : duel.playerBZoneY,
+    eliminatedTiles: isA ? duel.playerAEliminatedTiles : duel.playerBEliminatedTiles,
+  }
+}
+
+// Mirrors the SQL functions' own derivation — my required action is
+// place_zone if my own zone isn't set, otherwise guess (against the
+// opponent's zone).
+export function requiredActionFor(duel: PvpDuel, characterId: string): 'place_zone' | 'guess' {
+  return zoneFor(duel, characterId).zoneX === null ? 'place_zone' : 'guess'
 }
 
 export interface PvpActionResult {
