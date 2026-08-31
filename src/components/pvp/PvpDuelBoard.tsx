@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import { supabase } from '../../lib/supabaseClient'
+import { useState } from 'react'
 import { AscensionCard } from '../ui/AscensionCard'
 import { Button } from '../ui/Button'
 import { usePvpDuelStore, opponentIdFor, zoneFor, requiredActionFor } from '../../game/pvp/usePvpDuelStore'
@@ -22,31 +21,6 @@ import PvpTurnTimer from './PvpTurnTimer'
 // turn to guess, or just my own standing zone as a passive reference while
 // waiting on the opponent.
 
-function useCharacterNames(ids: (string | null | undefined)[]): Record<string, string> {
-  const key = ids.filter(Boolean).sort().join(',')
-  const [names, setNames] = useState<Record<string, string>>({})
-
-  useEffect(() => {
-    const validIds = ids.filter((id): id is string => Boolean(id))
-    if (validIds.length === 0) return
-
-    void supabase
-      .from('characters')
-      .select('id, name')
-      .in('id', validIds)
-      .then(({ data }) => {
-        if (data) {
-          setNames(Object.fromEntries((data as { id: string; name: string }[]).map((row) => [row.id, row.name])))
-        }
-      })
-    // key intentionally drives refetch instead of the raw ids array, which
-    // is a fresh reference every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key])
-
-  return names
-}
-
 function cellIndex(x: number, y: number): string {
   return `${x},${y}`
 }
@@ -65,8 +39,6 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
   const [pendingSelection, setPendingSelection] = useState<{ turnNumber: number; zone: { x: number; y: number } | null; tile: number | null } | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
-  const names = useCharacterNames([duel?.playerACharacterId, duel?.playerBCharacterId])
-
   const pendingZone = duel && pendingSelection?.turnNumber === duel.turnNumber ? pendingSelection.zone : null
   const pendingTile = duel && pendingSelection?.turnNumber === duel.turnNumber ? pendingSelection.tile : null
 
@@ -84,8 +56,8 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
   const opponentId = opponentIdFor(duel, characterId)
   const opponentHp = isPlayerA ? duel.playerBHp : duel.playerAHp
   const opponentMaxHp = isPlayerA ? duel.playerBMaxHp : duel.playerAMaxHp
-  const myName = names[characterId] ?? 'You'
-  const opponentName = names[opponentId] ?? 'Opponent'
+  const myName = (isPlayerA ? duel.playerAName : duel.playerBName) ?? 'You'
+  const opponentName = (isPlayerA ? duel.playerBName : duel.playerAName) ?? 'Opponent'
 
   if (duel.status !== 'active') {
     const wonText =

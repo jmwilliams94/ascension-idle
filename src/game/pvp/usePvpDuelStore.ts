@@ -21,6 +21,12 @@ export interface PvpDuel {
   id: string
   playerACharacterId: string
   playerBCharacterId: string
+  // Snapshotted at duel-creation time (start_pvp_duel), not looked up live —
+  // characters RLS only lets a client see its own account's rows, so a
+  // cross-account opponent's name would otherwise silently come back empty
+  // (bit Switchee vs Huntard, 2026-08-31 — see the name-snapshot migration).
+  playerAName: string | null
+  playerBName: string | null
   playerAHp: number
   playerBHp: number
   playerAMaxHp: number
@@ -44,6 +50,8 @@ export function toDuel(row: Record<string, unknown>): PvpDuel {
     id: row.id as string,
     playerACharacterId: row.player_a_character_id as string,
     playerBCharacterId: row.player_b_character_id as string,
+    playerAName: (row.player_a_name as string | null) ?? null,
+    playerBName: (row.player_b_name as string | null) ?? null,
     playerAHp: Number(row.player_a_hp),
     playerBHp: Number(row.player_b_hp),
     playerAMaxHp: Number(row.player_a_max_hp),

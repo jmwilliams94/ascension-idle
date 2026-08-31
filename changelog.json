@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.124.10",
+    "date": "2026-08-31",
+    "changes": [
+      "Fixed PvP showing \"Opponent\" for both players instead of real names whenever the duel crosses two different accounts"
+    ]
+  },
+  {
     "version": "1.124.9",
     "date": "2026-08-31",
     "changes": [
