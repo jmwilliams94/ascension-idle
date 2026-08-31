@@ -8,6 +8,7 @@ import { useInventoryStore } from '../items/useInventoryStore'
 import { useItemTemplatesStore } from '../items/useItemTemplatesStore'
 import { useNoQuiverWarningStore } from '../items/useNoQuiverWarningStore'
 import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
+import { useAchievementsStore } from '../achievements/useAchievementsStore'
 import { getActiveGoldDonationEvent, useGoldDonationStore } from '../goldDonation/useGoldDonationStore'
 import { ENEMY_TYPES, zoneIdForMonster, type EnemyTypeId } from '../zones/zoneData'
 import { SKILL_TYPES } from '../skills/skillData'
@@ -28,7 +29,7 @@ import {
   rollJadeShardDrop,
   rollDamageInRange,
   rollIsHit,
-  rollIsRare,
+  isRareKillNumber,
   spawnMonsterHp,
 } from './combatResolver'
 
@@ -110,6 +111,20 @@ interface CombatState {
   currentHp: number
   maxHp: number
   isRareInstance: boolean
+  // Deterministic rare cadence (2026-08-31, replaces an independent
+  // 5%-per-spawn RNG roll — see combatResolver.ts's isRareKillNumber/
+  // RARE_KILL_INTERVAL comment) — this client's own best-known count of how
+  // many of the CURRENTLY selected monster have been killed so far,
+  // seeded from useAchievementsStore's confirmed count on every start()
+  // (monster select/switch), incremented on every local kill, and snapped
+  // forward (never backward) by syncKillsTowardRare whenever a resolve-
+  // combat response confirms a higher real count. The next spawn's rarity
+  // is isRareKillNumber(killsTowardRare + 1). Kept in sync with the
+  // server's own identical formula (built off its own authoritative
+  // running count, see resolve-combat/index.ts's characterKillsBefore) so
+  // the two sides only disagree when their kill counts themselves are
+  // briefly out of sync, not on an unlucky coin flip.
+  killsTowardRare: number
   // The player's own HP — continuous across monster respawns/zone switches (only
   // reset by a knockout, not by start()/stop()/clear()), unlike the monster's own
   // currentHp/maxHp above. 0/0 is a sentinel meaning "never initialized yet";
@@ -246,6 +261,13 @@ interface CombatState {
     },
     serverNowMs: number,
   ) => void
+  // Called by resolveCombat.ts on every live response that reports a
+  // characterKillCount — keeps killsTowardRare from silently drifting
+  // behind the server's own authoritative count (e.g. a resolve call that
+  // batches more than one real kill). No-ops for a different monster than
+  // the one currently selected, or if confirmedCount isn't actually ahead
+  // of what's already tracked (never moves the cadence backward).
+  syncKillsTowardRare: (monsterId: string, confirmedCount: number) => void
   // Called by resolveCombat.ts when a live (not offline) resolve-combat
   // response reports inventoryFull — a kill rolled a drop that had nowhere
   // to go, so the fight stops outright rather than silently discarding it or
@@ -283,6 +305,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
   currentHp: 0,
   maxHp: 0,
   isRareInstance: false,
+  killsTowardRare: 0,
   currentPlayerHp: 0,
   maxPlayerHp: 0,
   currentPlayerMp: 0,
@@ -298,7 +321,11 @@ export const useCombatStore = create<CombatState>((set, get) => ({
 
   start: (monsterTypeId) => {
     const type = ENEMY_TYPES[monsterTypeId]
-    const isRare = rollIsRare()
+    // Seeded fresh from the confirmed ladder on every select/switch (see
+    // killsTowardRare's own field comment) rather than carried over from
+    // whatever monster was fought before.
+    const killsTowardRare = useAchievementsStore.getState().characterKills[monsterTypeId]?.kills ?? 0
+    const isRare = isRareKillNumber(killsTowardRare + 1)
     const hp = spawnMonsterHp(type, isRare)
     const nowMs = Date.now()
 
@@ -309,6 +336,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       currentHp: hp,
       maxHp: hp,
       isRareInstance: isRare,
+      killsTowardRare,
       lastAttackAt: 0,
       lastMonsterAttackAt: 0,
       // Clears any stale death-timer lockout from before a manual Stop —
@@ -374,7 +402,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         return
       }
       const respawnType = ENEMY_TYPES[state.monsterTypeId]
-      const nextIsRare = rollIsRare()
+      const nextIsRare = isRareKillNumber(state.killsTowardRare + 1)
       const nextHpValue = spawnMonsterHp(respawnType, nextIsRare)
       set((s) => ({
         respawnReadyAt: 0,
@@ -685,8 +713,13 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       // is fed by this at all now (see the reward-on-kill comment above);
       // the real grant only ever comes from the next server reconciliation.
       const { gold, exp } = killRewards(type, state.isRareInstance, expMultiplier)
+      // See killsTowardRare's own field comment — this confirms the kill
+      // just landed counts as kill number (state.killsTowardRare + 1),
+      // advancing the cadence for whatever spawns next.
+      const nextKillsTowardRare = state.killsTowardRare + 1
 
       set((s) => ({
+        killsTowardRare: nextKillsTowardRare,
         log: appendLog(s.log, {
           kind: state.isRareInstance ? 'rare-kill' : 'kill',
           message: state.isRareInstance
@@ -735,7 +768,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       // gap rather than a fresh full RESPAWN_GAP_MS.
       const respawnEligibleAt = state.currentMonsterSpawnedAt + RESPAWN_GAP_MS
       if (nowMs >= respawnEligibleAt) {
-        const nextIsRare = rollIsRare()
+        const nextIsRare = isRareKillNumber(nextKillsTowardRare + 1)
         const nextHpValue = spawnMonsterHp(type, nextIsRare)
         set((s) => ({
           currentHp: nextHpValue,
@@ -907,6 +940,15 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         pendingHpAdjustment: 0,
         respawnReadyAt: instance.respawn_at ? toClientMs(instance.respawn_at) : Date.now(),
       }
+    })
+  },
+
+  syncKillsTowardRare: (monsterId, confirmedCount) => {
+    set((state) => {
+      if (state.monsterTypeId !== monsterId || confirmedCount <= state.killsTowardRare) {
+        return {}
+      }
+      return { killsTowardRare: confirmedCount }
     })
   },
 

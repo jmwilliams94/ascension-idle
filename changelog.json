@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.124.0",
+    "date": "2026-08-31",
+    "changes": [
+      "Rare monsters no longer spawn on a random 5% roll — every 20th kill of a monster is now guaranteed rare, and it's tracked the same way on your screen as on the server, so the rare/normal 'rubber-banding' glitch is now rare instead of common"
+    ]
+  },
+  {
     "version": "1.123.5",
     "date": "2026-08-31",
     "changes": [

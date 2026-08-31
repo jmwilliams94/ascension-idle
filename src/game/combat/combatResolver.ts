@@ -1,17 +1,37 @@
 import type { EnemyTypeDef } from '../zones/zoneData'
 import { expRewardForLevel } from '../stats/expCurve'
 
-// PLACEHOLDER rare-monster odds/multipliers — matches CLAUDE.md's confirmed design
-// (5% chance per monster, 2x HP, 5x gold/EXP) but the underlying zone economy these
-// multiply against is itself still a placeholder. Shared by both the live combat
-// resolver (useCombatStore) and the offline-progress simulator (offlineProgress.ts)
-// so a monster's odds/scaling can never drift between "online" and "offline" combat.
-export const RARE_CHANCE = 0.05
+// PLACEHOLDER rare-monster HP/reward multipliers — matches CLAUDE.md's confirmed
+// design (2x HP, 5x gold/EXP) but the underlying zone economy these multiply
+// against is itself still a placeholder.
 export const RARE_HP_MULTIPLIER = 2
 export const RARE_REWARD_MULTIPLIER = 5
 
+// Row Combat's own rare roll (see useRowCombatStore.ts/resolve-row-combat)
+// still uses the old random-5%-per-spawn model — an accepted, untouched scope
+// gap (same "independent duplication, not extended" precedent CLAUDE.md
+// documents for Row Combat's skill math).
+export const RARE_CHANCE = 0.05
+
 export function rollIsRare(): boolean {
   return Math.random() < RARE_CHANCE
+}
+
+// Single-target Hunting's own rare cadence (2026-08-31, requested by the
+// user — replaces an independent 5%-per-spawn roll on each side with a
+// deterministic milestone both sides can compute from the same running kill
+// count instead of separate RNG). killNumber is 1-indexed ("this spawn will
+// be the Nth kill of this monster"); every 20th kill is guaranteed rare. Two
+// independent 5% rolls only agreed ~90% of the time, and every disagreement
+// forced a visible hard-snap in useCombatStore.syncMonsterInstance (the
+// "rubber-banding" the user was reacting to) — a shared deterministic rule
+// only disagrees when the client and server's own running kill counts
+// themselves fall out of sync (rare, and self-correcting within one
+// resolve), not on every unlucky coin flip.
+export const RARE_KILL_INTERVAL = 20
+
+export function isRareKillNumber(killNumber: number): boolean {
+  return killNumber > 0 && killNumber % RARE_KILL_INTERVAL === 0
 }
 
 export function spawnMonsterHp(type: EnemyTypeDef, isRare: boolean): number {

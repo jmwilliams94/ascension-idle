@@ -190,6 +190,12 @@ async function resolveCombatInner(characterId: string, mode: ResolveCombatMode):
     useAchievementsStore
       .getState()
       .applyResolveResult(result.monsterId, result.characterKillCount, result.accountKillCount, result.petObtained ?? null)
+    // Keeps the deterministic rare cadence (see useCombatStore's
+    // killsTowardRare) from drifting behind the server's own authoritative
+    // count — live mode only, same reasoning as syncMonsterInstance above.
+    if (mode === 'live') {
+      useCombatStore.getState().syncKillsTowardRare(result.monsterId, result.characterKillCount)
+    }
   }
 
   if (result.petObtained) {

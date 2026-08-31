@@ -346,10 +346,18 @@ const KNOCKOUT_LOCKOUT_MS = 10_000
 const MONSTER_ATTACK_INTERVAL_MS = 1000
 
 // Mirrors src/game/combat/combatResolver.ts
-const RARE_CHANCE = 0.05
 const RARE_HP_MULTIPLIER = 2
 const RARE_REWARD_MULTIPLIER = 5
 const MIN_DAMAGE_PERCENT_OF_ATTACK = 0.1
+// Deterministic rare cadence (2026-08-31, see combatResolver.ts's own
+// RARE_KILL_INTERVAL/isRareKillNumber comment) — every 20th real kill of a
+// monster is guaranteed rare, replacing the old independent 5%-per-spawn
+// RNG roll that this file and the client each did separately.
+const RARE_KILL_INTERVAL = 20
+
+function isRareKillNumber(killNumber: number): boolean {
+  return killNumber > 0 && killNumber % RARE_KILL_INTERVAL === 0
+}
 
 // Incoming-side level-gap Defense debuff (2026-08-05, steepened 2026-08-07) —
 // mirrors combatResolver.ts's PLAYER_DEFENSE_MULTIPLIER_BY_COLOR. The
@@ -375,21 +383,22 @@ function applyDamageReduction(damage: number, reductionPct: number): number {
 // below (walkCombat) now tracks one real monster instance at a time
 // (characters.current_monster_hp/current_monster_is_rare, persisted between
 // calls), the same way useCombatStore.ts already does client-side for its
-// own visual display. rollIsRare() is evaluated once per real spawn and its
-// result genuinely drives that instance's own HP/reward, not blended into an
-// average — this was the direct fix for a reported bug: a real rare fight
-// (genuinely ~2x longer) could cross two whole-kill thresholds under the old
-// blended model (2 EXP toasts for one fight) because the model never knew
-// that specific instance was rare. This doesn't reintroduce the client/server
-// RNG-divergence risk the 2026-08-11 rewrite was built to prevent — that risk
-// lived in per-attack damage RNG (expectedDamagePerHit/dps below are still
-// deterministic expected values, no random damage rolls added server-side).
-// The only new randomness is one rollIsRare() coin-flip per real kill, not
-// per attack — the client already independently rolls its own copy of this
-// same flip locally for cosmetic display (a divergence that already existed
-// and was never load-bearing, since the client hasn't predicted rewards
-// since the 2026-11 "reward-on-kill" rewrite). See rollIsRare/spawnInstanceHp
-// below for the actual per-instance spawn.
+// own visual display. isRareKillNumber() is evaluated once per real spawn
+// and its result genuinely drives that instance's own HP/reward, not
+// blended into an average — this was the direct fix for a reported bug: a
+// real rare fight (genuinely ~2x longer) could cross two whole-kill
+// thresholds under the old blended model (2 EXP toasts for one fight)
+// because the model never knew that specific instance was rare. This
+// doesn't reintroduce the client/server RNG-divergence risk the 2026-08-11
+// rewrite was built to prevent — that risk lived in per-attack damage RNG
+// (expectedDamagePerHit/dps below are still deterministic expected values,
+// no random damage rolls added server-side). Rare-ness itself is no longer
+// randomness at all (2026-08-31, see isRareKillNumber's own comment) — the
+// client computes the same deterministic cadence off its own best-known
+// running kill count, so the two sides only ever disagree when their kill
+// counts themselves are briefly out of sync, not on an unlucky coin flip.
+// See isRareKillNumber/spawnInstanceHp below for the actual per-instance
+// spawn.
 // Comet/Fallen Star kill-drop odds — confirmed, flat (reverted 2026-08-03: a
 // same-day earlier attempt scaled *this* base rate by monster level, but the
 // user clarified that was the wrong lever — the base rate was never the
@@ -517,10 +526,6 @@ interface EnemyType {
   // had no server-side concept at all. exp_reward still isn't read — see
   // expRewardForLevel above.
   attack_damage: number
-}
-
-function rollIsRare(): boolean {
-  return Math.random() < RARE_CHANCE
 }
 
 // Real per-instance spawn HP — mirrors combatResolver.ts's spawnMonsterHp
@@ -942,8 +947,8 @@ function loadInstance(character: CharacterSnapshot, monsterId: string): MonsterI
 // complexity class as the old per-kill drop-roll loop, already proven fine
 // up to the ~12h/~4300-kill AFK-cap worst case (see AFK_CAP_MS_BY_ACCOUNT_TIER).
 // dps/timeToPlayerDeathMs stay the same deterministic expected-value inputs
-// as before, fixed for the whole call (no per-attack RNG added — the only
-// new randomness is one rollIsRare() per real spawn, not per attack, so this
+// as before, fixed for the whole call (no per-attack RNG added — rare-ness
+// is now a deterministic kill-count cadence, not a per-spawn roll, so this
 // doesn't reintroduce the client/server reward-divergence risk the
 // 2026-08-11 closed-form rewrite was built to prevent).
 async function walkCombat(params: {
@@ -953,6 +958,11 @@ async function walkCombat(params: {
   dps: number
   timeToPlayerDeathMs: number
   initial: MonsterInstanceState
+  // The character's confirmed kill count for this monster BEFORE this
+  // window (see characterKillsBefore below) — the deterministic rare
+  // cadence (isRareKillNumber) needs the real running kill count, not a
+  // coin flip, to decide each new spawn's rarity.
+  characterKillsBefore: number
   // Ms of real attacking time still affordable given current MP — Infinity
   // when no MP-costing skill is active.
   affordableAttackMs: number
@@ -969,10 +979,14 @@ async function walkCombat(params: {
   let respawnAt = params.initial.respawnAt
   let remainingAffordable = params.affordableAttackMs
   const killEvents: KillEvent[] = []
+  // The kill number this walk's NEXT spawn will represent once killed —
+  // characterKillsBefore plus however many real kills this walk has already
+  // produced (killEvents.length), 1-indexed.
+  const nextKillNumber = () => params.characterKillsBefore + killEvents.length + 1
 
   while (t < params.windowEnd) {
     if (hp === null) {
-      isRare = rollIsRare()
+      isRare = isRareKillNumber(nextKillNumber())
       hp = spawnInstanceHp(params.monster, isRare)
       spawnedAt = t
     }
@@ -981,7 +995,7 @@ async function walkCombat(params: {
       // Dead, waiting out the respawn gap.
       if (respawnAt === null || respawnAt > params.windowEnd) break
       t = respawnAt
-      isRare = rollIsRare()
+      isRare = isRareKillNumber(nextKillNumber())
       hp = spawnInstanceHp(params.monster, isRare)
       spawnedAt = t
       respawnAt = null
@@ -1035,7 +1049,7 @@ async function walkCombat(params: {
     // rather than a dead end that could never spawn again.
     const respawnEligibleAt = spawnedAt + RESPAWN_GAP_MS
     if (respawnEligibleAt <= t) {
-      isRare = rollIsRare()
+      isRare = isRareKillNumber(nextKillNumber())
       hp = spawnInstanceHp(params.monster, isRare)
       spawnedAt = t
     } else {
@@ -1720,6 +1734,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       dps,
       timeToPlayerDeathMs,
       initial: loadInstance(character, character.selected_monster_id as string),
+      characterKillsBefore,
       affordableAttackMs: mpAffordableAttackMs,
       onKill,
     })
