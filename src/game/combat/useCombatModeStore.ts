@@ -5,7 +5,7 @@ import { create } from 'zustand'
 // CombatPage's local useState (2026-08-29) so KillRewardToast can gate on it
 // without prop-drilling: the kill-reward toast should only pop while the
 // player is actually looking at the Hunting view, not from every tab.
-export type CombatViewMode = 'hunting' | 'mining' | 'events'
+export type CombatViewMode = 'hunting' | 'mining' | 'events' | 'pvp'
 
 interface CombatModeState {
   mode: CombatViewMode

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.124.5",
+    "date": "2026-08-31",
+    "changes": [
+      "Added a PvP tab under Combat with the live duel board (hide-and-seek zone/tile picker, HP bars, turn timer) — no way to start a duel yet (matchmaking/tournament is still coming), so this only shows a real board if a duel is created for you"
+    ]
+  },
+  {
     "version": "1.124.4",
     "date": "2026-08-31",
     "changes": [

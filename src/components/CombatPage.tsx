@@ -19,6 +19,7 @@ import { POTION_TYPES, HP_POTION_ORDER, MP_POTION_ORDER } from '../game/items/po
 import { useSkillsStore } from '../game/skills/useSkillsStore'
 import { SKILL_TYPES } from '../game/skills/skillData'
 import EventsCardStack from './EventsCardStack'
+import PvpDuelBoard from './pvp/PvpDuelBoard'
 import RowCombatPanel from './RowCombatPanel'
 import { useRowCombatStore } from '../game/combat/useRowCombatStore'
 import { supabase } from '../lib/supabaseClient'
@@ -227,7 +228,7 @@ export function HpBar({
   )
 }
 
-type CombatMode = 'hunting' | 'mining' | 'events'
+type CombatMode = 'hunting' | 'mining' | 'events' | 'pvp'
 
 const MODE_BUTTON_CLASS = 'relative w-full rounded-lg px-3 py-1.5 font-heading text-xs font-bold uppercase tracking-[0.08em]'
 
@@ -242,7 +243,7 @@ const MODE_BUTTON_CLASS = 'relative w-full rounded-lg px-3 py-1.5 font-heading t
 // handleFight).
 function CombatModeSwitcher({ mode, onChange }: { mode: CombatMode; onChange: (mode: CombatMode) => void }) {
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-4 gap-2">
       <button
         type="button"
         onClick={() => onChange('hunting')}
@@ -260,6 +261,14 @@ function CombatModeSwitcher({ mode, onChange }: { mode: CombatMode; onChange: (m
       </button>
 
       <EventsModeButton mode={mode} onChange={onChange} />
+
+      <button
+        type="button"
+        onClick={() => onChange('pvp')}
+        className={`${MODE_BUTTON_CLASS} ${mode === 'pvp' ? 'btn-gold-active' : 'btn-gold'}`}
+      >
+        PvP
+      </button>
     </div>
   )
 }
@@ -608,6 +617,8 @@ export default function CombatPage() {
 
         {mode === 'events' && <EventsCardStack characterId={characterId} />}
 
+        {mode === 'pvp' && characterId && <PvpDuelBoard characterId={characterId} />}
+
         {mode === 'hunting' && activeType && (
           <AscensionCard>
             {/* Doubled from the shared .text-heading-label 0.7rem base
@@ -863,6 +874,8 @@ export default function CombatPage() {
           // this into Mining mode too, stacked below MiningModePanel above —
           // fixed while restructuring this branch for the two-card stack).
           <EventsCardStack characterId={characterId} />
+        ) : mode === 'pvp' && characterId ? (
+          <PvpDuelBoard characterId={characterId} />
         ) : null}
 
         {mode === 'hunting' && activeType && (
