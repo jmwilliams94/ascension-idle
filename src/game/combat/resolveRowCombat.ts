@@ -7,6 +7,7 @@ import { markDropSourced } from '../items/dropSourceTracking'
 import { useAchievementsStore } from '../achievements/useAchievementsStore'
 import { usePetToastStore } from '../achievements/usePetToastStore'
 import { useKillRewardToastStore } from '../hud/useKillRewardToastStore'
+import { useFxStore } from '../fx/useFxStore'
 import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
 import { useRowCombatStore, type ServerRowSlot } from './useRowCombatStore'
 import { serializeByKey } from './serializeByKey'
@@ -72,8 +73,19 @@ async function resolveRowCombatInner(
     exp: result.character.exp,
     level: result.character.level,
   })
+  // Purple Flash Streak on a real Comet drop (2026-09-01, requested by the
+  // user — see resolveCombat.ts's own copy of this comment for the full
+  // rationale). Row Combat's ResolveRowCombatResult has no gained.comets
+  // count the way resolveCombat.ts's does, so this diffs the currency
+  // store's own pre-update value instead — safe here since nothing else
+  // writes useCurrencyStore.comets between reading it and this same
+  // synchronous call setting it.
+  const previousComets = useCurrencyStore.getState().comets
   useCurrencyStore.getState().setComets(result.character.comets)
   useCurrencyStore.getState().setFallenStars(result.character.fallenStars)
+  if (result.character.comets > previousComets) {
+    useFxStore.getState().trigger('flash-streak-purple')
+  }
 
   // "Kill confirmed" toast (see useKillRewardToastStore.ts) — always live for
   // Row Combat (no offline path exists for it, see this file's own header),

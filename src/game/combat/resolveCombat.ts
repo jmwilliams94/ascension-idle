@@ -8,6 +8,7 @@ import { markDropSourced } from '../items/dropSourceTracking'
 import { useAchievementsStore } from '../achievements/useAchievementsStore'
 import { usePetToastStore } from '../achievements/usePetToastStore'
 import { useKillRewardToastStore } from '../hud/useKillRewardToastStore'
+import { useFxStore } from '../fx/useFxStore'
 import { ENEMY_TYPES, type EnemyTypeId } from '../zones/zoneData'
 import { useCombatStore } from './useCombatStore'
 import { serializeByKey } from './serializeByKey'
@@ -162,6 +163,19 @@ async function resolveCombatInner(characterId: string, mode: ResolveCombatMode):
       kills: result.gained.kills,
       rareKills: result.gained.rareKills,
     })
+  }
+
+  // Purple Flash Streak (2026-09-01, requested by the user — see
+  // meteorFlash.ts's createFlashStreakPurple, previewed in Settings > FX as
+  // "the one candidate for a comet landing in the inventory after a kill")
+  // — fires once per resolve response that actually granted a Comet, live
+  // mode only (same scoping as the kill-reward toast above: offline
+  // catch-up gets its own OfflineProgressModal summary, not a screen effect
+  // with no one there to see it). One trigger per resolve batch, not per
+  // comet, even if a batched offline-style catch-up window landed more
+  // than one.
+  if (mode === 'live' && (result.gained?.comets ?? 0) > 0) {
+    useFxStore.getState().trigger('flash-streak-purple')
   }
 
   for (const item of result.itemsGranted ?? []) {

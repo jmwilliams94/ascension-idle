@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.7",
+    "date": "2026-09-01",
+    "changes": [
+      "A Comet drop now triggers a violet shooting-star flash across the screen"
+    ]
+  },
+  {
     "version": "1.125.6",
     "date": "2026-09-01",
     "changes": [

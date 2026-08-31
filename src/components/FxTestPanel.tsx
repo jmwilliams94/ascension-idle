@@ -14,9 +14,13 @@ const LIGHTNING: { kind: FxKind; label: string; caption: string } = {
 // Flash Streak as the only one that read as polished, not cheap.
 const FLASH_EXAMPLES: { kind: FxKind; label: string; caption: string }[] = [
   { kind: 'flash-streak', label: '☄️ Flash Streak', caption: 'Short bright streak sweeps in from off-screen and ends in a burst (the original)' },
-  { kind: 'flash-streak-purple', label: '💜 Flash Streak — Purple', caption: 'Layered violet glow/core, glinting sparkle trail, thin expanding ring finish' },
-  { kind: 'flash-streak-shooting-star', label: '🌠 Shooting Star', caption: 'Dark blue-to-pink arc with twinkling sparkles, fades out instead of exploding' },
-  { kind: 'flash-streak-crater', label: '🕳️ Comet Crater', caption: 'Streaks in and embeds -- impact flare, fracture cracks, drifting dust, a dark crater' },
+  {
+    kind: 'flash-streak-purple',
+    label: '💜 Flash Streak — Purple',
+    caption: 'Layered violet glow/core, glinting sparkle trail, thin expanding ring finish -- live on every real Comet drop (see resolveCombat.ts/resolveRowCombat.ts)',
+  },
+  { kind: 'flash-streak-shooting-star', label: '🌠 Shooting Star', caption: 'Dark blue-to-pink arc with twinkling sparkles, fades out instead of exploding -- unused' },
+  { kind: 'flash-streak-crater', label: '🕳️ Comet Crater', caption: 'Streaks in and embeds -- impact flare, fracture cracks, drifting dust, a dark crater -- unused' },
 ]
 
 // FX Test (2026-08-29, requested by the user) -- dev/debug tab for
@@ -26,9 +30,10 @@ const FLASH_EXAMPLES: { kind: FxKind; label: string; caption: string }[] = [
 // calls useFxStore.trigger() -- FxLayer (mounted once in GameShell) picks
 // the request up on its own requestAnimationFrame loop and renders it as an
 // overlay above everything, including this modal, so you can see it isn't
-// clipped by or confined to any container. Not gameplay UI -- these effects
-// aren't wired to any real trigger (a Wuxia attack, an Ascend, a Comet
-// drop) yet, this is purely for eyeballing what the system can do.
+// clipped by or confined to any container. Not gameplay UI itself -- this is
+// for eyeballing/comparing the effects, even though flash-streak-purple is
+// now also fired for real elsewhere (see its own caption below). Lightning
+// still isn't wired to a real trigger (a Wuxia attack, an Ascend, ...).
 //
 // Pared back to just Lightning + the flash-streak family (2026-08-31,
 // requested by the user -- everything else previously here, comet/ripple/
@@ -60,7 +65,7 @@ export default function FxTestPanel() {
       <div className="border-t border-slate-800 pt-4">
         <h3 className="text-sm font-semibold text-white">Meteor Flash</h3>
         <p className="mt-1 text-xs text-slate-500">
-          Candidates for a comet landing in the inventory after a kill -- pick a favorite to wire up for real.
+          Purple was picked for a real Comet drop landing in the inventory after a kill; the rest stay here unused.
         </p>
         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
           {FLASH_EXAMPLES.map((example) => (
