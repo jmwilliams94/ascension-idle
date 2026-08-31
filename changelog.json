@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.1",
+    "date": "2026-08-31",
+    "changes": [
+      "PvP: the registration ladder is now hidden until you register a character yourself, so no one can scout who's entered before deciding to join"
+    ]
+  },
+  {
     "version": "1.125.0",
     "date": "2026-08-31",
     "changes": [

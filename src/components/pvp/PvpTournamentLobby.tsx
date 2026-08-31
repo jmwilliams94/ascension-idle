@@ -81,7 +81,15 @@ export default function PvpTournamentLobby({ characterId }: { characterId: strin
             {registerError && <p className="text-center text-xs text-rose-400">{registerError}</p>}
 
             <div>
-              <p className="text-heading-label mb-1">Ladder ({registrations.length})</p>
+              <p className="text-heading-label mb-1">Ladder{isRegistered ? ` (${registrations.length})` : ''}</p>
+              {!isRegistered ? (
+                // Anti-sniping (requested by the user): RLS hides every row
+                // here until your account has a character registered, so an
+                // empty list at this point means "hidden from you," not
+                // "no one's entered" — the copy has to say so explicitly
+                // rather than implying the ladder is actually empty.
+                <p className="text-center text-xs text-slate-500">Register to see who else has entered.</p>
+              ) : (
               <div className="max-h-64 space-y-1 overflow-y-auto">
                 {registrations.length === 0 && <p className="text-center text-xs text-slate-500">No one's registered yet.</p>}
                 {registrations.map((entry, index) => (
@@ -94,6 +102,7 @@ export default function PvpTournamentLobby({ characterId }: { characterId: strin
                   </div>
                 ))}
               </div>
+              )}
             </div>
           </div>
         )}
