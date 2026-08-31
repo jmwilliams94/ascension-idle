@@ -81,6 +81,13 @@ export interface ResolveCombatResult {
     spawned_at: string | null
     respawn_at: string | null
   } | null
+  // resolve-combat's own reference clock at the moment it computed
+  // monsterInstance — see useCombatStore.syncMonsterInstance's own comment
+  // on why this is needed to keep the respawn countdown immune to
+  // client/server clock skew. Absent only for very old, not-yet-updated
+  // client bundles' cached response shapes (never omitted by the current
+  // server).
+  now?: string
 }
 
 // Serialized per character (see serializeByKey.ts for the full race this
@@ -140,7 +147,7 @@ async function resolveCombatInner(characterId: string, mode: ResolveCombatMode):
   // overwritten a moment later; live is the only mode where the client
   // actually has a fight on screen to reconcile.
   if (mode === 'live' && result.monsterInstance) {
-    useCombatStore.getState().syncMonsterInstance(result.monsterInstance)
+    useCombatStore.getState().syncMonsterInstance(result.monsterInstance, result.now ? new Date(result.now).getTime() : Date.now())
   }
 
   // Live-only "kill confirmed" toast (2026-08-29, requested by the user —

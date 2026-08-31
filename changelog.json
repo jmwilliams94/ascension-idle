@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.123.5",
+    "date": "2026-08-31",
+    "changes": [
+      "Fixed the respawn countdown showing the wrong wait time (and occasionally jumping mid-countdown) on a device whose clock isn't perfectly in sync with the server"
+    ]
+  },
+  {
     "version": "1.123.4",
     "date": "2026-08-31",
     "changes": [

@@ -1966,6 +1966,15 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     // toast for a kill the player never visually saw). Null when nothing was
     // walked this call (effectiveElapsedMs was 0) — nothing to reconcile to.
     monsterInstance: monsterInstanceState,
+    // This function's own reference clock, echoed back so the client can
+    // reconcile monsterInstance's absolute spawned_at/respawn_at timestamps
+    // as a *duration from now* rather than comparing them directly against
+    // the client device's own Date.now() (reported by the user — a client
+    // clock running even a few seconds off from the server made the
+    // respawn countdown jump to a nonsensical value on every sync, since
+    // the "seconds left" math silently absorbed the full client/server
+    // clock skew). See useCombatStore.syncMonsterInstance's own comment.
+    now: new Date(now).toISOString(),
   })
   } catch (err) {
     // Anything that threw between the claim above and the successful return

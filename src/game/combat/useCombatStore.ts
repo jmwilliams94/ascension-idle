@@ -227,13 +227,25 @@ interface CombatState {
   // different monster than what's currently selected, or if not actively
   // fighting at all (a local switch/stop already in flight shouldn't be
   // stomped by a stale response for the old monster).
-  syncMonsterInstance: (instance: {
-    monster_id: string
-    hp: number
-    is_rare: boolean
-    spawned_at: string | null
-    respawn_at: string | null
-  }) => void
+  // serverNowMs is resolve-combat's own reference clock at the moment it
+  // computed `instance` (see resolveCombat.ts's own `now` field) — every
+  // timestamp on `instance` is converted to a duration relative to this
+  // before being re-anchored to the client's own Date.now() below, so a
+  // client device clock running seconds off from the server (a real
+  // reported bug — the respawn countdown jumped to a nonsensical value on
+  // every sync) can never leak into displayed/simulated timing. Defaults to
+  // Date.now() (no correction) only for a stale client bundle predating
+  // this field.
+  syncMonsterInstance: (
+    instance: {
+      monster_id: string
+      hp: number
+      is_rare: boolean
+      spawned_at: string | null
+      respawn_at: string | null
+    },
+    serverNowMs: number,
+  ) => void
   // Called by resolveCombat.ts when a live (not offline) resolve-combat
   // response reports inventoryFull — a kill rolled a drop that had nowhere
   // to go, so the fight stops outright rather than silently discarding it or
@@ -781,13 +793,24 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     })
   },
 
-  syncMonsterInstance: (instance) => {
+  syncMonsterInstance: (instance, serverNowMs) => {
     set((state) => {
       const monsterTypeId = state.monsterTypeId
       if (!state.isFighting || !monsterTypeId || monsterTypeId !== instance.monster_id) {
         return {}
       }
       const type = ENEMY_TYPES[monsterTypeId]
+
+      // Clock-skew correction (bug fix reported by the user — the respawn
+      // countdown jumped to a nonsensical value on every sync, traced to a
+      // client device clock running seconds off from the server). instance's
+      // spawned_at/respawn_at are absolute timestamps from the SERVER's
+      // clock; adding this offset re-expresses each one as "that many ms
+      // from now" using the CLIENT's own Date.now(), so a skewed device
+      // clock can never leak into the countdown or into runTick's own
+      // respawn-timing check (both compare against Date.now() elsewhere).
+      const clockCorrectionMs = Date.now() - serverNowMs
+      const toClientMs = (iso: string) => new Date(iso).getTime() + clockCorrectionMs
 
       // Anti-regression ordering (v1.123.3, bug fix reported by the user —
       // "I watch the enemy die and a new one spawn but then it rubber-bands
@@ -805,10 +828,10 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       const impliedSpawnedAtMs =
         instance.hp > 0
           ? instance.spawned_at
-            ? new Date(instance.spawned_at).getTime()
+            ? toClientMs(instance.spawned_at)
             : null
           : instance.respawn_at
-            ? new Date(instance.respawn_at).getTime() - RESPAWN_GAP_MS
+            ? toClientMs(instance.respawn_at) - RESPAWN_GAP_MS
             : null
 
       // Only a genuine invariant violation (documented in resolve-combat's
@@ -882,7 +905,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         currentHp: 0,
         maxHp: 0,
         pendingHpAdjustment: 0,
-        respawnReadyAt: instance.respawn_at ? new Date(instance.respawn_at).getTime() : Date.now(),
+        respawnReadyAt: instance.respawn_at ? toClientMs(instance.respawn_at) : Date.now(),
       }
     })
   },
