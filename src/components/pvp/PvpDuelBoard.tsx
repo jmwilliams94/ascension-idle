@@ -4,6 +4,7 @@ import { Button } from '../ui/Button'
 import { usePvpDuelStore, opponentIdFor, zoneFor, requiredActionFor } from '../../game/pvp/usePvpDuelStore'
 import { BOARD_SIZE, ZONE_SIZE, MAX_ZONE_ORIGIN } from '../../game/pvp/pvpConstants'
 import PvpTurnTimer from './PvpTurnTimer'
+import PvpDamageToast from './PvpDamageToast'
 
 // Phase 2 duel UI — see CLAUDE.md's plan nifty-riding-journal. Single
 // composed panel (deliberately not split into separate Zone/Guess-picker
@@ -64,7 +65,11 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
       duel.winnerCharacterId === characterId ? 'Victory!' : duel.winnerCharacterId ? 'Defeated' : 'Duel Over'
     return (
       <AscensionCard title="PvP Duel">
-        <div className="space-y-2 text-center">
+        <div className="relative space-y-2 text-center">
+          {/* The killing blow's own toast is queued the instant that HP
+              drop lands (usePvpDuelStore.setDuel), before this "duel over"
+              branch ever renders — still shown here so it isn't lost. */}
+          <PvpDamageToast />
           <p className="font-heading text-lg font-bold uppercase tracking-wide text-gradient-steel">{wonText}</p>
           {duel.status === 'forfeited' && <p className="text-sm text-slate-400">Ended by timeout forfeit.</p>}
           <p className="text-sm text-slate-400">
@@ -155,7 +160,8 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
 
   return (
     <AscensionCard title="PvP Duel">
-      <div className="space-y-3">
+      <div className="relative space-y-3">
+        <PvpDamageToast />
         <div className="flex items-center justify-between text-sm">
           <div className="flex-1">
             <div className="text-heading-label">{myName}</div>

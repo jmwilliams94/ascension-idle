@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.124.11",
+    "date": "2026-08-31",
+    "changes": [
+      "PvP: a small damage number now slides in when a hit lands — white when you dealt it, red when you took it"
+    ]
+  },
+  {
     "version": "1.124.10",
     "date": "2026-08-31",
     "changes": [

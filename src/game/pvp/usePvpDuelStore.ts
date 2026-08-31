@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../../lib/supabaseClient'
+import { usePvpDamageToastStore } from './usePvpDamageToastStore'
 
 // PvP Duel client state — see CLAUDE.md's plan nifty-riding-journal (Phase
 // 2). Mirrors public.pvp_duels exactly (20261124000000_pvp_duel_symmetric_hiding.sql) —
@@ -113,7 +114,12 @@ export interface PvpActionResult {
 interface PvpDuelState {
   duel: PvpDuel | null
   busy: boolean
-  setDuel: (duel: PvpDuel | null) => void
+  // characterId is optional (and skipped) only for callers that genuinely
+  // have none handy — every real call site (submitAction below,
+  // PvpDuelConnection's realtime handler) always has it, since that's what
+  // lets the before/after HP diff know which side is "me" for the damage
+  // toast's white/red coloring.
+  setDuel: (duel: PvpDuel | null, characterId?: string) => void
   loadActiveDuel: (characterId: string) => Promise<void>
   placeZone: (characterId: string, zoneX: number, zoneY: number, secretTile: number) => Promise<PvpActionResult>
   guess: (characterId: string, tile: number) => Promise<PvpActionResult>
@@ -152,7 +158,7 @@ async function submitAction(
   const result = data as { ok: boolean; error?: string; hit?: boolean; damage_dealt?: number; forfeited?: boolean; duel?: Record<string, unknown> }
 
   if (result.duel) {
-    usePvpDuelStore.getState().setDuel(toDuel(result.duel))
+    usePvpDuelStore.getState().setDuel(toDuel(result.duel), characterId)
   }
 
   return { ok: result.ok, error: result.error, hit: result.hit, damageDealt: result.damage_dealt, forfeited: result.forfeited }
@@ -162,7 +168,29 @@ export const usePvpDuelStore = create<PvpDuelState>((set, get) => ({
   duel: null,
   busy: false,
 
-  setDuel: (duel) => set({ duel }),
+  setDuel: (duel, characterId) => {
+    const prev = get().duel
+
+    // Same-duel HP drop = a hit landed — queue a damage toast for whichever
+    // side it hit. Guarded on prev existing and matching this duel's id so
+    // a brand-new/different duel loading in never reads as "damage."
+    if (duel && prev && prev.id === duel.id && characterId) {
+      const isA = duel.playerACharacterId === characterId
+      const myPrevHp = isA ? prev.playerAHp : prev.playerBHp
+      const myNewHp = isA ? duel.playerAHp : duel.playerBHp
+      const opponentPrevHp = isA ? prev.playerBHp : prev.playerAHp
+      const opponentNewHp = isA ? duel.playerBHp : duel.playerAHp
+
+      if (myNewHp < myPrevHp) {
+        usePvpDamageToastStore.getState().show(myPrevHp - myNewHp, false)
+      }
+      if (opponentNewHp < opponentPrevHp) {
+        usePvpDamageToastStore.getState().show(opponentPrevHp - opponentNewHp, true)
+      }
+    }
+
+    set({ duel })
+  },
 
   loadActiveDuel: async (characterId) => {
     const { data, error } = await supabase

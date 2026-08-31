@@ -44,7 +44,7 @@ export default function PvpDuelConnection({ characterId }: { characterId: string
         // page reload, e.g. once Phase 3's tournament matches exist).
         if (payload.eventType !== 'DELETE') {
           if (!current || current.id === row.id || row.status === 'active') {
-            setDuel(toDuel(row))
+            setDuel(toDuel(row), characterId)
           }
         }
       },
