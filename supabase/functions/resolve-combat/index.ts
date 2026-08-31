@@ -670,8 +670,15 @@ function requiredExpForLevel(level: number): number {
 // why this table was retuned a second time the same day (steeper tier-to-tier
 // jumps — "later levels should take longer"). Both tables must stay in sync
 // with expCurve.ts.
+//
+// Recalibrated again 2026-11 alongside expCurve.ts's copy — the 2026-11
+// weapon-curve/enemy-HP/respawn-gap rebalance (RESPAWN_GAP_MS 2s->10s, ~3->~6
+// hits/kill, damage-dealt EXP removed entirely) silently cut real EXP/hour to
+// ~20% of the pace this table was built for (10s-gap-dominated cycle at 100%
+// EXP vs. the original 3s cycle at 150% EXP). Every value divided by 5 to
+// restore it — see expCurve.ts's own comment for the full derivation.
 const PROMOTION_TIER_ANCHORS = [1, 15, 40, 70, 100, 110, 120]
-const KILLS_PER_LEVEL_BY_TIER = [200, 350, 650, 1300, 2600, 5200, 10000]
+const KILLS_PER_LEVEL_BY_TIER = [40, 70, 130, 260, 520, 1040, 2000]
 
 // Idle/offline EXP rate — confirmed with the user, 2026-08-05: live play
 // keeps the full expRewardForLevel/damage-dealt-EXP rate above; the once-at-

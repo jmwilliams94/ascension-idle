@@ -88,11 +88,26 @@ export function requiredExpForLevel(level: number): number {
 // PLACEHOLDER table, same disclosed-not-final status as every other economy
 // number in this combat system. Doesn't account for the White/Green/Red/
 // Black level-diff EXP multiplier (expMultiplierForLevelDiff in
-// combatResolver.ts), which still applies on top of this unchanged. Damage-
-// dealt EXP (a flat bonus on top of the on-kill grant) was removed 2026-11
-// alongside the RESPAWN_GAP_MS increase, in favor of on-kill-only rewards.
+// combatResolver.ts), which still applies on top of this unchanged.
+//
+// Recalibrated again 2026-11 (reported by the user: leveling had gone from
+// "grindy" to a wall after that same 2026-11 weapon-curve/enemy-HP/respawn-gap
+// rebalance) — this table's ~10-min/level-early to ~8.3-hr/level-endgame
+// pacing was calibrated against a per-kill cycle of ~3s (no respawn gap, ~3
+// hits/kill) and a per-kill EXP grant of 150% of expRewardForLevel (the full
+// on-kill grant plus the now-removed +50% damage-dealt bonus). Both of those
+// assumptions are gone: RESPAWN_GAP_MS is now 10s and dominates the cycle
+// time for every realistic gear tier (even Normal-quality's ~9 hits/kill
+// finishes in under 10s, so the fixed gap — not fight length — sets the real
+// kill rate), and damage-dealt EXP was removed (on-kill grant only, 100% not
+// 150%). Net effect: real EXP/hour fell to (1.0/10s) / (1.5/3s) = 20% of the
+// pacing this table was built for, a hidden 5x slowdown nothing here
+// compensated for. Every value below divided by 5 (200/350/650/1300/2600/
+// 5200/10000 → 40/70/130/260/520/1040/2000) to restore the originally-stated
+// real-time-per-level pacing under the new 10s-gap-dominated cycle. Must stay
+// in sync with the mirrored copy in resolve-combat/index.ts.
 const PROMOTION_TIER_ANCHORS = [1, 15, 40, 70, 100, 110, 120]
-const KILLS_PER_LEVEL_BY_TIER = [200, 350, 650, 1300, 2600, 5200, 10000]
+const KILLS_PER_LEVEL_BY_TIER = [40, 70, 130, 260, 520, 1040, 2000]
 
 function killsPerLevelForLevel(level: number): number {
   let tierIndex = 0

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.2",
+    "date": "2026-08-31",
+    "changes": [
+      "Leveling is much faster again — the recent combat changes (slower monster deaths, longer respawn gap) had quietly cut EXP gains to a fifth of the intended pace without anyone changing the leveling requirements to match. Fixed by lowering how much EXP each level needs."
+    ]
+  },
+  {
     "version": "1.125.1",
     "date": "2026-08-31",
     "changes": [
