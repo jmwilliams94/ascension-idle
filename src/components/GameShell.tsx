@@ -7,6 +7,7 @@ import MailRealtimeConnection from './MailRealtimeConnection'
 import ZoneBossConnection from './ZoneBossConnection'
 import GoldDonationConnection from './GoldDonationConnection'
 import PvpDuelConnection from './PvpDuelConnection'
+import PvpTournamentConnection from './PvpTournamentConnection'
 import TabActivityIndicator from './TabActivityIndicator'
 import QuiverWarningHud from './QuiverWarningHud'
 import InventoryFullWarningHud from './InventoryFullWarningHud'
@@ -582,6 +583,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <ZoneBossConnection />
       <GoldDonationConnection />
       <PvpDuelConnection characterId={characterId} />
+      <PvpTournamentConnection />
       <TabActivityIndicator />
       <ChatOverlay characterId={characterId} />
       <CharacterLoadoutModal />

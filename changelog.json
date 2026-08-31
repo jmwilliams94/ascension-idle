@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.125.0",
+    "date": "2026-08-31",
+    "changes": [
+      "Added the weekly PvP tournament: register any time, see everyone else's name on the ladder, and once the event goes live watch the bracket update round by round as duels resolve — last week's champion stays pinned at the top",
+      "The event goes live automatically every Friday at 12pm Brisbane time, and registration for the next one opens the moment the previous event ends"
+    ]
+  },
+  {
     "version": "1.124.11",
     "date": "2026-08-31",
     "changes": [

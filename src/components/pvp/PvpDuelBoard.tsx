@@ -5,6 +5,7 @@ import { usePvpDuelStore, opponentIdFor, zoneFor, requiredActionFor } from '../.
 import { BOARD_SIZE, ZONE_SIZE, MAX_ZONE_ORIGIN } from '../../game/pvp/pvpConstants'
 import PvpTurnTimer from './PvpTurnTimer'
 import PvpDamageToast from './PvpDamageToast'
+import PvpTournamentLobby from './PvpTournamentLobby'
 
 // Phase 2 duel UI — see CLAUDE.md's plan nifty-riding-journal. Single
 // composed panel (deliberately not split into separate Zone/Guess-picker
@@ -44,11 +45,7 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
   const pendingTile = duel && pendingSelection?.turnNumber === duel.turnNumber ? pendingSelection.tile : null
 
   if (!duel) {
-    return (
-      <AscensionCard title="PvP Duel">
-        <p className="text-sm text-slate-400">No active duel right now.</p>
-      </AscensionCard>
-    )
+    return <PvpTournamentLobby characterId={characterId} />
   }
 
   const isPlayerA = duel.playerACharacterId === characterId
@@ -75,6 +72,9 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
           <p className="text-sm text-slate-400">
             {myName} vs {opponentName}
           </p>
+          <Button variant="secondary" onClick={() => usePvpDuelStore.getState().setDuel(null)} className="mx-auto block">
+            Back to Tournament
+          </Button>
         </div>
       </AscensionCard>
     )
