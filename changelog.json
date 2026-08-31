@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.125.5",
+    "date": "2026-09-01",
+    "changes": [
+      "Gear now drops more often from kills, with a reshaped mix of tiers — a bit more Ascended and Radiant, noticeably more Tempered and Normal gear",
+      "Row Combat's own drop rates were rebalanced to match"
+    ]
+  },
+  {
     "version": "1.125.4",
     "date": "2026-09-01",
     "changes": [

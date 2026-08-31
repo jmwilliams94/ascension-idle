@@ -69,12 +69,13 @@ export interface ItemInstance {
 }
 
 // Mirrors supabase/functions/resolve-combat's own DROP_CHANCE (confirmed
-// with the user, 2026-08-01 — supersedes the earlier flat 10% placeholder).
-// This copy is predictive-only (drives the combat log's "You found: X" line
-// — see useCombatStore.ts — no real grant happens here), so it doesn't need
-// the server's quality-tier roll, just the rate, to keep the log honest
-// about how often something was actually found.
-const DROP_CHANCE = 1 / 150
+// with the user, 2026-08-01 — supersedes the earlier flat 10% placeholder;
+// raised 1/150 -> 1/50 in the 2026-09 drop-rate pass, see that file's own
+// comment). This copy is predictive-only (drives the combat log's "You
+// found: X" line — see useCombatStore.ts — no real grant happens here), so
+// it doesn't need the server's quality-tier roll, just the rate, to keep the
+// log honest about how often something was actually found.
+const DROP_CHANCE = 1 / 50
 
 // Level-ranged, class-agnostic drop selection (2026-08-29, requested by the
 // user — supersedes the earlier "own class only, single closest level"

@@ -204,21 +204,29 @@ const MIN_DAMAGE_PERCENT_OF_ATTACK = 0.1
 const RARE_BLENDED_REWARD_FACTOR = (1 - RARE_CHANCE) + RARE_CHANCE * RARE_REWARD_MULTIPLIER // 1.2
 const RARE_BLENDED_DAMAGE_EXP_FACTOR = (1 - RARE_CHANCE) + RARE_CHANCE * (RARE_REWARD_MULTIPLIER / RARE_HP_MULTIPLIER) // 1.075
 
-// Row Combat-specific rates, deliberately 4x single-target's own COMET_DROP_CHANCE/
-// FALLEN_STAR_DROP_CHANCE/DROP_CHANCE/QUALITY_DROP_CHANCES (combatResolver.ts) —
-// confirmed with the user 2026-08-20 as a Row Combat-only buff, not a global rebalance.
+// Row Combat-specific rates. COMET_DROP_CHANCE/FALLEN_STAR_DROP_CHANCE stay
+// deliberately 4x single-target's own values (confirmed with the user
+// 2026-08-20, a Row Combat-only buff, not a global rebalance) — untouched by
+// the 2026-09 drop-rate pass below.
+//
+// DROP_CHANCE/QUALITY_DROP_CHANCES relationship changed 2026-09 (requested by
+// the user alongside that same pass): DROP_CHANCE is now HALF single-target's
+// own DROP_CHANCE (was 4x) — 1/50 / 2 = 1/100 — and QUALITY_DROP_CHANCES is
+// now identical to single-target's own table, not its own separately-scaled
+// copy. Both must be kept in that relationship if resolve-combat/index.ts's
+// own DROP_CHANCE/QUALITY_DROP_CHANCES change again.
 const COMET_DROP_CHANCE = 1 / 125
 const FALLEN_STAR_DROP_CHANCE = 1 / 5000
-const DROP_CHANCE = 2 / 75
+const DROP_CHANCE = 1 / 100
 const JADE_SHARD_DROP_CHANCE = 1 / 300
 const JADE_SHARD_MONSTER_IDS = ['frostpelt', 'venomkin', 'dunecrawler']
 const PET_DROP_CHANCE = 1 / 25000
 
 const QUALITY_DROP_CHANCES: [tier: string, chance: number][] = [
-  ['ascended', 3 / 100],
-  ['radiant', 3 / 50],
-  ['infused', 1 / 4],
-  ['tempered', 3 / 8],
+  ['ascended', 1 / 200],
+  ['radiant', 1 / 100],
+  ['infused', 3 / 100],
+  ['tempered', 3 / 40],
 ]
 
 function rollDroppedQualityTier(qualityBonusMultiplier = 1): string {

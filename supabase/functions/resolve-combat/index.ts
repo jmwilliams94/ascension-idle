@@ -428,7 +428,14 @@ const FALLEN_STAR_DROP_CHANCE = 1 / 20000
 // Tempered-or-better). Then halved across the board as a deliberate safety
 // margin at the user's request before shipping: ~1.5 Tempered / ~1 Infused /
 // ~0.24 Radiant / ~0.12 Ascended expected per 2-hour session.
-const DROP_CHANCE = 1 / 150
+//
+// Both re-recalibrated 2026-09 (requested by the user, on top of the same
+// week's leveling-speed changes) — DROP_CHANCE raised 1/150 -> 1/50 (3x), and
+// the quality table switched to flat, independently-chosen absolute-of-a-drop
+// percentages (0.5%/1%/3%/7.5%) rather than re-deriving conditional odds off
+// the old kills/hour constant. Net per-kill (unconditional) effect: Ascended/
+// Radiant 2x, Infused ~1.44x, Tempered 2.4x, Normal ~3.2x, any-drop 3x.
+const DROP_CHANCE = 1 / 50
 
 // Jade Shard (2026-09-01, Class Promotion tier-70 material) — flat per-kill
 // chance scoped to exactly 3 monsters, mirrors combatResolver.ts's
@@ -438,10 +445,10 @@ const JADE_SHARD_DROP_CHANCE = 1 / 300
 const JADE_SHARD_MONSTER_IDS = ['frostpelt', 'venomkin', 'dunecrawler']
 
 const QUALITY_DROP_CHANCES: [tier: string, chance: number][] = [
-  ['ascended', 3 / 400],
-  ['radiant', 3 / 200],
-  ['infused', 1 / 16],
-  ['tempered', 3 / 32],
+  ['ascended', 1 / 200],
+  ['radiant', 1 / 100],
+  ['infused', 3 / 100],
+  ['tempered', 3 / 40],
 ]
 
 // qualityBonusMultiplier (2026-08-07, confirmed with the user, supersedes
