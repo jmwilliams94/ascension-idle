@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.124.4",
+    "date": "2026-08-31",
+    "changes": [
+      "Laid the groundwork for real-time PvP duels — a hidden-position guessing duel between two characters, Battleship-style — backend only for now, not accessible to players yet"
+    ]
+  },
+  {
     "version": "1.124.3",
     "date": "2026-08-31",
     "changes": [
