@@ -6,7 +6,7 @@ import { Button } from './ui/Button'
 import { Select } from './ui/Select'
 import { ENEMY_TYPES, ZONES, ZONE_ORDER, type EnemyTypeId, type ZoneId } from '../game/zones/zoneData'
 import { useZoneStore } from '../game/zones/useZoneStore'
-import { useCombatStore } from '../game/combat/useCombatStore'
+import { useCombatStore, RESPAWN_GAP_MS } from '../game/combat/useCombatStore'
 import { resolveCombat, touchCombatLastResolvedAt, claimHuntingSlot } from '../game/combat/resolveCombat'
 import { useHuntingTakeoverToastStore } from '../game/combat/useHuntingTakeoverToastStore'
 import { getLevelDiffColor } from '../game/combat/combatResolver'
@@ -412,8 +412,19 @@ export default function CombatPage() {
   const currentZone = ZONES[currentZoneId]
   // Respawn gap (see useCombatStore's RESPAWN_GAP_MS) — `now` already ticks
   // every 200ms for the floating-number lifetime check above, reused here
-  // rather than a second timer.
-  const respawnSecondsLeft = respawnReadyAt > 0 ? Math.max(0, Math.ceil((respawnReadyAt - now) / 1000)) : 0
+  // rather than a second timer. Clamped to one gap's worth of seconds
+  // (reported by the user — a fast-killing build occasionally saw this
+  // jump to ~19s instead of counting to 0): resolve-combat's per-instance
+  // walk can legitimately fold more than one real kill+respawn cycle into
+  // a single sync when a resolve call lands late, and syncMonsterInstance
+  // adopts that instance's real respawn_at as-is — correct for reward
+  // accounting (see the "N× kills" toast), but with nothing upstream ever
+  // intending a wait longer than one gap, showing it raw just reads as a
+  // display glitch. This only ever clamps the display; the real
+  // respawnReadyAt driving useCombatStore.runTick's own spawn timing is untouched.
+  const respawnSecondsLeft = respawnReadyAt > 0
+    ? Math.max(0, Math.min(Math.ceil(RESPAWN_GAP_MS / 1000), Math.ceil((respawnReadyAt - now) / 1000)))
+    : 0
   const isRespawning = respawnSecondsLeft > 0
 
   // "Best available" HP/Mana potion (confirmed with the user, 2026-07-31 for

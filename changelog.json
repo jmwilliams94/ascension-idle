@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.123.4",
+    "date": "2026-08-31",
+    "changes": [
+      "Fixed the respawn countdown occasionally jumping to a much longer wait than intended for fast-killing builds, instead of counting down smoothly"
+    ]
+  },
+  {
     "version": "1.123.3",
     "date": "2026-08-31",
     "changes": [
