@@ -88,16 +88,16 @@ export default function PvpTournamentLobby({ characterId }: { characterId: strin
                 // empty list at this point means "hidden from you," not
                 // "no one's entered" — the copy has to say so explicitly
                 // rather than implying the ladder is actually empty.
-                <p className="text-center text-xs text-slate-500">Register to see who else has entered.</p>
+                <p className="text-center text-xs text-slate-300">Register to see who else has entered.</p>
               ) : (
               <div className="max-h-64 space-y-1 overflow-y-auto">
-                {registrations.length === 0 && <p className="text-center text-xs text-slate-500">No one's registered yet.</p>}
+                {registrations.length === 0 && <p className="text-center text-xs text-slate-300">No one's registered yet.</p>}
                 {registrations.map((entry, index) => (
                   <div key={entry.characterId} className="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-900/40 px-3 py-1.5 text-sm">
-                    <span className={`w-8 shrink-0 font-bold ${RANK_ACCENT[index + 1] ?? 'text-slate-500'}`}>#{index + 1}</span>
+                    <span className={`w-8 shrink-0 font-bold ${RANK_ACCENT[index + 1] ?? 'text-slate-300'}`}>#{index + 1}</span>
                     <span className="min-w-0 flex-1 truncate text-slate-200">
                       {entry.characterName}
-                      {entry.characterId === characterId && <span className="ml-1 text-xs text-slate-500">(you)</span>}
+                      {entry.characterId === characterId && <span className="ml-1 text-xs text-slate-300">(you)</span>}
                     </span>
                   </div>
                 ))}

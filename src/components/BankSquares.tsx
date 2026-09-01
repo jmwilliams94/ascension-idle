@@ -422,7 +422,7 @@ function CurrencyPanel({
         )}
       </div>
 
-      <div className="flex items-center justify-between text-[11px] text-slate-500">
+      <div className="flex items-center justify-between text-[11px] text-slate-300">
         <span>Wallet: {wallet.toLocaleString()}</span>
         <span>Bank: {bank.toLocaleString()}</span>
       </div>
@@ -430,7 +430,7 @@ function CurrencyPanel({
       <div className="ascension-chip-frame">
         <div className="ascension-chip-inner p-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-slate-500">Amount</span>
+          <span className="text-xs text-slate-300">Amount</span>
           <span className="text-lg font-semibold text-slate-100">{amount.toLocaleString()}</span>
         </div>
         <input
@@ -578,12 +578,12 @@ function CometFallenStarPanel({
         )}
       </div>
 
-      <p className="text-[11px] text-slate-500">Bank: {bank.toLocaleString()}</p>
+      <p className="text-[11px] text-slate-300">Bank: {bank.toLocaleString()}</p>
 
       <div className="ascension-chip-frame">
         <div className="ascension-chip-inner p-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-slate-500">{mode === 'scroll' ? 'Scrolls' : 'Amount'}</span>
+          <span className="text-xs text-slate-300">{mode === 'scroll' ? 'Scrolls' : 'Amount'}</span>
           <span className="text-lg font-semibold text-slate-100">{amount.toLocaleString()}</span>
         </div>
         <input
@@ -601,12 +601,12 @@ function CometFallenStarPanel({
         </div>
 
         {mode === 'individual' && amount > 0 && (
-          <p className="mt-2 text-[11px] text-slate-500">
+          <p className="mt-2 text-[11px] text-slate-300">
             → lands in your Character Inventory as {amount} loose tile{amount === 1 ? '' : 's'}.
           </p>
         )}
         {mode === 'scroll' && amount > 0 && (
-          <p className="mt-2 text-[11px] text-slate-500">
+          <p className="mt-2 text-[11px] text-slate-300">
             → lands in your Character Inventory as {amount} Scroll{amount === 1 ? '' : 's'} ({(amount * 10).toLocaleString()} {label.toLowerCase()}).
           </p>
         )}
@@ -634,7 +634,7 @@ function TierSlider({ tier, setTier, minTier = 1 }: { tier: number; setTier: (ti
     <div className="ascension-chip-frame">
       <div className="ascension-chip-inner p-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-slate-500">Tier</span>
+          <span className="text-xs text-slate-300">Tier</span>
           <span className="text-lg font-semibold text-slate-100">{tier <= 0 ? 'Normal' : `+${tier}`}</span>
         </div>
         <input
@@ -649,7 +649,7 @@ function TierSlider({ tier, setTier, minTier = 1 }: { tier: number; setTier: (ti
           <span>{minTier <= 0 ? 'Normal' : `+${minTier}`}</span>
           <span>+{maxTier}</span>
         </div>
-        <p className="mt-2 text-[11px] text-slate-500">{cost > 0 ? `${cost.toLocaleString()} pts` : 'Free'}</p>
+        <p className="mt-2 text-[11px] text-slate-300">{cost > 0 ? `${cost.toLocaleString()} pts` : 'Free'}</p>
       </div>
     </div>
   )
@@ -690,7 +690,7 @@ function CompositionPointsPanel({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-slate-300">
         {points.toLocaleString()} points available — gain more by Banking a stone from Inventory.
       </p>
       <TierSlider tier={tier} setTier={setTier} />
@@ -724,7 +724,7 @@ function GearPointsPanel({
   if (!slotType) {
     return (
       <div className="space-y-2">
-        <p className="text-xs text-slate-500">Choose a gear type to spend its points pool.</p>
+        <p className="text-xs text-slate-300">Choose a gear type to spend its points pool.</p>
         <div className="grid grid-cols-2 gap-1.5">
           {GEAR_SLOT_TYPES.map((type) => (
             <div key={type} className="ascension-chip-frame is-interactive">
@@ -734,7 +734,7 @@ function GearPointsPanel({
                 className="ascension-chip-inner w-full px-2.5 py-2 text-left text-xs font-medium text-slate-300 hover:text-slate-100"
               >
                 <span className="block">{formatGearSlotLabel(type)}</span>
-                <span className="block text-[10px] font-normal text-slate-500">{gearCompositionPoints[type].toLocaleString()} pts</span>
+                <span className="block text-[10px] font-normal text-slate-300">{gearCompositionPoints[type].toLocaleString()} pts</span>
               </button>
             </div>
           ))}
@@ -857,22 +857,22 @@ function GearSlotWithdrawPanel({
 
   return (
     <div className="space-y-2">
-      <button type="button" onClick={onBack} className="text-[11px] text-slate-500 hover:text-slate-300">
+      <button type="button" onClick={onBack} className="text-[11px] text-slate-300 hover:text-slate-100">
         ‹ Back to gear types
       </button>
 
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-slate-300">
         {points.toLocaleString()} {formatGearSlotLabel(slotType).toLowerCase()} points available — gain more by Banking a composed{' '}
         {formatGearSlotLabel(slotType).toLowerCase()} from Inventory.
       </p>
 
       {eligibleTemplates.length === 0 ? (
-        <p className="mt-2 text-xs text-slate-500">No {formatGearSlotLabel(slotType).toLowerCase()} items available for your class.</p>
+        <p className="mt-2 text-xs text-slate-300">No {formatGearSlotLabel(slotType).toLowerCase()} items available for your class.</p>
       ) : (
         <>
           {singleTemplate ? (
             <p className="mt-2 text-sm font-medium text-slate-100">
-              {singleTemplate.name} <span className="text-xs font-normal text-slate-500">(Lv {singleTemplate.required_level})</span>
+              {singleTemplate.name} <span className="text-xs font-normal text-slate-300">(Lv {singleTemplate.required_level})</span>
             </p>
           ) : (
             <Select value={templateId} onChange={(event) => setTemplateId(event.target.value)} className="mt-2">

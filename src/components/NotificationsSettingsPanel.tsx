@@ -109,7 +109,7 @@ export default function NotificationsSettingsPanel() {
       ) : needsInstallFirst ? (
         <div className="space-y-1 rounded-xl border border-slate-800 bg-slate-950/40 p-3">
           <p className="text-sm font-medium text-slate-100">Add to Home Screen to enable notifications</p>
-          <p className="text-[11px] text-slate-500">
+          <p className="text-[11px] text-slate-300">
             iOS only allows push notifications for installed apps. Tap Share → "Add to Home Screen", then open Ascension Idle from
             there to turn this on.
           </p>
@@ -121,7 +121,7 @@ export default function NotificationsSettingsPanel() {
               <p className="text-sm font-medium text-slate-100">Push Notifications</p>
               <ToggleSwitch checked={subscribed} onChange={(checked) => void handleToggle(checked)} label="Push Notifications" disabled={busy || !accountId} />
             </div>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-slate-300">
               Get notified on this device even when Ascension Idle isn't open. Nothing is wired up to send a real alert yet -- this
               just turns the pipeline on.
             </p>
@@ -136,7 +136,7 @@ export default function NotificationsSettingsPanel() {
           {subscribed && (
             <div className="space-y-2 rounded-xl border border-slate-800 bg-slate-950/40 p-3">
               <p className="text-sm font-medium text-slate-100">Send test notification</p>
-              <p className="text-[11px] text-slate-500">Confirms the full pipeline works end-to-end on this device.</p>
+              <p className="text-[11px] text-slate-300">Confirms the full pipeline works end-to-end on this device.</p>
               <button
                 type="button"
                 onClick={() => void handleTestSend()}

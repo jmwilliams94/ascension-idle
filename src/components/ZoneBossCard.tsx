@@ -132,7 +132,7 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
   if (!spawn) {
     return (
       <AscensionCard>
-        <p className="text-center text-sm text-slate-500">Loading the Zone Boss…</p>
+        <p className="text-center text-sm text-slate-300">Loading the Zone Boss…</p>
       </AscensionCard>
     )
   }
@@ -167,8 +167,8 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
           </p>
         </div>
 
-        <p className="mt-3 text-center text-xs text-slate-500">Rewards have been mailed out to everyone who took part.</p>
-        <p className="mt-1 text-center text-xs text-slate-500">A new Zone Boss will appear within the next few hours.</p>
+        <p className="mt-3 text-center text-xs text-slate-300">Rewards have been mailed out to everyone who took part.</p>
+        <p className="mt-1 text-center text-xs text-slate-300">A new Zone Boss will appear within the next few hours.</p>
 
         {leaderboardOpen && (
           <ZoneBossLeaderboardModal characterId={characterId} spawnId={spawn.id} bossName={boss.displayName} onClose={() => setLeaderboardOpen(false)} />
@@ -226,7 +226,7 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
               onClick={() => setRewardsInfoOpen(true)}
             />
           </p>
-          <p className="mt-1 text-xs text-slate-500">{windowEnded ? 'Fight ended' : `Active — ends in ${formatCountdown(windowEndsAtMs - now)}`}</p>
+          <p className="mt-1 text-xs text-slate-300">{windowEnded ? 'Fight ended' : `Active — ends in ${formatCountdown(windowEndsAtMs - now)}`}</p>
         </div>
         <IconButton icon="🏆" title="Leaderboard" accent="amber" onClick={() => setLeaderboardOpen(true)} />
       </div>
@@ -248,7 +248,7 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
       </div>
 
       <div className="mt-3">
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-300">
           {spawn.currentHp.toLocaleString()} / {spawn.maxHp.toLocaleString()} HP
         </p>
         <div className="mt-1">
@@ -258,13 +258,13 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
         <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-center">
-          <p className="text-slate-500">Free attempts</p>
+          <p className="text-slate-300">Free attempts</p>
           <p className="text-sm font-medium text-slate-200">
             {freeRemaining} / {FREE_ATTEMPT_CAP}
           </p>
         </div>
         <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-center">
-          <p className="text-slate-500">Paid attempts</p>
+          <p className="text-slate-300">Paid attempts</p>
           <p className="text-sm font-medium text-slate-200">
             {paidRemaining} / {PAID_ATTEMPT_CAP}
           </p>
@@ -272,11 +272,11 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
       </div>
 
       {onCooldown && !damageCapReached && (
-        <p className="mt-2 text-center text-xs text-slate-500">Next attempt in {formatCountdown(cooldownEndsAtMs - now)}</p>
+        <p className="mt-2 text-center text-xs text-slate-300">Next attempt in {formatCountdown(cooldownEndsAtMs - now)}</p>
       )}
 
       {damageCapReached && !windowEnded && (
-        <p className="mt-2 text-center text-xs text-slate-500">You've dealt your max damage to this boss — let others finish it off.</p>
+        <p className="mt-2 text-center text-xs text-slate-300">You've dealt your max damage to this boss — let others finish it off.</p>
       )}
 
       {hasBrokenGear && <p className="mt-2 text-center text-xs text-rose-400">Some of your gear is broken — repair it before fighting.</p>}
@@ -294,7 +294,7 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
       )}
 
       {participation && (
-        <p className="mt-2 text-center text-xs text-slate-500">
+        <p className="mt-2 text-center text-xs text-slate-300">
           Your total damage: {participation.totalDamage.toLocaleString()} / {damageCap.toLocaleString()} cap
         </p>
       )}

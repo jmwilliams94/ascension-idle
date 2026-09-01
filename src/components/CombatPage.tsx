@@ -44,7 +44,7 @@ const LEVEL_DIFF_TEXT_CLASS: Record<string, string> = {
   white: 'text-slate-200',
   green: 'text-emerald-400',
   red: 'text-red-400',
-  black: 'text-slate-500',
+  black: 'text-slate-300',
 }
 
 // Same White/Green/Red/Black convention, extended to the Zone/Monster picker
@@ -597,7 +597,7 @@ export default function CombatPage() {
                   {activeType.displayName}
                   {isRareInstance && <span className="ml-2 text-xs font-bold text-amber-300">RARE</span>}
                 </p>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-slate-300">
                   {isRespawning ? `Respawning in ${respawnSecondsLeft}s...` : `${currentHp} / ${maxHp} HP`}
                 </p>
                 <div className="mt-2">
@@ -629,7 +629,7 @@ export default function CombatPage() {
               {characterName}
             </p>
             <div className="relative mt-1">
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-300">
                 {currentPlayerHp} / {maxPlayerHp} HP
               </p>
               <div className="mt-1">
@@ -661,7 +661,7 @@ export default function CombatPage() {
                 an irrelevant bar. */}
             {activeSkill && (
               <div className="relative mt-2">
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-300">
                   {currentPlayerMp} / {maxPlayerMp} MP
                 </p>
                 <div className="mt-1">
@@ -888,7 +888,7 @@ export default function CombatPage() {
               {characterName}
             </p>
             <div className="relative mt-1">
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-300">
                 {currentPlayerHp} / {maxPlayerHp} HP
               </p>
               <div className="mt-1">
@@ -914,7 +914,7 @@ export default function CombatPage() {
 
             {activeSkill && (
               <div className="relative mt-2">
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-300">
                   {currentPlayerMp} / {maxPlayerMp} MP
                 </p>
                 <div className="mt-1">
@@ -1032,7 +1032,7 @@ export default function CombatPage() {
                   {activeType.displayName}
                   {isRareInstance && <span className="ml-2 text-xs font-bold text-amber-300">RARE</span>}
                 </p>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-slate-300">
                   {isRespawning ? `Respawning in ${respawnSecondsLeft}s...` : `${currentHp} / ${maxHp} HP`}
                 </p>
                 <div className="mt-2">

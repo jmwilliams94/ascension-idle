@@ -25,7 +25,7 @@ export default function ZoneBossRewardsInfoModal({
       <div className="space-y-4">
         {poolEntries.length > 0 && (
           <div>
-            <p className="text-center text-xs text-slate-500">This fight's full reward pool</p>
+            <p className="text-center text-xs text-slate-300">This fight's full reward pool</p>
             <div className="mt-2 flex flex-wrap justify-center gap-3">
               {poolEntries.map(([currencyType, amount]) => {
                 const visual = mailCurrencyVisual(currencyType)

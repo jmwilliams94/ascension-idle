@@ -137,7 +137,7 @@ function MySuggestionsSection({ characterId }: { characterId: string }) {
   return (
     <div className="space-y-4">
       <div className="space-y-2 rounded-lg border border-slate-800 bg-slate-950/40 p-3">
-        <p className="text-xs uppercase tracking-wide text-slate-500">Suggest Something</p>
+        <p className="text-xs uppercase tracking-wide text-slate-300">Suggest Something</p>
         <textarea
           value={description}
           onChange={(event) => setDescription(event.target.value.slice(0, DESCRIPTION_MAX_LENGTH))}
@@ -157,9 +157,9 @@ function MySuggestionsSection({ characterId }: { characterId: string }) {
       </div>
 
       <div>
-        <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">Your Suggestions</p>
+        <p className="mb-2 text-xs uppercase tracking-wide text-slate-300">Your Suggestions</p>
         {mySuggestions.length === 0 ? (
-          <p className="text-sm text-slate-500">You haven't suggested anything yet.</p>
+          <p className="text-sm text-slate-300">You haven't suggested anything yet.</p>
         ) : (
           <div className="space-y-2">
             {mySuggestions.map((suggestion) => (
@@ -188,12 +188,12 @@ function MySuggestionRow({ suggestion, characterId }: { suggestion: Suggestion; 
       >
         <div>
           <p className="whitespace-pre-wrap text-slate-200">{suggestion.description}</p>
-          <p className="mt-1 text-[11px] text-slate-500">{suggestion.character_name}</p>
-          <p className="text-[11px] text-slate-500">{new Date(suggestion.created_at).toLocaleString()}</p>
+          <p className="mt-1 text-[11px] text-slate-300">{suggestion.character_name}</p>
+          <p className="text-[11px] text-slate-300">{new Date(suggestion.created_at).toLocaleString()}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <StatusBadge status={suggestion.status} />
-          <span className="text-xs text-slate-500">{expanded ? '▲' : '▼'}</span>
+          <span className="text-xs text-slate-300">{expanded ? '▲' : '▼'}</span>
         </div>
       </button>
       {suggestion.admin_comment && (
@@ -229,9 +229,9 @@ function AdminQueueSection() {
   return (
     <div className="space-y-4">
       <div>
-        <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">Open ({openSuggestions.length})</p>
+        <p className="mb-2 text-xs uppercase tracking-wide text-slate-300">Open ({openSuggestions.length})</p>
         {openSuggestions.length === 0 ? (
-          <p className="text-sm text-slate-500">{allSuggestionsLoaded ? 'Nothing open right now.' : 'Loading…'}</p>
+          <p className="text-sm text-slate-300">{allSuggestionsLoaded ? 'Nothing open right now.' : 'Loading…'}</p>
         ) : (
           <div className="space-y-2">
             {openSuggestions.map((suggestion) => (
@@ -243,7 +243,7 @@ function AdminQueueSection() {
 
       {resolvedSuggestions.length > 0 && (
         <div>
-          <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">Resolved History</p>
+          <p className="mb-2 text-xs uppercase tracking-wide text-slate-300">Resolved History</p>
           <div className="space-y-2">
             {resolvedSuggestions.map((suggestion) => (
               <ResolvedSuggestionRow key={suggestion.id} suggestion={suggestion} />
@@ -267,12 +267,12 @@ function ResolvedSuggestionRow({ suggestion }: { suggestion: Suggestion }) {
       >
         <div>
           <p className="whitespace-pre-wrap text-slate-300">{suggestion.description}</p>
-          <p className="mt-1 text-[11px] text-slate-500">{suggestion.character_name}</p>
-          <p className="text-[11px] text-slate-500">{new Date(suggestion.created_at).toLocaleString()}</p>
+          <p className="mt-1 text-[11px] text-slate-300">{suggestion.character_name}</p>
+          <p className="text-[11px] text-slate-300">{new Date(suggestion.created_at).toLocaleString()}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <StatusBadge status={suggestion.status} />
-          <span className="text-xs text-slate-500">{expanded ? '▲' : '▼'}</span>
+          <span className="text-xs text-slate-300">{expanded ? '▲' : '▼'}</span>
         </div>
       </button>
       {suggestion.admin_comment && <p className="mt-2 text-xs text-slate-400">“{suggestion.admin_comment}”</p>}
@@ -332,20 +332,20 @@ function AdminSuggestionRow({ suggestion }: { suggestion: Suggestion }) {
       >
         <div>
           <p className="whitespace-pre-wrap text-slate-200">{suggestion.description}</p>
-          <p className="mt-1 text-[11px] text-slate-500">{suggestion.character_name}</p>
-          <p className="text-[11px] text-slate-500">{new Date(suggestion.created_at).toLocaleString()}</p>
+          <p className="mt-1 text-[11px] text-slate-300">{suggestion.character_name}</p>
+          <p className="text-[11px] text-slate-300">{new Date(suggestion.created_at).toLocaleString()}</p>
         </div>
-        <span className="shrink-0 text-xs text-slate-500">{expanded ? '▲' : '▼'}</span>
+        <span className="shrink-0 text-xs text-slate-300">{expanded ? '▲' : '▼'}</span>
       </button>
 
       {expanded && (
         <div className="mt-3 space-y-3 border-t border-slate-800 pt-3">
           <div>
-            <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">Conversation</p>
+            <p className="mb-2 text-xs uppercase tracking-wide text-slate-300">Conversation</p>
             <ReportReplyThread parentType="suggestion" parentId={suggestion.id} viewerRole="admin" />
           </div>
 
-          <p className="text-xs uppercase tracking-wide text-slate-500">Close This Out</p>
+          <p className="text-xs uppercase tracking-wide text-slate-300">Close This Out</p>
           <textarea
             value={comment}
             onChange={(event) => setComment(event.target.value.slice(0, COMMENT_MAX_LENGTH))}
@@ -355,7 +355,7 @@ function AdminSuggestionRow({ suggestion }: { suggestion: Suggestion }) {
           />
 
           <div className="space-y-2 rounded-lg border border-slate-800 bg-slate-950/40 p-3">
-            <p className="text-xs uppercase tracking-wide text-slate-500">Add Currency Reward (optional)</p>
+            <p className="text-xs uppercase tracking-wide text-slate-300">Add Currency Reward (optional)</p>
             <div className="flex items-center gap-2">
               <Select value={currencyType} onChange={(event) => setCurrencyType(event.target.value as MailCurrencyType)} className="flex-1">
                 {MAIL_CURRENCY_TYPES.map((type) => (
@@ -389,7 +389,7 @@ function AdminSuggestionRow({ suggestion }: { suggestion: Suggestion }) {
                     <span>
                       {reward.amount}× {mailCurrencyLabel(reward.currencyType)}
                     </span>
-                    <button type="button" onClick={() => removeReward(index)} className="text-slate-500 hover:text-slate-300">
+                    <button type="button" onClick={() => removeReward(index)} className="text-slate-300 hover:text-slate-100">
                       ✕
                     </button>
                   </div>

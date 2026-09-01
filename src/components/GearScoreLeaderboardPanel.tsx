@@ -59,7 +59,7 @@ export default function GearScoreLeaderboardPanel({ characterId }: { characterId
   return (
     <div className="space-y-3">
       <AscensionCard contentClassName="p-3">
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-300">
           Ranked by Gear Score — quality tier, sockets, composition, Enchant HP tier, and Bless tier across your equipped gear.
         </p>
       </AscensionCard>
@@ -91,14 +91,14 @@ export default function GearScoreLeaderboardPanel({ characterId }: { characterId
       </div>
 
       <AscensionCard contentClassName="p-3">
-        {loading && <p className="py-6 text-center text-sm text-slate-500">Loading…</p>}
+        {loading && <p className="py-6 text-center text-sm text-slate-300">Loading…</p>}
 
-        {!loading && (!result || !result.ok) && <p className="py-6 text-center text-sm text-slate-500">Couldn't load the leaderboard.</p>}
+        {!loading && (!result || !result.ok) && <p className="py-6 text-center text-sm text-slate-300">Couldn't load the leaderboard.</p>}
 
         {!loading && result?.ok && (
           <>
             <div className="max-h-96 space-y-1 overflow-y-auto">
-              {result.entries.length === 0 && <p className="py-6 text-center text-sm text-slate-500">No characters yet.</p>}
+              {result.entries.length === 0 && <p className="py-6 text-center text-sm text-slate-300">No characters yet.</p>}
               {result.entries.map((entry) => (
                 <button
                   key={entry.rank}
@@ -106,9 +106,9 @@ export default function GearScoreLeaderboardPanel({ characterId }: { characterId
                   onClick={() => viewCharacter(entry.character_name)}
                   className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-1.5 text-xs hover:border-amber-500/50"
                 >
-                  <span className={`w-8 shrink-0 font-bold ${RANK_ACCENT[entry.rank] ?? 'text-slate-500'}`}>#{entry.rank}</span>
+                  <span className={`w-8 shrink-0 font-bold ${RANK_ACCENT[entry.rank] ?? 'text-slate-300'}`}>#{entry.rank}</span>
                   <span className="min-w-0 flex-1 truncate text-left text-slate-200">{entry.character_name}</span>
-                  <span className="shrink-0 text-slate-500">
+                  <span className="shrink-0 text-slate-300">
                     {entry.class ? CLASS_DEFINITIONS[entry.class as ClassId]?.displayName ?? entry.class : '—'} · Lv {entry.level}
                   </span>
                   <span className="shrink-0 font-semibold text-amber-300">{entry.gear_score}</span>

@@ -75,7 +75,7 @@ function RowUnlockSection({ characterId, row }: { characterId: string; row: 1 | 
   return (
     <div className="rounded-lg border-2 border-dashed border-slate-800 bg-slate-950/60 p-3 text-center">
       <p className="text-sm font-medium text-slate-300">Row {row} — Locked</p>
-      <p className="mt-1 text-xs text-slate-500">
+      <p className="mt-1 text-xs text-slate-300">
         {claimable ? 'Ready to unlock!' : `Reach Kill Count Tier ${ROW_REQUIRED_TIER[row]} (${ROW_REQUIRED_KILLS[row].toLocaleString()} kills on one monster)`}
       </p>
       <Button variant="primary" disabled={busy || !claimable} onClick={() => void handleClaim()} className="mt-2">

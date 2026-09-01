@@ -77,17 +77,17 @@ export default function GoldDonationModal({ characterId, onClose }: { characterI
             >
               🏆
             </button>
-            <button type="button" onClick={onClose} aria-label="Close" className="text-slate-500 hover:text-slate-300">
+            <button type="button" onClick={onClose} aria-label="Close" className="text-slate-300 hover:text-slate-100">
               ✕
             </button>
           </div>
         </div>
 
-        <p className="text-xs text-slate-500">Your Gold: {formatGoldAmount(gold)}</p>
+        <p className="text-xs text-slate-300">Your Gold: {formatGoldAmount(gold)}</p>
 
         {pool && (
           <div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-300">
               {formatGoldAmount(pool.totalDonated)} / {formatGoldAmount(pool.targetAmount)} donated
             </p>
             <div className="mt-1">
@@ -96,14 +96,14 @@ export default function GoldDonationModal({ characterId, onClose }: { characterI
           </div>
         )}
 
-        {pool?.status !== 'collecting' && <p className="text-center text-xs text-slate-500">No pool is currently accepting donations.</p>}
+        {pool?.status !== 'collecting' && <p className="text-center text-xs text-slate-300">No pool is currently accepting donations.</p>}
 
         {pool?.status === 'collecting' && (
           <>
             {canAffordStep ? (
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500">Amount</span>
+                  <span className="text-xs text-slate-300">Amount</span>
                   <span className="text-sm font-medium text-amber-300">{formatGoldAmount(clampedAmount)}</span>
                 </div>
                 <input
@@ -117,7 +117,7 @@ export default function GoldDonationModal({ characterId, onClose }: { characterI
                 />
               </div>
             ) : (
-              <p className="text-center text-xs text-slate-500">You need at least {formatGoldAmount(DONATION_STEP)} Gold to donate.</p>
+              <p className="text-center text-xs text-slate-300">You need at least {formatGoldAmount(DONATION_STEP)} Gold to donate.</p>
             )}
 
             <Button variant="primary" disabled={!canDonate} onClick={() => void handleDonate()} className="w-full">

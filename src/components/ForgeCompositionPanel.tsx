@@ -69,7 +69,7 @@ export default function ForgeCompositionPanel({ item, template, entries, busy, o
     <div className="space-y-3">
       {preview && template && <ResultPreviewTile item={item} template={template} previewLevel={preview.level} previewPoints={preview.points} />}
 
-      {maxed && <p className="text-center text-[10px] text-slate-500">Already at maximum composition (+{item.composition_level}).</p>}
+      {maxed && <p className="text-center text-[10px] text-slate-300">Already at maximum composition (+{item.composition_level}).</p>}
       {feedError && <p className="text-center text-[10px] text-red-400">{feedError}</p>}
 
       <Button variant="primary" disabled={busy || maxed || addedPoints <= 0} onClick={onFeed} className="w-full">

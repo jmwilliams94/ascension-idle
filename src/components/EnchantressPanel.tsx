@@ -316,7 +316,7 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
 
         {subMode === 'enchant' ? (
           <>
-            <p className="max-w-sm text-center text-[11px] text-slate-500">
+            <p className="max-w-sm text-center text-[11px] text-slate-300">
               Consume a Normal, Tempered, or Ascended gem to roll a flat HP bonus for a piece of gear. Only a higher roll replaces
               the item's existing bonus — the gem is spent either way.
             </p>
@@ -329,7 +329,7 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
             {!selectedItem && <EquippedGearPicker onSelect={handleDropItemId} />}
 
             {selectedItem && (
-              <p className="text-center text-[11px] text-slate-500">
+              <p className="text-center text-[11px] text-slate-300">
                 Current Enchanted HP: <span style={{ color: ENCHANT_HP_COLOR }}>{currentEnchantHp}</span>
               </p>
             )}
@@ -342,7 +342,7 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
                 >
                   {rollDisplay}
                 </p>
-                <p className="text-[10px] uppercase tracking-wide text-slate-500">{rolling ? 'Rolling…' : 'HP'}</p>
+                <p className="text-[10px] uppercase tracking-wide text-slate-300">{rolling ? 'Rolling…' : 'HP'}</p>
               </div>
             )}
 
@@ -376,7 +376,7 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
           </>
         ) : (
           <>
-            <p className="max-w-sm text-center text-[11px] text-slate-500">
+            <p className="max-w-sm text-center text-[11px] text-slate-300">
               Consume an Ascended Bastion Gem to bless a piece of gear with Damage Reduction. Blessing advances a fixed ladder —
               +1%, +3%, +5%, then +7% — no roll involved, and always succeeds while there's a step left to take.
             </p>
@@ -389,7 +389,7 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
             {!selectedItem && <EquippedGearPicker onSelect={handleDropItemId} />}
 
             {selectedItem && (
-              <p className="text-center text-[11px] text-slate-500">
+              <p className="text-center text-[11px] text-slate-300">
                 Current Blessing:{' '}
                 <span style={{ color: BLESS_COLOR }}>{currentBlessPct > 0 ? `+${currentBlessPct}% Damage Reduction` : 'None'}</span>
                 {isBlessMaxed && ' (max)'}

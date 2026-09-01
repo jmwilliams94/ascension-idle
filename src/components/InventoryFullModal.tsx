@@ -52,7 +52,7 @@ export default function InventoryFullModal() {
               >
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="truncate text-slate-200">{type.displayName}</span>
-                  <span className="shrink-0 text-slate-500">
+                  <span className="shrink-0 text-slate-300">
                     {stack.count} / {type.stackSize}
                   </span>
                 </div>
@@ -84,7 +84,7 @@ export default function InventoryFullModal() {
                   <span className="truncate text-slate-200">
                     {template ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level) : 'Unknown item'}
                   </span>
-                  <span className="shrink-0 text-slate-500">{formatItemLevel(item.level)}</span>
+                  <span className="shrink-0 text-slate-300">{formatItemLevel(item.level)}</span>
                 </div>
 
                 <button

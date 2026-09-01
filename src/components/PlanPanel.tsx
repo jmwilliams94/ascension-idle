@@ -190,7 +190,7 @@ export default function PlanPanel() {
       )}
 
       {displayItems.length === 0 ? (
-        <p className="text-sm text-slate-500">Nothing on the list right now.</p>
+        <p className="text-sm text-slate-300">Nothing on the list right now.</p>
       ) : (
         <div className="space-y-2">
           {displayItems.map((item) => (
@@ -218,7 +218,7 @@ export default function PlanPanel() {
                     }}
                     aria-label="Drag to reorder"
                     title="Drag to reorder"
-                    className="touch-none select-none px-1 text-slate-500 hover:text-slate-300 active:cursor-grabbing"
+                    className="touch-none select-none px-1 text-slate-300 hover:text-slate-100 active:cursor-grabbing"
                     style={{ cursor: 'grab' }}
                   >
                     ⠿
@@ -232,7 +232,7 @@ export default function PlanPanel() {
                   onClick={() => void removePlan(item.id)}
                   aria-label="Remove plan"
                   title="Remove plan"
-                  className="shrink-0 text-slate-500 hover:text-rose-400"
+                  className="shrink-0 text-slate-300 hover:text-rose-400"
                 >
                   ✕
                 </button>

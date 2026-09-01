@@ -86,7 +86,7 @@ export default function ForgeHub({ onSelect }: ForgeHubProps) {
           >
             <img src={tile.iconSrc} alt="" className={`${tile.iconClassName ?? 'h-14 w-14'} object-contain`} />
             <span className="font-heading text-sm font-semibold text-slate-200">{tile.title}</span>
-            <span className="text-[11px] leading-snug text-slate-500">{tile.description}</span>
+            <span className="text-[11px] leading-snug text-slate-300">{tile.description}</span>
           </AscensionCard>
         </button>
       ))}

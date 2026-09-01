@@ -70,7 +70,7 @@ export default function MarketplaceListingSlot({ target, onRemove }: Marketplace
   return (
     <div className={`flex flex-col items-center gap-2 ${SLOT_WIDTH_CLASS}`}>
       <div className={`flex ${SLOT_LABEL_HEIGHT_CLASS} items-center justify-center`}>
-        <p className="text-center text-[10px] uppercase leading-tight tracking-wide text-slate-500">List for Sale</p>
+        <p className="text-center text-[10px] uppercase leading-tight tracking-wide text-slate-300">List for Sale</p>
       </div>
 
       <div data-drop-zone="marketplace-listing" className={`${SLOT_SIZE_CLASS} shrink-0`}>
@@ -98,8 +98,8 @@ export default function MarketplaceListingSlot({ target, onRemove }: Marketplace
       {target && (
         <div className="text-center">
           <p className="text-xs font-medium text-slate-200">{label}</p>
-          {item && <p className="text-[10px] text-slate-500">{formatItemLevel(item.level)}</p>}
-          <button type="button" onClick={onRemove} className="mt-1 text-[10px] text-slate-500 underline hover:text-slate-300">
+          {item && <p className="text-[10px] text-slate-300">{formatItemLevel(item.level)}</p>}
+          <button type="button" onClick={onRemove} className="mt-1 text-[10px] text-slate-300 underline hover:text-slate-300">
             Remove
           </button>
         </div>

@@ -21,7 +21,7 @@ function FindTile({ iconSrc, color, label, count }: { iconSrc: string; color: st
   return (
     <div className="flex flex-col items-center gap-1">
       <InventorySlot slotId={`find-${label}`} filled iconSrc={iconSrc} qualityColor={color} badge={`${count}`} sizeClassName="h-10 w-10" label={label} />
-      <p className="text-[10px] text-slate-500">{label}</p>
+      <p className="text-[10px] text-slate-300">{label}</p>
     </div>
   )
 }
@@ -80,7 +80,7 @@ function VipAutomationRow({ label, value, detail }: { label: string; value: stri
     <div>
       <p className="text-xs text-slate-400">{label}</p>
       <p className="text-sm font-semibold text-amber-200">
-        {value} <span className="font-normal text-slate-500">{detail}</span>
+        {value} <span className="font-normal text-slate-300">{detail}</span>
       </p>
     </div>
   )

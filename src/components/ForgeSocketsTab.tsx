@@ -193,7 +193,7 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
               <p className="text-center text-[11px] text-slate-600">Drag an item into the slot on the left, or tap one you have equipped.</p>
             ) : isWeapon ? (
               maxed ? (
-                <p className="text-center text-[10px] text-slate-500">Both sockets unlocked.</p>
+                <p className="text-center text-[10px] text-slate-300">Both sockets unlocked.</p>
               ) : (
                 <Button
                   variant="primary"
@@ -214,12 +214,12 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
                 </Button>
               )
             ) : isArmor ? (
-              <p className="text-center text-[10px] text-slate-500">
+              <p className="text-center text-[10px] text-slate-300">
                 Armor sockets aren't purchased — there's a small chance to gain one automatically whenever you Quality or Level Upgrade
                 this item. {socketCount}/{MAX_SOCKETS} unlocked.
               </p>
             ) : (
-              <p className="text-center text-[10px] text-slate-500">This item doesn't support sockets.</p>
+              <p className="text-center text-[10px] text-slate-300">This item doesn't support sockets.</p>
             )}
 
             {socketCount > 0 && !pendingSocket && (

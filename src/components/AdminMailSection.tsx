@@ -151,7 +151,7 @@ export default function AdminMailSection() {
   return (
     <div className="space-y-4">
       <div>
-        <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">Recipient</p>
+        <p className="mb-1 text-xs uppercase tracking-wide text-slate-300">Recipient</p>
         <div className="flex items-center gap-2">
           <input
             type="text"
@@ -186,7 +186,7 @@ export default function AdminMailSection() {
 
       <div>
         <div className="mb-1 flex items-center justify-between">
-          <p className="text-xs uppercase tracking-wide text-slate-500">Subject</p>
+          <p className="text-xs uppercase tracking-wide text-slate-300">Subject</p>
           <p className="text-[10px] text-slate-600">
             {subject.length}/{SUBJECT_MAX_LENGTH}
           </p>
@@ -202,7 +202,7 @@ export default function AdminMailSection() {
 
       <div>
         <div className="mb-1 flex items-center justify-between">
-          <p className="text-xs uppercase tracking-wide text-slate-500">Message</p>
+          <p className="text-xs uppercase tracking-wide text-slate-300">Message</p>
           <p className="text-[10px] text-slate-600">
             {message.length}/{MESSAGE_MAX_LENGTH}
           </p>
@@ -217,7 +217,7 @@ export default function AdminMailSection() {
       </div>
 
       <div className="space-y-2 rounded-lg border border-slate-800 bg-slate-950/40 p-3">
-        <p className="text-xs uppercase tracking-wide text-slate-500">Add Currency</p>
+        <p className="text-xs uppercase tracking-wide text-slate-300">Add Currency</p>
         <div className="flex items-center gap-2">
           <Select value={currencyType} onChange={(event) => setCurrencyType(event.target.value as MailCurrencyType)} className="flex-1">
             {MAIL_CURRENCY_TYPES.map((type) => (
@@ -244,7 +244,7 @@ export default function AdminMailSection() {
       </div>
 
       <div className="space-y-2 rounded-lg border border-slate-800 bg-slate-950/40 p-3">
-        <p className="text-xs uppercase tracking-wide text-slate-500">Add Item</p>
+        <p className="text-xs uppercase tracking-wide text-slate-300">Add Item</p>
         <input
           type="text"
           value={itemFilter}
@@ -290,14 +290,14 @@ export default function AdminMailSection() {
 
       {rewards.length > 0 && (
         <div className="space-y-1">
-          <p className="text-xs uppercase tracking-wide text-slate-500">Rewards ({rewards.length})</p>
+          <p className="text-xs uppercase tracking-wide text-slate-300">Rewards ({rewards.length})</p>
           {rewards.map((reward, index) => (
             <div
               key={index}
               className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/60 px-2 py-1.5 text-xs text-slate-200"
             >
               <span>{describeReward(reward, templates)}</span>
-              <button type="button" onClick={() => removeReward(index)} className="text-slate-500 hover:text-slate-300">
+              <button type="button" onClick={() => removeReward(index)} className="text-slate-300 hover:text-slate-100">
                 ✕
               </button>
             </div>

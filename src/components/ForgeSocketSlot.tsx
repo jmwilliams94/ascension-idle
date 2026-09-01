@@ -28,7 +28,7 @@ export default function ForgeSocketSlot({ index, unlocked, filledKey, pendingGem
   return (
     <div className={`flex flex-col items-center gap-2 ${SLOT_WIDTH_CLASS}`}>
       <div className={`flex ${SLOT_LABEL_HEIGHT_CLASS} items-center justify-center`}>
-        <p className="text-center text-[10px] uppercase leading-tight tracking-wide text-slate-500">Socket {index + 1}</p>
+        <p className="text-center text-[10px] uppercase leading-tight tracking-wide text-slate-300">Socket {index + 1}</p>
       </div>
 
       {unlocked ? (

@@ -200,7 +200,7 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
         onBack={onBack}
         inventory={<InventoryPanel columns={5} reservedItemIds={selectedItemId ? [selectedItemId] : []} onTileDrop={handleTileDrop} />}
       >
-        <p className="max-w-sm text-center text-[11px] text-slate-500">
+        <p className="max-w-sm text-center text-[11px] text-slate-300">
           A Forge master will guarantee a Quality or Level Upgrade — for a price well above the usual materials.
         </p>
 

@@ -42,7 +42,7 @@ export default function ForgeUpgradeSlot({ item, template, onRemove, hold, onHol
   return (
     <div className={`flex flex-col items-center gap-2 ${SLOT_WIDTH_CLASS}`}>
       <div className={`flex ${SLOT_LABEL_HEIGHT_CLASS} items-center justify-center`}>
-        <p className="text-center text-[10px] uppercase leading-tight tracking-wide text-slate-500">Upgrade Slot</p>
+        <p className="text-center text-[10px] uppercase leading-tight tracking-wide text-slate-300">Upgrade Slot</p>
       </div>
 
       <div
@@ -73,7 +73,7 @@ export default function ForgeUpgradeSlot({ item, template, onRemove, hold, onHol
       </div>
 
       {onHoldChange && (
-        <label className="flex items-center gap-1.5 text-[10px] text-slate-500">
+        <label className="flex items-center gap-1.5 text-[10px] text-slate-300">
           <input type="checkbox" checked={Boolean(hold)} onChange={(event) => onHoldChange(event.target.checked)} />
           Hold?
         </label>
@@ -84,11 +84,11 @@ export default function ForgeUpgradeSlot({ item, template, onRemove, hold, onHol
           <p className="text-xs font-medium text-slate-200">
             {template ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level) : 'Unknown item'}
           </p>
-          <p className="text-[10px] text-slate-500">{formatItemLevel(item.level)}</p>
+          <p className="text-[10px] text-slate-300">{formatItemLevel(item.level)}</p>
           <button
             type="button"
             onClick={onRemove}
-            className="mt-1 text-[10px] text-slate-500 underline hover:text-slate-300"
+            className="mt-1 text-[10px] text-slate-300 underline hover:text-slate-300"
           >
             Remove
           </button>

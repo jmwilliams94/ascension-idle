@@ -67,7 +67,7 @@ export default function EquippedGearPicker({ onSelect }: EquippedGearPickerProps
               label={EQUIP_SLOT_LABELS[slot]}
               onClick={() => item && onSelect(itemId)}
             />
-            <span className="text-[9px] text-slate-500">{EQUIP_SLOT_LABELS[slot]}</span>
+            <span className="text-[9px] text-slate-300">{EQUIP_SLOT_LABELS[slot]}</span>
           </div>
         )
       })}
@@ -76,7 +76,7 @@ export default function EquippedGearPicker({ onSelect }: EquippedGearPickerProps
 
   return (
     <div className="w-full max-w-sm space-y-2">
-      <p className="text-center text-[10px] uppercase tracking-wide text-slate-500">Or pick an equipped item</p>
+      <p className="text-center text-[10px] uppercase tracking-wide text-slate-300">Or pick an equipped item</p>
       {topRow.length > 0 && renderRow(topRow)}
       {bottomRow.length > 0 && renderRow(bottomRow)}
     </div>

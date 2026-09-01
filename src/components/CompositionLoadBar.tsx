@@ -194,7 +194,7 @@ export default function CompositionLoadBar({
         <span className="w-8 shrink-0 text-left text-xs font-medium text-amber-300">{targetLevel !== null ? formatCompositionTier(targetLevel) : ''}</span>
       </div>
 
-      <div className="mt-1 h-4 text-center text-[10px] text-slate-500">
+      <div className="mt-1 h-4 text-center text-[10px] text-slate-300">
         {!preview && !maxed ? `Next ${formatCompositionTier(nextLevel)} — ${nextCost} pts` : ''}
       </div>
     </div>

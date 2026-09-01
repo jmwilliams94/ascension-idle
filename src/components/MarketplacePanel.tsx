@@ -204,7 +204,7 @@ function ListingRow({
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-slate-200">{label}</p>
         {showSeller && <p className="text-[11px] text-sky-400/80">Sold by {listing.seller_character_name ?? 'Unknown seller'}</p>}
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-300">
           {listing.price_amount.toLocaleString()} {currencyLabel(listing.price_currency)}
         </p>
         <p className="text-[11px] text-slate-600">
@@ -245,7 +245,7 @@ function BrowseTab({ characterId, templates }: { characterId: string; templates:
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-slate-500">{browseListings.length} listing{browseListings.length === 1 ? '' : 's'} for sale</p>
+        <p className="text-xs text-slate-300">{browseListings.length} listing{browseListings.length === 1 ? '' : 's'} for sale</p>
         <div className="ascension-chip-frame is-interactive">
           <button
             type="button"
@@ -260,9 +260,9 @@ function BrowseTab({ characterId, templates }: { characterId: string; templates:
       {error && <p className="text-xs text-amber-400">{error}</p>}
 
       {!browseLoaded ? (
-        <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">Loading…</p>
+        <p className="flex h-24 items-center justify-center text-center text-sm text-slate-300">Loading…</p>
       ) : browseListings.length === 0 ? (
-        <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">Nothing for sale right now</p>
+        <p className="flex h-24 items-center justify-center text-center text-sm text-slate-300">Nothing for sale right now</p>
       ) : (
         <div className="max-h-[28rem] space-y-2 overflow-y-auto">
           {browseListings.map((listing) => (
@@ -273,7 +273,7 @@ function BrowseTab({ characterId, templates }: { characterId: string; templates:
               showSeller
               action={
                 listing.seller_character_id === characterId ? (
-                  <span className="rounded-lg border border-slate-700 px-3 py-1 text-xs text-slate-500">Your listing</span>
+                  <span className="rounded-lg border border-slate-700 px-3 py-1 text-xs text-slate-300">Your listing</span>
                 ) : confirmingId === listing.id ? (
                   <div className="flex gap-2">
                     <Button variant="primary" disabled={busy} onClick={() => void handleBuy(listing.id)}>
@@ -472,7 +472,7 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
             </div>
 
             {priceValid && (
-              <p className={`text-[11px] ${canAffordFee ? 'text-slate-500' : 'text-amber-400'}`}>
+              <p className={`text-[11px] ${canAffordFee ? 'text-slate-300' : 'text-amber-400'}`}>
                 Listing fee:{' '}
                 {fee > 0 ? (
                   <>
@@ -537,7 +537,7 @@ function MyListingsTab({ characterId, templates }: { characterId: string; templa
         <p className="text-sm font-semibold text-slate-200">Active Listings</p>
         {error && <p className="text-xs text-amber-400">{error}</p>}
         {activeListings.length === 0 ? (
-          <p className="text-xs text-slate-500">Nothing listed right now.</p>
+          <p className="text-xs text-slate-300">Nothing listed right now.</p>
         ) : (
           <div className="space-y-2">
             {activeListings.map((listing) => (
@@ -783,10 +783,10 @@ function MailDetailModal({
       >
         <div className="flex items-start justify-between gap-2 p-4 pb-0">
           <div>
-            <p className="text-[11px] uppercase tracking-wide text-slate-500">From: {mailGroupSender(group)}</p>
+            <p className="text-[11px] uppercase tracking-wide text-slate-300">From: {mailGroupSender(group)}</p>
             <p className="text-sm font-semibold text-slate-100">{mailGroupSubject(group)}</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-slate-500 hover:text-slate-300">
+          <button type="button" onClick={onClose} aria-label="Close" className="text-slate-300 hover:text-slate-100">
             ✕
           </button>
         </div>
@@ -865,7 +865,7 @@ function MailTab({ characterId, templates }: { characterId: string; templates: I
   }
 
   if (entries.length === 0) {
-    return <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">No mail</p>
+    return <p className="flex h-24 items-center justify-center text-center text-sm text-slate-300">No mail</p>
   }
 
   return (

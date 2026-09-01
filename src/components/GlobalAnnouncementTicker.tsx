@@ -124,11 +124,11 @@ function AnnouncementHistoryDropdown() {
 
   return (
     <div className="absolute left-0 top-full z-50 mt-1 w-72 rounded-lg border border-slate-700 bg-slate-900/95 p-2 shadow-xl sm:w-80 backdrop-blur will-change-transform">
-      <p className="px-1 pb-1.5 text-[10px] uppercase tracking-wide text-slate-500">Recent Activity</p>
+      <p className="px-1 pb-1.5 text-[10px] uppercase tracking-wide text-slate-300">Recent Activity</p>
       {!loaded ? (
-        <p className="px-1 py-2 text-xs text-slate-500">Loading…</p>
+        <p className="px-1 py-2 text-xs text-slate-300">Loading…</p>
       ) : entries.length === 0 ? (
-        <p className="px-1 py-2 text-xs text-slate-500">Nothing yet.</p>
+        <p className="px-1 py-2 text-xs text-slate-300">Nothing yet.</p>
       ) : (
         <div className="max-h-64 space-y-1 overflow-y-auto">
           {entries.map((entry) => (

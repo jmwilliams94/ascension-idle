@@ -75,7 +75,7 @@ export default function ReportReplyThread({
                   : 'border-slate-800 bg-slate-950/60 text-slate-300'
               }`}
             >
-              <p className="mb-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500">
+              <p className="mb-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-300">
                 {reply.author_name} · {new Date(reply.created_at).toLocaleString()}
               </p>
               <p className="whitespace-pre-wrap">{reply.message}</p>

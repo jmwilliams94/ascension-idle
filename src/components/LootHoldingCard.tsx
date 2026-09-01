@@ -262,13 +262,13 @@ export default function LootHoldingCard() {
 
   return (
     <AscensionCard title="Loot Holding" contentClassName="space-y-3 p-4">
-      <p className="text-[11px] text-slate-500">
+      <p className="text-[11px] text-slate-300">
         {entries.length}/{LOOT_HOLDING_CAP} pending
       </p>
 
       {stage === 'currency' && (
         <div className="space-y-3">
-          <p className="text-[11px] text-slate-500">Comets and Fallen Stars found while you were away.</p>
+          <p className="text-[11px] text-slate-300">Comets and Fallen Stars found while you were away.</p>
           <div className="flex justify-center overflow-x-auto">
             <div className="grid grid-cols-[repeat(5,3.5rem)] gap-1.5 lg:grid-cols-[repeat(5,4rem)]">
               {currencyEntries.map((entry) => (
@@ -304,7 +304,7 @@ export default function LootHoldingCard() {
 
       {stage === 'gear' && (
         <div className="space-y-3">
-          <p className="text-[11px] text-slate-500">Tap an item below to Claim, Store, or Sell it.</p>
+          <p className="text-[11px] text-slate-300">Tap an item below to Claim, Store, or Sell it.</p>
           <Button
             variant={inventoryFull ? 'danger' : 'primary'}
             disabled={busy || bulkBusy || inventoryFull}

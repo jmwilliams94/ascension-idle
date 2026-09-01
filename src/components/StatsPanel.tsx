@@ -116,7 +116,7 @@ export default function StatsPanel() {
                 <dd>{derived.dexterity}</dd>
               </div>
             </dl>
-            <p className="mt-2 text-[11px] text-slate-500">
+            <p className="mt-2 text-[11px] text-slate-300">
               Dodge helps you avoid attacks (Boots); Dexterity helps your own attacks land (Bows/Rings). Both also scale with
               Agility.
             </p>

@@ -102,9 +102,9 @@ export default function CharacterLoadoutModal() {
           </button>
         </div>
 
-        {loading && <p className="py-6 text-center text-sm text-slate-500">Loading…</p>}
+        {loading && <p className="py-6 text-center text-sm text-slate-300">Loading…</p>}
         {!loading && error && (
-          <p className="py-6 text-center text-sm text-slate-500">
+          <p className="py-6 text-center text-sm text-slate-300">
             {error === 'not_found' ? 'Character not found.' : 'Failed to load gear.'}
           </p>
         )}

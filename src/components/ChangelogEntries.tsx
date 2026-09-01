@@ -27,15 +27,15 @@ export default function ChangelogEntries({ entries, collapseThreshold }: Changel
       {entries.map((entry, index) => {
         const versionHeading = (
           <p className="text-sm font-semibold text-white">
-            v{entry.version} <span className="font-normal text-slate-500">— {entry.date}</span>
+            v{entry.version} <span className="font-normal text-slate-300">— {entry.date}</span>
           </p>
         )
 
         if (shouldCollapse && index > 0) {
           return (
             <details key={entry.version}>
-              <summary className="cursor-pointer text-sm font-semibold text-white marker:text-slate-500">
-                v{entry.version} <span className="font-normal text-slate-500">— {entry.date}</span>
+              <summary className="cursor-pointer text-sm font-semibold text-white marker:text-slate-300">
+                v{entry.version} <span className="font-normal text-slate-300">— {entry.date}</span>
               </summary>
               <ChangelogEntryBody entry={entry} />
             </details>

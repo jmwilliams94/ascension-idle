@@ -55,7 +55,7 @@ export default function BankActionModal({
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-base font-semibold text-white">{title}</h2>
-              {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
+              {subtitle && <p className="mt-0.5 text-xs text-slate-300">{subtitle}</p>}
             </div>
             <div className={`ascension-chip-frame is-interactive shrink-0 ${tint ? 'is-tinted' : ''}`} style={tintStyle}>
               <button

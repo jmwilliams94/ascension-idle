@@ -62,7 +62,7 @@ export default function ExpBar() {
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800 lg:h-2">
           <div className={`h-full rounded-full ${isMaxLevel ? 'bg-amber-400' : 'bg-emerald-500'}`} style={{ width: `${percent}%` }} />
         </div>
-        <span className="shrink-0 text-slate-500">{isMaxLevel ? 'MAX' : `${percent.toFixed(2)}%`}</span>
+        <span className="shrink-0 text-slate-300">{isMaxLevel ? 'MAX' : `${percent.toFixed(2)}%`}</span>
         <span className={`shrink-0 border-l border-slate-700 pl-2 font-semibold lg:pl-3 ${goldColorClass(displayedGold)}`}>
           {formatGoldAmount(displayedGold)}
         </span>

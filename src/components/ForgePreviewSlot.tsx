@@ -17,7 +17,7 @@ export default function ForgePreviewSlot({ previewItem, previewTemplate, slotId 
   return (
     <div className={`flex flex-col items-center gap-2 ${SLOT_WIDTH_CLASS}`}>
       <div className={`flex ${SLOT_LABEL_HEIGHT_CLASS} items-center justify-center`}>
-        <p className="text-center text-[10px] uppercase leading-tight tracking-wide text-slate-500">Preview</p>
+        <p className="text-center text-[10px] uppercase leading-tight tracking-wide text-slate-300">Preview</p>
       </div>
 
       <div className={SLOT_SIZE_CLASS}>

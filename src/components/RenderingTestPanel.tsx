@@ -54,7 +54,7 @@ export default function RenderingTestPanel() {
           </ModelErrorBoundary>
         </div>
         {!characterModelPath && (
-          <p className="border-t border-slate-800 bg-slate-950/60 px-3 py-2 text-center text-xs text-slate-500">
+          <p className="border-t border-slate-800 bg-slate-950/60 px-3 py-2 text-center text-xs text-slate-300">
             No model loaded — enter a path below.
           </p>
         )}
@@ -67,7 +67,7 @@ export default function RenderingTestPanel() {
         }}
         className="flex items-center gap-2"
       >
-        <p className="w-16 shrink-0 text-xs uppercase tracking-wide text-slate-500">Model</p>
+        <p className="w-16 shrink-0 text-xs uppercase tracking-wide text-slate-300">Model</p>
         <input
           type="text"
           value={characterDraft}
@@ -90,7 +90,7 @@ export default function RenderingTestPanel() {
             }}
             className="flex items-center gap-2"
           >
-            <p className="w-16 shrink-0 text-xs uppercase tracking-wide text-slate-500">{SLOT_LABELS[slot]}</p>
+            <p className="w-16 shrink-0 text-xs uppercase tracking-wide text-slate-300">{SLOT_LABELS[slot]}</p>
             <input
               type="text"
               value={slotDrafts[slot] ?? equippedItems[slot] ?? ''}
@@ -114,7 +114,7 @@ export default function RenderingTestPanel() {
             onChange={(event) => setBloomEnabled(event.target.checked)}
           />
         </label>
-        <label className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+        <label className="mt-2 flex items-center gap-2 text-xs text-slate-300">
           <span className="w-16 shrink-0">Intensity</span>
           <input
             type="range"
@@ -139,11 +139,11 @@ export default function RenderingTestPanel() {
             onChange={(event) => setEmissivePulse({ enabled: event.target.checked })}
           />
         </label>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-slate-300">
           Travels along a model's longest axis, multiplied against its emissiveMap (if it has one) — only lights up
           textures like glowing veins/cracks, not the whole surface.
         </p>
-        <label className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+        <label className="mt-2 flex items-center gap-2 text-xs text-slate-300">
           <span className="w-16 shrink-0">Speed</span>
           <input
             type="range"
@@ -157,7 +157,7 @@ export default function RenderingTestPanel() {
           />
           <span className="w-8 shrink-0 text-right">{emissivePulse.speed.toFixed(2)}</span>
         </label>
-        <label className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+        <label className="mt-2 flex items-center gap-2 text-xs text-slate-300">
           <span className="w-16 shrink-0">Width</span>
           <input
             type="range"
@@ -171,7 +171,7 @@ export default function RenderingTestPanel() {
           />
           <span className="w-8 shrink-0 text-right">{emissivePulse.width.toFixed(2)}</span>
         </label>
-        <label className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+        <label className="mt-2 flex items-center gap-2 text-xs text-slate-300">
           <span className="w-16 shrink-0">Intensity</span>
           <input
             type="range"

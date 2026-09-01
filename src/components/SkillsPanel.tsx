@@ -51,7 +51,7 @@ export default function SkillsPanel() {
       {subTab === 'skills' && (
         <div className="mt-4 space-y-3">
           {skillIds.length === 0 && (
-            <p className="text-xs text-slate-500">No skills available for this class yet.</p>
+            <p className="text-xs text-slate-300">No skills available for this class yet.</p>
           )}
           {skillIds.map((skillId) => {
             const skill = SKILL_TYPES[skillId]
@@ -63,7 +63,7 @@ export default function SkillsPanel() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-slate-200">{skill.displayName}</p>
-                    <p className="mt-0.5 text-xs text-slate-500">{skill.description}</p>
+                    <p className="mt-0.5 text-xs text-slate-300">{skill.description}</p>
                     <p className="mt-1.5 text-xs text-sky-300">
                       {skill.effectDamage} bonus Magic Attack · {skill.mpCost} MP · {(1000 / skill.attackIntervalMs).toFixed(1)}/s
                     </p>
@@ -85,7 +85,7 @@ export default function SkillsPanel() {
       )}
 
       {subTab === 'passives' && (
-        <p className="mt-4 text-xs text-slate-500">Passives are coming soon.</p>
+        <p className="mt-4 text-xs text-slate-300">Passives are coming soon.</p>
       )}
     </AscensionCard>
   )

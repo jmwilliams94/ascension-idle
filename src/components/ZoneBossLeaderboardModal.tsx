@@ -61,17 +61,17 @@ export default function ZoneBossLeaderboardModal({
   return (
     <BankActionModal title={`${bossName} Leaderboard`} onClose={onClose}>
       <div className="space-y-3">
-        {loading && <p className="py-6 text-center text-sm text-slate-500">Loading…</p>}
+        {loading && <p className="py-6 text-center text-sm text-slate-300">Loading…</p>}
 
-        {!loading && (!result || !result.ok) && <p className="py-6 text-center text-sm text-slate-500">Couldn't load the leaderboard.</p>}
+        {!loading && (!result || !result.ok) && <p className="py-6 text-center text-sm text-slate-300">Couldn't load the leaderboard.</p>}
 
         {!loading && result?.ok && (
           <>
             <div className="max-h-72 space-y-1 overflow-y-auto">
-              {result.entries.length === 0 && <p className="py-6 text-center text-sm text-slate-500">No attempts yet.</p>}
+              {result.entries.length === 0 && <p className="py-6 text-center text-sm text-slate-300">No attempts yet.</p>}
               {result.entries.map((entry) => (
                 <div key={entry.rank} className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-1.5 text-xs">
-                  <span className={`w-8 shrink-0 font-bold ${RANK_ACCENT[entry.rank] ?? 'text-slate-500'}`}>#{entry.rank}</span>
+                  <span className={`w-8 shrink-0 font-bold ${RANK_ACCENT[entry.rank] ?? 'text-slate-300'}`}>#{entry.rank}</span>
                   <span className="min-w-0 flex-1 truncate text-slate-200">{entry.character_name}</span>
                   <span className="shrink-0 text-slate-400">{entry.total_damage.toLocaleString()}</span>
                 </div>

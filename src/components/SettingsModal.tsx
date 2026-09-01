@@ -68,7 +68,7 @@ export default function SettingsModal({ characterId, onClose }: { characterId: s
       id: 'fx',
       label: 'FX',
       content: (
-        <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
+        <Suspense fallback={<p className="text-sm text-slate-300">Loading…</p>}>
           <FxTestPanel />
         </Suspense>
       ),
@@ -89,7 +89,7 @@ export default function SettingsModal({ characterId, onClose }: { characterId: s
       id: 'rendering',
       label: 'Rendering',
       content: (
-        <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
+        <Suspense fallback={<p className="text-sm text-slate-300">Loading…</p>}>
           <RenderingTestPanel />
         </Suspense>
       ),

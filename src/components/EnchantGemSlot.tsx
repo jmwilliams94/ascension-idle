@@ -28,7 +28,7 @@ export default function EnchantGemSlot({ gem, onRemove }: EnchantGemSlotProps) {
   return (
     <div className={`flex flex-col items-center gap-2 ${SLOT_WIDTH_CLASS}`}>
       <div className={`flex ${SLOT_LABEL_HEIGHT_CLASS} items-center justify-center`}>
-        <p className="text-center text-[10px] uppercase leading-tight tracking-wide text-slate-500">Gem</p>
+        <p className="text-center text-[10px] uppercase leading-tight tracking-wide text-slate-300">Gem</p>
       </div>
 
       <div
@@ -56,7 +56,7 @@ export default function EnchantGemSlot({ gem, onRemove }: EnchantGemSlotProps) {
       </div>
 
       {gem && (
-        <button type="button" onClick={onRemove} className="text-[10px] text-slate-500 underline hover:text-slate-300">
+        <button type="button" onClick={onRemove} className="text-[10px] text-slate-300 underline hover:text-slate-300">
           Remove
         </button>
       )}

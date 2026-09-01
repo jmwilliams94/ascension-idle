@@ -1074,7 +1074,7 @@ export default function InventoryPanel({
     <div className="space-y-4">
       <div>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs uppercase tracking-wide text-slate-500">
+          <p className="text-xs uppercase tracking-wide text-slate-300">
             Inventory ({occupiedCount}/{INVENTORY_SLOT_CAP})
           </p>
 
@@ -1738,7 +1738,7 @@ export default function InventoryPanel({
             </div>
             <div>
               <p className="text-sm font-medium text-slate-200">+{selectedStoneTier} Stone</p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-300">
                 {compositionPointValue(selectedStoneTier)} pts · {stones[String(selectedStoneTier)] ?? 0} owned total
               </p>
             </div>
@@ -1759,7 +1759,7 @@ export default function InventoryPanel({
               <p className="text-sm font-medium text-slate-200">
                 {formatGemTierLabel(selectedGem.tier)} {GEM_TYPES[selectedGem.gemId].displayName}
               </p>
-              <p className="text-xs text-slate-500">{gemCount(gems, selectedGem.gemId, selectedGem.tier)} owned total</p>
+              <p className="text-xs text-slate-300">{gemCount(gems, selectedGem.gemId, selectedGem.tier)} owned total</p>
             </div>
           </div>
         </div>
@@ -1886,8 +1886,8 @@ export default function InventoryPanel({
             </div>
             <div>
               <p className="text-sm font-medium text-slate-200">{POTION_TYPES[selectedPotionStack.potionType].displayName}</p>
-              <p className="text-xs text-slate-500">{POTION_TYPES[selectedPotionStack.potionType].description}</p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-300">{POTION_TYPES[selectedPotionStack.potionType].description}</p>
+              <p className="text-xs text-slate-300">
                 {selectedPotionStack.count} / {POTION_TYPES[selectedPotionStack.potionType].stackSize}
               </p>
             </div>
@@ -1927,12 +1927,12 @@ export default function InventoryPanel({
                   ? formatItemDisplayName(selectedTemplate.name, selectedItem.quality_tier, selectedItem.composition_level)
                   : 'Unknown item'}
               </p>
-              <p className="text-xs text-slate-500">{formatItemLevel(selectedItem.level)}</p>
+              <p className="text-xs text-slate-300">{formatItemLevel(selectedItem.level)}</p>
               {selectedTemplate && (
-                <p className="text-xs text-slate-500">{formatBaseStats(selectedTemplate.base_stats, selectedItem.quality_tier, selectedTemplate.item_family)}</p>
+                <p className="text-xs text-slate-300">{formatBaseStats(selectedTemplate.base_stats, selectedItem.quality_tier, selectedTemplate.item_family)}</p>
               )}
               {selectedTemplate && selectedTemplate.required_level > 1 && (
-                <p className={meetsLevelRequirement ? 'text-xs text-slate-500' : 'text-xs text-amber-500'}>
+                <p className={meetsLevelRequirement ? 'text-xs text-slate-300' : 'text-xs text-amber-500'}>
                   Requires level {selectedTemplate.required_level}
                 </p>
               )}

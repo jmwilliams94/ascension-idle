@@ -173,7 +173,7 @@ export default function MiningModePanel({ characterId }: { characterId: string }
           />
           <div className="min-w-0 flex-1">
             {!equipped ? (
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-300">
                 Drag a Pickaxe from your Inventory into the slot, or hit Equip on it there — buy one from the Shop's Weapons tab if you need one.
                 Independent of your weapon slot, so your real weapon stays equipped too.
               </p>
@@ -187,7 +187,7 @@ export default function MiningModePanel({ characterId }: { characterId: string }
           <>
             {cost ? (
               <>
-                <p className="mt-2 text-xs text-slate-500">
+                <p className="mt-2 text-xs text-slate-300">
                   Tier up cost: {formatGoldAmount(cost.goldCost)} gold
                   {cost.gemIds.length > 0 && (
                     <>
@@ -252,7 +252,7 @@ export default function MiningModePanel({ characterId }: { characterId: string }
 
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-slate-200">{activeNode.displayName}</p>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-slate-300">
                 {isRespawning ? `Respawning in ${respawnSecondsLeft}s...` : `${currentHp} / ${maxHp} HP`}
               </p>
               <div className="mt-2">

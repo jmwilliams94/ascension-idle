@@ -33,7 +33,7 @@ export default function PickaxeEquipSlot({ item, template, onUnequip }: PickaxeE
   return (
     <div className={`flex flex-col items-center gap-2 ${SLOT_WIDTH_CLASS}`}>
       <div className={`flex ${SLOT_LABEL_HEIGHT_CLASS} items-center justify-center`}>
-        <p className="text-center text-[10px] uppercase leading-tight tracking-wide text-slate-500">Pickaxe Slot</p>
+        <p className="text-center text-[10px] uppercase leading-tight tracking-wide text-slate-300">Pickaxe Slot</p>
       </div>
 
       <div
@@ -63,7 +63,7 @@ export default function PickaxeEquipSlot({ item, template, onUnequip }: PickaxeE
       </div>
 
       {item && (
-        <button type="button" onClick={onUnequip} className="text-[10px] text-slate-500 underline hover:text-slate-300">
+        <button type="button" onClick={onUnequip} className="text-[10px] text-slate-300 underline hover:text-slate-300">
           Unequip
         </button>
       )}

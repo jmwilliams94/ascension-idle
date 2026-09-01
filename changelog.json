@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.8",
+    "date": "2026-09-01",
+    "changes": [
+      "Brightened dim gray label text across the game (Bank, Events, Achievements, and more) to a lighter silver for better readability on the dark background"
+    ]
+  },
+  {
     "version": "1.125.7",
     "date": "2026-09-01",
     "changes": [

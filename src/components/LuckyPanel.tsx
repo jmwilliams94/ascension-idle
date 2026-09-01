@@ -562,7 +562,7 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
               <span className="text-[10px] font-normal normal-case tracking-normal text-emerald-300/70">{LUCKY_BULK_AP_COST} AP</span>
             </button>
           </div>
-          <p className="mt-2 text-[10px] text-slate-500">
+          <p className="mt-2 text-[10px] text-slate-300">
             {freeAvailable ? 'Free ticket ready' : `Next free ticket in ${formatCountdown(nextFreeTicketAt! - now)}`}
           </p>
         </AscensionCard>

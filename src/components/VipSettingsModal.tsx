@@ -42,7 +42,7 @@ export default function VipSettingsModal() {
               <p className="text-sm font-medium text-slate-100">Auto-Sell Ore</p>
               <ToggleSwitch checked={settings.autoSellOre} onChange={(checked) => void updateSettings({ autoSellOre: checked })} label="Auto-Sell Ore" />
             </div>
-            <p className="text-[11px] text-slate-500">Sells Ore for gold as it's mined, so it never fills up your Inventory.</p>
+            <p className="text-[11px] text-slate-300">Sells Ore for gold as it's mined, so it never fills up your Inventory.</p>
           </div>
 
           <div className="space-y-1 rounded-xl border border-slate-800 bg-slate-950/40 p-3">
@@ -54,7 +54,7 @@ export default function VipSettingsModal() {
                 label="Auto-Sell Normal Gear"
               />
             </div>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-slate-300">
               Sells dropped Normal-quality gear for gold. Salvage gives 0 AP for Normal gear, so this is the only way to auto-clear it
               (Composed Normal gear is Auto-Banked instead, if that's enabled).
             </p>
@@ -69,7 +69,7 @@ export default function VipSettingsModal() {
                 label="Auto-Salvage Quality Gear"
               />
             </div>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-slate-300">
               Salvages dropped gear at or above the chosen quality for Ascension Points. Never touches socketed gear or anything above +1.
             </p>
             {settings.autoSalvage.enabled && (
@@ -101,7 +101,7 @@ export default function VipSettingsModal() {
                 label="Auto-Bank +N Gear"
               />
             </div>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-slate-300">
               Liquidates gear at or above the chosen Composition level into that slot's Gear Points pool. This destroys the item
               — same as the Bank tab's manual "Bank" action, not physical storage.
             </p>

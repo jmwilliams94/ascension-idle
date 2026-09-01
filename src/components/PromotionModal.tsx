@@ -79,7 +79,7 @@ export default function PromotionModal({
       <div className="space-y-4">
         {tier.items_required.length > 0 && (
           <div className="space-y-1">
-            <p className="text-[11px] uppercase tracking-wide text-slate-500">Requires</p>
+            <p className="text-[11px] uppercase tracking-wide text-slate-300">Requires</p>
             {tier.items_required.map((cost, index) => {
               const owned = ownedCountFor(cost)
               const short = owned < cost.quantity
@@ -95,7 +95,7 @@ export default function PromotionModal({
 
         {(tier.award_items.length > 0 || tier.skills_unlocked.length > 0) && (
           <div className="space-y-1">
-            <p className="text-[11px] uppercase tracking-wide text-slate-500">Rewards</p>
+            <p className="text-[11px] uppercase tracking-wide text-slate-300">Rewards</p>
             {tier.award_items.map((award, index) => {
               const label = award.kind === 'currency' ? currencyLabel(award.name) : award.name
               return (

@@ -167,7 +167,7 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
             <div className="text-heading-label">{myName}</div>
             <HpBar current={myHp} max={myMaxHp} />
           </div>
-          <div className="px-3 font-heading text-xs uppercase tracking-widest text-slate-500">vs</div>
+          <div className="px-3 font-heading text-xs uppercase tracking-widest text-slate-300">vs</div>
           <div className="flex-1 text-right">
             <div className="text-heading-label">{opponentName}</div>
             <HpBar current={opponentHp} max={opponentMaxHp} align="right" />

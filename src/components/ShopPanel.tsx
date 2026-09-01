@@ -220,9 +220,9 @@ function GearRow({ template, bulkBuy }: { template: ItemTemplate; bulkBuy: boole
           />
           <div className="min-w-0">
             <p className="truncate font-medium text-slate-200">{template.name}</p>
-            <p className="text-slate-500">{template.price}g</p>
+            <p className="text-slate-300">{template.price}g</p>
             {template.required_level > 1 && (
-              <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {template.required_level}</p>
+              <p className={meetsLevel ? 'text-slate-300' : 'text-amber-500'}>Requires level {template.required_level}</p>
             )}
           </div>
         </div>
@@ -418,13 +418,13 @@ export default function ShopPanel() {
           )}
         </div>
 
-        <p className="text-xs text-slate-500">Gold: {gold}</p>
+        <p className="text-xs text-slate-300">Gold: {gold}</p>
 
         <AscensionCard>
         {tab === 'weapons' && (
           <div className="max-h-96 space-y-2 overflow-y-auto">
             {weaponTemplates.length === 0 ? (
-              <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">Nothing available yet</p>
+              <p className="flex h-24 items-center justify-center text-center text-sm text-slate-300">Nothing available yet</p>
             ) : (
               weaponTemplates.map((template) => (
                 <GearRow key={template.id} template={template} bulkBuy={bulkBuyWeaponIds.has(template.id)} />
@@ -436,7 +436,7 @@ export default function ShopPanel() {
         {tab === 'armor' && (
           <div className="max-h-96 space-y-2 overflow-y-auto">
             {armorTemplates.length === 0 ? (
-              <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">Nothing available yet</p>
+              <p className="flex h-24 items-center justify-center text-center text-sm text-slate-300">Nothing available yet</p>
             ) : (
               armorTemplates.map((template) => (
                 <GearRow key={template.id} template={template} bulkBuy={bulkBuyArmorIds.has(template.id)} />
@@ -448,7 +448,7 @@ export default function ShopPanel() {
         {tab === 'jeweller' && (
           <div className="max-h-96 space-y-2 overflow-y-auto">
             {jewellerTemplates.length === 0 ? (
-              <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">Nothing available yet</p>
+              <p className="flex h-24 items-center justify-center text-center text-sm text-slate-300">Nothing available yet</p>
             ) : (
               jewellerTemplates.map((template) => (
                 <GearRow key={template.id} template={template} bulkBuy={bulkBuyJewellerIds.has(template.id)} />
@@ -487,12 +487,12 @@ export default function ShopPanel() {
                         <InventorySlot slotId={typeId} filled sizeClassName={SLOT_SIZE_CLASS} icon="🧪" label={type.displayName} tooltip={potionTooltip} />
                         <div className="min-w-0">
                           <p className="truncate font-medium text-slate-200">{type.displayName}</p>
-                          <p className="text-slate-500">{type.description}</p>
-                          <p className="text-slate-500">
+                          <p className="text-slate-300">{type.description}</p>
+                          <p className="text-slate-300">
                             Owned: {owned} · stack of {type.stackSize} for {stackCost}g
                           </p>
                           {type.requiredLevel > 1 && (
-                            <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {type.requiredLevel}</p>
+                            <p className={meetsLevel ? 'text-slate-300' : 'text-amber-500'}>Requires level {type.requiredLevel}</p>
                           )}
                         </div>
                       </div>
@@ -539,12 +539,12 @@ export default function ShopPanel() {
                         <InventorySlot slotId={typeId} filled sizeClassName={SLOT_SIZE_CLASS} icon="💧" label={type.displayName} tooltip={potionTooltip} />
                         <div className="min-w-0">
                           <p className="truncate font-medium text-slate-200">{type.displayName}</p>
-                          <p className="text-slate-500">{type.description}</p>
-                          <p className="text-slate-500">
+                          <p className="text-slate-300">{type.description}</p>
+                          <p className="text-slate-300">
                             Owned: {owned} · stack of {type.stackSize} for {stackCost}g
                           </p>
                           {type.requiredLevel > 1 && (
-                            <p className={meetsLevel ? 'text-slate-500' : 'text-amber-500'}>Requires level {type.requiredLevel}</p>
+                            <p className={meetsLevel ? 'text-slate-300' : 'text-amber-500'}>Requires level {type.requiredLevel}</p>
                           )}
                         </div>
                       </div>
@@ -568,13 +568,13 @@ export default function ShopPanel() {
 
         {tab === 'repair' && (
           <div className="space-y-3">
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-300">
               Equipped gear slowly wears down the longer you fight. A broken (0-durability) item stays equipped but stops
               contributing anything in combat until it's repaired.
             </p>
 
             {damagedItems.length === 0 ? (
-              <p className="flex h-24 items-center justify-center text-center text-sm text-slate-500">
+              <p className="flex h-24 items-center justify-center text-center text-sm text-slate-300">
                 Everything's in good repair.
               </p>
             ) : (
@@ -596,7 +596,7 @@ export default function ShopPanel() {
                         />
                         <p className="truncate font-medium text-slate-200">{template.name}</p>
                       </div>
-                      <p className="shrink-0 text-slate-500">{cost}g</p>
+                      <p className="shrink-0 text-slate-300">{cost}g</p>
                     </div>
                   </div>
                 ))}

@@ -59,12 +59,12 @@ export default function FxTestPanel() {
         className="w-full rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-3 text-left text-sm text-slate-200 transition hover:border-amber-500/60 hover:bg-slate-900"
       >
         <span className="block font-medium">{LIGHTNING.label}</span>
-        <span className="mt-1 block text-xs text-slate-500">{LIGHTNING.caption}</span>
+        <span className="mt-1 block text-xs text-slate-300">{LIGHTNING.caption}</span>
       </button>
 
       <div className="border-t border-slate-800 pt-4">
         <h3 className="text-sm font-semibold text-white">Meteor Flash</h3>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-slate-300">
           Purple was picked for a real Comet drop landing in the inventory after a kill; the rest stay here unused.
         </p>
         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -76,7 +76,7 @@ export default function FxTestPanel() {
               className="rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-3 text-left text-sm text-slate-200 transition hover:border-amber-500/60 hover:bg-slate-900"
             >
               <span className="block font-medium">{example.label}</span>
-              <span className="mt-1 block text-xs text-slate-500">{example.caption}</span>
+              <span className="mt-1 block text-xs text-slate-300">{example.caption}</span>
             </button>
           ))}
         </div>

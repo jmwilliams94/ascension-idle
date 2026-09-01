@@ -56,7 +56,7 @@ export default function GoldDonationCard({
           <p className="text-heading-label" style={{ fontSize: '1.4rem' }}>
             Gold Donation Event
           </p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-300">
             {!pool
               ? 'Loading…'
               : pool.status === 'collecting'
@@ -83,11 +83,11 @@ export default function GoldDonationCard({
       </div>
 
       {!pool ? (
-        <p className="mt-3 text-center text-sm text-slate-500">Loading…</p>
+        <p className="mt-3 text-center text-sm text-slate-300">Loading…</p>
       ) : pool.status === 'collecting' ? (
         <>
           <div className="mt-3">
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-300">
               {formatGoldAmount(pool.totalDonated)} / {formatGoldAmount(pool.targetAmount)} donated
             </p>
             <div className="mt-1">
@@ -108,7 +108,7 @@ export default function GoldDonationCard({
       ) : (
         // Deliberately generic — the gap between one pool ending and the
         // next opening is never surfaced to players (no countdown).
-        <p className="mt-3 text-center text-sm text-slate-500">No event active</p>
+        <p className="mt-3 text-center text-sm text-slate-300">No event active</p>
       )}
 
       {donateOpen && characterId && <GoldDonationModal characterId={characterId} onClose={() => setDonateOpen(false)} />}

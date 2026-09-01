@@ -172,7 +172,7 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
 
         <div ref={scrollRef} className="flex-1 space-y-1.5 overflow-y-auto px-4 py-3">
           {feed.length === 0 ? (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-300">
               {chatLoaded ? 'No messages yet — say something!' : 'Loading…'}
             </p>
           ) : (

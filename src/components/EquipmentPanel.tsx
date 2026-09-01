@@ -313,7 +313,7 @@ export default function EquipmentPanel() {
         </button>
         {lockEditMode && (
           <div className="flex items-center gap-2">
-            <p className="text-[11px] text-slate-500">Tap gear to toggle Lock</p>
+            <p className="text-[11px] text-slate-300">Tap gear to toggle Lock</p>
             <Button variant="primary" disabled={savingLocks} onClick={() => void confirmLockEditMode()}>
               {savingLocks ? 'Saving…' : 'Confirm'}
             </Button>
@@ -364,8 +364,8 @@ export default function EquipmentPanel() {
               <p className="text-sm font-medium text-slate-200">
                 {formatItemDisplayName(selected.template.name, selected.item.quality_tier, selected.item.composition_level)}
               </p>
-              <p className="text-xs text-slate-500">{formatItemLevel(selected.item.level)}</p>
-              <p className="text-xs text-slate-500">{formatBaseStats(selected.template.base_stats, selected.item.quality_tier, selected.template.item_family)}</p>
+              <p className="text-xs text-slate-300">{formatItemLevel(selected.item.level)}</p>
+              <p className="text-xs text-slate-300">{formatBaseStats(selected.template.base_stats, selected.item.quality_tier, selected.template.item_family)}</p>
             </div>
           </div>
 
@@ -382,7 +382,7 @@ export default function EquipmentPanel() {
         </AscensionCard>
       )}
 
-      {!selected && !lockEditMode && <p className="text-center text-xs text-slate-500">Equip gear from your Inventory to fill these slots.</p>}
+      {!selected && !lockEditMode && <p className="text-center text-xs text-slate-300">Equip gear from your Inventory to fill these slots.</p>}
     </div>
   )
 }

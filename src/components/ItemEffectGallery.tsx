@@ -59,7 +59,7 @@ function ExampleTile({ example, index }: { example: Example; index: number }) {
         </div>
       </div>
       <p className="text-[11px] font-medium text-slate-300">{example.label}</p>
-      <p className="text-[10px] leading-snug text-slate-500">{example.caption}</p>
+      <p className="text-[10px] leading-snug text-slate-300">{example.caption}</p>
     </div>
   )
 }
@@ -67,7 +67,7 @@ function ExampleTile({ example, index }: { example: Example; index: number }) {
 export default function ItemEffectGallery() {
   return (
     <div className="space-y-4">
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-slate-300">
         Live on every real gear/material tile in the game now (Inventory, Forge, Equipment, Bank, Loot Holding) — colored
         to match each tile's own established color ({Object.keys(EMBER_DENSITY_BY_COLOR).length} colors mapped: 4 gear quality
         tiers + Comet/Stones + Fallen Star), denser for rarer/more valuable tiles. Normal quality and Potions get no effect at

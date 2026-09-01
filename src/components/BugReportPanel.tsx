@@ -147,7 +147,7 @@ function MyReportsSection({ characterId }: { characterId: string }) {
   return (
     <div className="space-y-4">
       <div className="space-y-2 rounded-lg border border-slate-800 bg-slate-950/40 p-3">
-        <p className="text-xs uppercase tracking-wide text-slate-500">Report a Bug</p>
+        <p className="text-xs uppercase tracking-wide text-slate-300">Report a Bug</p>
         <textarea
           value={description}
           onChange={(event) => setDescription(event.target.value.slice(0, DESCRIPTION_MAX_LENGTH))}
@@ -167,9 +167,9 @@ function MyReportsSection({ characterId }: { characterId: string }) {
       </div>
 
       <div>
-        <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">Your Reports</p>
+        <p className="mb-2 text-xs uppercase tracking-wide text-slate-300">Your Reports</p>
         {myReports.length === 0 ? (
-          <p className="text-sm text-slate-500">You haven't reported anything yet.</p>
+          <p className="text-sm text-slate-300">You haven't reported anything yet.</p>
         ) : (
           <div className="space-y-2">
             {myReports.map((report) => (
@@ -197,12 +197,12 @@ function MyReportRow({ report, characterId }: { report: BugReport; characterId: 
       >
         <div>
           <p className="whitespace-pre-wrap text-slate-200">{report.description}</p>
-          <p className="mt-1 text-[11px] text-slate-500">{report.character_name}</p>
-          <p className="text-[11px] text-slate-500">{new Date(report.created_at).toLocaleString()}</p>
+          <p className="mt-1 text-[11px] text-slate-300">{report.character_name}</p>
+          <p className="text-[11px] text-slate-300">{new Date(report.created_at).toLocaleString()}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <StatusBadge status={report.status} />
-          <span className="text-xs text-slate-500">{expanded ? '▲' : '▼'}</span>
+          <span className="text-xs text-slate-300">{expanded ? '▲' : '▼'}</span>
         </div>
       </button>
       {report.admin_comment && (
@@ -238,9 +238,9 @@ function AdminQueueSection() {
   return (
     <div className="space-y-4">
       <div>
-        <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">Open ({openReports.length})</p>
+        <p className="mb-2 text-xs uppercase tracking-wide text-slate-300">Open ({openReports.length})</p>
         {openReports.length === 0 ? (
-          <p className="text-sm text-slate-500">{allReportsLoaded ? 'Nothing open right now.' : 'Loading…'}</p>
+          <p className="text-sm text-slate-300">{allReportsLoaded ? 'Nothing open right now.' : 'Loading…'}</p>
         ) : (
           <div className="space-y-2">
             {openReports.map((report) => (
@@ -252,7 +252,7 @@ function AdminQueueSection() {
 
       {resolvedReports.length > 0 && (
         <div>
-          <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">Resolved History</p>
+          <p className="mb-2 text-xs uppercase tracking-wide text-slate-300">Resolved History</p>
           <div className="space-y-2">
             {resolvedReports.map((report) => (
               <ResolvedReportRow key={report.id} report={report} />
@@ -276,12 +276,12 @@ function ResolvedReportRow({ report }: { report: BugReport }) {
       >
         <div>
           <p className="whitespace-pre-wrap text-slate-300">{report.description}</p>
-          <p className="mt-1 text-[11px] text-slate-500">{report.character_name}</p>
-          <p className="text-[11px] text-slate-500">{new Date(report.created_at).toLocaleString()}</p>
+          <p className="mt-1 text-[11px] text-slate-300">{report.character_name}</p>
+          <p className="text-[11px] text-slate-300">{new Date(report.created_at).toLocaleString()}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <StatusBadge status={report.status} />
-          <span className="text-xs text-slate-500">{expanded ? '▲' : '▼'}</span>
+          <span className="text-xs text-slate-300">{expanded ? '▲' : '▼'}</span>
         </div>
       </button>
       {report.admin_comment && <p className="mt-2 text-xs text-slate-400">“{report.admin_comment}”</p>}
@@ -341,20 +341,20 @@ function AdminReportRow({ report }: { report: BugReport }) {
       >
         <div>
           <p className="whitespace-pre-wrap text-slate-200">{report.description}</p>
-          <p className="mt-1 text-[11px] text-slate-500">{report.character_name}</p>
-          <p className="text-[11px] text-slate-500">{new Date(report.created_at).toLocaleString()}</p>
+          <p className="mt-1 text-[11px] text-slate-300">{report.character_name}</p>
+          <p className="text-[11px] text-slate-300">{new Date(report.created_at).toLocaleString()}</p>
         </div>
-        <span className="shrink-0 text-xs text-slate-500">{expanded ? '▲' : '▼'}</span>
+        <span className="shrink-0 text-xs text-slate-300">{expanded ? '▲' : '▼'}</span>
       </button>
 
       {expanded && (
         <div className="mt-3 space-y-3 border-t border-slate-800 pt-3">
           <div>
-            <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">Conversation</p>
+            <p className="mb-2 text-xs uppercase tracking-wide text-slate-300">Conversation</p>
             <ReportReplyThread parentType="bug" parentId={report.id} viewerRole="admin" />
           </div>
 
-          <p className="text-xs uppercase tracking-wide text-slate-500">Close This Out</p>
+          <p className="text-xs uppercase tracking-wide text-slate-300">Close This Out</p>
           <textarea
             value={comment}
             onChange={(event) => setComment(event.target.value.slice(0, COMMENT_MAX_LENGTH))}
@@ -364,7 +364,7 @@ function AdminReportRow({ report }: { report: BugReport }) {
           />
 
           <div className="space-y-2 rounded-lg border border-slate-800 bg-slate-950/40 p-3">
-            <p className="text-xs uppercase tracking-wide text-slate-500">Add Currency Reward (optional)</p>
+            <p className="text-xs uppercase tracking-wide text-slate-300">Add Currency Reward (optional)</p>
             <div className="flex items-center gap-2">
               <Select value={currencyType} onChange={(event) => setCurrencyType(event.target.value as MailCurrencyType)} className="flex-1">
                 {MAIL_CURRENCY_TYPES.map((type) => (
@@ -398,7 +398,7 @@ function AdminReportRow({ report }: { report: BugReport }) {
                     <span>
                       {reward.amount}× {mailCurrencyLabel(reward.currencyType)}
                     </span>
-                    <button type="button" onClick={() => removeReward(index)} className="text-slate-500 hover:text-slate-300">
+                    <button type="button" onClick={() => removeReward(index)} className="text-slate-300 hover:text-slate-100">
                       ✕
                     </button>
                   </div>

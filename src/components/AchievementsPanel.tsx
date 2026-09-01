@@ -284,7 +284,7 @@ function TierSegmentBar({
                 ) : (
                   <div
                     style={{ clipPath }}
-                    className="flex h-9 w-full min-w-0 items-center justify-center bg-slate-950/60 px-3 text-[11px] font-semibold text-slate-500"
+                    className="flex h-9 w-full min-w-0 items-center justify-center bg-slate-950/60 px-3 text-[11px] font-semibold text-slate-300"
                   >
                     {tierIndex + 1}
                   </div>
@@ -326,9 +326,9 @@ function CharacterMonsterCard({ characterId, monsterId, displayName }: { charact
     <MonsterCard badgeCount={claimable ? 1 : 0}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-medium text-slate-200">{displayName}</p>
-        <p className="text-[11px] text-slate-500">{Math.floor(kills).toLocaleString()} kills</p>
+        <p className="text-[11px] text-slate-300">{Math.floor(kills).toLocaleString()} kills</p>
       </div>
-      <p className="mt-1 text-[11px] text-slate-500">
+      <p className="mt-1 text-[11px] text-slate-300">
         {maxed ? <span className="font-medium text-emerald-400">All tiers claimed</span> : <>Next: {describeCharacterTierReward(nextReward)}</>}
       </p>
       <TierSegmentBar
@@ -367,9 +367,9 @@ function AccountMonsterCard({ accountId, monsterId, displayName }: { accountId: 
     <MonsterCard badgeCount={claimable ? 1 : 0}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-medium text-slate-200">{displayName}</p>
-        <p className="text-[11px] text-slate-500">{Math.floor(kills).toLocaleString()} kills (all characters)</p>
+        <p className="text-[11px] text-slate-300">{Math.floor(kills).toLocaleString()} kills (all characters)</p>
       </div>
-      <p className="mt-1 text-[11px] text-slate-500">
+      <p className="mt-1 text-[11px] text-slate-300">
         {maxed ? (
           <span className="font-medium text-emerald-400">All tiers claimed</span>
         ) : (
@@ -418,7 +418,7 @@ function PetTile({ monsterId, displayName }: { monsterId: EnemyTypeId; displayNa
         >
           {hasPet ? '🐾' : '🔒'}
         </div>
-        <p className="w-16 truncate text-center text-[10px] text-slate-500">{displayName}</p>
+        <p className="w-16 truncate text-center text-[10px] text-slate-300">{displayName}</p>
       </div>
     </HoverTooltip>
   )
@@ -444,7 +444,7 @@ function ZoneTierSection({ characterId, zoneId }: { characterId: string; zoneId:
 
   return (
     <div className="w-full" onClick={(event) => event.stopPropagation()}>
-      <div className="flex items-center justify-between text-[11px] text-slate-500">
+      <div className="flex items-center justify-between text-[11px] text-slate-300">
         <span>
           {completions}/{ZONE_TOTAL_TIER_MILESTONES} completions
         </span>
@@ -540,7 +540,7 @@ function CollapsibleZoneGroups({
                   <p className="text-sm font-medium text-slate-200">{zone.displayName}</p>
                   <NotificationBadge count={zoneBadgeCount} />
                 </div>
-                <span className={`text-slate-500 transition-transform ${expanded ? 'rotate-180' : ''}`}>▾</span>
+                <span className={`text-slate-300 transition-transform ${expanded ? 'rotate-180' : ''}`}>▾</span>
               </div>
               {renderZoneTier && <div className="mt-2">{renderZoneTier(zoneId)}</div>}
               {renderZoneExtra && <div className="mt-1">{renderZoneExtra(zoneId)}</div>}
@@ -605,7 +605,7 @@ function PlayerTabContent({ characterId }: { characterId: string }) {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-slate-300">
         Kill a monster to climb its personal ladder — each of the 6 tiers is a real, one-time claim. Tap a zone to expand it.
       </p>
       <CollapsibleZoneGroups
@@ -652,7 +652,7 @@ function AccountTabContent({ accountId }: { accountId: string | undefined }) {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-slate-300">
         Every character on this account contributes to the same ladder per monster (thresholds are 5x the character track's own). Claiming
         grants a small, permanent combat buff — active only while fighting in that monster's own zone.
       </p>
@@ -699,7 +699,7 @@ export default function AchievementsPanel({ characterId, accountId }: { characte
     <div className="space-y-4">
       <AscensionCard>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs text-slate-500">Track progress and claim one-time rewards for grinding a monster.</p>
+          <p className="text-xs text-slate-300">Track progress and claim one-time rewards for grinding a monster.</p>
           <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400">
             <span>
               Pets: <span className="font-semibold text-amber-300">{pets.size}</span> / 40
@@ -716,7 +716,7 @@ export default function AchievementsPanel({ characterId, accountId }: { characte
         </div>
       </AscensionCard>
 
-      <p className="text-xs text-slate-500">{TAB_DESCRIPTIONS[tab]}</p>
+      <p className="text-xs text-slate-300">{TAB_DESCRIPTIONS[tab]}</p>
 
       <div className="flex flex-wrap gap-2">
         {TABS.map((item) => (

@@ -99,7 +99,7 @@ function SalvageSlot({ item, template, onRemove }: SalvageSlotProps) {
   return (
     <div className={`flex flex-col items-center gap-2 ${SLOT_WIDTH_CLASS}`}>
       <div className={`flex ${SLOT_LABEL_HEIGHT_CLASS} items-center justify-center`}>
-        <p className="text-center text-[10px] uppercase leading-tight tracking-wide text-slate-500">Salvage Slot</p>
+        <p className="text-center text-[10px] uppercase leading-tight tracking-wide text-slate-300">Salvage Slot</p>
       </div>
 
       <div
@@ -132,8 +132,8 @@ function SalvageSlot({ item, template, onRemove }: SalvageSlotProps) {
           <p className="text-xs font-medium text-slate-200">
             {template ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level) : 'Unknown item'}
           </p>
-          <p className="text-[10px] text-slate-500">{formatItemLevel(item.level)}</p>
-          <button type="button" onClick={onRemove} className="mt-1 text-[10px] text-slate-500 underline hover:text-slate-300">
+          <p className="text-[10px] text-slate-300">{formatItemLevel(item.level)}</p>
+          <button type="button" onClick={onRemove} className="mt-1 text-[10px] text-slate-300 underline hover:text-slate-300">
             Remove
           </button>
         </div>
@@ -325,7 +325,7 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
         </AscensionCard>
 
         <div className="w-full max-w-sm space-y-2">
-          <p className="text-center text-[11px] uppercase tracking-wide text-slate-500">Bulk Salvage</p>
+          <p className="text-center text-[11px] uppercase tracking-wide text-slate-300">Bulk Salvage</p>
           {bulkGroups.map((group) => (
             <button
               key={group.tier}
@@ -361,7 +361,7 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
 
         {phase === 'bulk-salvaging' && bulkProgress && (
           <div className="w-full max-w-xs">
-            <p className="mb-1 text-center text-[11px] text-slate-500">
+            <p className="mb-1 text-center text-[11px] text-slate-300">
               Salvaging {bulkProgress.total} {BULK_TIER_LABEL[bulkProgress.tier]} item{bulkProgress.total === 1 ? '' : 's'}…
             </p>
             <div className="h-2.5 overflow-hidden rounded-full bg-slate-800">
@@ -377,7 +377,7 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
 
         {phase === 'salvaging' && (
           <div className="w-full max-w-xs">
-            <p className="mb-1 text-center text-[11px] text-slate-500">Salvaging…</p>
+            <p className="mb-1 text-center text-[11px] text-slate-300">Salvaging…</p>
             <div className="h-2.5 overflow-hidden rounded-full bg-slate-800">
               <motion.div
                 className="h-full rounded-full bg-purple-500"
@@ -405,7 +405,7 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
             disabled={isWorthless}
             onClick={handleSalvage}
             title={isWorthless ? 'Normal-quality gear has no salvage value — sell it in the Shop instead.' : undefined}
-            className="w-full max-w-xs rounded-lg border border-purple-600 bg-purple-500/10 px-4 py-2 text-sm font-medium text-purple-300 hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-transparent disabled:text-slate-500"
+            className="w-full max-w-xs rounded-lg border border-purple-600 bg-purple-500/10 px-4 py-2 text-sm font-medium text-purple-300 hover:bg-purple-500/20 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-transparent disabled:text-slate-300"
           >
             {isWorthless ? 'No salvage value' : `Salvage (${apValue} AP)`}
           </button>

@@ -119,7 +119,7 @@ export default function CharacterSelectScreen() {
         </p>
 
         {!rosterLoaded ? (
-          <p className="mt-8 text-center text-sm text-slate-500">Loading…</p>
+          <p className="mt-8 text-center text-sm text-slate-300">Loading…</p>
         ) : (
           <div className="mt-8 grid grid-cols-1 gap-3">
             {slots.map((slot, index) => {
@@ -212,7 +212,7 @@ export default function CharacterSelectScreen() {
                           className="w-full bg-transparent px-3 py-2 text-base text-slate-200 focus:outline-none"
                         />
                       </div>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-300">
                         Capital letter first, lowercase the rest (e.g. "Aragorn"). Must be unique.
                       </p>
 
