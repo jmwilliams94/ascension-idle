@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { DEFAULT_STAT_COLOR, type ItemTooltipData, type TooltipLine } from '../game/items/itemTooltip'
 import { BLESS_COLOR, ENCHANT_HP_COLOR } from '../game/items/gemCatalog'
 
@@ -94,10 +95,12 @@ export default function ItemTooltip({
         {hasIcon ? (
           <div className="flex items-start gap-2">
             <div
-              className="flex h-22 w-22 shrink-0 items-center justify-center rounded-lg border-2 bg-slate-800 text-lg"
-              style={{ borderColor: iconColor ?? '#475569', backgroundColor: iconColor ? `${iconColor}22` : undefined }}
+              className="item-quality-frame relative flex h-22 w-22 shrink-0 items-center justify-center text-lg"
+              style={iconColor ? ({ '--item-tier-color': iconColor } as CSSProperties) : undefined}
             >
-              {iconSrc ? <img src={iconSrc} alt="" className="h-4/5 w-4/5 object-contain" /> : <span>{icon}</span>}
+              <div className="item-quality-frame-inner flex h-full w-full items-center justify-center overflow-hidden">
+                {iconSrc ? <img src={iconSrc} alt="" className="h-4/5 w-4/5 object-contain" /> : <span>{icon}</span>}
+              </div>
             </div>
             <div className="min-w-0 flex-1">{body}</div>
           </div>
