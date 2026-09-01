@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.126.4",
+    "date": "2026-09-02",
+    "changes": [
+      "Fixed Money Bags and Gem Bags being sellable for gold/nothing through the Inventory's \"Sell All Normal\" button instead of staying Open-only"
+    ]
+  },
+  {
     "version": "1.126.3",
     "date": "2026-09-02",
     "changes": [

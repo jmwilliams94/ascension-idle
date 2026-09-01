@@ -1179,10 +1179,23 @@ export default function InventoryPanel({
   // Excludes anything with composition progress (+N) even at Normal quality,
   // since that's no longer junk. Also excludes anything with an unlocked
   // socket (even an empty one) — sockets cost real Fallen Stars (weapons) or
-  // a rare RNG proc (armor) to unlock, so that gear isn't junk either.
-  const normalJunkItems = visibleItems.filter(
-    (item) => item.quality_tier === 'normal' && item.composition_level === 0 && item.sockets.length === 0 && !item.locked,
-  )
+  // a rare RNG proc (armor) to unlock, so that gear isn't junk either. Also
+  // excludes Money Bag/Gem Bag: real item_instances rows with quality_tier
+  // 'normal' like any other junk, but they're not gear — sell_item has no
+  // item_family guard, so an unfiltered sweep would sell a Money Bag for
+  // half its stored gold payout (item_templates.price) instead of it being
+  // opened, and a Gem Bag (price 0) for nothing.
+  const normalJunkItems = visibleItems.filter((item) => {
+    const template = templates.find((entry) => entry.id === item.template_id)
+    return (
+      item.quality_tier === 'normal' &&
+      item.composition_level === 0 &&
+      item.sockets.length === 0 &&
+      !item.locked &&
+      template?.item_family !== 'money-bag' &&
+      template?.item_family !== 'gem-bag'
+    )
+  })
 
   const normalJunkTotal = normalJunkItems.reduce((sum, item) => {
     const template = templates.find((entry) => entry.id === item.template_id)
