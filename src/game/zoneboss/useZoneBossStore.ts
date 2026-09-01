@@ -50,6 +50,7 @@ export interface ZoneBossAttackResult {
     | 'damage_cap_reached'
     | 'quiver_required'
     | 'not_owner'
+    | 'other_character_active'
     | 'rpc_failed'
   damage?: number
   boss_current_hp?: number

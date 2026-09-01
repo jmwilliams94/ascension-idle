@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabaseClient'
 import { AscensionCard } from './ui/AscensionCard'
 import { Button } from './ui/Button'
@@ -35,7 +36,31 @@ const ERROR_MESSAGES: Record<string, string> = {
   damage_cap_reached: "You've already dealt your max damage to this boss.",
   quiver_required: 'Equip a Quiver to attack.',
   not_owner: "Couldn't verify your character.",
+  other_character_active: 'Another character on your account is already fighting this boss.',
   rpc_failed: 'Something went wrong — try again.',
+}
+
+// "Do not show me this again" preference for the first-attack confirmation
+// below — a plain client-side convenience, not account state, so a flat
+// localStorage flag (not scoped per-account) is fine; worst case a shared
+// browser sees the confirmation once more than strictly necessary.
+const SKIP_CONFIRM_KEY = 'ascension-zone-boss-skip-attack-confirm'
+
+function getSkipAttackConfirm(): boolean {
+  try {
+    return localStorage.getItem(SKIP_CONFIRM_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function setSkipAttackConfirm(): void {
+  try {
+    localStorage.setItem(SKIP_CONFIRM_KEY, '1')
+  } catch {
+    // Not worth failing the attack over — just means the confirmation
+    // reappears next time.
+  }
 }
 
 // Also used for the fight-window countdown below (2026-08-29, added
@@ -69,11 +94,13 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
   const [leaderboardOpen, setLeaderboardOpen] = useState(false)
   const [rewardsInfoOpen, setRewardsInfoOpen] = useState(false)
   const [showRepairAlert, setShowRepairAlert] = useState(false)
+  const [showAttackConfirm, setShowAttackConfirm] = useState(false)
+  const [skipConfirmChecked, setSkipConfirmChecked] = useState(false)
   // Top-damage entry for the "who won" line on the defeated-boss results
   // card below — fetched from the same leaderboard RPC the trophy modal
   // uses, just for rank 1, once the boss has actually died.
   const [winner, setWinner] = useState<{ name: string; damage: number } | null>(null)
-  useLockBodyScroll(showRepairAlert)
+  useLockBodyScroll(showRepairAlert || showAttackConfirm)
   // Own 1s tick for the cooldown countdown — independent of CombatPage's
   // own 200ms floating-number tick, which this card doesn't use.
   const [now, setNow] = useState(() => Date.now())
@@ -203,13 +230,28 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
     return itemHasDurability(template?.slot_type) && (item.durability ?? 0) <= 0
   })
 
-  const handleAttack = async () => {
+  const performAttack = async () => {
+    const result = await attack(characterId)
+    setLastResult(result)
+  }
+
+  const handleAttack = () => {
     if (hasBrokenGear) {
       setShowRepairAlert(true)
       return
     }
-    const result = await attack(characterId)
-    setLastResult(result)
+    if (getSkipAttackConfirm()) {
+      void performAttack()
+      return
+    }
+    setSkipConfirmChecked(false)
+    setShowAttackConfirm(true)
+  }
+
+  const handleConfirmAttack = () => {
+    if (skipConfirmChecked) setSkipAttackConfirm()
+    setShowAttackConfirm(false)
+    void performAttack()
   }
 
   return (
@@ -281,7 +323,7 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
 
       {hasBrokenGear && <p className="mt-2 text-center text-xs text-rose-400">Some of your gear is broken — repair it before fighting.</p>}
 
-      <Button variant="primary" disabled={!canAttack} onClick={() => void handleAttack()} className="mt-3 w-full">
+      <Button variant="primary" disabled={!canAttack} onClick={handleAttack} className="mt-3 w-full">
         {busy ? 'Attacking…' : freeRemaining > 0 ? 'Attack' : `Attack (${PAID_ATTEMPT_AP_COST} AP)`}
       </Button>
 
@@ -307,26 +349,65 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
         <ZoneBossRewardsInfoModal bossName={boss.displayName} rewardPool={spawn.rewardPool} onClose={() => setRewardsInfoOpen(false)} />
       )}
 
-      {showRepairAlert && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4"
-          onClick={() => setShowRepairAlert(false)}
-        >
+      {showAttackConfirm &&
+        createPortal(
           <div
-            className="w-full max-w-xs space-y-3 rounded-2xl border border-rose-500/40 bg-slate-900 p-4 shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4"
+            onClick={() => setShowAttackConfirm(false)}
           >
-            <p className="text-sm font-semibold text-rose-300">Gear needs repair</p>
-            <p className="text-xs text-slate-400">
-              One or more of your equipped items is at 0 durability and won't fight effectively. Repair your gear in the Shop before
-              attacking the Zone Boss.
-            </p>
-            <Button variant="primary" onClick={() => setShowRepairAlert(false)} className="w-full">
-              Got it
-            </Button>
-          </div>
-        </div>
-      )}
+            <div
+              className="w-full max-w-xs space-y-3 rounded-2xl border border-amber-500/40 bg-slate-900 p-4 shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <p className="text-sm font-semibold text-amber-200">Attack with this character?</p>
+              <p className="text-xs text-slate-400">
+                Only one character per account can fight a Zone Boss at a time. Once this character lands a hit on {boss.displayName},
+                no other character on your account will be able to join this fight.
+              </p>
+              <label className="flex items-center gap-2 text-xs text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={skipConfirmChecked}
+                  onChange={(event) => setSkipConfirmChecked(event.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-slate-600 bg-slate-800 text-amber-500 focus:ring-amber-500"
+                />
+                Do not show me this message again
+              </label>
+              <div className="flex gap-2">
+                <Button variant="secondary" onClick={() => setShowAttackConfirm(false)} className="flex-1">
+                  Cancel
+                </Button>
+                <Button variant="primary" onClick={handleConfirmAttack} className="flex-1">
+                  Confirm
+                </Button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
+      {showRepairAlert &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4"
+            onClick={() => setShowRepairAlert(false)}
+          >
+            <div
+              className="w-full max-w-xs space-y-3 rounded-2xl border border-rose-500/40 bg-slate-900 p-4 shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <p className="text-sm font-semibold text-rose-300">Gear needs repair</p>
+              <p className="text-xs text-slate-400">
+                One or more of your equipped items is at 0 durability and won't fight effectively. Repair your gear in the Shop before
+                attacking the Zone Boss.
+              </p>
+              <Button variant="primary" onClick={() => setShowRepairAlert(false)} className="w-full">
+                Got it
+              </Button>
+            </div>
+          </div>,
+          document.body,
+        )}
     </AscensionCard>
   )
 }

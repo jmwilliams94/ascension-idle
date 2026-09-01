@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.125.21",
+    "date": "2026-09-01",
+    "changes": [
+      "Attacking a Zone Boss for the first time now asks you to confirm, with an option to stop showing that prompt",
+      "Only one character per account can now fight a given Zone Boss spawn at a time"
+    ]
+  },
+  {
     "version": "1.125.20",
     "date": "2026-09-01",
     "changes": [
