@@ -143,9 +143,10 @@ function LuckyNavButton({ label }: { label: string }) {
 // .ascension-fab-chamfer square read as too small, with the hourglass glyph
 // visually crowding/spilling past its edges) now matches the other four
 // nav buttons' own rounded-lg icon-over-label pill shape instead of a
-// bespoke chamfered square, just taller (portrait, h-20 w-20 — widened from
-// an initial w-16 the same day, reported as still too narrow) so it still
-// reads as the bar's primary button. Label moved inside the same box as
+// bespoke chamfered square, just taller (h-20 w-24 — widened twice the same
+// day from an initial w-16, first to w-20 then to w-24, both times reported
+// as still too narrow) so it still reads as the bar's primary button. Label
+// moved inside the same box as
 // the icon (previously a separate span below it) — same combined
 // icon+label-in-one-pill structure NavButton/LuckyNavButton already use —
 // and its color is inherited from .btn-gold/.btn-gold-active rather than a
@@ -154,7 +155,7 @@ function LuckyNavButton({ label }: { label: string }) {
 // active).
 //
 // The button itself is now an inner `absolute inset-0` span, with
-// EventEmberBorder as an unclipped sibling in the outer h-20 w-20 wrapper
+// EventEmberBorder as an unclipped sibling in the outer h-20 w-24 wrapper
 // (2026-08-28, reported by the user: while an event was live, the old
 // .btn-ember-safe opt-out stripped .btn-gold's overflow:hidden AND its
 // ::before/::after glass highlight + hover light-sweep, so the button
@@ -164,14 +165,14 @@ function LuckyNavButton({ label }: { label: string }) {
 // visible box exactly — EventEmberBorder anchors its embers via left/top
 // percentages of its positioned parent's own box (see its own doc comment).
 //
-// flex-none w-20, not flex-1 (2026-08-16, requested by the user) — the real
+// flex-none w-24, not flex-1 (2026-08-16, requested by the user) — the real
 // source of the "huge gap" either side of this button wasn't the row's
 // gap-1 (two earlier passes tweaking that via negative margin barely moved
 // the needle): as a flex-1 item this column was exactly as wide as the
 // other four, but unlike them it's not a box filled edge-to-edge, it's a
 // narrower shape centered inside, so dead transparent space sat between it
 // and each neighbor even with margin at 0. Fixing this button's own column
-// to a width close to the box itself (80px) removes that dead space at the
+// to a width close to the box itself (96px) removes that dead space at the
 // source, and hands the freed-up width back to the other four flex-1
 // columns automatically.
 function IdlingNavButton() {
@@ -182,8 +183,8 @@ function IdlingNavButton() {
   const emberColor = useActiveEventEmberColor()
 
   return (
-    <button type="button" onClick={() => setActiveTab('combat')} className="flex w-20 flex-none flex-col items-center justify-center">
-      <span className="relative flex h-20 w-20 items-center justify-center">
+    <button type="button" onClick={() => setActiveTab('combat')} className="flex w-24 flex-none flex-col items-center justify-center">
+      <span className="relative flex h-20 w-24 items-center justify-center">
         <span
           className={`absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-lg py-2 shadow-lg ${
             active ? 'btn-gold-active shadow-slate-300/20' : 'btn-gold shadow-black/30'
