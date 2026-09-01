@@ -1792,8 +1792,26 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     }
 
     if (activeSkill && activeSkill.mpCost > 0) {
-      const castsUsed = Math.floor(walkResult.attackTimeConsumedMs / attackIntervalMs)
-      mpSpent = castsUsed * activeSkill.mpCost
+      // Continuous, not floored to whole casts (bug fix, reported by the
+      // user: a Wuxia's MP visibly dropped per attack client-side, then
+      // "reverted back to full" moments later once a resolve-combat response
+      // synced it). Root cause: this call's own window is frequently short —
+      // CombatEngine.tsx resolves on every kill in addition to its ~4s
+      // periodic poll, so a single real kill's ~2-3 attacks routinely span
+      // two (or more) separate resolve calls, each with its own short
+      // attackTimeConsumedMs. Flooring each call's own window to whole casts
+      // independently threw away up to just-under-one-cast of real spend on
+      // *every* call boundary crossed — e.g. a kill's true ~2.5 attacks worth
+      // of time split into a 1.3-cast call and a 1.2-cast call previously
+      // credited floor(1.3)+floor(1.2) = 1+1 = 2 casts instead of the real
+      // ~2.5, so the server's persisted current_mp drained far slower than
+      // what the client was showing per-attack, and every sync pulled the
+      // displayed bar back up toward that under-spent, near-full DB value.
+      // walkCombat's dps model is already a continuous expected-value
+      // average (same as gold/EXP/damage) — there's no discrete "attack" for
+      // this to floor against, so mpSpent is just the direct proportional
+      // amount, exactly like every other continuous reward in this function.
+      mpSpent = (walkResult.attackTimeConsumedMs / attackIntervalMs) * activeSkill.mpCost
     }
   }
 

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.35",
+    "date": "2026-09-01",
+    "changes": [
+      "Fixed Wuxia mana draining much slower than it should have on the server, which made the mana bar appear to jump back up toward full shortly after casting"
+    ]
+  },
+  {
     "version": "1.125.34",
     "date": "2026-09-01",
     "changes": [
