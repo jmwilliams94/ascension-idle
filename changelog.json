@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.33",
+    "date": "2026-09-01",
+    "changes": [
+      "Added real icons for Iron, Silver, Gold, and Umbrite Ore"
+    ]
+  },
+  {
     "version": "1.125.32",
     "date": "2026-09-01",
     "changes": [

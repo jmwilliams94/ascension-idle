@@ -517,6 +517,7 @@ export function getItemIcon(slotType: string | undefined): string {
 // new mapping entry here is the only step needed to roll out the next piece
 // of art — no other file needs touching.
 const ITEM_ICON_OVERRIDES: Record<string, string> = {
+  'Umbrite Ore': `${import.meta.env.BASE_URL}item-icons/umbrite-ore.webp`,
   'Sapling Bow': `${import.meta.env.BASE_URL}item-icons/sapling-bow.webp`,
   "Ranger's Bow": `${import.meta.env.BASE_URL}item-icons/rangers-bow.webp`,
   'Lucky Bow': `${import.meta.env.BASE_URL}item-icons/lucky-bow.webp`,
@@ -846,9 +847,24 @@ const PICKAXE_ICON_BY_TIER: Record<string, string> = {
   ascended: `${import.meta.env.BASE_URL}item-icons/pickaxe-ascended.webp`,
 }
 
+// Iron/Silver/Gold Ore are 30 real item_templates rows (10 ranks each, see
+// 20260926010000_add_mining_ore_catalog.sql) but visually identical within a
+// metal regardless of rank — one icon per metal, matched by stripping the
+// '(Rank N)' suffix, rather than 30 duplicate ITEM_ICON_OVERRIDES entries.
+const ORE_ICON_SRC_BY_METAL: Record<string, string> = {
+  Iron: `${import.meta.env.BASE_URL}item-icons/iron-ore.webp`,
+  Silver: `${import.meta.env.BASE_URL}item-icons/silver-ore.webp`,
+  Gold: `${import.meta.env.BASE_URL}item-icons/gold-ore.webp`,
+}
+const ORE_RANK_NAME = /^(Iron|Silver|Gold) Ore \(Rank \d+\)$/
+
 export function getGearIconSrc(templateName: string | undefined, qualityTier?: string): string | undefined {
   if (templateName === 'Pickaxe') {
     return PICKAXE_ICON_BY_TIER[qualityTier ?? 'normal'] ?? PICKAXE_ICON_BY_TIER.normal
+  }
+  const oreMatch = templateName ? ORE_RANK_NAME.exec(templateName) : null
+  if (oreMatch) {
+    return ORE_ICON_SRC_BY_METAL[oreMatch[1]]
   }
   return templateName ? ITEM_ICON_OVERRIDES[templateName] : undefined
 }
