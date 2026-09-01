@@ -690,7 +690,13 @@ export default function CombatPage() {
             {activeSkill && (
               <div className="relative mt-2">
                 <p className="text-xs text-slate-300">
-                  {currentPlayerMp} / {maxPlayerMp} MP
+                  {/* currentPlayerMp is a real (non-integer) numeric value as of
+                  v1.125.35 — resolve-combat now tracks MP spend continuously
+                  instead of flooring it to whole casts per resolve call (see
+                  that fix's own comment). Floored here for display only; the
+                  underlying state stays at full precision for the mpCost
+                  gating check below and for resolve-combat's own math. */}
+                  {Math.floor(currentPlayerMp)} / {maxPlayerMp} MP
                 </p>
                 <div className="mt-1">
                   <HpBar current={currentPlayerMp} max={maxPlayerMp} barColorClass="bg-sky-500" healFlashColorClass="bg-sky-300" />
@@ -943,7 +949,13 @@ export default function CombatPage() {
             {activeSkill && (
               <div className="relative mt-2">
                 <p className="text-xs text-slate-300">
-                  {currentPlayerMp} / {maxPlayerMp} MP
+                  {/* currentPlayerMp is a real (non-integer) numeric value as of
+                  v1.125.35 — resolve-combat now tracks MP spend continuously
+                  instead of flooring it to whole casts per resolve call (see
+                  that fix's own comment). Floored here for display only; the
+                  underlying state stays at full precision for the mpCost
+                  gating check below and for resolve-combat's own math. */}
+                  {Math.floor(currentPlayerMp)} / {maxPlayerMp} MP
                 </p>
                 <div className="mt-1">
                   <HpBar current={currentPlayerMp} max={maxPlayerMp} barColorClass="bg-sky-500" healFlashColorClass="bg-sky-300" />
