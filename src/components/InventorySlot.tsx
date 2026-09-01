@@ -82,6 +82,10 @@ interface InventorySlotProps {
   // (see set_item_locked's SQL guards).
   locked?: boolean
   selected?: boolean
+  // Dims a filled tile to signal "not usable right now" (e.g. Forge's
+  // Upgrade Slot needs gear first, then only Comets/Fallen Stars/Scrolls are
+  // valid for the Material slot) — purely visual, doesn't block interaction.
+  dimmed?: boolean
   // Native event is passed through (rather than a bare `() => void`) so a
   // caller can inspect event.shiftKey — used by InventoryPanel's gear/Comet/
   // Fallen Star tiles to route a shift-click straight into whichever Forge
@@ -137,6 +141,7 @@ export default function InventorySlot({
   broken,
   locked,
   selected,
+  dimmed,
   onClick,
   onContextMenu,
   draggable,
@@ -226,7 +231,9 @@ export default function InventorySlot({
       aria-label={label}
       className={`item-quality-frame relative flex items-center justify-center text-lg ${sizingClassName} ${
         selected ? 'ring-2 ring-sky-400' : ''
-      } ${draggable ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${dragging ? 'opacity-40' : ''}`}
+      } ${draggable ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${dragging ? 'opacity-40' : ''} ${
+        dimmed ? 'opacity-30 grayscale' : ''
+      }`}
       style={frameStyle}
     >
       <div className="item-quality-frame-inner relative flex h-full w-full items-center justify-center overflow-hidden">

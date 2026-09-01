@@ -195,6 +195,17 @@ interface InventoryPanelProps {
   // Salvage, open GearEquipPopover on Combat, etc.) that this would
   // short-circuit.
   tapToPlaceEnabled?: boolean
+  // Optional eligibility check (2026-09-02, requested by the user for
+  // Forge's Standard tab) — when supplied, any filled tile whose id fails
+  // this check renders dimmed (opacity + grayscale, see InventorySlot's
+  // `dimmed` prop) instead of full-strength. Purely visual — dragging/
+  // tapping a dimmed tile still fires onTileDrop as normal; the parent's
+  // own drop handler is what actually rejects it (e.g. ForgeStandardPanel's
+  // handleDropItemId/handleDropMaterial already no-op on a mismatched
+  // type). Lets a panel like Forge visually signal "gear only, right now"
+  // vs. "Comets/Fallen Stars/Scrolls only, right now" without this
+  // component needing to know anything about Forge's own two-phase flow.
+  isTileEligible?: (dragId: string) => boolean
 }
 
 // Isolated so only this tiny button subscribes to the live HP/MP that ticks
@@ -245,7 +256,9 @@ export default function InventoryPanel({
   enableBankDeposit = false,
   enableCompareToggle = false,
   tapToPlaceEnabled = false,
+  isTileEligible,
 }: InventoryPanelProps) {
+  const dimmedFor = (dragId: string) => (isTileEligible ? !isTileEligible(dragId) : false)
   const items = useInventoryStore((state) => state.items)
   const sellItem = useInventoryStore((state) => state.sellItem)
   const openRewardItem = useInventoryStore((state) => state.openRewardItem)
@@ -1285,6 +1298,7 @@ export default function InventoryPanel({
                 tooltip={potionTooltip}
                 badge={`${stack.count}/${type.stackSize}`}
                 selected={selectedSlot?.kind === 'potion' && selectedSlot.id === stack.id}
+                dimmed={dimmedFor(stack.id)}
                 onClick={() => toggleSlot({ kind: 'potion', id: stack.id })}
               />
             )
@@ -1308,6 +1322,7 @@ export default function InventoryPanel({
               label: `+${tier} Stone — ${compositionPointValue(tier)} pts`,
               tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildStoneTooltip(tier),
               selected: isSelected,
+              dimmed: dimmedFor(dragId),
             }
 
             const stoneSlot = onTileDrop ? (
@@ -1368,6 +1383,7 @@ export default function InventoryPanel({
               label: `${formatGemTierLabel(tier)} ${GEM_TYPES[gemId].displayName}`,
               tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildGemTooltip(gemId, tier),
               selected: isSelected,
+              dimmed: dimmedFor(dragId),
             }
 
             const gemSlot = onTileDrop ? (
@@ -1427,6 +1443,7 @@ export default function InventoryPanel({
               label: 'Comet',
               tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildCometTooltip(),
               selected: isSelected,
+              dimmed: dimmedFor(dragId),
             }
 
             const cometSlot = onTileDrop ? (
@@ -1493,6 +1510,7 @@ export default function InventoryPanel({
               label: 'Fallen Star',
               tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildFallenStarTooltip(),
               selected: isSelected,
+              dimmed: dimmedFor(dragId),
             }
 
             const fallenStarSlot = onTileDrop ? (
@@ -1558,6 +1576,7 @@ export default function InventoryPanel({
               label: 'Comet Scroll',
               tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildCometScrollTooltip(),
               selected: isSelected,
+              dimmed: dimmedFor(dragId),
             }
 
             const scrollSlot = onTileDrop ? (
@@ -1607,6 +1626,7 @@ export default function InventoryPanel({
               label: 'Fallen Star Scroll',
               tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildFallenStarScrollTooltip(),
               selected: isSelected,
+              dimmed: dimmedFor(dragId),
             }
 
             const scrollSlot = onTileDrop ? (
@@ -1660,6 +1680,7 @@ export default function InventoryPanel({
               label: 'Comet Box',
               tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildCometBoxTooltip(),
               selected: isSelected,
+              dimmed: dimmedFor(dragId),
             }
 
             const cometBoxSlot = onTileDrop ? (
@@ -1703,6 +1724,7 @@ export default function InventoryPanel({
               label: 'VIP Token',
               tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildVipTokenTooltip(),
               selected: isSelected,
+              dimmed: dimmedFor(dragId),
             }
 
             const vipTokenSlot = onTileDrop ? (
@@ -1746,6 +1768,7 @@ export default function InventoryPanel({
               label: 'Experience Orb',
               tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildExperienceOrbTooltip(),
               selected: isSelected,
+              dimmed: dimmedFor(dragId),
             }
 
             const experienceOrbSlot = onTileDrop ? (
@@ -1789,6 +1812,7 @@ export default function InventoryPanel({
               label: 'Experience Potion',
               tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildExperiencePotionTooltip(),
               selected: isSelected,
+              dimmed: dimmedFor(dragId),
             }
 
             const experiencePotionSlot = onTileDrop ? (
@@ -1865,6 +1889,7 @@ export default function InventoryPanel({
                   : null,
               disableTouchPeek: equipPopoverEnabled && enableCompareToggle,
               selected: isSelected,
+              dimmed: dimmedFor(item.id),
             }
 
             // Merged (2026-08-03, was two separate early-return branches) so

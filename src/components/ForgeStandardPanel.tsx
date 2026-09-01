@@ -45,6 +45,18 @@ const AUTO_REPEAT_GLOW_STYLE = { '--glow-bright': '#c4b5fd', '--glow-base': '#8b
 
 type MaterialMode = 'quality' | 'level'
 
+// The Quiver has no stats and no upgrade chain — Level Upgrade already has
+// nowhere to go, and Quality Upgrade would just burn Fallen Stars for a
+// cosmetic tier with nothing to scale. Promotion materials (Lunar Chest,
+// Umbrite Ore, Jade Shard, Opaline Gem) and Mining Ore (Iron/Silver/Gold) are
+// excluded for the same reason — they're plain quest/currency items, not
+// gear, and the backend now rejects a Quality Upgrade on either slot_type
+// anyway. Shared by handleDropItemId (actually blocks the drop) and
+// isTileEligible (dims these tiles in the grid before they're even dropped).
+function isUpgradeEligibleSlotType(slotType: string | undefined): boolean {
+  return slotType !== 'quiver' && slotType !== 'promotion-material' && slotType !== 'material'
+}
+
 interface AttemptResult {
   success: boolean
   message: string
@@ -244,16 +256,8 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
       return
     }
 
-    // The Quiver has no stats and no upgrade chain — Level Upgrade already
-    // has nowhere to go, and Quality Upgrade would just burn Fallen Stars
-    // for a cosmetic tier with nothing to scale. Excluded from this tile
-    // entirely rather than left to fail silently once dropped. Promotion
-    // materials (Lunar Chest, Umbrite Ore, Jade Shard, Opaline Gem) and
-    // Mining Ore (Iron/Silver/Gold) are excluded for the same reason —
-    // they're plain quest/currency items, not gear, and the backend now
-    // rejects a Quality Upgrade on either slot_type anyway.
     const template = templates.find((entry) => entry.id === item.template_id)
-    if (template?.slot_type === 'quiver' || template?.slot_type === 'promotion-material' || template?.slot_type === 'material') {
+    if (!isUpgradeEligibleSlotType(template?.slot_type)) {
       return
     }
 
@@ -295,6 +299,21 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
 
   const handleRemoveMaterial = (id: string) => {
     setMaterialEntries((current) => current.filter((entry) => entry.id !== id))
+  }
+
+  // Dims every Inventory tile that isn't valid for the current step (2026-09-02,
+  // requested by the user) — gear only until an item is staged in the Upgrade
+  // Slot, then Comets/Fallen Stars/their Scrolls only once it is. Purely
+  // visual (see InventorySlot's `dimmed` prop) — handleDropItemId/
+  // handleDropMaterial below are what actually reject a mismatched drop.
+  const isTileEligible = (dragId: string): boolean => {
+    if (!selectedItem) {
+      const item = items.find((entry) => entry.id === dragId)
+      const template = item ? templates.find((entry) => entry.id === item.template_id) : undefined
+      return Boolean(item) && isUpgradeEligibleSlotType(template?.slot_type)
+    }
+
+    return isCometDragId(dragId) || isFallenStarDragId(dragId) || isCometScrollDragId(dragId) || isFallenStarScrollDragId(dragId)
   }
 
   const handleTileDrop = (overTarget: string, id: string) => {
@@ -454,6 +473,7 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
             columns={5}
             reservedItemIds={[...(selectedItemId ? [selectedItemId] : []), ...materialEntries.map((entry) => entry.id)]}
             onTileDrop={handleTileDrop}
+            isTileEligible={isTileEligible}
             tapToPlaceEnabled
           />
         }

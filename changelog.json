@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.126.2",
+    "date": "2026-09-02",
+    "changes": [
+      "Forge now dims Inventory items that aren't usable for the current step — non-gear until you place an item, then non-materials once you have"
+    ]
+  },
+  {
     "version": "1.126.1",
     "date": "2026-09-02",
     "changes": [
