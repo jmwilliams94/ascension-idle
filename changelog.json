@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.16",
+    "date": "2026-09-01",
+    "changes": [
+      "Fixed a bug where drinking a Mana potion could visibly heal you and then silently reverse a moment later, wasting the potion"
+    ]
+  },
+  {
     "version": "1.125.15",
     "date": "2026-09-01",
     "changes": [

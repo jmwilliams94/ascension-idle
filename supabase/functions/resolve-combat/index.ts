@@ -917,6 +917,10 @@ interface ApplyResultsResponse {
   character_kills?: number | string | null
   account_kills?: number | string | null
   granted_items?: GrantedItemRow[]
+  // Authoritative post-write value (see resolve_combat_apply_results) — always
+  // returned, even when p_mp_spent was null (unchanged current_mp echoed
+  // back), but only read by the caller when this call actually spent MP.
+  current_mp?: number | null
 }
 
 // Per-instance combat state carried between resolve calls — see this file's
@@ -1513,7 +1517,16 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // because it's simulating those phases directly rather than estimating a
   // fraction).
   const effectiveElapsedMs = canAttackAtAll ? elapsedMs : 0
-  let newCurrentMp: number | null = null
+  // Amount of MP this call spent (null = no MP-costing skill active, nothing
+  // to persist) — a DELTA, not an absolute value. Applied server-side as
+  // `current_mp = current_mp - p_mp_spent` against whatever the row holds at
+  // write time (see resolve_combat_apply_results), so a potion drink that
+  // lands on the row between this call's read of startingMp and its own
+  // final write can never be silently discarded — see this file's own
+  // "MP race" writeup at the p_mp_spent RPC call below for the incident this
+  // replaced (a stale absolute overwrite that clobbered concurrent
+  // use_potion_stack increments).
+  let mpSpent: number | null = null
   // Infinity = no MP-costing skill active, walkCombat's own budget check
   // (timeToKillMs > remainingAffordable) never trips.
   let mpAffordableAttackMs = Infinity
@@ -1591,7 +1604,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // Persisted per-instance state carried between calls (see this file's
   // header comment on the per-instance rewrite) — null/no-op when nothing
   // happens this call (effectiveElapsedMs === 0), matching the existing
-  // p_current_mp: null "nothing changed" convention.
+  // p_mp_spent: null "nothing changed" convention.
   let monsterInstanceState: {
     monster_id: string
     hp: number
@@ -1780,7 +1793,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
 
     if (activeSkill && activeSkill.mpCost > 0) {
       const castsUsed = Math.floor(walkResult.attackTimeConsumedMs / attackIntervalMs)
-      newCurrentMp = Math.max(0, startingMp - castsUsed * activeSkill.mpCost)
+      mpSpent = castsUsed * activeSkill.mpCost
     }
   }
 
@@ -1918,7 +1931,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     p_pet_obtained: petObtained,
     p_item_drops: itemDropsPayload,
     p_currency_drops: currencyDropsPayload,
-    p_current_mp: newCurrentMp,
+    p_mp_spent: mpSpent,
     p_monster_instance_state: monsterInstanceState,
   })
 
@@ -1931,6 +1944,15 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   }
 
   const apply = applyData as ApplyResultsResponse
+
+  // Sourced from the RPC's own post-write RETURNING, not recomputed here —
+  // this call's local startingMp snapshot can be stale by the time this
+  // response is built (a potion drink may have landed on the row in between),
+  // so the client must reconcile to what the DB actually holds now, not to
+  // what this call predicted it would hold. Still null whenever this call
+  // spent no MP (mpSpent === null), preserving the existing "null = nothing
+  // changed" convention useCombatStore.syncPlayerMp relies on.
+  const newCurrentMp = mpSpent !== null ? (apply.current_mp ?? null) : null
 
   // apply is guaranteed present past the throw above; these ?? fallbacks
   // only cover killsDeltaToPersist legitimately being 0 (character_kills/
