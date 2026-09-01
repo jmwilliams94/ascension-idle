@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.28",
+    "date": "2026-09-01",
+    "changes": [
+      "Fixed the bot-verification check disappearing before it could be completed on Safari (mainly iPhone/iPad)"
+    ]
+  },
+  {
     "version": "1.125.27",
     "date": "2026-09-01",
     "changes": [
