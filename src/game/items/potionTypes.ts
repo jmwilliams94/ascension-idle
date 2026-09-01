@@ -60,6 +60,7 @@ export const POTION_TYPES: Record<PotionTypeId, PotionTypeDef> = {
     description: 'Restores 25 HP.',
     stackSize: 20,
     requiredLevel: 1,
+    iconSrc: potionIconSrc('sprigroot-tonic'),
   },
   verdant_balm: {
     id: 'verdant_balm',
@@ -70,6 +71,7 @@ export const POTION_TYPES: Record<PotionTypeId, PotionTypeDef> = {
     description: 'Restores 45 HP.',
     stackSize: 20,
     requiredLevel: 20,
+    iconSrc: potionIconSrc('verdant-balm'),
   },
   emberleaf_draught: {
     id: 'emberleaf_draught',
@@ -80,6 +82,7 @@ export const POTION_TYPES: Record<PotionTypeId, PotionTypeDef> = {
     description: 'Restores 75 HP.',
     stackSize: 20,
     requiredLevel: 40,
+    iconSrc: potionIconSrc('emberleaf-draught'),
   },
   ironbark_elixir: {
     id: 'ironbark_elixir',
@@ -90,6 +93,7 @@ export const POTION_TYPES: Record<PotionTypeId, PotionTypeDef> = {
     description: 'Restores 115 HP.',
     stackSize: 20,
     requiredLevel: 60,
+    iconSrc: potionIconSrc('ironbark-elixir'),
   },
   stormroot_brew: {
     id: 'stormroot_brew',
@@ -100,6 +104,7 @@ export const POTION_TYPES: Record<PotionTypeId, PotionTypeDef> = {
     description: 'Restores 160 HP.',
     stackSize: 20,
     requiredLevel: 80,
+    iconSrc: potionIconSrc('stormroot-brew'),
   },
   duskflame_panacea: {
     id: 'duskflame_panacea',

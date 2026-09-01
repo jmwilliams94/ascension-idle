@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.31",
+    "date": "2026-09-01",
+    "changes": [
+      "Added real icons for 5 of the 8 HP Potion tiers (Sprigroot Tonic through Stormroot Brew)"
+    ]
+  },
+  {
     "version": "1.125.30",
     "date": "2026-09-01",
     "changes": [
