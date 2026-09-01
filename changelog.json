@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.20",
+    "date": "2026-09-01",
+    "changes": [
+      "Fixed the Idling button's label crowding its edges with no breathing room"
+    ]
+  },
+  {
     "version": "1.125.19",
     "date": "2026-09-01",
     "changes": [

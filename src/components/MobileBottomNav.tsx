@@ -186,7 +186,7 @@ function IdlingNavButton() {
     <button type="button" onClick={() => setActiveTab('combat')} className="flex w-24 flex-none flex-col items-center justify-center">
       <span className="relative flex h-20 w-24 items-center justify-center">
         <span
-          className={`absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-lg py-2 shadow-lg ${
+          className={`absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 shadow-lg ${
             active ? 'btn-gold-active shadow-slate-300/20' : 'btn-gold shadow-black/30'
           }`}
           style={eventBorderTintStyle(emberColor)}
