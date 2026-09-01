@@ -140,6 +140,24 @@ interface CombatState {
   // own either" precedent.
   currentPlayerMp: number
   maxPlayerMp: number
+  // Small residual drift between this local prediction and resolve-combat's
+  // own authoritative value (v1.125.39, reported by the user — mana visibly
+  // "gives back" 1-3 points right after a kill, most often exactly 1).
+  // Root cause: the two sides fundamentally use different models for the
+  // same real time window — this file ticks in discrete whole attacks (an
+  // attack only fires once a full attackIntervalMs has genuinely elapsed),
+  // while resolve-combat's walkCombat computes a fully continuous "attack
+  // time consumed" from real elapsed wall-clock time (necessarily so, since
+  // that's also the model gold/EXP/kills already use) — the two will almost
+  // never land on the exact same whole-number cast count for the same real
+  // window. Folded into the next cast's own effective cost instead of
+  // snapping the bar on sync, same "reads as a slightly cheaper/pricier
+  // cast rather than an unexplained bar jump" precedent as
+  // pendingHpAdjustment below. Only ever holds an amount to give back
+  // (positive) — syncPlayerMp applies a shortfall (the server confirming
+  // *less* remaining than shown) immediately instead, since mana dropping
+  // further mid-fight is already expected and unremarkable.
+  pendingMpAdjustment: number
   // Death timer (confirmed with the user, 2026-08-05, replaces the earlier
   // "instant full heal, fight stops" placeholder). Nonzero while the player
   // is incapacitated after a knockout: the nowMs timestamp when they can act
@@ -310,6 +328,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
   maxPlayerHp: 0,
   currentPlayerMp: 0,
   maxPlayerMp: 0,
+  pendingMpAdjustment: 0,
   reviveAt: 0,
   respawnReadyAt: 0,
   currentMonsterSpawnedAt: 0,
@@ -635,7 +654,13 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     // simply skipped until a Mana potion restores enough (see
     // restorePlayerMp), matching this game's existing "no auto-resolution,
     // the player deals with it" precedent (no-quiver works the same way).
-    if (activeSkill && currentPlayerMp < activeSkill.mpCost) {
+    // Any outstanding pendingMpAdjustment (see its own field comment) shaves
+    // straight off this cast's real cost rather than being snapped onto the
+    // display separately — so a player sitting right at their last point of
+    // real MP with a small giveback still pending isn't wrongly blocked here.
+    const effectiveMpCost = activeSkill ? Math.max(0, activeSkill.mpCost - state.pendingMpAdjustment) : 0
+
+    if (activeSkill && currentPlayerMp < effectiveMpCost) {
       set((s) => ({
         lastAttackAt: nowMs,
         log: appendLog(s.log, { kind: 'no-mana', message: `Not enough Mana to cast ${activeSkill.displayName}!` }),
@@ -646,7 +671,10 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     // Mana is spent on the cast attempt itself (hit or miss), not only on a
     // landed hit — matches how the wiki's own "Cost" column reads (a cast
     // cost, not a per-damage cost).
-    const nextPlayerMp = activeSkill ? currentPlayerMp - activeSkill.mpCost : currentPlayerMp
+    const nextPlayerMp = activeSkill ? currentPlayerMp - effectiveMpCost : currentPlayerMp
+    const nextPendingMpAdjustment = activeSkill
+      ? state.pendingMpAdjustment - (activeSkill.mpCost - effectiveMpCost)
+      : state.pendingMpAdjustment
 
     // Reward-on-kill (2026-11, requested by the user — see resolve-combat/
     // index.ts's own rewrite) — the client no longer predicts gold/EXP ahead
@@ -671,6 +699,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       set((s) => ({
         lastAttackAt: nowMs,
         currentPlayerMp: nextPlayerMp,
+        pendingMpAdjustment: nextPendingMpAdjustment,
         log: appendLog(s.log, { kind: 'miss', message: `Your attack misses ${type.displayName}!` }),
       }))
       return
@@ -704,6 +733,7 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       currentHp: nextHp,
       currentPlayerMp: nextPlayerMp,
       pendingHpAdjustment: 0,
+      pendingMpAdjustment: nextPendingMpAdjustment,
       log: appendLog(s.log, { kind: 'damage', message: `You hit ${type.displayName} for ${damage}.`, amount: damage }),
     }))
 
@@ -822,7 +852,18 @@ export const useCombatStore = create<CombatState>((set, get) => ({
       if (state.maxPlayerMp <= 0) {
         return {}
       }
-      return { currentPlayerMp: Math.min(state.maxPlayerMp, Math.max(0, amount)) }
+      const clamped = Math.min(state.maxPlayerMp, Math.max(0, amount))
+      const delta = clamped - state.currentPlayerMp
+      // A shortfall (server confirms less remaining than shown) applies
+      // immediately — mana dropping further mid-fight is already expected,
+      // nothing to smooth. A surplus (see pendingMpAdjustment's own field
+      // comment) is deferred instead of snapped, so it reads as the next
+      // cast or two landing slightly cheaper rather than the bar visibly
+      // refilling on its own.
+      if (delta > 0) {
+        return { pendingMpAdjustment: state.pendingMpAdjustment + delta }
+      }
+      return { currentPlayerMp: clamped }
     })
   },
 

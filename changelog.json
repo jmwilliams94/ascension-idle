@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.39",
+    "date": "2026-09-02",
+    "changes": [
+      "Smoothed out the last bit of mana bar rubber-banding after a kill by folding small corrections into the next cast instead of snapping the bar"
+    ]
+  },
+  {
     "version": "1.125.38",
     "date": "2026-09-02",
     "changes": [
