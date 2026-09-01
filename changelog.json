@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.24",
+    "date": "2026-09-01",
+    "changes": [
+      "Fixed a bug where certain combinations of popups (like Mail and Chat) could leave every page permanently unable to scroll after closing them"
+    ]
+  },
+  {
     "version": "1.125.23",
     "date": "2026-09-01",
     "changes": [
