@@ -6,6 +6,7 @@ import { useSuggestionStore, countOpenSuggestions } from '../game/suggestions/us
 import AdminMailSection from './AdminMailSection'
 import ChangelogEntries from './ChangelogEntries'
 import ItemEffectGallery from './ItemEffectGallery'
+import LegalPanel from './legal/LegalPanel'
 import PlanPanel from './PlanPanel'
 import SuggestionsPanel from './SuggestionsPanel'
 import BugReportPanel from './BugReportPanel'
@@ -83,6 +84,7 @@ export default function SettingsModal({ characterId, onClose }: { characterId: s
     },
     { id: 'bugs', label: 'Bug Reports', content: <BugReportPanel characterId={characterId} />, badge: bugsBadge },
     { id: 'notifications', label: 'Notifications', content: <NotificationsSettingsPanel /> },
+    { id: 'legal', label: 'Legal', content: <LegalPanel /> },
     // Rendering (2026-08-20, requested by the user) -- dev/debug tab for
     // testing GLB model loading, not gameplay UI. See RenderingTestPanel.tsx.
     {

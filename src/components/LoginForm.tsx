@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useAuthStore } from '../lib/useAuthStore'
 import { AscensionCard } from './ui/AscensionCard'
 import { Button } from './ui/Button'
+import LegalModal from './legal/LegalModal'
 
 type Mode = 'sign-in' | 'sign-up' | 'reset-request'
 
@@ -28,6 +29,7 @@ export default function LoginForm() {
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [legalDoc, setLegalDoc] = useState<'privacy' | 'terms' | null>(null)
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -154,6 +156,18 @@ export default function LoginForm() {
           </button>
         )}
       </AscensionCard>
+
+      <div className="mt-6 flex items-center gap-3 text-xs text-slate-400">
+        <button type="button" onClick={() => setLegalDoc('privacy')} className="transition hover:text-amber-300">
+          Privacy Policy
+        </button>
+        <span className="text-slate-700">·</span>
+        <button type="button" onClick={() => setLegalDoc('terms')} className="transition hover:text-amber-300">
+          Terms &amp; Conditions
+        </button>
+      </div>
+
+      {legalDoc && <LegalModal initialDoc={legalDoc} onClose={() => setLegalDoc(null)} />}
     </div>
   )
 }

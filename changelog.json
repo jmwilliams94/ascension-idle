@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.11",
+    "date": "2026-09-01",
+    "changes": [
+      "Added a Privacy Policy and Terms & Conditions — readable from Settings > Legal in-game, and from links at the bottom of the sign-in screen"
+    ]
+  },
+  {
     "version": "1.125.10",
     "date": "2026-09-01",
     "changes": [
