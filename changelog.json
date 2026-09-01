@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.125.38",
+    "date": "2026-09-02",
+    "changes": [
+      "Fixed Mana potions being able to overfill a character's mana pool past its true maximum, which made the mana bar look stuck at full or snap back up mid-fight",
+      "Fixed a brand-new skill user's mana getting zeroed out on their very first cast instead of properly starting from full"
+    ]
+  },
+  {
     "version": "1.125.37",
     "date": "2026-09-02",
     "changes": [

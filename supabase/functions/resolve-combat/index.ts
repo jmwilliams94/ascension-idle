@@ -1527,18 +1527,25 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // replaced (a stale absolute overwrite that clobbered concurrent
   // use_potion_stack increments).
   let mpSpent: number | null = null
+  // Passed to resolve_combat_apply_results as p_max_mp alongside mpSpent
+  // (only meaningful, and only ever read there, when mpSpent ends up
+  // non-null) — see that RPC call's own comment and the
+  // 20261205000000_mp_max_clamp_and_null_init_fix migration for why the
+  // *write* needs this clamp too, not just the read-side one just below.
+  let maxMpForSpend = 0
   // Infinity = no MP-costing skill active, walkCombat's own budget check
   // (timeToKillMs > remainingAffordable) never trips.
   let mpAffordableAttackMs = Infinity
   let startingMp = 0
   if (canAttackAtAll && activeSkill && activeSkill.mpCost > 0) {
-    const maxMp = BASE_MP + attributes.spirit * MP_PER_SPIRIT
-    // Clamped to maxMp — use_potion_stack adds a potion's flat restore
-    // amount without knowing this character's true max (computing it there
-    // would mean duplicating the whole attribute-interpolation table into
-    // SQL just for this), so an over-full persisted value is possible and
-    // corrected here rather than there.
-    startingMp = Math.min(character.current_mp ?? maxMp, maxMp)
+    maxMpForSpend = BASE_MP + attributes.spirit * MP_PER_SPIRIT
+    // Clamped to maxMp for this call's own gating math — this alone was
+    // never enough to stop an over-full persisted value from existing in
+    // the first place (use_potion_stack's restore has no ceiling — see the
+    // migration above), only to stop it from granting extra real affordable
+    // attack time. The RPC call below now also clamps what actually gets
+    // written back.
+    startingMp = Math.min(character.current_mp ?? maxMpForSpend, maxMpForSpend)
     const castsAffordable = Math.floor(startingMp / activeSkill.mpCost)
     mpAffordableAttackMs = castsAffordable * attackIntervalMs
   }
@@ -1951,6 +1958,11 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     p_currency_drops: currencyDropsPayload,
     p_mp_spent: mpSpent,
     p_monster_instance_state: monsterInstanceState,
+    // Only meaningful (and only ever applied by the RPC) alongside a
+    // non-null p_mp_spent — see this function's own maxMpForSpend comment
+    // and the 20261205000000 migration for the write-side overfill/NULL-init
+    // bugs this closes.
+    p_max_mp: mpSpent !== null ? maxMpForSpend : null,
   })
 
   if (applyError || !applyData) {
