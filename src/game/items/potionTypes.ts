@@ -115,6 +115,7 @@ export const POTION_TYPES: Record<PotionTypeId, PotionTypeDef> = {
     description: 'Restores 220 HP.',
     stackSize: 20,
     requiredLevel: 95,
+    iconSrc: potionIconSrc('duskflame-panacea'),
   },
   skyfire_elixir: {
     id: 'skyfire_elixir',
@@ -125,6 +126,7 @@ export const POTION_TYPES: Record<PotionTypeId, PotionTypeDef> = {
     description: 'Restores 300 HP.',
     stackSize: 20,
     requiredLevel: 110,
+    iconSrc: potionIconSrc('skyfire-elixir'),
   },
   wyrmheart_draught: {
     id: 'wyrmheart_draught',
@@ -135,6 +137,7 @@ export const POTION_TYPES: Record<PotionTypeId, PotionTypeDef> = {
     description: 'Restores 400 HP.',
     stackSize: 20,
     requiredLevel: 125,
+    iconSrc: potionIconSrc('wyrmheart-draught'),
   },
   mossglow_tonic: {
     id: 'mossglow_tonic',
