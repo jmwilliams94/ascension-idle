@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.14",
+    "date": "2026-09-01",
+    "changes": [
+      "Widened the mobile Idling nav button a bit more"
+    ]
+  },
+  {
     "version": "1.125.13",
     "date": "2026-09-01",
     "changes": [
