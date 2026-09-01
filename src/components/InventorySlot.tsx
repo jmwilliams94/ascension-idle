@@ -179,9 +179,9 @@ export default function InventorySlot({
     return (
       <div
         data-slot-id={slotId}
-        className={`flex items-center justify-center rounded-lg border border-dashed border-slate-800 bg-slate-950/40 ${sizingClassName}`}
+        className={`flex items-center justify-center rounded-lg border border-dashed border-slate-700 bg-slate-950/40 ${sizingClassName}`}
       >
-        {emptyHint && <span className="px-1 text-center text-[10px] leading-tight text-slate-600">{emptyHint}</span>}
+        {emptyHint && <span className="px-1 text-center text-[10px] leading-tight text-slate-300">{emptyHint}</span>}
       </div>
     )
   }

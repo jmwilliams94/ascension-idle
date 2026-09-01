@@ -278,7 +278,7 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
         title="Enchantress"
         onBack={onBack}
         inventory={
-          <InventoryPanel columns={5} reservedItemIds={selectedItemId ? [selectedItemId] : []} onTileDrop={handleTileDrop} />
+          <InventoryPanel columns={5} reservedItemIds={selectedItemId ? [selectedItemId] : []} onTileDrop={handleTileDrop} tapToPlaceEnabled />
         }
       >
         <div className="grid w-full max-w-xs grid-cols-2 gap-2">
@@ -364,9 +364,9 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
 
             <div className="w-full max-w-xs space-y-2">
               {!selectedItem ? (
-                <p className="text-center text-[11px] text-slate-600">Drag an item into the Upgrade Slot, or tap one you have equipped.</p>
+                <p className="text-center text-[11px] text-slate-300">Tap or drag an item into the Upgrade Slot, or tap one you have equipped.</p>
               ) : !stagedGem ? (
-                <p className="text-center text-[11px] text-slate-600">Drag a gem into the Gem slot.</p>
+                <p className="text-center text-[11px] text-slate-300">Tap or drag a gem into the Gem slot.</p>
               ) : (
                 <Button variant="primary" disabled={busy || rolling} onClick={() => void handleEnchant()} className="w-full">
                   {rolling ? 'Rolling…' : 'Enchant'}
@@ -406,11 +406,11 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
 
             <div className="w-full max-w-xs space-y-2">
               {!selectedItem ? (
-                <p className="text-center text-[11px] text-slate-600">Drag an item into the Upgrade Slot, or tap one you have equipped.</p>
+                <p className="text-center text-[11px] text-slate-300">Tap or drag an item into the Upgrade Slot, or tap one you have equipped.</p>
               ) : isBlessMaxed ? (
-                <p className="text-center text-[11px] text-slate-600">Already blessed to the max (+{BLESS_MAX_PCT}%).</p>
+                <p className="text-center text-[11px] text-slate-300">Already blessed to the max (+{BLESS_MAX_PCT}%).</p>
               ) : !blessGem ? (
-                <p className="text-center text-[11px] text-slate-600">Drag an Ascended Bastion Gem into the Gem slot.</p>
+                <p className="text-center text-[11px] text-slate-300">Tap or drag an Ascended Bastion Gem into the Gem slot.</p>
               ) : (
                 <Button variant="primary" disabled={busy || blessing} onClick={() => void handleBless()} className="w-full">
                   {blessing ? 'Blessing…' : 'Bless'}

@@ -198,7 +198,9 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
       <ForgeTwoColumnLayout
         title="Master Forge"
         onBack={onBack}
-        inventory={<InventoryPanel columns={5} reservedItemIds={selectedItemId ? [selectedItemId] : []} onTileDrop={handleTileDrop} />}
+        inventory={
+          <InventoryPanel columns={5} reservedItemIds={selectedItemId ? [selectedItemId] : []} onTileDrop={handleTileDrop} tapToPlaceEnabled />
+        }
       >
         <p className="max-w-sm text-center text-[11px] text-slate-300">
           A Forge master will guarantee a Quality or Level Upgrade — for a price well above the usual materials.
@@ -260,7 +262,7 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
               )}
 
               {!selectedItem ? (
-                <p className="text-center text-[11px] text-slate-600">Drag an item into the Upgrade Slot, or tap one you have equipped.</p>
+                <p className="text-center text-[11px] text-slate-300">Tap or drag an item into the Upgrade Slot, or tap one you have equipped.</p>
               ) : blockedReason ? (
                 <p className="rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-3 text-center text-[11px] text-amber-400">
                   {blockedReason}

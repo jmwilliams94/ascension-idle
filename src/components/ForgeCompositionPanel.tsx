@@ -24,7 +24,7 @@ function ResultPreviewTile({ item, template, previewLevel, previewPoints }: { it
 
   return (
     <div className="flex flex-col items-center gap-1">
-      <p className="text-[10px] uppercase tracking-wide text-slate-600">Result</p>
+      <p className="text-[10px] uppercase tracking-wide text-slate-300">Result</p>
       <div className={SLOT_SIZE_CLASS}>
         <InventorySlot
           slotId="composition-result-preview"

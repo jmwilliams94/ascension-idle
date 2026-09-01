@@ -170,6 +170,20 @@ interface InventoryPanelProps {
   // this — it doesn't pass this prop, so it keeps today's in-popover
   // Compare button and long-press peek unchanged.
   enableCompareToggle?: boolean
+  // Mobile equivalent of the shift-click shortcut above (2026-09-01,
+  // requested by the user — "windows has shift-click, mobile needs
+  // something too"). Forge/Composition/Sockets/Enchantress are the only
+  // callers that pass this: their plain (non-shift) tap already had no
+  // effect of its own on these pages (toggleSlot's `selected` state isn't
+  // read by anything outside this component here — the parent panel only
+  // ever learns about a placed item via onTileDrop), so making every tap
+  // act like a shift-click is a strict improvement with nothing to lose,
+  // and it removes the desktop-only shift requirement for those users too.
+  // Left off (default) everywhere else, since a plain tap already means
+  // something else on those pages (select-for-detail-card on Marketplace/
+  // Salvage, open GearEquipPopover on Combat, etc.) that this would
+  // short-circuit.
+  tapToPlaceEnabled?: boolean
 }
 
 // Isolated so only this tiny button subscribes to the live HP/MP that ticks
@@ -219,6 +233,7 @@ export default function InventoryPanel({
   equipPopoverEnabled = false,
   enableBankDeposit = false,
   enableCompareToggle = false,
+  tapToPlaceEnabled = false,
 }: InventoryPanelProps) {
   const items = useInventoryStore((state) => state.items)
   const sellItem = useInventoryStore((state) => state.sellItem)
@@ -1182,7 +1197,18 @@ export default function InventoryPanel({
                 dragEnabled
                 dragPayload={{ id: dragId, icon: '🔷', iconSrc: getStoneIconSrc(tier), qualityColor: MATERIAL_COLOR }}
                 onDrop={handleTileDrop}
-                onClick={() => toggleSlot({ kind: 'stone', dragId, tier })}
+                onClick={(event) => {
+                  // Same shift-click/tapToPlaceEnabled shortcut as the
+                  // currency tiles above, routing to 'material' — Composition
+                  // is the only current onTileDrop consumer that treats a
+                  // stone as fuel; everyone else no-ops.
+                  if (event.shiftKey || tapToPlaceEnabled) {
+                    event.stopPropagation()
+                    onTileDrop('material', dragId)
+                    return
+                  }
+                  toggleSlot({ kind: 'stone', dragId, tier })
+                }}
               />
             ) : (
               <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'stone', dragId, tier })} />
@@ -1231,7 +1257,20 @@ export default function InventoryPanel({
                 dragEnabled
                 dragPayload={{ id: dragId, icon: '💎', iconSrc: gemIconSrc, qualityColor: gemColor }}
                 onDrop={handleTileDrop}
-                onClick={() => toggleSlot({ kind: 'gem', dragId, gemId, tier })}
+                onClick={(event) => {
+                  // Same shift-click/tapToPlaceEnabled shortcut as the other
+                  // tile kinds above, routing to a generic 'gem' key —
+                  // Enchantress is the only current onTileDrop consumer with
+                  // an unambiguous single gem slot; Sockets (two sockets, no
+                  // way to know which one a tap means) no-ops here and still
+                  // needs a real drag onto the specific socket.
+                  if (event.shiftKey || tapToPlaceEnabled) {
+                    event.stopPropagation()
+                    onTileDrop('gem', dragId)
+                    return
+                  }
+                  toggleSlot({ kind: 'gem', dragId, gemId, tier })
+                }}
               />
             ) : (
               <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'gem', dragId, gemId, tier })} />
@@ -1281,8 +1320,9 @@ export default function InventoryPanel({
                   // Same shift-click shortcut as gear tiles above, targeting
                   // the 'material' drop-zone key instead — Forge/Composition
                   // are the only current onTileDrop consumers that check
-                  // 'material'; everyone else no-ops.
-                  if (event.shiftKey) {
+                  // 'material'; everyone else no-ops. tapToPlaceEnabled is
+                  // the mobile equivalent (see that prop's own doc comment).
+                  if (event.shiftKey || tapToPlaceEnabled) {
                     event.stopPropagation()
                     onTileDrop('material', dragId)
                     return
@@ -1343,7 +1383,7 @@ export default function InventoryPanel({
                 dragPayload={{ id: dragId, icon: '🔮', iconSrc: FALLEN_STAR_ICON_SRC, qualityColor: FALLEN_STAR_COLOR }}
                 onDrop={handleTileDrop}
                 onClick={(event) => {
-                  if (event.shiftKey) {
+                  if (event.shiftKey || tapToPlaceEnabled) {
                     event.stopPropagation()
                     onTileDrop('material', dragId)
                     return
@@ -1408,7 +1448,7 @@ export default function InventoryPanel({
                 dragPayload={{ id: dragId, icon: '📜', iconSrc: COMET_SCROLL_ICON_SRC, qualityColor: MATERIAL_COLOR }}
                 onDrop={handleTileDrop}
                 onClick={(event) => {
-                  if (event.shiftKey) {
+                  if (event.shiftKey || tapToPlaceEnabled) {
                     event.stopPropagation()
                     onTileDrop('material', dragId)
                     return
@@ -1457,7 +1497,7 @@ export default function InventoryPanel({
                 dragPayload={{ id: dragId, icon: '📜', iconSrc: FALLEN_STAR_SCROLL_ICON_SRC, qualityColor: FALLEN_STAR_COLOR }}
                 onDrop={handleTileDrop}
                 onClick={(event) => {
-                  if (event.shiftKey) {
+                  if (event.shiftKey || tapToPlaceEnabled) {
                     event.stopPropagation()
                     onTileDrop('material', dragId)
                     return
@@ -1645,8 +1685,9 @@ export default function InventoryPanel({
                   // gear listens for 'upgrade' — Marketplace/Salvage use
                   // their own keys ('marketplace-listing'/'salvage') and
                   // simply no-op here, same as they would for an
-                  // unrecognized drop target today.
-                  if (event.shiftKey) {
+                  // unrecognized drop target today. tapToPlaceEnabled is the
+                  // mobile equivalent (see that prop's own doc comment).
+                  if (event.shiftKey || tapToPlaceEnabled) {
                     event.stopPropagation()
                     onTileDrop('upgrade', item.id)
                     return

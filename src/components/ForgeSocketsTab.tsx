@@ -168,7 +168,9 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
       <ForgeTwoColumnLayout
         title="Sockets"
         onBack={onBack}
-        inventory={<InventoryPanel columns={5} reservedItemIds={selectedItemId ? [selectedItemId] : []} onTileDrop={handleTileDrop} />}
+        inventory={
+          <InventoryPanel columns={5} reservedItemIds={selectedItemId ? [selectedItemId] : []} onTileDrop={handleTileDrop} tapToPlaceEnabled />
+        }
       >
           <div className="flex items-start justify-center gap-6">
             <ForgeUpgradeSlot item={selectedItem} template={selectedTemplate} onRemove={handleRemoveItem} />
@@ -190,7 +192,7 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
 
           <div className="w-full max-w-xs space-y-2">
             {!selectedItem ? (
-              <p className="text-center text-[11px] text-slate-600">Drag an item into the slot on the left, or tap one you have equipped.</p>
+              <p className="text-center text-[11px] text-slate-300">Tap or drag an item into the slot on the left, or tap one you have equipped.</p>
             ) : isWeapon ? (
               maxed ? (
                 <p className="text-center text-[10px] text-slate-300">Both sockets unlocked.</p>
@@ -223,7 +225,7 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
             )}
 
             {socketCount > 0 && !pendingSocket && (
-              <p className="text-center text-[11px] text-slate-600">Drag a gem from below onto a socket to fill it.</p>
+              <p className="text-center text-[11px] text-slate-300">Drag a gem from below onto a socket to fill it.</p>
             )}
 
             {pendingSocket && (

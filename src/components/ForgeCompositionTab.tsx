@@ -184,6 +184,7 @@ export default function ForgeCompositionTab({ onBack }: ForgeCompositionTabProps
             columns={5}
             reservedItemIds={[...(selectedItemId ? [selectedItemId] : []), ...materialEntries.map((entry) => entry.id)]}
             onTileDrop={handleTileDrop}
+            tapToPlaceEnabled
           />
         }
       >
@@ -202,7 +203,7 @@ export default function ForgeCompositionTab({ onBack }: ForgeCompositionTabProps
 
         <div className="w-full max-w-xs space-y-2">
           {!selectedItem ? (
-            <p className="text-center text-[11px] text-slate-600">Drag an item into the Upgrade Slot, or tap one you have equipped.</p>
+            <p className="text-center text-[11px] text-slate-300">Tap or drag an item into the Upgrade Slot, or tap one you have equipped.</p>
           ) : (
             <ForgeCompositionPanel
               item={selectedItem}

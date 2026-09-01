@@ -454,6 +454,7 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
             columns={5}
             reservedItemIds={[...(selectedItemId ? [selectedItemId] : []), ...materialEntries.map((entry) => entry.id)]}
             onTileDrop={handleTileDrop}
+            tapToPlaceEnabled
           />
         }
       >
@@ -467,10 +468,10 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
 
         <div className="w-full max-w-xs space-y-2">
           {!selectedItem ? (
-            <p className="text-center text-[11px] text-slate-600">Drag an item into the Upgrade Slot, or tap one you have equipped.</p>
+            <p className="text-center text-[11px] text-slate-300">Tap or drag an item into the Upgrade Slot, or tap one you have equipped.</p>
           ) : !materialMode ? (
-            <p className="text-center text-[11px] text-slate-600">
-              Drag a Comet, Fallen Star, or Scroll into the Material slot.
+            <p className="text-center text-[11px] text-slate-300">
+              Tap or drag a Comet, Fallen Star, or Scroll into the Material slot.
             </p>
           ) : (
             <>
@@ -510,7 +511,7 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
                   {autoRepeatSummary && <p className="text-center text-[11px] text-amber-400/80">{autoRepeatSummary}</p>}
                 </div>
               ) : (
-                <p className="rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-3 text-center text-[11px] text-slate-600">
+                <p className="rounded-xl border border-dashed border-slate-700 bg-slate-950/40 p-3 text-center text-[11px] text-slate-300">
                   {materialMode === 'quality' ? qualityDisabledReason : levelDisabledReason}
                 </p>
               )}
