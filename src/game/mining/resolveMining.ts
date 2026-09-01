@@ -103,13 +103,30 @@ async function resolveMiningInner(characterId: string, mode: ResolveMiningMode):
   return result
 }
 
-// Resets mining_last_resolved_at to now with zero reward grant — called only
-// when Mining is *entered* from Hunting (MiningModePanel.tsx's
-// stopHuntingIfActive), so a stale pointer left over from however long ago
-// Mining last ran doesn't get replayed as a catch-up the instant it resumes.
-// See resolveCombat.ts's touchCombatLastResolvedAt (the Hunting-side mirror)
-// and the migration (20260930110000_touch_last_resolved_on_mode_switch.sql).
-export async function touchMiningLastResolvedAt(characterId: string): Promise<void> {
+// Resets mining_last_resolved_at to now with zero reward grant, and clears
+// selected_monster_id — called unconditionally whenever Mining is *entered*
+// (MiningModePanel.tsx's handleMine), not just when this tab's own local
+// isFighting flag happened to be true. That local-only gating used to be
+// the whole guard, which is exactly the blind spot that let a *different*
+// already-open session for this same character keep resolving Hunting live
+// forever after this one switched to Mining (selected_monster_id is
+// resolve-combat's own "am I active" guard — see claim_hunting_slot's
+// identical mechanism for a *displaced* character; this is the same fix
+// applied to a single character's own other mode). See resolveCombat.ts's
+// touchCombatLastResolvedAt (the Hunting-side mirror, clears
+// selected_mine_id) and the migration
+// (20261201000000_mode_switch_clears_other_mode_selection.sql). Routed
+// through the same per-character serializeByKey queue as resolveMining/
+// resolveCombat so a trailing live resolve triggered by this same switch
+// (MiningModePanel's stopHuntingIfActive -> useCombatStore.stop() ->
+// CombatEngine's subscription -> resolveCombat) finishes and credits its
+// last few seconds before this call clears selected_monster_id out from
+// under it.
+export function touchMiningLastResolvedAt(characterId: string): Promise<void> {
+  return serializeByKey(characterId, () => touchMiningLastResolvedAtInner(characterId))
+}
+
+async function touchMiningLastResolvedAtInner(characterId: string): Promise<void> {
   const { error } = await supabase.rpc('touch_mining_last_resolved_at', { p_character_id: characterId })
   if (error) {
     console.error('touch_mining_last_resolved_at failed', error)

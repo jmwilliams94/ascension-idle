@@ -227,13 +227,25 @@ async function resolveCombatInner(characterId: string, mode: ResolveCombatMode):
   return result
 }
 
-// Resets combat_last_resolved_at to now with zero reward grant — called only
-// when Hunting is *entered* from Mining (CombatPage.tsx's handleFight), so a
-// stale pointer left over from however long ago Hunting last ran doesn't get
-// replayed as a catch-up the instant it resumes. See the migration
-// (20260930110000_touch_last_resolved_on_mode_switch.sql) for why this is a
-// dedicated RPC rather than going through resolveCombat itself.
-export async function touchCombatLastResolvedAt(characterId: string): Promise<void> {
+// Resets combat_last_resolved_at to now with zero reward grant, and clears
+// selected_mine_id — called unconditionally every time Hunting is *entered*
+// (CombatPage.tsx's handleFight), so a stale pointer left over from however
+// long ago Hunting last ran doesn't get replayed as a catch-up the instant
+// it resumes. selected_mine_id is resolve-mining's own "am I active" guard
+// (mirrors claim_hunting_slot's identical mechanism for stopping a
+// *displaced* character's own future accrual) — clearing it here closes the
+// gap that let a *different* already-open session for this same character
+// keep mining live forever after this one switched to Hunting. See
+// resolveMining.ts's touchMiningLastResolvedAt (the Mining-side mirror) and
+// the migration (20261201000000_mode_switch_clears_other_mode_selection.sql).
+// Routed through serializeByKey so it queues behind whatever resolveCombat
+// call it's chained after (see handleFight's own `.then()`), rather than
+// racing it.
+export function touchCombatLastResolvedAt(characterId: string): Promise<void> {
+  return serializeByKey(characterId, () => touchCombatLastResolvedAtInner(characterId))
+}
+
+async function touchCombatLastResolvedAtInner(characterId: string): Promise<void> {
   const { error } = await supabase.rpc('touch_combat_last_resolved_at', { p_character_id: characterId })
   if (error) {
     console.error('touch_combat_last_resolved_at failed', error)

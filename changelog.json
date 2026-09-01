@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.19",
+    "date": "2026-09-01",
+    "changes": [
+      "Fixed a bug that let Hunting and Mining run at the same time on one character across two open sessions, double-earning rewards from both"
+    ]
+  },
+  {
     "version": "1.125.18",
     "date": "2026-09-01",
     "changes": [

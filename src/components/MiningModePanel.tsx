@@ -30,19 +30,19 @@ import PickaxeEquipSlot from './PickaxeEquipSlot'
 // colors would.
 const NODE_SWATCH_COLOR = 0x8b8378
 
-// Starting a mining session stops any active Hunting fight (and vice versa
-// in CombatPage.tsx's handleFight) — Hunting and Mining can never both
-// accrue progress, confirmed by the user. Calling useCombatStore.stop()
-// triggers CombatEngine's own subscription-driven final resolve, closing out
-// Hunting's own trailing window. That alone doesn't protect Mining's own
-// pointer though — mining_last_resolved_at sits frozen the whole time
-// Hunting was active, so without the touch call below, resuming Mining here
-// would replay that entire Hunting session as a Mining catch-up (bug,
-// reported by the user, fixed 2026-09-30 — see the migration's own comment).
-function stopHuntingIfActive(characterId: string) {
+// Starting a mining session stops any active Hunting fight in *this tab*
+// (and vice versa in CombatPage.tsx's handleFight) — Hunting and Mining can
+// never both accrue progress, confirmed by the user. Calling
+// useCombatStore.stop() triggers CombatEngine's own subscription-driven
+// final resolve, closing out this tab's own trailing Hunting window before
+// handleMine below unconditionally calls touchMiningLastResolvedAt (which
+// now also clears selected_monster_id server-side — see that function's own
+// comment for why the *unconditional* call matters: this local isFighting
+// check alone used to be the whole guard, which did nothing for a stale
+// selected_monster_id left behind by a *different*, already-open session).
+function stopHuntingIfActive() {
   if (useCombatStore.getState().isFighting) {
     useCombatStore.getState().stop()
-    void touchMiningLastResolvedAt(characterId)
   }
 }
 
@@ -94,11 +94,12 @@ export default function MiningModePanel({ characterId }: { characterId: string }
   const dropdownMineId = currentMineId ?? MINE_ORDER[0]
 
   const handleMine = (mineId: MineId) => {
-    stopHuntingIfActive(characterId)
+    stopHuntingIfActive()
     // Hunting Slot exclusivity (see resolveCombat.ts's own comment) — frees
     // the account-wide slot immediately if this character held it, rather
     // than leaving it pointed at a character that isn't hunting anymore.
     void releaseHuntingSlot(characterId)
+    void touchMiningLastResolvedAt(characterId)
     useIdleModeStore.getState().setLastActiveIdleMode('mining')
     setCurrentMineId(mineId)
     start(mineId)
