@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.26",
+    "date": "2026-09-01",
+    "changes": [
+      "Added a bot-verification check to the sign in, sign up, and password reset forms"
+    ]
+  },
+  {
     "version": "1.125.25",
     "date": "2026-09-01",
     "changes": [

@@ -12,10 +12,10 @@ interface AuthState {
   // "choose a new password" form instead of the normal game, even though a
   // session now exists.
   passwordRecovery: boolean
-  signIn: (email: string, password: string) => Promise<string | null>
-  signUp: (email: string, password: string) => Promise<string | null>
+  signIn: (email: string, password: string, captchaToken?: string) => Promise<string | null>
+  signUp: (email: string, password: string, captchaToken?: string) => Promise<string | null>
   signOut: () => Promise<void>
-  requestPasswordReset: (email: string) => Promise<string | null>
+  requestPasswordReset: (email: string, captchaToken?: string) => Promise<string | null>
   updatePassword: (newPassword: string) => Promise<string | null>
 }
 
@@ -32,11 +32,11 @@ export const useAuthStore = create<AuthState>((set) => {
     session: null,
     loading: true,
     passwordRecovery: false,
-    signIn: async (email, password) => {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
+    signIn: async (email, password, captchaToken) => {
+      const { error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken } })
       return error?.message ?? null
     },
-    signUp: async (email, password) => {
+    signUp: async (email, password, captchaToken) => {
       // Without an explicit emailRedirectTo, Supabase sends the confirmation link to
       // whatever "Site URL" is configured in the dashboard's Auth settings — if that's
       // stale/unset, the confirm button lands on an unreachable page (the account
@@ -44,17 +44,17 @@ export const useAuthStore = create<AuthState>((set) => {
       // Deriving it from window.location keeps this correct for both local dev and
       // the deployed GitHub Pages URL without hardcoding a domain.
       const emailRedirectTo = `${window.location.origin}${import.meta.env.BASE_URL}`
-      const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo } })
+      const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo, captchaToken } })
       return error?.message ?? null
     },
     signOut: async () => {
       await supabase.auth.signOut()
     },
-    requestPasswordReset: async (email) => {
+    requestPasswordReset: async (email, captchaToken) => {
       // Same reasoning as signUp's emailRedirectTo above — must be set explicitly or
       // the reset link falls back to the dashboard's possibly-stale Site URL.
       const redirectTo = `${window.location.origin}${import.meta.env.BASE_URL}`
-      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo, captchaToken })
       return error?.message ?? null
     },
     updatePassword: async (newPassword) => {

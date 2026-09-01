@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { useAuthStore } from '../lib/useAuthStore'
 import { AscensionCard } from './ui/AscensionCard'
 import { Button } from './ui/Button'
 import LegalModal from './legal/LegalModal'
+import Turnstile, { type TurnstileHandle } from './ui/Turnstile'
 
 type Mode = 'sign-in' | 'sign-up' | 'reset-request'
 
@@ -30,16 +31,29 @@ export default function LoginForm() {
   const [info, setInfo] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [legalDoc, setLegalDoc] = useState<'privacy' | 'terms' | null>(null)
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const turnstileRef = useRef<TurnstileHandle>(null)
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
     setError(null)
     setInfo(null)
+
+    // Turnstile only ships if VITE_TURNSTILE_SITE_KEY is set (Turnstile renders
+    // nothing without it) -- don't block submission on a token that will never arrive.
+    if (import.meta.env.VITE_TURNSTILE_SITE_KEY && !captchaToken) {
+      setError('Please complete the verification check.')
+      return
+    }
+
     setSubmitting(true)
+    const tokenForSubmit = captchaToken ?? undefined
 
     if (mode === 'reset-request') {
-      const errorMessage = await requestPasswordReset(email)
+      const errorMessage = await requestPasswordReset(email, tokenForSubmit)
       setSubmitting(false)
+      turnstileRef.current?.reset()
+      setCaptchaToken(null)
 
       if (errorMessage) {
         setError(errorMessage)
@@ -50,9 +64,12 @@ export default function LoginForm() {
       return
     }
 
-    const errorMessage = mode === 'sign-in' ? await signIn(email, password) : await signUp(email, password)
+    const errorMessage =
+      mode === 'sign-in' ? await signIn(email, password, tokenForSubmit) : await signUp(email, password, tokenForSubmit)
 
     setSubmitting(false)
+    turnstileRef.current?.reset()
+    setCaptchaToken(null)
 
     if (errorMessage) {
       setError(errorMessage)
@@ -127,6 +144,8 @@ export default function LoginForm() {
               Forgot your password?
             </button>
           )}
+
+          <Turnstile ref={turnstileRef} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} />
 
           {error && <p className="text-sm text-red-400">{error}</p>}
           {info && <p className="text-sm text-emerald-400">{info}</p>}
