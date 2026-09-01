@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.13",
+    "date": "2026-09-01",
+    "changes": [
+      "The mobile Idling nav button is now a taller pill matching the other nav buttons' shape, instead of a small square the hourglass icon spilled past"
+    ]
+  },
+  {
     "version": "1.125.12",
     "date": "2026-09-01",
     "changes": [

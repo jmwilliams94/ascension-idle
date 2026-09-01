@@ -137,32 +137,42 @@ function LuckyNavButton({ label }: { label: string }) {
 // Uses the same .btn-gold/.btn-gold-active treatment as the rest of the nav
 // (2026-08-16) instead of its own bespoke amber/slate colors, and carries
 // the Zone Boss/Gold Donation Event border embers — see
-// useEventEmberColor.ts for the red/green/gold priority rule. Chamfered via
-// .ascension-fab-chamfer (2026-08-29, requested by the user — a squarer
-// shape matching the app's established chamfered corner language) instead
-// of the original rounded-full circle. The button itself is now an inner
-// `absolute inset-0` span, with EventEmberBorder as
-// an unclipped sibling in the outer h-14 w-14 wrapper (2026-08-28, reported
-// by the user: while an event was live, the old .btn-ember-safe opt-out
-// stripped .btn-gold's overflow:hidden AND its ::before/::after glass
-// highlight + hover light-sweep, so the FAB visibly lost its normal chrome
-// exactly when it should stand out most) — same sibling-wrapper fix as
-// AscensionCard's activeEventColor prop, see CLAUDE.visual-design.md.
-// Sized up (h-11 -> h-14, 2026-08-16, requested by the user) so the center
-// action button reads as the primary one — the row's items-stretch cross-
-// axis means the whole nav bar's height grows to match this circle, and the
-// four side NavButtons re-center within that taller row for free (they
-// already use justify-center on a stretched flex child, see NavButton).
+// useEventEmberColor.ts for the red/green/gold priority rule.
+//
+// Shape (2026-09-01, requested by the user — the previous h-14 w-14
+// .ascension-fab-chamfer square read as too small, with the hourglass glyph
+// visually crowding/spilling past its edges) now matches the other four
+// nav buttons' own rounded-lg icon-over-label pill shape instead of a
+// bespoke chamfered square, just taller/narrower (portrait, h-20 w-16) so
+// it still reads as the bar's primary button. Label moved inside the same
+// box as the icon (previously a separate span below it) — same combined
+// icon+label-in-one-pill structure NavButton/LuckyNavButton already use —
+// and its color is inherited from .btn-gold/.btn-gold-active rather than a
+// separate slate class, since those classes already pick a color with good
+// contrast against their own background (white on dark idle, ink on bright
+// active).
+//
+// The button itself is now an inner `absolute inset-0` span, with
+// EventEmberBorder as an unclipped sibling in the outer h-20 w-16 wrapper
+// (2026-08-28, reported by the user: while an event was live, the old
+// .btn-ember-safe opt-out stripped .btn-gold's overflow:hidden AND its
+// ::before/::after glass highlight + hover light-sweep, so the button
+// visibly lost its normal chrome exactly when it should stand out most) —
+// same sibling-wrapper fix as AscensionCard's activeEventColor prop, see
+// CLAUDE.visual-design.md. The outer wrapper's size must keep matching the
+// visible box exactly — EventEmberBorder anchors its embers via left/top
+// percentages of its positioned parent's own box (see its own doc comment).
+//
 // flex-none w-16, not flex-1 (2026-08-16, requested by the user) — the real
 // source of the "huge gap" either side of this button wasn't the row's
 // gap-1 (two earlier passes tweaking that via negative margin barely moved
 // the needle): as a flex-1 item this column was exactly as wide as the
 // other four, but unlike them it's not a box filled edge-to-edge, it's a
-// 56px circle centered inside, so ~15-17px of dead transparent space sat
-// between the circle and each neighbor even with margin at 0. Fixing this
-// button's own column to a width close to the circle (64px) removes that
-// dead space at the source, and hands the freed-up width back to the other
-// four flex-1 columns automatically.
+// narrower shape centered inside, so dead transparent space sat between it
+// and each neighbor even with margin at 0. Fixing this button's own column
+// to a width close to the box itself (64px) removes that dead space at the
+// source, and hands the freed-up width back to the other four flex-1
+// columns automatically.
 function IdlingNavButton() {
   const activeTab = useTabStore((state) => state.activeTab)
   const setActiveTab = useTabStore((state) => state.setActiveTab)
@@ -171,26 +181,18 @@ function IdlingNavButton() {
   const emberColor = useActiveEventEmberColor()
 
   return (
-    <button
-      type="button"
-      onClick={() => setActiveTab('combat')}
-      className="flex w-16 flex-none flex-col items-center justify-center gap-0.5"
-    >
-      <span className="relative flex h-14 w-14 items-center justify-center">
+    <button type="button" onClick={() => setActiveTab('combat')} className="flex w-16 flex-none flex-col items-center justify-center">
+      <span className="relative flex h-20 w-16 items-center justify-center">
         <span
-          className={`ascension-fab-chamfer absolute inset-0 flex items-center justify-center shadow-lg ${
+          className={`absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-lg py-2 shadow-lg ${
             active ? 'btn-gold-active shadow-slate-300/20' : 'btn-gold shadow-black/30'
           }`}
           style={eventBorderTintStyle(emberColor)}
         >
-          {icon && <NavIconGlyph icon={icon} sizeClassName="h-9 w-9" />}
+          {icon && <NavIconGlyph icon={icon} sizeClassName="h-8 w-8" />}
+          <span className="font-heading text-[10px] font-bold uppercase tracking-wide leading-tight">Idling</span>
         </span>
         <EventEmberBorder color={emberColor} count={20} />
-      </span>
-      <span
-        className={`font-heading text-[10px] font-bold uppercase tracking-wide leading-tight ${active ? 'text-slate-100' : 'text-slate-400'}`}
-      >
-        Idling
       </span>
     </button>
   )

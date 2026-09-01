@@ -896,23 +896,6 @@ a,
   }
 }
 
-/* Chamfered "square" variant for compact fixed-size buttons (2026-08-29,
-   mobile Idling FAB — the user wanted the app's own established chamfered
-   card/chip corner language here instead of the old rounded-full circle,
-   not a plain rounded square). Sized for a ~56px box (h-14 w-14); the cut
-   distance should scale up/down if reused at a meaningfully different box
-   size. Just clip-path — no separate frame/inner split like the card/chip
-   system, since this wraps a single .btn-gold/.btn-gold-active element that
-   already owns its own background. */
-.ascension-fab-chamfer {
-  clip-path: polygon(
-    10px 0%, calc(100% - 10px) 0%,
-    100% 10px, 100% calc(100% - 10px),
-    calc(100% - 10px) 100%, 10px 100%,
-    0% calc(100% - 10px), 0% 10px
-  );
-}
-
 /* Item icon tile frame (2026-09-01, design-reviewed live in Settings >
    Item Effects before rollout) — a rounded-corner variant of the
    gradient-border-via-padding technique .ascension-chip-frame already
