@@ -32,6 +32,14 @@ export default function LoginForm() {
   const [submitting, setSubmitting] = useState(false)
   const [legalDoc, setLegalDoc] = useState<'privacy' | 'terms' | null>(null)
   const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  // Sticky, unlike captchaToken itself -- a mid-form Turnstile expiry (rare,
+  // ~5min token lifetime) shouldn't yank the password field back to disabled
+  // and dump whatever the user already typed. No Turnstile configured at all
+  // (VITE_TURNSTILE_SITE_KEY unset) means Turnstile's onVerify never fires,
+  // so this stays false and the field would stay disabled forever -- guarded
+  // by the `hasVerified || !turnstileConfigured` check below instead.
+  const [hasVerified, setHasVerified] = useState(false)
+  const turnstileConfigured = Boolean(import.meta.env.VITE_TURNSTILE_SITE_KEY)
   const turnstileRef = useRef<TurnstileHandle>(null)
 
   const handleSubmit = async (event: FormEvent) => {
@@ -129,9 +137,20 @@ export default function LoginForm() {
                   minLength={6}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  className="w-full bg-transparent px-3 py-2 text-base text-slate-100 focus:outline-none"
+                  // Disabled until Turnstile verifies (bug fix, reported by the
+                  // user -- 1Password autofilling the password field while
+                  // Turnstile was still mid-verify appeared to be knocking the
+                  // widget over, leaving it blank with no token). Most password
+                  // managers, 1Password included, skip a disabled field
+                  // entirely rather than queuing the fill for later, so this
+                  // closes off that race regardless of the exact mechanism.
+                  disabled={turnstileConfigured && !hasVerified}
+                  className="w-full bg-transparent px-3 py-2 text-base text-slate-100 focus:outline-none disabled:opacity-50"
                 />
               </div>
+              {turnstileConfigured && !hasVerified && (
+                <p className="mt-1 text-xs text-slate-400">Waiting for verification check…</p>
+              )}
             </div>
           )}
 
@@ -145,7 +164,14 @@ export default function LoginForm() {
             </button>
           )}
 
-          <Turnstile ref={turnstileRef} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} />
+          <Turnstile
+            ref={turnstileRef}
+            onVerify={(token) => {
+              setCaptchaToken(token)
+              setHasVerified(true)
+            }}
+            onExpire={() => setCaptchaToken(null)}
+          />
 
           {error && <p className="text-sm text-red-400">{error}</p>}
           {info && <p className="text-sm text-emerald-400">{info}</p>}

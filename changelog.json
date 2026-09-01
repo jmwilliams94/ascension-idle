@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.37",
+    "date": "2026-09-02",
+    "changes": [
+      "The password field on the login screen now stays locked until the Cloudflare verification check finishes, to stop password managers from filling it too early"
+    ]
+  },
+  {
     "version": "1.125.36",
     "date": "2026-09-01",
     "changes": [
