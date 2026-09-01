@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.22",
+    "date": "2026-09-01",
+    "changes": [
+      "Fixed a bug where a Zone Boss already being fought by more than one of your characters could lock your whole account out of it — now whichever of your characters has dealt the most damage stays unlocked"
+    ]
+  },
+  {
     "version": "1.125.21",
     "date": "2026-09-01",
     "changes": [
