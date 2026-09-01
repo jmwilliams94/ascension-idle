@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.125.34",
+    "date": "2026-09-01",
+    "changes": [
+      "Added real icons for Jade Shard and Lunar Chest, and simplified their tooltip to just say Quest Item",
+      "Removed the old Wooden Sword starter item from the Shop and the game entirely"
+    ]
+  },
+  {
     "version": "1.125.33",
     "date": "2026-09-01",
     "changes": [

@@ -495,6 +495,7 @@ const SLOT_ICONS: Record<string, string> = {
   'gem-bag': '🎁',
   pickaxe: '⛏️',
   material: '🪨',
+  'promotion-material': '💠',
 }
 
 export function getItemIcon(slotType: string | undefined): string {
@@ -518,6 +519,8 @@ export function getItemIcon(slotType: string | undefined): string {
 // of art — no other file needs touching.
 const ITEM_ICON_OVERRIDES: Record<string, string> = {
   'Umbrite Ore': `${import.meta.env.BASE_URL}item-icons/umbrite-ore.webp`,
+  'Jade Shard': `${import.meta.env.BASE_URL}item-icons/jade-shard.webp`,
+  'Lunar Chest': `${import.meta.env.BASE_URL}item-icons/lunar-chest.webp`,
   'Sapling Bow': `${import.meta.env.BASE_URL}item-icons/sapling-bow.webp`,
   "Ranger's Bow": `${import.meta.env.BASE_URL}item-icons/rangers-bow.webp`,
   'Lucky Bow': `${import.meta.env.BASE_URL}item-icons/lucky-bow.webp`,
@@ -945,7 +948,7 @@ export function formatItemLevel(level: number): string {
 // Display-layer only — the stored item_templates.name is never renamed. Normal
 // quality shows the plain name; anything above gets the tier prefixed. Composition
 // (see CLAUDE.md's Gear system section), when present, appends a "(+N)" suffix —
-// confirmed format, e.g. "Refined Wooden Sword (+1)" — rather than showing on a
+// confirmed format, e.g. "Refined Sapling Bow (+1)" — rather than showing on a
 // separate line, so the name itself always reflects the item's full identity.
 export function formatItemDisplayName(templateName: string, qualityTier: string, compositionLevel = 0): string {
   const base = qualityTier === 'normal' ? templateName : `${QUALITY_LABELS[qualityTier] ?? qualityTier} ${templateName}`
@@ -956,7 +959,25 @@ export function formatItemDisplayName(templateName: string, qualityTier: string,
 // of truth for what a gear tooltip shows, reused everywhere a gear tile renders
 // (InventoryPanel, ForgeUpgradeSlot, ForgeMaterialSlot, EquipmentSlot's Main Hand)
 // via InventorySlot's `tooltip` prop, so hovering any of them looks the same.
+// Standalone quest/promotion items (Jade Shard, Lunar Chest) have no combat
+// stats, level relevance, or Gear Score — they're inert until handed to
+// promote_character — so the full gear-tooltip machinery below (Class,
+// Sockets, Durability, Gear Score...) doesn't apply to them. Named
+// explicitly rather than gated on item_family === 'promotion-material',
+// since Umbrite Ore shares that family for historical reasons but is a real
+// sellable Mining resource, not a quest item.
+const QUEST_ITEM_NAMES = new Set(['Jade Shard', 'Lunar Chest'])
+
 export function buildGearTooltip(item: ItemInstance, template: ItemTemplate | undefined): ItemTooltipData {
+  if (template && QUEST_ITEM_NAMES.has(template.name)) {
+    return {
+      title: template.name,
+      icon: getItemIcon(template.slot_type),
+      iconSrc: getGearIconSrc(template.name),
+      lines: ['Quest Item'],
+    }
+  }
+
   // "Class: ___" is display-only for now — just the plain class name (e.g.
   // "Hunter"), not a promotion-tier-specific name (no promotion-tier naming
   // exists yet). Nothing currently blocks equipping across classes; this is

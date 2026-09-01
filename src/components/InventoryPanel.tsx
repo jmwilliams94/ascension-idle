@@ -509,7 +509,7 @@ export default function InventoryPanel({
   // time (Shop purchase/kill-drop filtering) — so any class-restricted item
   // that reached Inventory some other way (Marketplace trade, Mail, an item
   // that predates a class's own filtering) could still be equipped by any
-  // class. null means genuinely class-agnostic (Boots/Wooden Sword/Pickaxe —
+  // class. null means genuinely class-agnostic (Boots/Pickaxe —
   // see the backfill migration 20261020000000_backfill_hunter_required_class.sql
   // for why nothing else is null). Same client-side-only trust model as
   // meetsLevelRequirement above.

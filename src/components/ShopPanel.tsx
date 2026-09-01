@@ -96,8 +96,8 @@ const SHOP_TABS: { id: ShopTab; label: string; icon: string }[] = [
 ]
 
 // A template is available to the current class if it has no class restriction
-// at all (required_class null — Boots/Wooden Sword/Pickaxe today, genuinely
-// shared across every class — see the backfill migration
+// at all (required_class null — Boots/Pickaxe today, genuinely shared across
+// every class — see the backfill migration
 // 20261020000000_backfill_hunter_required_class.sql for why nothing else is
 // null anymore) or matches the character's own class exactly. This is what
 // makes the Weapons/Armor tabs "dynamic": the same component just renders a
@@ -111,9 +111,9 @@ function availableToClass(template: ItemTemplate, classId: string): boolean {
 // requested by the user) — it's meant for early/starter gear, not a mirror of
 // the entire level-1-130 progression (that's what kill-drops/Forge upgrades
 // are for). Groups by item_family (falling back to the template's own id for
-// the rare standalone item with none, e.g. Wooden Sword) so a class with
-// several distinct weapon families — Twin-soul/Juggernaut's Club/Sword/Blade —
-// still shows a few of *each* rather than 3 total across all of them.
+// the rare standalone item with none) so a class with several distinct
+// weapon families — Twin-soul/Juggernaut's Club/Sword/Blade — still shows a
+// few of *each* rather than 3 total across all of them.
 // Templates must already be sorted by required_level ascending.
 const SHOP_ITEMS_PER_FAMILY = 3
 
@@ -320,15 +320,9 @@ export default function ShopPanel() {
     void buyPotions(characterId, typeId, POTION_TYPES[typeId].stackSize)
   }
 
-  // Wooden Sword is a class-agnostic legacy freebie item kept around for
-  // classes with no real starter weapon of their own — Hunter has its own
-  // Lucky Bow (auto-granted/auto-equipped) and the full Bow chain, so it
-  // never needs to appear in a Hunter's Shop (confirmed with the user,
-  // 2026-08-07).
   const weaponTemplates = capFirstPerFamily(
     templates
       .filter((t) => t.slot_type === 'weapon' && availableToClass(t, selectedClassId))
-      .filter((t) => !(selectedClassId === 'hunter' && t.name === 'Wooden Sword'))
       .filter((t) => t.required_level <= SHOP_MAX_LEVEL)
       .sort((a, b) => a.required_level - b.required_level),
   )
