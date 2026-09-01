@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.25",
+    "date": "2026-09-01",
+    "changes": [
+      "Fixed a bug where gear from another class (e.g. Hunter gear on a Wuxia, picked up via trading or mail) could be equipped instead of being blocked"
+    ]
+  },
+  {
     "version": "1.125.24",
     "date": "2026-09-01",
     "changes": [

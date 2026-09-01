@@ -75,6 +75,8 @@ import { useMarketplaceStore } from '../game/marketplace/useMarketplaceStore'
 import { useMailStore } from '../game/marketplace/useMailStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
+import { useCharacterStore } from '../game/stats/useCharacterStore'
+import { CLASS_DEFINITIONS } from '../game/stats/classes'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { equipPickaxe } from '../game/mining/pickaxeEquipActions'
@@ -500,6 +502,24 @@ export default function InventoryPanel({
   // a level 130 item. Client-side only, same trust model as equipping itself
   // (there's no server-side equip check at all, gated or not).
   const meetsLevelRequirement = Boolean(selectedTemplate && characterLevel >= selectedTemplate.required_level)
+  const classId = useCharacterStore((state) => state.selectedClassId)
+  // Bug fix (reported by the user — a Wuxia was able to equip Hunter gear):
+  // required_class was likewise never enforced anywhere in equip, only used
+  // for display (buildGearTooltip's "Class: ___" line) and at acquisition
+  // time (Shop purchase/kill-drop filtering) — so any class-restricted item
+  // that reached Inventory some other way (Marketplace trade, Mail, an item
+  // that predates a class's own filtering) could still be equipped by any
+  // class. null means genuinely class-agnostic (Boots/Wooden Sword/Pickaxe —
+  // see the backfill migration 20261020000000_backfill_hunter_required_class.sql
+  // for why nothing else is null). Same client-side-only trust model as
+  // meetsLevelRequirement above.
+  const meetsClassRequirement = Boolean(
+    selectedTemplate && (selectedTemplate.required_class === null || selectedTemplate.required_class === classId),
+  )
+  const requiredClassLabel =
+    selectedTemplate?.required_class && selectedTemplate.required_class in CLASS_DEFINITIONS
+      ? CLASS_DEFINITIONS[selectedTemplate.required_class as keyof typeof CLASS_DEFINITIONS].displayName
+      : undefined
   // Whatever's currently worn in the same slot_type as the given item, if
   // any — used both for the selected item's GearEquipPopover Compare view
   // and (enableCompareToggle only) every gear tile's own hover-compare peek.
@@ -1977,29 +1997,40 @@ export default function InventoryPanel({
                   Requires level {selectedTemplate.required_level}
                 </p>
               )}
+              {requiredClassLabel && (
+                <p className={meetsClassRequirement ? 'text-xs text-slate-300' : 'text-xs text-amber-500'}>
+                  {requiredClassLabel} only
+                </p>
+              )}
             </div>
           </div>
 
           <Button
             variant="primary"
-            disabled={isEquipped(selectedItem.id) || !isEquippableSlot || !meetsLevelRequirement}
+            disabled={isEquipped(selectedItem.id) || !isEquippableSlot || !meetsLevelRequirement || !meetsClassRequirement}
             title={
               !isEquippableSlot
                 ? "This slot isn't wearable yet"
-                : !meetsLevelRequirement
-                  ? `Requires level ${selectedTemplate?.required_level}`
-                  : undefined
+                : !meetsClassRequirement
+                  ? `${requiredClassLabel} only`
+                  : !meetsLevelRequirement
+                    ? `Requires level ${selectedTemplate?.required_level}`
+                    : undefined
             }
-            onClick={() => selectedTemplate && meetsLevelRequirement && handleEquip(selectedTemplate, selectedItem)}
+            onClick={() =>
+              selectedTemplate && meetsLevelRequirement && meetsClassRequirement && handleEquip(selectedTemplate, selectedItem)
+            }
             className="mt-3 w-full"
           >
             {isEquipped(selectedItem.id)
               ? 'Equipped'
               : !isEquippableSlot
                 ? 'Not wearable yet'
-                : !meetsLevelRequirement
-                  ? `Requires level ${selectedTemplate?.required_level}`
-                  : 'Equip'}
+                : !meetsClassRequirement
+                  ? `${requiredClassLabel} only`
+                  : !meetsLevelRequirement
+                    ? `Requires level ${selectedTemplate?.required_level}`
+                    : 'Equip'}
           </Button>
 
           {enableSelling && (
@@ -2028,18 +2059,20 @@ export default function InventoryPanel({
           tooltip={buildGearTooltip(selectedItem, selectedTemplate)}
           compareTooltip={compareTooltip}
           alreadyEquipped={isEquipped(selectedItem.id)}
-          canEquip={!isEquipped(selectedItem.id) && isEquippableSlot && meetsLevelRequirement}
+          canEquip={!isEquipped(selectedItem.id) && isEquippableSlot && meetsLevelRequirement && meetsClassRequirement}
           equipLabel={
             isEquipped(selectedItem.id)
               ? 'Equipped'
               : !isEquippableSlot
                 ? 'Not wearable yet'
-                : !meetsLevelRequirement
-                  ? `Requires level ${selectedTemplate?.required_level}`
-                  : 'Equip'
+                : !meetsClassRequirement
+                  ? `${requiredClassLabel} only`
+                  : !meetsLevelRequirement
+                    ? `Requires level ${selectedTemplate?.required_level}`
+                    : 'Equip'
           }
           onEquip={() => {
-            if (selectedTemplate && meetsLevelRequirement) {
+            if (selectedTemplate && meetsLevelRequirement && meetsClassRequirement) {
               handleEquip(selectedTemplate, selectedItem)
             }
           }}
