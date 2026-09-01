@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.126.1",
+    "date": "2026-09-02",
+    "changes": [
+      "Added real art for the Experience Orb and Experience Potion icons"
+    ]
+  },
+  {
     "version": "1.126.0",
     "date": "2026-09-02",
     "changes": [
