@@ -14,7 +14,7 @@ import { buildConfettiEmbers } from '../game/items/tierEffectsData'
 const REVEAL_DISPLAY_MS = 2400
 const SALVAGE_COLOR = '#a855f7'
 const CONFETTI_EMBER_COUNT = 24
-const AP_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/ascension-points.png`
+const AP_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/ascension-points.webp`
 
 interface ConfettiStyle extends CSSProperties {
   '--ember-dx': string

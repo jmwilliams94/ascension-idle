@@ -9,7 +9,7 @@ import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 // to this file rather than added there since AP isn't an Inventory/Loot
 // Holding tile the way Comets/Fallen Stars are — nothing else needs this
 // constant yet.
-const AP_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/ascension-points.png`
+const AP_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/ascension-points.webp`
 
 // A persistent, always-visible compact readout of level/EXP/gold/AP, shown in
 // GameShell's top HUD strip across every tab (desktop and mobile alike).

@@ -161,7 +161,7 @@ export function parseGemDragId(id: string): { gemId: GemTypeId; tier: GemTier } 
 // per tier (revised 2026-08-08 — supersedes the original one-icon-per-gem-
 // type/color-only design), still paired with getGemTierColor's border/glow.
 export function getGemIconSrc(gemId: GemTypeId, tier: GemTier): string {
-  return `${import.meta.env.BASE_URL}item-icons/gem-${gemId}-${tier}.png`
+  return `${import.meta.env.BASE_URL}item-icons/gem-${gemId}-${tier}.webp`
 }
 
 // One-line description of a socketed gem for use in plain string contexts

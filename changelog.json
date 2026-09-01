@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.23",
+    "date": "2026-09-01",
+    "changes": [
+      "Fixed item icons sometimes loading slowly or inconsistently in the installed mobile app by shrinking icon file sizes well under a storage limit mobile browsers impose"
+    ]
+  },
+  {
     "version": "1.125.22",
     "date": "2026-09-01",
     "changes": [

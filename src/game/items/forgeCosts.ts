@@ -334,15 +334,15 @@ export function parseStoneDragId(id: string): number | null {
 // (rough stone -> clear -> amber -> blue crystal -> red gem -> green gem ->
 // cosmic/starfield orb -> purple crystal -> gold diamond).
 const STONE_ICON_SRC_BY_TIER: Partial<Record<number, string>> = {
-  1: `${import.meta.env.BASE_URL}item-icons/composition-stone-1.png`,
-  2: `${import.meta.env.BASE_URL}item-icons/composition-stone-2.png`,
-  3: `${import.meta.env.BASE_URL}item-icons/composition-stone-3.png`,
-  4: `${import.meta.env.BASE_URL}item-icons/composition-stone-4.png`,
-  5: `${import.meta.env.BASE_URL}item-icons/composition-stone-5.png`,
-  6: `${import.meta.env.BASE_URL}item-icons/composition-stone-6.png`,
-  7: `${import.meta.env.BASE_URL}item-icons/composition-stone-7.png`,
-  8: `${import.meta.env.BASE_URL}item-icons/composition-stone-8.png`,
-  9: `${import.meta.env.BASE_URL}item-icons/composition-stone-9.png`,
+  1: `${import.meta.env.BASE_URL}item-icons/composition-stone-1.webp`,
+  2: `${import.meta.env.BASE_URL}item-icons/composition-stone-2.webp`,
+  3: `${import.meta.env.BASE_URL}item-icons/composition-stone-3.webp`,
+  4: `${import.meta.env.BASE_URL}item-icons/composition-stone-4.webp`,
+  5: `${import.meta.env.BASE_URL}item-icons/composition-stone-5.webp`,
+  6: `${import.meta.env.BASE_URL}item-icons/composition-stone-6.webp`,
+  7: `${import.meta.env.BASE_URL}item-icons/composition-stone-7.webp`,
+  8: `${import.meta.env.BASE_URL}item-icons/composition-stone-8.webp`,
+  9: `${import.meta.env.BASE_URL}item-icons/composition-stone-9.webp`,
 }
 
 export function getStoneIconSrc(tier: number): string | undefined {
@@ -396,8 +396,8 @@ export function isFallenStarDragId(id: string): boolean {
 // Fallen Star tile renders (InventoryPanel's grid + detail card,
 // LootHoldingCard) — pass to InventorySlot's iconSrc prop, which takes
 // priority over its emoji icon prop.
-export const COMET_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/comet.png`
-export const FALLEN_STAR_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/fallen-star.png`
+export const COMET_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/comet.webp`
+export const FALLEN_STAR_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/fallen-star.webp`
 // Comet Box (2026-08-14) — the Lucky Lad reward kind gets its own dedicated
 // chest-and-scroll icon rather than reusing the plain Comet icon above,
 // everywhere it's shown (LuckyPanel board tile/tooltip, InventoryPanel's
@@ -411,7 +411,7 @@ export const FALLEN_STAR_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/falle
 // Scroll below (characters.comet_box_count) — see buildCometBoxTooltip
 // further down for its own drag-id/tooltip helpers, placed alongside Comet
 // Scroll's since they share the exact same mechanic shape.
-export const COMET_BOX_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/comet-box.png?v=${APP_VERSION}`
+export const COMET_BOX_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/comet-box.webp?v=${APP_VERSION}`
 
 // Own distinct border/glow colors (2026-08-02), same InventorySlot
 // qualityColor mechanism gear uses for its tier tint — materials previously
@@ -498,8 +498,8 @@ export function isFallenStarScrollDragId(id: string): boolean {
 // Real art (2026-08-07), supersedes the 📜 emoji everywhere a Scroll tile
 // renders — same iconSrc-over-icon priority as COMET_ICON_SRC/
 // FALLEN_STAR_ICON_SRC above.
-export const COMET_SCROLL_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/comet-scroll.png`
-export const FALLEN_STAR_SCROLL_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/fallen-star-scroll.png`
+export const COMET_SCROLL_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/comet-scroll.webp`
+export const FALLEN_STAR_SCROLL_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/fallen-star-scroll.webp`
 
 export function buildCometScrollTooltip(): ItemTooltipData {
   return {
@@ -560,7 +560,7 @@ export function buildCometBoxTooltip(): ItemTooltipData {
 // COMET_ICON_SRC/FALLEN_STAR_ICON_SRC above.
 export const VIP_TOKEN_DURATION_DAYS = 30
 export const VIP_TOKEN_COLOR = '#facc15'
-export const VIP_TOKEN_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/vip-token.png`
+export const VIP_TOKEN_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/vip-token.webp`
 const VIP_TOKEN_DRAG_ID_PREFIX = 'vip-token:'
 
 export function vipTokenDragId(index: number): string {

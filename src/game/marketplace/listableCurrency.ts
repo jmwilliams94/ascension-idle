@@ -66,11 +66,11 @@ const ASCENSION_POINTS_COLOR = '#a855f7'
 // their own local copy of this same constant — following that established
 // per-file pattern rather than centralizing it) — fixed 2026-08-13, reported
 // by the user: mail tiles were showing a 🎖️ medal emoji instead of this.
-const ASCENSION_POINTS_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/ascension-points.png`
+const ASCENSION_POINTS_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/ascension-points.webp`
 // Real art (2026-09-30), supersedes the 🎫 emoji everywhere a Lottery Ticket
 // tile renders — same per-file local-const pattern as ASCENSION_POINTS_ICON_SRC
 // above (Lottery Ticket is Mail/LuckyLad-only, never marketplace-listable).
-const LOTTERY_TICKET_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/lottery-ticket.png`
+const LOTTERY_TICKET_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/lottery-ticket.webp`
 
 // Gold's own color, matching ExpBar.tsx's top-HUD gold readout convention.
 const GOLD_COLOR = '#F0B87A'

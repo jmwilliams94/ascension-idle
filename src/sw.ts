@@ -63,12 +63,35 @@ precacheAndRoute(self.__WB_MANIFEST, { ignoreURLParametersMatching: [/^v$/] })
 // (Equipment's paper doll, Bank's full inventory) mounted -- StaleWhileRevalidate
 // still serves a cache hit instantly, but an eviction forces a real fetch,
 // and several of those landing around the same tick reads as "everything
-// rendering at once." 600 gives headroom well past the current file count
-// for future icon additions without needing another bump soon.
+// rendering at once." 600 gives headroom well past the current file count.
+// This maxEntries cap never actually gets hit at 317 files -- it wasn't the
+// live constraint for the eviction below.
+//
+// Root cause of a *different* symptom (2026-09-01, "icons load inconsistently
+// on mobile", slow pop-in, mobile PWA only, item-icons only): iOS enforces a
+// hard 50MB Cache Storage quota per origin for installed/standalone PWAs, at
+// the WebKit level, completely independent of ExpirationPlugin's own
+// entry-count bookkeeping above -- so an eviction can happen there that
+// Workbox has no visibility into and never tries to prevent. public/item-icons/
+// alone was ~36MB of PNGs (317 files), i.e. most of that 50MB budget by
+// itself before counting the JS/CSS precache bundle or nav/lucky icons, so a
+// real play session touching a meaningful fraction of the catalog could push
+// the origin over quota and get entries silently evicted by the OS -- explains
+// why it was mobile-PWA-only (desktop/plain browser tabs don't have this 50MB
+// ceiling), item-icons-only (by far the largest cache), and "sometimes"
+// (depends on how much of the quota the rest of the session's caches already
+// used). Fixed by converting every public/item-icons/*.png to lossless WebP
+// (verified pixel-identical where alpha > 0; fully-transparent pixels can
+// carry different "don't care" RGB bytes between encoders, which is a real,
+// harmless divergence since it never renders) -- ~36MB -> ~20MB, real headroom
+// under the 50MB ceiling instead of sitting right against it. cacheName
+// bumped to 'item-icons-v3' (same one-time-bump pattern as v1->v2) so phones
+// holding the old, now-unused PNG entries start clean rather than carrying
+// dead cache weight forward.
 registerRoute(
   ({ url }) => url.pathname.includes('/item-icons/'),
   new StaleWhileRevalidate({
-    cacheName: 'item-icons-v2',
+    cacheName: 'item-icons-v3',
     plugins: [
       new ExpirationPlugin({ maxEntries: 600, maxAgeSeconds: 60 * 60 * 24 * 90 }),
       new CacheableResponsePlugin({ statuses: [0, 200] }),

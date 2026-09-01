@@ -43,7 +43,7 @@ const FORGE_TILES: ForgeHubTile[] = [
     mode: 'composition',
     title: 'Composition',
     description: 'Feed stones and gear into an item for guaranteed, permanent +N stat growth.',
-    iconSrc: `${import.meta.env.BASE_URL}item-icons/composition-stone-9.png`,
+    iconSrc: `${import.meta.env.BASE_URL}item-icons/composition-stone-9.webp`,
     iconClassName: 'h-12 w-12',
   },
   {
@@ -56,7 +56,7 @@ const FORGE_TILES: ForgeHubTile[] = [
     mode: 'sockets',
     title: 'Sockets',
     description: "Add sockets to your gear. Gems can't be removed but can be overwritten.",
-    iconSrc: `${import.meta.env.BASE_URL}item-icons/gem-drake-ascended.png`,
+    iconSrc: `${import.meta.env.BASE_URL}item-icons/gem-drake-ascended.webp`,
   },
   {
     mode: 'enchant',
