@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.125.17",
+    "date": "2026-09-01",
+    "changes": [
+      "Fixed item tooltips not showing the sparkling ember effect for rare gear/materials",
+      "Item tooltip borders now tint to match the item's quality color"
+    ]
+  },
+  {
     "version": "1.125.16",
     "date": "2026-09-01",
     "changes": [

@@ -896,6 +896,25 @@ a,
   }
 }
 
+/* Item-tier-colored chip frame (2026-09-01) — lets ItemTooltip's outer
+   .ascension-chip-frame pick up an item's own quality-tier color around its
+   chamfered/cut-corner edge, the same way .item-quality-frame already tints
+   the rounded icon box inside it. Deliberately its own modifier rather than
+   reusing .is-tinted above: .is-tinted is keyed by --ascension-tint (the
+   gold/steel UI-chrome accent system), while this is keyed by
+   --item-tier-color (gameplay-data quality-tier color) — mixing the two
+   would violate the "never repaint gameplay-data color coding with this
+   system" guardrail in CLAUDE.visual-design.md. Same gradient math as
+   .is-tinted, just parameterized by the other variable. */
+.ascension-chip-frame.is-item-tiered {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--item-tier-color, #94a3b8) 75%, white) 0%,
+    var(--item-tier-color, #94a3b8) 55%,
+    color-mix(in srgb, var(--item-tier-color, #94a3b8) 65%, black) 100%
+  );
+}
+
 /* Item icon tile frame (2026-09-01, design-reviewed live in Settings >
    Item Effects before rollout) — a rounded-corner variant of the
    gradient-border-via-padding technique .ascension-chip-frame already

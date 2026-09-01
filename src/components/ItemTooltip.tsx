@@ -1,6 +1,8 @@
 import type { CSSProperties } from 'react'
 import { DEFAULT_STAT_COLOR, type ItemTooltipData, type TooltipLine } from '../game/items/itemTooltip'
 import { BLESS_COLOR, ENCHANT_HP_COLOR } from '../game/items/gemCatalog'
+import { TierEmberEffect } from '../game/items/tierEffects'
+import { emberCountForColor, seedFromId } from '../game/items/tierEffectsData'
 
 // `lines`' own default (matches the old flat text-slate-400) — a plain
 // string entry in either array falls back to its block's default; a
@@ -41,6 +43,18 @@ export default function ItemTooltip({
   // still need this bordered block to render, so the block's visibility
   // can't gate on `stats.length` alone anymore.
   const hasBonusBlock = (stats && stats.length > 0) || (bonusStats && bonusStats.length > 0) || Boolean(enchantLine) || Boolean(blessLine)
+  // Same radiating-ember effect InventorySlot's tile already renders — was
+  // missing here entirely, so hovering a rare item never showed it even
+  // though the grid tile underneath it did. Seeded off `title` (no stable
+  // per-instance id reaches this component) rather than InventorySlot's
+  // slotId, so the exact ember layout won't match the tile 1:1, but stays
+  // stable across re-renders of the same tooltip.
+  const emberCount = emberCountForColor(iconColor)
+  // Colors the outer chamfered chip frame to match the icon box's own
+  // quality-tier color (2026-09-01, requested alongside the ember fix) —
+  // see .ascension-chip-frame.is-item-tiered in index.css for why this is a
+  // separate modifier from .is-tinted rather than reusing it.
+  const chipFrameStyle: CSSProperties = iconColor ? ({ '--item-tier-color': iconColor } as CSSProperties) : {}
 
   const body = (
     <>
@@ -90,7 +104,10 @@ export default function ItemTooltip({
   )
 
   return (
-    <div className="ascension-chip-frame w-64 shadow-xl shadow-black/50">
+    <div
+      className={`ascension-chip-frame w-64 shadow-xl shadow-black/50 ${iconColor ? 'is-item-tiered' : ''}`}
+      style={chipFrameStyle}
+    >
       <div className="ascension-chip-inner p-2.5 text-left">
         {hasIcon ? (
           <div className="flex items-start gap-2">
@@ -98,8 +115,13 @@ export default function ItemTooltip({
               className="item-quality-frame relative flex h-22 w-22 shrink-0 items-center justify-center text-lg"
               style={iconColor ? ({ '--item-tier-color': iconColor } as CSSProperties) : undefined}
             >
-              <div className="item-quality-frame-inner flex h-full w-full items-center justify-center overflow-hidden">
-                {iconSrc ? <img src={iconSrc} alt="" className="h-4/5 w-4/5 object-contain" /> : <span>{icon}</span>}
+              <div className="item-quality-frame-inner relative flex h-full w-full items-center justify-center overflow-hidden">
+                {emberCount > 0 && <TierEmberEffect color={iconColor as string} count={emberCount} seed={seedFromId(title)} />}
+                {iconSrc ? (
+                  <img src={iconSrc} alt="" className="relative z-10 h-4/5 w-4/5 object-contain" />
+                ) : (
+                  <span className="relative z-10">{icon}</span>
+                )}
               </div>
             </div>
             <div className="min-w-0 flex-1">{body}</div>
