@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.126.5",
+    "date": "2026-09-02",
+    "changes": [
+      "Fixed a character-switching bug where a Hunting/Mining session left running on one character could briefly keep granting its rewards to whichever character you switched to next, sometimes flooding their Inventory with Ore"
+    ]
+  },
+  {
     "version": "1.126.4",
     "date": "2026-09-02",
     "changes": [
