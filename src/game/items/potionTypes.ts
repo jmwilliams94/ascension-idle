@@ -195,6 +195,7 @@ export const POTION_TYPES: Record<PotionTypeId, PotionTypeDef> = {
     description: 'Restores 750 MP.',
     stackSize: 20,
     requiredLevel: 95,
+    iconSrc: potionIconSrc('nightbloom-draught'),
   },
   voidglass_elixir: {
     id: 'voidglass_elixir',
@@ -205,6 +206,7 @@ export const POTION_TYPES: Record<PotionTypeId, PotionTypeDef> = {
     description: 'Restores 1000 MP.',
     stackSize: 20,
     requiredLevel: 110,
+    iconSrc: potionIconSrc('voidglass-elixir'),
   },
   astral_draught: {
     id: 'astral_draught',
@@ -215,6 +217,7 @@ export const POTION_TYPES: Record<PotionTypeId, PotionTypeDef> = {
     description: 'Restores 1500 MP.',
     stackSize: 20,
     requiredLevel: 125,
+    iconSrc: potionIconSrc('astral-draught'),
   },
 }
 

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.30",
+    "date": "2026-09-01",
+    "changes": [
+      "Added real icons for the remaining 3 Mana Potion tiers — all 8 Mana Potions now show real art"
+    ]
+  },
+  {
     "version": "1.125.29",
     "date": "2026-09-01",
     "changes": [
