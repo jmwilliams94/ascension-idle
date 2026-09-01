@@ -5,6 +5,7 @@ import { markDropSourced } from '../items/dropSourceTracking'
 import { useLootHoldingStore } from '../items/useLootHoldingStore'
 import { useGemStore } from '../items/useGemStore'
 import { useMiningStore } from './useMiningStore'
+import { serializeByKey } from '../combat/serializeByKey'
 
 // The single client-side entry point into the resolve-mining Edge Function —
 // see supabase/functions/resolve-mining/index.ts. Mirrors resolveCombat.ts's
@@ -27,7 +28,28 @@ export interface ResolveMiningResult {
   nodeDisplayName?: string
 }
 
-export async function resolveMining(characterId: string, mode: ResolveMiningMode): Promise<ResolveMiningResult | null> {
+// Serialized per character — mirrors resolveCombat.ts's own fix (see
+// serializeByKey.ts for the full race this closes). MiningEngine.tsx fires
+// resolve calls from several independent, uncoordinated triggers (a 4s
+// periodic poll, plus immediate calls on stop/mine-switch/visibility-hide/
+// beforeunload) — nothing stopped two of them from being genuinely in
+// flight at once. resolve_mining_gather_state's CAS on mining_last_resolved_at
+// already prevents two calls from double-crediting the *same* elapsed-time
+// window, but the live-mode Inventory-full guard (gearCount read once per
+// call, see resolve-mining/index.ts) is a separate snapshot with no such
+// protection — two overlapping calls can each read the same starting
+// gearCount and each grant ore up to their own independently-computed
+// "room left" figure, together overshooting the 40-slot cap. Reported by
+// the user as ore overshooting Inventory's max by exactly the room that was
+// free when the race happened. Shared queue key with combat/row-combat
+// (plain characterId, not a mining-specific key) is deliberate, matching
+// resolveRowCombat.ts's own choice — Hunting and Mining are mutually
+// exclusive per character anyway, so one queue per character is sufficient.
+export function resolveMining(characterId: string, mode: ResolveMiningMode): Promise<ResolveMiningResult | null> {
+  return serializeByKey(characterId, () => resolveMiningInner(characterId, mode))
+}
+
+async function resolveMiningInner(characterId: string, mode: ResolveMiningMode): Promise<ResolveMiningResult | null> {
   const { data, error } = await supabase.functions.invoke('resolve-mining', { body: { characterId, mode } })
 
   if (error) {

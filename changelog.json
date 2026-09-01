@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.18",
+    "date": "2026-09-01",
+    "changes": [
+      "Fixed a rare bug where Mining could grant more Ore than your Inventory had room for, pushing it over the max"
+    ]
+  },
+  {
     "version": "1.125.17",
     "date": "2026-09-01",
     "changes": [
