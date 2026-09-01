@@ -1168,6 +1168,7 @@ export default function InventoryPanel({
             const potionTooltip: ItemTooltipData = {
               title: type.displayName,
               icon: type.kind === 'hp' ? '🧪' : '💧',
+              iconSrc: type.iconSrc,
               iconColor: CONSUMABLE_COLOR,
               lines: [type.kind === 'hp' ? 'HP Potion' : 'Mana Potion', `${stack.count} / ${type.stackSize}`],
               stats: [type.description],
@@ -1180,6 +1181,7 @@ export default function InventoryPanel({
                 filled
                 sizeClassName={SLOT_SIZE_CLASS}
                 icon={type.kind === 'hp' ? '🧪' : '💧'}
+                iconSrc={type.iconSrc}
                 qualityColor={CONSUMABLE_COLOR}
                 label={`${type.displayName} (${stack.count}/${type.stackSize})`}
                 tooltip={potionTooltip}
@@ -1940,10 +1942,16 @@ export default function InventoryPanel({
         <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
           <div className="flex items-center gap-3">
             <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 text-lg"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 p-1 text-lg"
               style={{ borderColor: CONSUMABLE_COLOR, backgroundColor: `${CONSUMABLE_COLOR}22` }}
             >
-              {POTION_TYPES[selectedPotionStack.potionType].kind === 'hp' ? '🧪' : '💧'}
+              {POTION_TYPES[selectedPotionStack.potionType].iconSrc ? (
+                <img src={POTION_TYPES[selectedPotionStack.potionType].iconSrc} alt="" className="h-full w-full object-contain" />
+              ) : POTION_TYPES[selectedPotionStack.potionType].kind === 'hp' ? (
+                '🧪'
+              ) : (
+                '💧'
+              )}
             </div>
             <div>
               <p className="text-sm font-medium text-slate-200">{POTION_TYPES[selectedPotionStack.potionType].displayName}</p>

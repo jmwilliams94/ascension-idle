@@ -41,6 +41,13 @@ export interface PotionTypeDef {
   // convention as ArrowTypeDef.stackSize.
   stackSize: number
   requiredLevel: number
+  // Real art, added tier-by-tier as it's supplied — falls back to the 🧪/💧
+  // emoji (see ShopPanel/InventoryPanel) when unset.
+  iconSrc?: string
+}
+
+function potionIconSrc(file: string): string {
+  return `${import.meta.env.BASE_URL}item-icons/${file}.webp`
 }
 
 export const POTION_TYPES: Record<PotionTypeId, PotionTypeDef> = {
@@ -133,6 +140,7 @@ export const POTION_TYPES: Record<PotionTypeId, PotionTypeDef> = {
     description: 'Restores 75 MP.',
     stackSize: 20,
     requiredLevel: 1,
+    iconSrc: potionIconSrc('mossglow-tonic'),
   },
   whisperleaf_draught: {
     id: 'whisperleaf_draught',
@@ -143,6 +151,7 @@ export const POTION_TYPES: Record<PotionTypeId, PotionTypeDef> = {
     description: 'Restores 140 MP.',
     stackSize: 20,
     requiredLevel: 20,
+    iconSrc: potionIconSrc('whisperleaf-draught'),
   },
   moonpetal_elixir: {
     id: 'moonpetal_elixir',
@@ -153,6 +162,7 @@ export const POTION_TYPES: Record<PotionTypeId, PotionTypeDef> = {
     description: 'Restores 200 MP.',
     stackSize: 20,
     requiredLevel: 40,
+    iconSrc: potionIconSrc('moonpetal-elixir'),
   },
   starlight_brew: {
     id: 'starlight_brew',
@@ -163,6 +173,7 @@ export const POTION_TYPES: Record<PotionTypeId, PotionTypeDef> = {
     description: 'Restores 350 MP.',
     stackSize: 20,
     requiredLevel: 60,
+    iconSrc: potionIconSrc('starlight-brew'),
   },
   emberwind_panacea: {
     id: 'emberwind_panacea',
@@ -173,6 +184,7 @@ export const POTION_TYPES: Record<PotionTypeId, PotionTypeDef> = {
     description: 'Restores 500 MP.',
     stackSize: 20,
     requiredLevel: 80,
+    iconSrc: potionIconSrc('emberwind-panacea'),
   },
   nightbloom_draught: {
     id: 'nightbloom_draught',

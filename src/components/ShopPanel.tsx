@@ -527,6 +527,7 @@ export default function ShopPanel() {
                 const potionTooltip: ItemTooltipData = {
                   title: type.displayName,
                   icon: '💧',
+                  iconSrc: type.iconSrc,
                   iconColor: CONSUMABLE_COLOR,
                   lines: ['Mana Potion'],
                   stats: [type.description],
@@ -536,7 +537,15 @@ export default function ShopPanel() {
                   <div key={typeId} className="ascension-chip-frame">
                     <div className="ascension-chip-inner flex items-center justify-between gap-2 p-2 text-xs">
                       <div className="flex min-w-0 items-center gap-2">
-                        <InventorySlot slotId={typeId} filled sizeClassName={SLOT_SIZE_CLASS} icon="💧" label={type.displayName} tooltip={potionTooltip} />
+                        <InventorySlot
+                          slotId={typeId}
+                          filled
+                          sizeClassName={SLOT_SIZE_CLASS}
+                          icon="💧"
+                          iconSrc={type.iconSrc}
+                          label={type.displayName}
+                          tooltip={potionTooltip}
+                        />
                         <div className="min-w-0">
                           <p className="truncate font-medium text-slate-200">{type.displayName}</p>
                           <p className="text-slate-300">{type.description}</p>

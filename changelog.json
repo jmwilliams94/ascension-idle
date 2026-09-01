@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.125.29",
+    "date": "2026-09-01",
+    "changes": [
+      "Added real icons for 5 of the 8 Mana Potion tiers (Mossglow Tonic through Emberwind Panacea)"
+    ]
+  },
+  {
     "version": "1.125.28",
     "date": "2026-09-01",
     "changes": [

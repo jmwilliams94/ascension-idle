@@ -3,7 +3,9 @@
 // no-glow source images now being supplied. Flood-fills the white
 // background into real alpha transparency (BFS from the edges, only walking
 // connected white-ish pixels, so nothing inside the art gets eaten), trims,
-// pads to square, resizes to 160x160.
+// pads to square, resizes to 320x320. Outputs lossless WebP (matching the
+// whole public/item-icons/ set as of v1.125.23) when DEST ends in .webp,
+// else PNG.
 //
 // Usage: node scripts/process-white-bg-icon.mjs <src-path> <dest-path> [size]
 import sharp from 'sharp'
@@ -14,7 +16,7 @@ if (!SRC || !DEST) {
   process.exit(1)
 }
 
-const TARGET_SIZE = SIZE_ARG ? Number(SIZE_ARG) : 160
+const TARGET_SIZE = SIZE_ARG ? Number(SIZE_ARG) : 320
 const WHITE_THRESHOLD = 245
 
 async function main() {
@@ -69,11 +71,15 @@ async function main() {
   const trimmedMeta = await sharp(trimmed).metadata()
   const side = Math.max(trimmedMeta.width, trimmedMeta.height)
 
-  await sharp(trimmed)
+  const resized = sharp(trimmed)
     .resize(side, side, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .resize(TARGET_SIZE, TARGET_SIZE, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-    .png()
-    .toFile(DEST)
+
+  if (DEST.endsWith('.webp')) {
+    await resized.webp({ lossless: true }).toFile(DEST)
+  } else {
+    await resized.png().toFile(DEST)
+  }
 
   // Verify against real alpha data, not a visual guess — see the Lucky Bow
   // incident (a checkerboard-preview pattern baked into pixels looked fine
