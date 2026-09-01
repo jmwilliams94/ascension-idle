@@ -16,9 +16,16 @@ interface CharacterState {
   // (see useBankStore.useVipToken) — hydrated on load, never sent back via
   // a normal character save.
   vipExpiresAt: string | null
+  // Experience Potion's active-buff clock (characters.exp_potion_expires_at)
+  // — null means no active buff. Server-authoritative, only ever written by
+  // use_experience_potion (see useBankStore.useExperiencePotion) — hydrated
+  // on load, never sent back via a normal character save. Same trust model
+  // as vipExpiresAt above.
+  expPotionExpiresAt: string | null
   selectClass: (classId: ClassId) => void
   setPromotionLevel: (level: number) => void
   setVipExpiresAt: (value: string | null) => void
+  setExpPotionExpiresAt: (value: string | null) => void
 }
 
 export const useCharacterStore = create<CharacterState>((set) => ({
@@ -26,6 +33,7 @@ export const useCharacterStore = create<CharacterState>((set) => ({
   attributes: getAttributesForLevel('hunter', useProgressionStore.getState().level),
   promotionLevel: 0,
   vipExpiresAt: null,
+  expPotionExpiresAt: null,
   selectClass: (classId) =>
     set({
       selectedClassId: classId,
@@ -33,6 +41,7 @@ export const useCharacterStore = create<CharacterState>((set) => ({
     }),
   setPromotionLevel: (level) => set({ promotionLevel: level }),
   setVipExpiresAt: (value) => set({ vipExpiresAt: value }),
+  setExpPotionExpiresAt: (value) => set({ expPotionExpiresAt: value }),
 }))
 
 // Attributes are a pure function of (class, level) now (see classes.ts's

@@ -846,6 +846,11 @@ interface CharacterSnapshot {
   current_monster_is_rare: boolean
   current_monster_spawned_at: string | null
   current_monster_respawn_at: string | null
+  // Experience Potion's active-buff clock (see 20261206000000_experience_
+  // orb_and_potion.sql) — null/past means no active buff, doubles kill EXP
+  // (expPotionMultiplier below) while in the future. Not cleared here on
+  // expiry; it just naturally stops applying once now() passes it.
+  exp_potion_expires_at: string | null
 }
 
 interface EquippedItemRow {
@@ -1434,6 +1439,11 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const eventCometMultiplier = activeEvent?.category === 'comet' ? activeEvent.multiplier : 1
   const eventFallenStarMultiplier = activeEvent?.category === 'fallen_star' ? activeEvent.multiplier : 1
   const eventQualityMultiplier = activeEvent?.category === 'quality_tier' ? activeEvent.multiplier : 1
+  // Experience Potion — flat 2x kill EXP while exp_potion_expires_at is in
+  // the future (see CharacterSnapshot's own comment). Computed once per
+  // resolve call, same "not per-elapsed-ms precise" precedent as
+  // eventExpMultiplier above.
+  const expPotionMultiplier = character.exp_potion_expires_at && new Date(character.exp_potion_expires_at) > new Date() ? 2 : 1
   // Split by type, composition added in unscaled after the account-wide
   // multiplier (see compositionPhysicalAttackBonus's declaration above), then
   // Drake/Ember's own socketed gem bonus % applied last, per the user's
@@ -1687,7 +1697,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       const killExp = expRewardForLevel(monster.level) * expMultiplier * rareMultiplier
       // Iris gem bonus % applied last, after every other EXP multiplier —
       // mirrors combatResolver.ts's expectedRewardPerAttack exactly.
-      expGained += Math.round(killExp * (1 + irisBonusPct / 100) * eventExpMultiplier)
+      expGained += Math.round(killExp * (1 + irisBonusPct / 100) * eventExpMultiplier * expPotionMultiplier)
 
       if (!petAlreadyUnlocked && !petObtained && Math.random() < PET_DROP_CHANCE) {
         petObtained = true

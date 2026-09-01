@@ -32,12 +32,17 @@ import {
   VIP_TOKEN_COLOR,
   VIP_TOKEN_DURATION_DAYS,
   VIP_TOKEN_ICON_SRC,
+  EXPERIENCE_POTION_DURATION_HOURS,
+  EXPERIENCE_ORB_ICON_SRC,
+  EXPERIENCE_POTION_ICON_SRC,
   buildFallenStarScrollTooltip,
   buildFallenStarTooltip,
   buildCometScrollTooltip,
   buildCometTooltip,
   buildCometBoxTooltip,
   buildVipTokenTooltip,
+  buildExperienceOrbTooltip,
+  buildExperiencePotionTooltip,
   buildStoneTooltip,
   buildMoneyBagTooltip,
   buildGemBagTooltip,
@@ -48,6 +53,8 @@ import {
   cometScrollDragId,
   cometBoxDragId,
   vipTokenDragId,
+  experienceOrbDragId,
+  experiencePotionDragId,
   getStoneIconSrc,
   stoneDragId,
 } from '../game/items/forgeCosts'
@@ -103,6 +110,8 @@ type SelectedSlot =
   | { kind: 'scroll'; dragId: string; currencyType: 'comet' | 'fallen_star' }
   | { kind: 'comet_box'; dragId: string }
   | { kind: 'vip_token'; dragId: string }
+  | { kind: 'experience_orb'; dragId: string }
+  | { kind: 'experience_potion'; dragId: string }
   | null
 
 interface InventoryPanelProps {
@@ -266,13 +275,18 @@ export default function InventoryPanel({
   const fallenStarScrolls = useCurrencyStore((state) => state.fallenStarScrolls)
   const cometBoxes = useCurrencyStore((state) => state.cometBoxes)
   const vipTokens = useCurrencyStore((state) => state.vipTokens)
+  const experienceOrbs = useCurrencyStore((state) => state.experienceOrbs)
+  const experiencePotions = useCurrencyStore((state) => state.experiencePotions)
   const bundleScroll = useCurrencyStore((state) => state.bundleScroll)
   const unbundleScroll = useCurrencyStore((state) => state.unbundleScroll)
   const openCometBox = useBankStore((state) => state.openCometBox)
   // Named consumeVipToken, not useVipToken -- eslint's react-hooks plugin
   // treats any identifier starting with "use" as a hook, which would
-  // wrongly flag handleUseVipToken's plain async call to it below.
+  // wrongly flag handleUseVipToken's plain async call to it below. Same
+  // reasoning for consumeExperienceOrb/consumeExperiencePotion below.
   const consumeVipToken = useBankStore((state) => state.useVipToken)
+  const consumeExperienceOrb = useBankStore((state) => state.useExperienceOrb)
+  const consumeExperiencePotion = useBankStore((state) => state.useExperiencePotion)
   const characterId = useActiveCharacterStore((state) => state.characterId)
   const claimGearSnapshot = useGearSnapshotStore((state) => state.claimSnapshot)
   const showGearClaimPrompt = useGearClaimPromptStore((state) => state.show)
@@ -341,6 +355,15 @@ export default function InventoryPanel({
   const [vipTokenPopoverAnchorRect, setVipTokenPopoverAnchorRect] = useState<DOMRect | null>(null)
   const [vipTokenBusy, setVipTokenBusy] = useState(false)
   const [vipTokenError, setVipTokenError] = useState<string | null>(null)
+  // Experience Orb / Experience Potion "Use" popovers — same click-opened
+  // TooltipActionPopover shell as VIP Token above, own state each since both
+  // have a single action (Use, no Bank/Bank All).
+  const [experienceOrbPopoverAnchorRect, setExperienceOrbPopoverAnchorRect] = useState<DOMRect | null>(null)
+  const [experienceOrbBusy, setExperienceOrbBusy] = useState(false)
+  const [experienceOrbError, setExperienceOrbError] = useState<string | null>(null)
+  const [experiencePotionPopoverAnchorRect, setExperiencePotionPopoverAnchorRect] = useState<DOMRect | null>(null)
+  const [experiencePotionBusy, setExperiencePotionBusy] = useState(false)
+  const [experiencePotionError, setExperiencePotionError] = useState<string | null>(null)
   // Money Bag / Gem Bag "Open" popover (Lucky Lad rewards expansion,
   // 2026-08-09) — same click-opened TooltipActionPopover shell as the Scroll
   // popover above, but takes precedence over equipPopoverEnabled/
@@ -383,6 +406,8 @@ export default function InventoryPanel({
       scrollPopoverAnchorRect !== null ||
       cometBoxPopoverAnchorRect !== null ||
       vipTokenPopoverAnchorRect !== null ||
+      experienceOrbPopoverAnchorRect !== null ||
+      experiencePotionPopoverAnchorRect !== null ||
       bagPopoverAnchorRect !== null)
 
   const visiblePotionStacks = potionStacks.filter((stack) => stack.count > 0)
@@ -472,6 +497,21 @@ export default function InventoryPanel({
   const vipTokenShown = Math.min(vipTokens, remainingAfterCometBoxes)
   const vipTokenTiles = Array.from({ length: vipTokenShown }, (_, index) => ({ index, dragId: vipTokenDragId(index) }))
 
+  // Experience Orb / Experience Potion — same virtual-tile shape as VIP
+  // Token above, allocated last in the same greedy budget chain.
+  const remainingAfterVipTokens = Math.max(0, remainingAfterCometBoxes - vipTokenTiles.length)
+  const experienceOrbShown = Math.min(experienceOrbs, remainingAfterVipTokens)
+  const experienceOrbTiles = Array.from({ length: experienceOrbShown }, (_, index) => ({
+    index,
+    dragId: experienceOrbDragId(index),
+  }))
+  const remainingAfterExperienceOrbs = Math.max(0, remainingAfterVipTokens - experienceOrbTiles.length)
+  const experiencePotionShown = Math.min(experiencePotions, remainingAfterExperienceOrbs)
+  const experiencePotionTiles = Array.from({ length: experiencePotionShown }, (_, index) => ({
+    index,
+    dragId: experiencePotionDragId(index),
+  }))
+
   const occupiedCount =
     stoneTiles.length +
     gemTiles.length +
@@ -481,6 +521,8 @@ export default function InventoryPanel({
     fallenStarScrollTiles.length +
     cometBoxTiles.length +
     vipTokenTiles.length +
+    experienceOrbTiles.length +
+    experiencePotionTiles.length +
     visiblePotionStacks.length +
     visibleItems.length
   const emptySlotCount = Math.max(0, INVENTORY_SLOT_CAP - occupiedCount)
@@ -547,7 +589,9 @@ export default function InventoryPanel({
     slot.kind === 'currency' ||
     slot.kind === 'scroll' ||
     slot.kind === 'comet_box' ||
-    slot.kind === 'vip_token'
+    slot.kind === 'vip_token' ||
+    slot.kind === 'experience_orb' ||
+    slot.kind === 'experience_potion'
       ? slot.dragId
       : `${slot.kind}:${slot.id}`
 
@@ -607,6 +651,18 @@ export default function InventoryPanel({
   const closeVipTokenPopover = () => {
     setSelectedSlot(null)
     setVipTokenPopoverAnchorRect(null)
+  }
+
+  // Experience Orb / Experience Potion popover-only — same dismiss shape as
+  // VIP Token above.
+  const closeExperienceOrbPopover = () => {
+    setSelectedSlot(null)
+    setExperienceOrbPopoverAnchorRect(null)
+  }
+
+  const closeExperiencePotionPopover = () => {
+    setSelectedSlot(null)
+    setExperiencePotionPopoverAnchorRect(null)
   }
 
   // Bag popover-only — dismiss action, also used after a successful Open
@@ -1067,6 +1123,46 @@ export default function InventoryPanel({
     closeVipTokenPopover()
   }
 
+  const handleUseExperienceOrb = async () => {
+    if (!characterId) {
+      return
+    }
+    setExperienceOrbError(null)
+    setExperienceOrbBusy(true)
+    const result = await consumeExperienceOrb(characterId)
+    setExperienceOrbBusy(false)
+
+    if (!result.ok) {
+      setExperienceOrbError(
+        result.error === 'not_enough_orbs' ? 'No Experience Orbs to use.' : result.error === 'max_level' ? 'Already max level.' : "Couldn't use.",
+      )
+      return
+    }
+
+    if (typeof result.exp_gained === 'number') {
+      showGainToast({ label: 'EXP', amount: result.exp_gained, icon: '✨', color: '#4ADE80' })
+    }
+
+    closeExperienceOrbPopover()
+  }
+
+  const handleUseExperiencePotion = async () => {
+    if (!characterId) {
+      return
+    }
+    setExperiencePotionError(null)
+    setExperiencePotionBusy(true)
+    const result = await consumeExperiencePotion(characterId)
+    setExperiencePotionBusy(false)
+
+    if (!result.ok) {
+      setExperiencePotionError(result.error === 'not_enough_potions' ? 'No Experience Potions to use.' : "Couldn't use.")
+      return
+    }
+
+    closeExperiencePotionPopover()
+  }
+
   // Excludes anything with composition progress (+N) even at Normal quality,
   // since that's no longer junk. Also excludes anything with an unlocked
   // socket (even an empty one) — sockets cost real Fallen Stars (weapons) or
@@ -1147,6 +1243,8 @@ export default function InventoryPanel({
           {scrollError && <span className="text-xs text-amber-400">{scrollError}</span>}
           {cometBoxError && <span className="text-xs text-amber-400">{cometBoxError}</span>}
           {vipTokenError && <span className="text-xs text-amber-400">{vipTokenError}</span>}
+          {experienceOrbError && <span className="text-xs text-amber-400">{experienceOrbError}</span>}
+          {experiencePotionError && <span className="text-xs text-amber-400">{experiencePotionError}</span>}
         </div>
 
         {/* overflow-x-auto is a defensive backstop, not the primary fix — the
@@ -1631,6 +1729,92 @@ export default function InventoryPanel({
             )
           })}
 
+          {experienceOrbTiles.map(({ dragId }) => {
+            if (reservedItemIds.includes(dragId)) {
+              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+            }
+
+            const isSelected = selectedSlot?.kind === 'experience_orb' && selectedSlot.dragId === dragId
+
+            const commonProps = {
+              slotId: dragId,
+              filled: true as const,
+              sizeClassName: SLOT_SIZE_CLASS,
+              icon: '🔮',
+              iconSrc: EXPERIENCE_ORB_ICON_SRC,
+              qualityColor: CONSUMABLE_COLOR,
+              label: 'Experience Orb',
+              tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildExperienceOrbTooltip(),
+              selected: isSelected,
+            }
+
+            const experienceOrbSlot = onTileDrop ? (
+              <DraggableInventorySlot
+                key={dragId}
+                {...commonProps}
+                dragEnabled
+                dragPayload={{ id: dragId, icon: '🔮', iconSrc: EXPERIENCE_ORB_ICON_SRC, qualityColor: CONSUMABLE_COLOR }}
+                onDrop={handleTileDrop}
+                onClick={() => toggleSlot({ kind: 'experience_orb', dragId })}
+              />
+            ) : (
+              <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'experience_orb', dragId })} />
+            )
+
+            return (
+              <div
+                key={dragId}
+                data-tooltip-action-anchor
+                onClick={(event) => setExperienceOrbPopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
+              >
+                {experienceOrbSlot}
+              </div>
+            )
+          })}
+
+          {experiencePotionTiles.map(({ dragId }) => {
+            if (reservedItemIds.includes(dragId)) {
+              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+            }
+
+            const isSelected = selectedSlot?.kind === 'experience_potion' && selectedSlot.dragId === dragId
+
+            const commonProps = {
+              slotId: dragId,
+              filled: true as const,
+              sizeClassName: SLOT_SIZE_CLASS,
+              icon: '🧪',
+              iconSrc: EXPERIENCE_POTION_ICON_SRC,
+              qualityColor: CONSUMABLE_COLOR,
+              label: 'Experience Potion',
+              tooltip: isPopoverOpenForSelection(isSelected) ? undefined : buildExperiencePotionTooltip(),
+              selected: isSelected,
+            }
+
+            const experiencePotionSlot = onTileDrop ? (
+              <DraggableInventorySlot
+                key={dragId}
+                {...commonProps}
+                dragEnabled
+                dragPayload={{ id: dragId, icon: '🧪', iconSrc: EXPERIENCE_POTION_ICON_SRC, qualityColor: CONSUMABLE_COLOR }}
+                onDrop={handleTileDrop}
+                onClick={() => toggleSlot({ kind: 'experience_potion', dragId })}
+              />
+            ) : (
+              <InventorySlot key={dragId} {...commonProps} onClick={() => toggleSlot({ kind: 'experience_potion', dragId })} />
+            )
+
+            return (
+              <div
+                key={dragId}
+                data-tooltip-action-anchor
+                onClick={(event) => setExperiencePotionPopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
+              >
+                {experiencePotionSlot}
+              </div>
+            )
+          })}
+
           {visibleItems.map((item) => {
             if (reservedItemIds.includes(item.id)) {
               return <InventorySlot key={item.id} slotId={item.id} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
@@ -1902,6 +2086,36 @@ export default function InventoryPanel({
             },
           ]}
           onClose={closeVipTokenPopover}
+        />
+      )}
+
+      {selectedSlot?.kind === 'experience_orb' && experienceOrbPopoverAnchorRect && (
+        <TooltipActionPopover
+          anchorRect={experienceOrbPopoverAnchorRect}
+          tooltip={buildExperienceOrbTooltip()}
+          actions={[
+            {
+              label: experienceOrbBusy ? 'Using…' : 'Use',
+              onClick: () => void handleUseExperienceOrb(),
+              disabled: experienceOrbBusy,
+            },
+          ]}
+          onClose={closeExperienceOrbPopover}
+        />
+      )}
+
+      {selectedSlot?.kind === 'experience_potion' && experiencePotionPopoverAnchorRect && (
+        <TooltipActionPopover
+          anchorRect={experiencePotionPopoverAnchorRect}
+          tooltip={buildExperiencePotionTooltip()}
+          actions={[
+            {
+              label: experiencePotionBusy ? 'Using…' : `Use (2x EXP for ${EXPERIENCE_POTION_DURATION_HOURS}h)`,
+              onClick: () => void handleUseExperiencePotion(),
+              disabled: experiencePotionBusy,
+            },
+          ]}
+          onClose={closeExperiencePotionPopover}
         />
       )}
 

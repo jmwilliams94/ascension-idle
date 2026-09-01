@@ -15,6 +15,8 @@ const MAIL_CURRENCY_TYPES: MailCurrencyType[] = [
   'lottery_ticket',
   'ascension_points',
   'vip_token',
+  'experience_orb',
+  'experience_potion',
 ]
 
 const QUALITY_TIER_OPTIONS = Object.keys(QUALITY_COLORS)

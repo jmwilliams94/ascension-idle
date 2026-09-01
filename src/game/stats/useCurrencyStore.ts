@@ -56,6 +56,15 @@ interface CurrencyState {
   // vip_expires_at), so its RPC wrapper lives in useBankStore.useVipToken
   // rather than here — this store only ever reflects the count itself.
   vipTokens: number
+  // Experience Orb / Experience Potion — same virtual-tile counter shape as
+  // vipTokens above (characters.experience_orb_count/experience_potion_count).
+  // Orb is a self-contained EXP grant (useBankStore.useExperienceOrb writes
+  // back to useProgressionStore directly); Potion is a cross-store mutation
+  // (character experience_potion_count + character exp_potion_expires_at),
+  // so both RPC wrappers live in useBankStore rather than here — this store
+  // only ever reflects the counts themselves.
+  experienceOrbs: number
+  experiencePotions: number
   // Ascension Points moved to usePlayerRecordStore (2026-08-03) — it's
   // account-wide (a premium currency), not per-character, so it doesn't
   // belong in this store anymore. See usePlayerRecordStore.ts.
@@ -73,6 +82,8 @@ interface CurrencyState {
     cometBoxes: number
     lotteryTickets: number
     vipTokens: number
+    experienceOrbs: number
+    experiencePotions: number
   }) => void
   setComets: (value: number) => void
   setFallenStars: (value: number) => void
@@ -81,6 +92,8 @@ interface CurrencyState {
   setCometBoxes: (value: number) => void
   setLotteryTickets: (value: number) => void
   setVipTokens: (value: number) => void
+  setExperienceOrbs: (value: number) => void
+  setExperiencePotions: (value: number) => void
   // Bundles 10 loose units into 1 Scroll — one fixed-size transaction per
   // call (mirrors buyArrows/buyPotions always purchasing one full stack),
   // not a variable amount.
@@ -99,6 +112,8 @@ export const useCurrencyStore = create<CurrencyState>((set) => ({
   cometBoxes: 0,
   lotteryTickets: 0,
   vipTokens: 0,
+  experienceOrbs: 0,
+  experiencePotions: 0,
 
   hydrate: (saved) =>
     set({
@@ -109,6 +124,8 @@ export const useCurrencyStore = create<CurrencyState>((set) => ({
       cometBoxes: saved.cometBoxes,
       lotteryTickets: saved.lotteryTickets,
       vipTokens: saved.vipTokens,
+      experienceOrbs: saved.experienceOrbs,
+      experiencePotions: saved.experiencePotions,
     }),
   setComets: (value) => set({ comets: value }),
   setFallenStars: (value) => set({ fallenStars: value }),
@@ -117,6 +134,8 @@ export const useCurrencyStore = create<CurrencyState>((set) => ({
   setCometBoxes: (value) => set({ cometBoxes: value }),
   setLotteryTickets: (value) => set({ lotteryTickets: value }),
   setVipTokens: (value) => set({ vipTokens: value }),
+  setExperienceOrbs: (value) => set({ experienceOrbs: value }),
+  setExperiencePotions: (value) => set({ experiencePotions: value }),
 
   bundleScroll: async (characterId, currencyType) => {
     const { data, error } = await supabase.rpc('bundle_currency_scroll', {

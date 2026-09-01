@@ -19,6 +19,7 @@ import {
   FALLEN_STAR_ICON_SRC,
   FALLEN_STAR_SCROLL_ICON_SRC,
   MATERIAL_COLOR,
+  CONSUMABLE_COLOR,
   COMET_ICON_SRC,
   COMET_BOX_ICON_SRC,
   COMET_SCROLL_ICON_SRC,
@@ -34,6 +35,10 @@ import {
   buildVipTokenTooltip,
   VIP_TOKEN_COLOR,
   VIP_TOKEN_ICON_SRC,
+  buildExperienceOrbTooltip,
+  buildExperiencePotionTooltip,
+  EXPERIENCE_ORB_ICON_SRC,
+  EXPERIENCE_POTION_ICON_SRC,
   MONEY_BAG_GOLD_BY_CLASS,
 } from '../game/items/forgeCosts'
 import { GEM_TYPES, formatGemTierLabel, getGemIconSrc, getGemTierColor, buildGemTooltip, type GemTier, type GemTypeId } from '../game/items/gemTypes'
@@ -106,6 +111,10 @@ function rewardLabel(reward: LuckyReward): string {
       return 'Lunar Chest'
     case 'vip_token':
       return 'VIP Token'
+    case 'experience_orb':
+      return 'Experience Orb'
+    case 'experience_potion':
+      return 'Experience Potion'
   }
 }
 
@@ -150,6 +159,10 @@ function rewardVisual(reward: LuckyReward): { icon?: string; iconSrc?: string; c
       return { icon: '📦', iconSrc: getGearIconSrc('Lunar Chest'), color: MATERIAL_COLOR }
     case 'vip_token':
       return { icon: '👑', iconSrc: VIP_TOKEN_ICON_SRC, color: VIP_TOKEN_COLOR }
+    case 'experience_orb':
+      return { icon: '🔮', iconSrc: EXPERIENCE_ORB_ICON_SRC, color: CONSUMABLE_COLOR }
+    case 'experience_potion':
+      return { icon: '🧪', iconSrc: EXPERIENCE_POTION_ICON_SRC, color: CONSUMABLE_COLOR }
   }
 }
 
@@ -218,6 +231,10 @@ function buildLuckyRewardTooltip(reward: LuckyReward): ItemTooltipData {
       return { title: 'Lunar Chest', icon: '📦', iconColor: MATERIAL_COLOR, lines: ['Lucky Lad reward'] }
     case 'vip_token':
       return buildVipTokenTooltip()
+    case 'experience_orb':
+      return buildExperienceOrbTooltip()
+    case 'experience_potion':
+      return buildExperiencePotionTooltip()
   }
 }
 

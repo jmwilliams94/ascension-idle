@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.126.0",
+    "date": "2026-09-02",
+    "changes": [
+      "Added Experience Orb — an instant EXP boost, biggest at low levels and smaller at high levels",
+      "Added Experience Potion — doubles EXP from kills for 1 hour",
+      "Both are now Lucky Lad rewards, at the same odds as a Class 6 Money Bag"
+    ]
+  },
+  {
     "version": "1.125.39",
     "date": "2026-09-02",
     "changes": [

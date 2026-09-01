@@ -8,12 +8,17 @@ import {
   COMET_BOX_ICON_SRC,
   VIP_TOKEN_COLOR,
   VIP_TOKEN_ICON_SRC,
+  CONSUMABLE_COLOR,
+  EXPERIENCE_ORB_ICON_SRC,
+  EXPERIENCE_POTION_ICON_SRC,
   buildCometTooltip,
   buildFallenStarTooltip,
   buildCometScrollTooltip,
   buildFallenStarScrollTooltip,
   buildCometBoxTooltip,
   buildVipTokenTooltip,
+  buildExperienceOrbTooltip,
+  buildExperiencePotionTooltip,
 } from '../items/forgeCosts'
 import type { ItemTooltipData } from '../items/itemTooltip'
 import type { ListableCurrencyType } from './useMarketplaceStore'
@@ -81,6 +86,8 @@ export function mailCurrencyLabel(type: MailCurrencyType): string {
   if (type === 'gold') return 'Gold'
   if (type === 'comet_box') return 'Comet Box'
   if (type === 'vip_token') return 'VIP Token'
+  if (type === 'experience_orb') return 'Experience Orb'
+  if (type === 'experience_potion') return 'Experience Potion'
   return listableCurrencyLabel(type)
 }
 
@@ -90,6 +97,8 @@ export function mailCurrencyVisual(type: MailCurrencyType): ListableCurrencyVisu
   if (type === 'gold') return { icon: '💰', qualityColor: GOLD_COLOR }
   if (type === 'comet_box') return { iconSrc: COMET_BOX_ICON_SRC, qualityColor: MATERIAL_COLOR }
   if (type === 'vip_token') return { iconSrc: VIP_TOKEN_ICON_SRC, qualityColor: VIP_TOKEN_COLOR }
+  if (type === 'experience_orb') return { iconSrc: EXPERIENCE_ORB_ICON_SRC, qualityColor: CONSUMABLE_COLOR }
+  if (type === 'experience_potion') return { iconSrc: EXPERIENCE_POTION_ICON_SRC, qualityColor: CONSUMABLE_COLOR }
   return listableCurrencyVisual(type)
 }
 
@@ -132,13 +141,17 @@ export function mailCurrencyTooltip(type: MailCurrencyType, amount?: number | nu
             ? buildCometBoxTooltip()
             : type === 'vip_token'
               ? buildVipTokenTooltip()
-              : type === 'comet'
-                ? buildCometTooltip()
-                : type === 'fallen_star'
-                  ? buildFallenStarTooltip()
-                  : type === 'comet_scroll'
-                    ? buildCometScrollTooltip()
-                    : buildFallenStarScrollTooltip()
+              : type === 'experience_orb'
+                ? buildExperienceOrbTooltip()
+                : type === 'experience_potion'
+                  ? buildExperiencePotionTooltip()
+                  : type === 'comet'
+                    ? buildCometTooltip()
+                    : type === 'fallen_star'
+                      ? buildFallenStarTooltip()
+                      : type === 'comet_scroll'
+                        ? buildCometScrollTooltip()
+                        : buildFallenStarScrollTooltip()
 
   if (amount && amount > 1) {
     return { ...base, stats: [...(base.stats ?? []), `Amount: ${amount}`] }

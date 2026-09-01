@@ -59,6 +59,11 @@ interface CharacterRow {
   // VIP status expiry (groundwork only) — server-authoritative, only ever
   // written by use_vip_token, excluded from saveNow below.
   vip_expires_at: string | null
+  // Experience Orb / Experience Potion — same trust model as vip_token_count/
+  // vip_expires_at above (server-authoritative, RPC-only writes).
+  experience_orb_count: number
+  experience_potion_count: number
+  exp_potion_expires_at: string | null
   composition_stones: CompositionStones
   // First real hydration of this column (Lucky Lad rewards expansion,
   // 2026-08-09) — see useGemStore.ts. Same server-authoritative trust model
@@ -155,7 +160,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     const { data, error } = await supabase
       .from('characters')
       .select(
-        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, comet_count, fallen_star_count, comet_scroll_count, fallen_star_scroll_count, comet_box_count, lottery_ticket_count, vip_token_count, vip_expires_at, composition_stones, gems, selected_monster_id, last_active_at, promotion_level, row1_unlocked, row2_unlocked, row_slots, selected_mine_id, last_active_idle_mode, pickaxe_ascended_gem_type, equipped_pickaxe_id, vip_automation_settings, equipped_skill_id',
+        'name, class, level, gold, exp, current_zone, equipped_weapon_id, equipped_ring_id, equipped_necklace_id, equipped_boots_id, equipped_hat_id, equipped_coat_id, equipped_quiver_id, comet_count, fallen_star_count, comet_scroll_count, fallen_star_scroll_count, comet_box_count, lottery_ticket_count, vip_token_count, vip_expires_at, experience_orb_count, experience_potion_count, exp_potion_expires_at, composition_stones, gems, selected_monster_id, last_active_at, promotion_level, row1_unlocked, row2_unlocked, row_slots, selected_mine_id, last_active_idle_mode, pickaxe_ascended_gem_type, equipped_pickaxe_id, vip_automation_settings, equipped_skill_id',
       )
       .eq('id', characterId)
       .maybeSingle<CharacterRow>()
@@ -174,6 +179,7 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
     }
     useCharacterStore.getState().setPromotionLevel(data.promotion_level)
     useCharacterStore.getState().setVipExpiresAt(data.vip_expires_at)
+    useCharacterStore.getState().setExpPotionExpiresAt(data.exp_potion_expires_at)
     useProgressionStore.getState().hydrate({ level: data.level, gold: data.gold, exp: data.exp })
     useZoneStore.getState().hydrate({ zoneId: data.current_zone, monsterId: data.selected_monster_id })
     useEquipmentStore.getState().hydrate({
@@ -193,6 +199,8 @@ export const useCharacterRecordStore = create<CharacterRecordState>((set, get) =
       cometBoxes: data.comet_box_count,
       lotteryTickets: data.lottery_ticket_count,
       vipTokens: data.vip_token_count,
+      experienceOrbs: data.experience_orb_count,
+      experiencePotions: data.experience_potion_count,
     })
     useCompositionStore.getState().hydrate(data.composition_stones)
     useGemStore.getState().hydrate(data.gems)

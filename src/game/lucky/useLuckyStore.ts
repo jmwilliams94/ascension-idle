@@ -108,6 +108,15 @@ export type LuckyRewardKind =
   // consuming one adds 30 days of VIP via use_vip_token (see
   // useBankStore.useVipToken), no gameplay bonuses implemented yet.
   | 'vip_token'
+  // Experience Orb / Experience Potion (requested by the user) — same
+  // virtual-tile counter shape as vip_token above (characters.
+  // experience_orb_count/experience_potion_count). Both weighted at 2.0,
+  // matching Class 6 Money Bag's own rate — see pick_lucky_reward's own
+  // comment in 20261206000000_experience_orb_and_potion.sql. Orb grants
+  // instant EXP via use_experience_orb; Potion doubles kill EXP for 1 hour
+  // via use_experience_potion (see useBankStore for both).
+  | 'experience_orb'
+  | 'experience_potion'
 
 export interface LuckyReward {
   kind: LuckyRewardKind
@@ -123,6 +132,8 @@ interface LuckyCharacterTotals {
   comet_box_count: number
   lottery_ticket_count: number
   vip_token_count: number
+  experience_orb_count: number
+  experience_potion_count: number
 }
 
 export interface DrawLuckyTicketResult {
@@ -219,6 +230,8 @@ export const useLuckyStore = create<LuckyState>((set, get) => ({
       useCurrencyStore.getState().setCometBoxes(result.character.comet_box_count)
       useCurrencyStore.getState().setLotteryTickets(result.character.lottery_ticket_count)
       useCurrencyStore.getState().setVipTokens(result.character.vip_token_count)
+      useCurrencyStore.getState().setExperienceOrbs(result.character.experience_orb_count)
+      useCurrencyStore.getState().setExperiencePotions(result.character.experience_potion_count)
     }
 
     if (result.ok && typeof result.ascension_points === 'number') {
@@ -273,6 +286,8 @@ export const useLuckyStore = create<LuckyState>((set, get) => ({
       useCurrencyStore.getState().setCometBoxes(result.character.comet_box_count)
       useCurrencyStore.getState().setLotteryTickets(result.character.lottery_ticket_count)
       useCurrencyStore.getState().setVipTokens(result.character.vip_token_count)
+      useCurrencyStore.getState().setExperienceOrbs(result.character.experience_orb_count)
+      useCurrencyStore.getState().setExperiencePotions(result.character.experience_potion_count)
     }
 
     if (result.ok && typeof result.ascension_points === 'number') {

@@ -18,8 +18,17 @@ import type { ListableCurrencyType } from './useMarketplaceStore'
 // 20260904000000_event_reward_overhaul.sql) is the same story — Mail-
 // claimable, never marketplace-listable. 'vip_token' (groundwork only) is
 // the same story too — Admin Mail can grant it, but it's never a
-// marketplace-listable currency type.
-export type MailCurrencyType = ListableCurrencyType | 'lottery_ticket' | 'ascension_points' | 'gold' | 'comet_box' | 'vip_token'
+// marketplace-listable currency type. 'experience_orb'/'experience_potion'
+// (20261206000000_experience_orb_and_potion.sql) are the same story again.
+export type MailCurrencyType =
+  | ListableCurrencyType
+  | 'lottery_ticket'
+  | 'ascension_points'
+  | 'gold'
+  | 'comet_box'
+  | 'vip_token'
+  | 'experience_orb'
+  | 'experience_potion'
 
 // Mail (see CLAUDE.md's Marketplace section and
 // supabase/migrations/20260802050000_add_marketplace.sql). Sale proceeds
@@ -263,6 +272,12 @@ export const useMailStore = create<MailState>((set, get) => ({
             break
           case 'vip_token':
             currencyStore.setVipTokens(result.new_count)
+            break
+          case 'experience_orb':
+            currencyStore.setExperienceOrbs(result.new_count)
+            break
+          case 'experience_potion':
+            currencyStore.setExperiencePotions(result.new_count)
             break
         }
       } else if (entry?.item) {

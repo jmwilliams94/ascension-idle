@@ -581,6 +581,64 @@ export function buildVipTokenTooltip(): ItemTooltipData {
   }
 }
 
+// Experience Orb (requested by the user) — same virtual-tile pattern as VIP
+// Token above (characters.experience_orb_count, no per-unit DB row).
+// Consuming one instantly grants EXP equal to a tier-stepped percentage of
+// the character's current-level EXP requirement — see use_experience_orb /
+// experience_orb_percent_for_level in
+// 20261206000000_experience_orb_and_potion.sql for the real tier table
+// ([0.8, 0.5, 0.3, 0.16, 0.08, 0.04, 0.02] at levels [1, 15, 40, 70, 100,
+// 110, 120]). Uses CONSUMABLE_COLOR, not its own color, per the "Consumables
+// visually unified as green" convention noted on that constant above.
+export const EXPERIENCE_ORB_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/experience-orb.webp`
+const EXPERIENCE_ORB_DRAG_ID_PREFIX = 'experience-orb:'
+
+export function experienceOrbDragId(index: number): string {
+  return `${EXPERIENCE_ORB_DRAG_ID_PREFIX}${index}`
+}
+
+export function isExperienceOrbDragId(id: string): boolean {
+  return id.startsWith(EXPERIENCE_ORB_DRAG_ID_PREFIX)
+}
+
+export function buildExperienceOrbTooltip(): ItemTooltipData {
+  return {
+    title: 'Experience Orb',
+    iconSrc: EXPERIENCE_ORB_ICON_SRC,
+    iconColor: CONSUMABLE_COLOR,
+    lines: ['Lucky Lad reward'],
+    stats: ['Use to instantly gain EXP (more at low levels, less at high levels)'],
+  }
+}
+
+// Experience Potion (requested by the user) — same virtual-tile pattern as
+// Experience Orb above (characters.experience_potion_count). Consuming one
+// doubles EXP from kills for EXPERIENCE_POTION_DURATION_HOURS, applied
+// server-side in resolve-combat's onKill via characters.exp_potion_expires_at
+// (see use_experience_potion) — stacks on remaining time, same convention as
+// VIP_TOKEN_DURATION_DAYS/use_vip_token.
+export const EXPERIENCE_POTION_DURATION_HOURS = 1
+export const EXPERIENCE_POTION_ICON_SRC = `${import.meta.env.BASE_URL}item-icons/experience-potion.webp`
+const EXPERIENCE_POTION_DRAG_ID_PREFIX = 'experience-potion:'
+
+export function experiencePotionDragId(index: number): string {
+  return `${EXPERIENCE_POTION_DRAG_ID_PREFIX}${index}`
+}
+
+export function isExperiencePotionDragId(id: string): boolean {
+  return id.startsWith(EXPERIENCE_POTION_DRAG_ID_PREFIX)
+}
+
+export function buildExperiencePotionTooltip(): ItemTooltipData {
+  return {
+    title: 'Experience Potion',
+    iconSrc: EXPERIENCE_POTION_ICON_SRC,
+    iconColor: CONSUMABLE_COLOR,
+    lines: ['Lucky Lad reward'],
+    stats: [`Use for double EXP from kills for ${EXPERIENCE_POTION_DURATION_HOURS} hour`],
+  }
+}
+
 // Gear's "Deposit as Composition" path (stage 4 of the Warehouse economy
 // redesign, 2026-07-31) — six separate, non-fungible per-slot-type point
 // pools (characters.gear_composition_points jsonb), distinct from the shared

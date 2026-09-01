@@ -98,6 +98,33 @@ interface UseVipTokenResult {
   vip_expires_at?: string
 }
 
+// use_experience_orb — consumes 1 Experience Orb (characters.experience_orb_count)
+// and grants an instant EXP amount (see 20261206000000_experience_orb_and_
+// potion.sql's required_exp_for_level/experience_orb_percent_for_level),
+// running the normal level-up loop server-side. exp/level come back already
+// resolved (post level-up), so the client just replays them through
+// useProgressionStore.applyServerCombatResult the same way resolve-combat's
+// own confirmations do (goldGained: 0 — the Orb never grants gold).
+interface UseExperienceOrbResult {
+  ok: boolean
+  error?: 'not_owner' | 'not_enough_orbs' | 'max_level'
+  exp_gained?: number
+  exp?: number
+  level?: number
+  experience_orb_count?: number
+}
+
+// use_experience_potion — consumes 1 Experience Potion
+// (characters.experience_potion_count) and adds a flat 1 hour to
+// characters.exp_potion_expires_at, stacking on remaining time (same
+// shape as use_vip_token's vip_expires_at above).
+interface UseExperiencePotionResult {
+  ok: boolean
+  error?: 'not_owner' | 'not_enough_potions'
+  experience_potion_count?: number
+  exp_potion_expires_at?: string
+}
+
 interface TransferCurrencyResult {
   ok: boolean
   // 'not_enough_room' (2026-08-07) — withdrawing comets/fallen_stars is
@@ -196,6 +223,9 @@ interface BankState {
   openCometBox: (characterId: string) => Promise<OpenCometBoxResult>
   // VIP Token "Use" (groundwork only) — see UseVipTokenResult above.
   useVipToken: (characterId: string) => Promise<UseVipTokenResult>
+  // Experience Orb / Experience Potion "Use" — see their Result types above.
+  useExperienceOrb: (characterId: string) => Promise<UseExperienceOrbResult>
+  useExperiencePotion: (characterId: string) => Promise<UseExperiencePotionResult>
 }
 
 export const useBankStore = create<BankState>((set, get) => ({
@@ -526,6 +556,46 @@ export const useBankStore = create<BankState>((set, get) => ({
     if (result.ok && typeof result.vip_token_count === 'number' && result.vip_expires_at) {
       useCurrencyStore.getState().setVipTokens(result.vip_token_count)
       useCharacterStore.getState().setVipExpiresAt(result.vip_expires_at)
+    }
+
+    return result
+  },
+
+  useExperienceOrb: async (characterId) => {
+    set({ busy: true })
+    const { data, error } = await supabase.rpc('use_experience_orb', { p_character_id: characterId })
+    set({ busy: false })
+
+    if (error) {
+      console.error('Use Experience Orb call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as UseExperienceOrbResult
+
+    if (result.ok && typeof result.experience_orb_count === 'number' && typeof result.exp === 'number' && typeof result.level === 'number') {
+      useCurrencyStore.getState().setExperienceOrbs(result.experience_orb_count)
+      useProgressionStore.getState().applyServerCombatResult({ goldGained: 0, exp: result.exp, level: result.level })
+    }
+
+    return result
+  },
+
+  useExperiencePotion: async (characterId) => {
+    set({ busy: true })
+    const { data, error } = await supabase.rpc('use_experience_potion', { p_character_id: characterId })
+    set({ busy: false })
+
+    if (error) {
+      console.error('Use Experience Potion call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as UseExperiencePotionResult
+
+    if (result.ok && typeof result.experience_potion_count === 'number' && result.exp_potion_expires_at) {
+      useCurrencyStore.getState().setExperiencePotions(result.experience_potion_count)
+      useCharacterStore.getState().setExpPotionExpiresAt(result.exp_potion_expires_at)
     }
 
     return result

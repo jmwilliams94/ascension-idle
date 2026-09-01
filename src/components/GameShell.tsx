@@ -14,6 +14,7 @@ import InventoryFullWarningHud from './InventoryFullWarningHud'
 import KnockoutHud from './KnockoutHud'
 import PlayersOnlineHud from './PlayersOnlineHud'
 import VipStatusHud from './VipStatusHud'
+import ExperiencePotionHud from './ExperiencePotionHud'
 import ChatAndAnnouncements from './ChatAndAnnouncements'
 import ChatOverlay from './ChatOverlay'
 import CharacterLoadoutModal from './CharacterLoadoutModal'
@@ -613,6 +614,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
           <InventoryFullWarningHud />
           <KnockoutHud />
           <VipStatusHud />
+          <ExperiencePotionHud />
           <PlayersOnlineHud />
           <div className="h-0 basis-full lg:hidden" aria-hidden="true" />
           <ChatAndAnnouncements />

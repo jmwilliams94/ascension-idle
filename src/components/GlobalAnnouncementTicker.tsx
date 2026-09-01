@@ -9,6 +9,8 @@ import {
   FALLEN_STAR_ICON_SRC,
   COMET_BOX_ICON_SRC,
   VIP_TOKEN_ICON_SRC,
+  EXPERIENCE_ORB_ICON_SRC,
+  EXPERIENCE_POTION_ICON_SRC,
   getStoneIconSrc,
 } from '../game/items/forgeCosts'
 
@@ -28,6 +30,8 @@ export const ANNOUNCEMENT_ICONS: Record<string, string> = {
   lucky_gear_radiant_coat: '🥋',
   lucky_gear_ascended_random: '🗡️',
   lucky_vip_token: '👑',
+  lucky_experience_orb: '🔮',
+  lucky_experience_potion: '🧪',
   lucky_money_bag: '💰',
   lucky_stone: '🔷',
   level_130: '🏆',
@@ -60,6 +64,10 @@ function resolveAnnouncementIconSrc(kind: string, message: string): string | und
     }
     case 'lucky_vip_token':
       return VIP_TOKEN_ICON_SRC
+    case 'lucky_experience_orb':
+      return EXPERIENCE_ORB_ICON_SRC
+    case 'lucky_experience_potion':
+      return EXPERIENCE_POTION_ICON_SRC
     case 'lucky_comet_box':
       return COMET_BOX_ICON_SRC
     case 'lucky_comet_scroll':
