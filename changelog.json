@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.125.12",
+    "date": "2026-09-01",
+    "changes": [
+      "Fixed the Hunting/Mining/Events/PvP tab labels sitting slightly off-center",
+      "The Hunting enemy panel and monster portrait now use the app's chamfered gradient-border frame, with a gold version for rare monsters",
+      "Hunting's Row 1/Row 2 sections are now collapsible and use a brighter, more readable label color"
+    ]
+  },
+  {
     "version": "1.125.11",
     "date": "2026-09-01",
     "changes": [

@@ -196,6 +196,13 @@ function RowSlotTile({ characterId, slotIndex }: { characterId: string; slotInde
 
 function RowGrid({ characterId, row }: { characterId: string; row: 1 | 2 }) {
   const startIndex = row === 1 ? 0 : 6
+  const hasActiveSlot = useRowCombatStore((state) => state.slots.slice(startIndex, startIndex + 6).some((s) => s.enabled))
+  // Collapsible (2026-09-01, requested by the user) — starts expanded only
+  // if the row already has a slot toggled on, so an unused row doesn't
+  // permanently eat vertical space, but manual toggles here always win
+  // afterwards (this is only the INITIAL state, not re-derived from
+  // hasActiveSlot on every render).
+  const [expanded, setExpanded] = useState(hasActiveSlot)
   return (
     // Labeled + top-bordered as its own section (reported by the user,
     // 2026-08-17 — with no heading at all once unlocked, Row 1's tiles read
@@ -203,20 +210,37 @@ function RowGrid({ characterId, row }: { characterId: string; row: 1 | 2 }) {
     // a bigger gap alone didn't fix that, since there was still no textual
     // anchor telling the two apart).
     <div className="border-t border-slate-800 pt-3">
-      <p className="text-heading-label mb-2">Row {row}</p>
-      {/* grid-cols-6 (not flex) — six explicit, exactly-equal tracks always
-          spanning the full container width, regardless of tile content.
-          flex + flex-1 + aspect-square turned out not to reliably grow tiles
-          to fill available width (reported by the user, 2026-08-17 — tiles
-          rendered near their own content size instead of stretching); a
-          grid track's width doesn't depend on content/aspect-ratio the way
-          a flex item's does, so each tile (w-full below) just fills its own
-          guaranteed 1/6th-width column. */}
-      <div className="grid grid-cols-6 gap-2">
-        {Array.from({ length: 6 }, (_, i) => (
-          <RowSlotTile key={startIndex + i} characterId={characterId} slotIndex={startIndex + i} />
-        ))}
-      </div>
+      <button
+        type="button"
+        onClick={() => setExpanded((value) => !value)}
+        className="mb-2 flex w-full items-center justify-between"
+      >
+        {/* text-heading-label's default color (--ascension-steel-dark) reads
+            too muted here — overridden inline (same pattern as this file's
+            own character-name label) to the app's established slate-300
+            silver secondary-text tone (2026-09-01, requested by the user). */}
+        <span className="text-heading-label" style={{ color: '#cbd5e1' }}>
+          Row {row}
+        </span>
+        <span className="text-xs transition-transform" style={{ color: '#cbd5e1', transform: expanded ? 'rotate(180deg)' : undefined }}>
+          ▾
+        </span>
+      </button>
+      {expanded && (
+        // grid-cols-6 (not flex) — six explicit, exactly-equal tracks always
+        // spanning the full container width, regardless of tile content.
+        // flex + flex-1 + aspect-square turned out not to reliably grow tiles
+        // to fill available width (reported by the user, 2026-08-17 — tiles
+        // rendered near their own content size instead of stretching); a
+        // grid track's width doesn't depend on content/aspect-ratio the way
+        // a flex item's does, so each tile (w-full below) just fills its own
+        // guaranteed 1/6th-width column.
+        <div className="grid grid-cols-6 gap-2">
+          {Array.from({ length: 6 }, (_, i) => (
+            <RowSlotTile key={startIndex + i} characterId={characterId} slotIndex={startIndex + i} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

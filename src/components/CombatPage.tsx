@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import InventoryPanel from './InventoryPanel'
 import { AscensionCard } from './ui/AscensionCard'
@@ -80,6 +80,13 @@ function zoneLevelRange(zone: { monsterOrder: EnemyTypeId[] }): { min: number; m
 export function hexColor(value: number): string {
   return `#${value.toString(16).padStart(6, '0')}`
 }
+
+// Rare-instance portrait frame tint (2026-09-01) — same amber the RARE
+// badge/row-tile border/HP bar already use for isRareInstance, applied via
+// the shared .ascension-card-frame.is-tinted var (see index.css) instead of
+// a bespoke border color. Replaces the old `super-quality-glow` class,
+// which had no matching CSS rule anywhere and rendered as a no-op.
+const RARE_PORTRAIT_TINT_STYLE = { '--ascension-tint': '#f59e0b' } as CSSProperties
 
 // How long a floating damage number stays visible after its log entry lands.
 const FLOATING_NUMBER_LIFETIME_MS = 800
@@ -230,7 +237,18 @@ export function HpBar({
 
 type CombatMode = 'hunting' | 'mining' | 'events' | 'pvp'
 
-const MODE_BUTTON_CLASS = 'relative w-full rounded-lg px-3 py-1.5 font-heading text-xs font-bold uppercase tracking-[0.08em]'
+const MODE_BUTTON_CLASS =
+  'relative flex w-full items-center justify-center rounded-lg px-3 py-1.5 font-heading text-xs font-bold uppercase tracking-[0.08em]'
+
+// CSS letter-spacing adds trailing space AFTER the last character too, not
+// just between characters — so a tracking-[0.08em] label inside a centered
+// button reads as sitting slightly left-of-center (reported by the user,
+// 2026-09-01, on the Hunting button). Wrapping the label and canceling that
+// trailing space with an equal negative margin puts the visible glyphs back
+// on the true center without touching the letter-spacing itself.
+function TrackedLabel({ children }: { children: string }) {
+  return <span className="-mr-[0.08em]">{children}</span>
+}
 
 // In-page sub-mode switcher (2026-08-26) — same "sub-navigation inside one
 // top-level tab" convention MarketplacePanel's Browse/My Listings/Mail and
@@ -249,7 +267,7 @@ function CombatModeSwitcher({ mode, onChange }: { mode: CombatMode; onChange: (m
         onClick={() => onChange('hunting')}
         className={`${MODE_BUTTON_CLASS} ${mode === 'hunting' ? 'btn-gold-active' : 'btn-gold'}`}
       >
-        Hunting
+        <TrackedLabel>Hunting</TrackedLabel>
       </button>
 
       <button
@@ -257,7 +275,7 @@ function CombatModeSwitcher({ mode, onChange }: { mode: CombatMode; onChange: (m
         onClick={() => onChange('mining')}
         className={`${MODE_BUTTON_CLASS} ${mode === 'mining' ? 'btn-gold-active' : 'btn-gold'}`}
       >
-        Mining
+        <TrackedLabel>Mining</TrackedLabel>
       </button>
 
       <EventsModeButton mode={mode} onChange={onChange} />
@@ -267,7 +285,7 @@ function CombatModeSwitcher({ mode, onChange }: { mode: CombatMode; onChange: (m
         onClick={() => onChange('pvp')}
         className={`${MODE_BUTTON_CLASS} ${mode === 'pvp' ? 'btn-gold-active' : 'btn-gold'}`}
       >
-        PvP
+        <TrackedLabel>PvP</TrackedLabel>
       </button>
     </div>
   )
@@ -295,7 +313,7 @@ function EventsModeButton({ mode, onChange }: { mode: CombatMode; onChange: (mod
         onClick={() => onChange('events')}
         className={`${MODE_BUTTON_CLASS} ${mode === 'events' ? 'btn-gold-active' : 'btn-gold'}`}
       >
-        Events
+        <TrackedLabel>Events</TrackedLabel>
       </button>
       <EventEmberBorder color={emberColor} count={48} />
     </div>
@@ -542,75 +560,85 @@ export default function CombatPage() {
         )}
 
         {mode === 'hunting' && activeType && (
-          <div
-            className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/80 bg-cover bg-center p-4"
-            style={currentZone.backgroundUrl ? { backgroundImage: `url(${currentZone.backgroundUrl})` } : undefined}
-          >
-            {currentZone.backgroundUrl && <div className="absolute inset-0 bg-slate-950/60" />}
-            <div className="relative">
-              <div className="flex items-center gap-4">
-              <div className="relative h-32 w-32 shrink-0">
-                {activeType.portraitUrl ? (
-                  <img
-                    key={monsterInstanceKey}
-                    src={activeType.portraitUrl}
-                    alt={activeType.displayName}
-                    className={`h-32 w-32 rounded-2xl border-2 border-slate-700 object-contain p-[15%] transition-opacity ${isRareInstance ? 'super-quality-glow' : ''} ${isRespawning ? 'opacity-30 grayscale' : ''}`}
-                  />
-                ) : (
-                  <div
-                    key={monsterInstanceKey}
-                    className={`h-32 w-32 rounded-2xl border-2 border-slate-700 transition-opacity ${isRareInstance ? 'super-quality-glow' : ''} ${isRespawning ? 'opacity-30 grayscale' : ''}`}
-                    style={{ backgroundColor: hexColor(activeType.color) }}
-                  />
-                )}
-                {isRespawning && <DeadOverlay seconds={respawnSecondsLeft} />}
-                <AnimatePresence>
-                  {floatingNumbers.map((entry) => (
-                    <motion.div
-                      key={entry.id}
-                      initial={{ opacity: 1, y: 0 }}
-                      animate={{ opacity: 0, y: -32 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.8, ease: 'easeOut' }}
-                      className={`pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 font-heading font-bold ${
-                        entry.kind === 'miss' ? 'text-slate-300' : outgoingDamageColorClass
-                      }`}
-                      // Nicer-looking damage numbers (2026-08-26, requested by
-                      // the user): the game's own Cinzel `.font-heading` font
-                      // instead of the default sans-serif, ~50% larger than
-                      // the prior text-sm (0.875rem * 1.5 = 1.3125rem) via
-                      // inline style so it reliably wins over the class's own
-                      // font-size (same convention as this page's character-
-                      // name label above), plus a drop shadow so white/light-
-                      // blue text still pops against light monster art.
-                      style={{ fontSize: '1.3125rem', textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
-                    >
-                      {entry.kind === 'miss' ? 'Miss' : `-${entry.amount}`}
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <p className={`truncate text-sm font-medium ${LEVEL_DIFF_TEXT_CLASS[getLevelDiffColor(characterLevel, activeType.level)]}`}>
-                  {activeType.displayName}
-                  {isRareInstance && <span className="ml-2 text-xs font-bold text-amber-300">RARE</span>}
-                </p>
-                <p className="mt-1 text-xs text-slate-300">
-                  {isRespawning ? `Respawning in ${respawnSecondsLeft}s...` : `${currentHp} / ${maxHp} HP`}
-                </p>
-                <div className="mt-2">
-                  <HpBar current={isRespawning ? 0 : currentHp} max={maxHp} />
+          <div className="ascension-card-frame">
+            <div
+              className="ascension-card-inner relative overflow-hidden bg-cover bg-center p-4"
+              style={currentZone.backgroundUrl ? { backgroundImage: `url(${currentZone.backgroundUrl})` } : undefined}
+            >
+              {currentZone.backgroundUrl && <div className="absolute inset-0 bg-slate-950/70" />}
+              <div className="relative">
+                <div className="flex items-center gap-4">
+                <div
+                  className={`relative h-32 w-32 shrink-0 ascension-card-frame ${isRareInstance ? 'is-tinted' : ''}`}
+                  style={isRareInstance ? RARE_PORTRAIT_TINT_STYLE : undefined}
+                >
+                  <div className="ascension-card-inner relative h-full w-full overflow-hidden">
+                    {activeType.portraitUrl ? (
+                      <img
+                        key={monsterInstanceKey}
+                        src={activeType.portraitUrl}
+                        alt={activeType.displayName}
+                        className={`h-full w-full object-contain p-[15%] transition-opacity ${isRespawning ? 'opacity-30 grayscale' : ''}`}
+                      />
+                    ) : (
+                      <div
+                        key={monsterInstanceKey}
+                        className={`h-full w-full transition-opacity ${isRespawning ? 'opacity-30 grayscale' : ''}`}
+                        style={{ backgroundColor: hexColor(activeType.color) }}
+                      />
+                    )}
+                    {isRespawning && <DeadOverlay seconds={respawnSecondsLeft} />}
+                  </div>
+                  <AnimatePresence>
+                    {floatingNumbers.map((entry) => (
+                      <motion.div
+                        key={entry.id}
+                        initial={{ opacity: 1, y: 0 }}
+                        animate={{ opacity: 0, y: -32 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.8, ease: 'easeOut' }}
+                        className={`pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 font-heading font-bold ${
+                          entry.kind === 'miss' ? 'text-slate-300' : outgoingDamageColorClass
+                        }`}
+                        // Nicer-looking damage numbers (2026-08-26, requested by
+                        // the user): the game's own Cinzel `.font-heading` font
+                        // instead of the default sans-serif, ~50% larger than
+                        // the prior text-sm (0.875rem * 1.5 = 1.3125rem) via
+                        // inline style so it reliably wins over the class's own
+                        // font-size (same convention as this page's character-
+                        // name label above), plus a drop shadow so white/light-
+                        // blue text still pops against light monster art.
+                        style={{ fontSize: '1.3125rem', textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
+                      >
+                        {entry.kind === 'miss' ? 'Miss' : `-${entry.amount}`}
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 </div>
-              </div>
-              </div>
 
-            {characterId && <RowCombatPanel characterId={characterId} />}
+                <div className="min-w-0 flex-1">
+                  <p
+                    className={`truncate text-sm font-medium ${LEVEL_DIFF_TEXT_CLASS[getLevelDiffColor(characterLevel, activeType.level)]}`}
+                    style={{ textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
+                  >
+                    {activeType.displayName}
+                    {isRareInstance && <span className="ml-2 text-xs font-bold text-amber-300">RARE</span>}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-300" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}>
+                    {isRespawning ? `Respawning in ${respawnSecondsLeft}s...` : `${currentHp} / ${maxHp} HP`}
+                  </p>
+                  <div className="mt-2">
+                    <HpBar current={isRespawning ? 0 : currentHp} max={maxHp} />
+                  </div>
+                </div>
+                </div>
 
-            <Button variant="secondary" onClick={handleToggle} className="mt-4 w-full">
-              {isFighting ? 'Stop' : 'Resume'}
-            </Button>
+              {characterId && <RowCombatPanel characterId={characterId} />}
+
+              <Button variant="secondary" onClick={handleToggle} className="mt-4 w-full">
+                {isFighting ? 'Stop' : 'Resume'}
+              </Button>
+              </div>
             </div>
           </div>
         )}
@@ -977,75 +1005,85 @@ export default function CombatPage() {
         )}
 
         {mode === 'hunting' && activeType && (
-          <div
-            className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/80 bg-cover bg-center p-4"
-            style={currentZone.backgroundUrl ? { backgroundImage: `url(${currentZone.backgroundUrl})` } : undefined}
-          >
-            {currentZone.backgroundUrl && <div className="absolute inset-0 bg-slate-950/60" />}
-            <div className="relative">
-              <div className="flex items-center gap-4">
-              <div className="relative h-40 w-40 shrink-0">
-                {activeType.portraitUrl ? (
-                  <img
-                    key={monsterInstanceKey}
-                    src={activeType.portraitUrl}
-                    alt={activeType.displayName}
-                    className={`h-40 w-40 rounded-2xl border-2 border-slate-700 object-contain p-[15%] transition-opacity ${isRareInstance ? 'super-quality-glow' : ''} ${isRespawning ? 'opacity-30 grayscale' : ''}`}
-                  />
-                ) : (
-                  <div
-                    key={monsterInstanceKey}
-                    className={`h-40 w-40 rounded-2xl border-2 border-slate-700 transition-opacity ${isRareInstance ? 'super-quality-glow' : ''} ${isRespawning ? 'opacity-30 grayscale' : ''}`}
-                    style={{ backgroundColor: hexColor(activeType.color) }}
-                  />
-                )}
-                {isRespawning && <DeadOverlay seconds={respawnSecondsLeft} />}
-                <AnimatePresence>
-                  {floatingNumbers.map((entry) => (
-                    <motion.div
-                      key={entry.id}
-                      initial={{ opacity: 1, y: 0 }}
-                      animate={{ opacity: 0, y: -32 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.8, ease: 'easeOut' }}
-                      className={`pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 font-heading font-bold ${
-                        entry.kind === 'miss' ? 'text-slate-300' : outgoingDamageColorClass
-                      }`}
-                      // Nicer-looking damage numbers (2026-08-26, requested by
-                      // the user): the game's own Cinzel `.font-heading` font
-                      // instead of the default sans-serif, ~50% larger than
-                      // the prior text-sm (0.875rem * 1.5 = 1.3125rem) via
-                      // inline style so it reliably wins over the class's own
-                      // font-size (same convention as this page's character-
-                      // name label above), plus a drop shadow so white/light-
-                      // blue text still pops against light monster art.
-                      style={{ fontSize: '1.3125rem', textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
-                    >
-                      {entry.kind === 'miss' ? 'Miss' : `-${entry.amount}`}
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
-
-              <div className="flex-1">
-                <p className={`text-sm font-medium ${LEVEL_DIFF_TEXT_CLASS[getLevelDiffColor(characterLevel, activeType.level)]}`}>
-                  {activeType.displayName}
-                  {isRareInstance && <span className="ml-2 text-xs font-bold text-amber-300">RARE</span>}
-                </p>
-                <p className="mt-1 text-xs text-slate-300">
-                  {isRespawning ? `Respawning in ${respawnSecondsLeft}s...` : `${currentHp} / ${maxHp} HP`}
-                </p>
-                <div className="mt-2">
-                  <HpBar current={isRespawning ? 0 : currentHp} max={maxHp} />
+          <div className="ascension-card-frame">
+            <div
+              className="ascension-card-inner relative overflow-hidden bg-cover bg-center p-4"
+              style={currentZone.backgroundUrl ? { backgroundImage: `url(${currentZone.backgroundUrl})` } : undefined}
+            >
+              {currentZone.backgroundUrl && <div className="absolute inset-0 bg-slate-950/70" />}
+              <div className="relative">
+                <div className="flex items-center gap-4">
+                <div
+                  className={`relative h-40 w-40 shrink-0 ascension-card-frame ${isRareInstance ? 'is-tinted' : ''}`}
+                  style={isRareInstance ? RARE_PORTRAIT_TINT_STYLE : undefined}
+                >
+                  <div className="ascension-card-inner relative h-full w-full overflow-hidden">
+                    {activeType.portraitUrl ? (
+                      <img
+                        key={monsterInstanceKey}
+                        src={activeType.portraitUrl}
+                        alt={activeType.displayName}
+                        className={`h-full w-full object-contain p-[15%] transition-opacity ${isRespawning ? 'opacity-30 grayscale' : ''}`}
+                      />
+                    ) : (
+                      <div
+                        key={monsterInstanceKey}
+                        className={`h-full w-full transition-opacity ${isRespawning ? 'opacity-30 grayscale' : ''}`}
+                        style={{ backgroundColor: hexColor(activeType.color) }}
+                      />
+                    )}
+                    {isRespawning && <DeadOverlay seconds={respawnSecondsLeft} />}
+                  </div>
+                  <AnimatePresence>
+                    {floatingNumbers.map((entry) => (
+                      <motion.div
+                        key={entry.id}
+                        initial={{ opacity: 1, y: 0 }}
+                        animate={{ opacity: 0, y: -32 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.8, ease: 'easeOut' }}
+                        className={`pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 font-heading font-bold ${
+                          entry.kind === 'miss' ? 'text-slate-300' : outgoingDamageColorClass
+                        }`}
+                        // Nicer-looking damage numbers (2026-08-26, requested by
+                        // the user): the game's own Cinzel `.font-heading` font
+                        // instead of the default sans-serif, ~50% larger than
+                        // the prior text-sm (0.875rem * 1.5 = 1.3125rem) via
+                        // inline style so it reliably wins over the class's own
+                        // font-size (same convention as this page's character-
+                        // name label above), plus a drop shadow so white/light-
+                        // blue text still pops against light monster art.
+                        style={{ fontSize: '1.3125rem', textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
+                      >
+                        {entry.kind === 'miss' ? 'Miss' : `-${entry.amount}`}
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 </div>
-              </div>
-              </div>
 
-            {characterId && <RowCombatPanel characterId={characterId} />}
+                <div className="flex-1">
+                  <p
+                    className={`text-sm font-medium ${LEVEL_DIFF_TEXT_CLASS[getLevelDiffColor(characterLevel, activeType.level)]}`}
+                    style={{ textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
+                  >
+                    {activeType.displayName}
+                    {isRareInstance && <span className="ml-2 text-xs font-bold text-amber-300">RARE</span>}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-300" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}>
+                    {isRespawning ? `Respawning in ${respawnSecondsLeft}s...` : `${currentHp} / ${maxHp} HP`}
+                  </p>
+                  <div className="mt-2">
+                    <HpBar current={isRespawning ? 0 : currentHp} max={maxHp} />
+                  </div>
+                </div>
+                </div>
 
-            <Button variant="secondary" onClick={handleToggle} className="mt-4">
-              {isFighting ? 'Stop' : 'Resume'}
-            </Button>
+              {characterId && <RowCombatPanel characterId={characterId} />}
+
+              <Button variant="secondary" onClick={handleToggle} className="mt-4">
+                {isFighting ? 'Stop' : 'Resume'}
+              </Button>
+              </div>
             </div>
           </div>
         )}
