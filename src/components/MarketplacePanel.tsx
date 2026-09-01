@@ -36,7 +36,15 @@ import {
   getQualityColor,
   itemHasDurability,
 } from '../game/items/equipmentBonus'
-import { isFallenStarDragId, isFallenStarScrollDragId, isCometDragId, isCometScrollDragId } from '../game/items/forgeCosts'
+import {
+  isFallenStarDragId,
+  isFallenStarScrollDragId,
+  isCometDragId,
+  isCometScrollDragId,
+  isVipTokenDragId,
+  isExperienceOrbDragId,
+  isExperiencePotionDragId,
+} from '../game/items/forgeCosts'
 
 // Marketplace (see CLAUDE.md's Gear system / Marketplace section) — three
 // page-local sub-tabs, same "sub-navigation inside one top-level tab"
@@ -362,6 +370,21 @@ function ListAnItemForm({ characterId }: { characterId: string }) {
     }
     if (isFallenStarScrollDragId(dragId)) {
       setDraft({ kind: 'currency', dragId, currencyType: 'fallen_star_scroll' })
+      setError(null)
+      return
+    }
+    if (isVipTokenDragId(dragId)) {
+      setDraft({ kind: 'currency', dragId, currencyType: 'vip_token' })
+      setError(null)
+      return
+    }
+    if (isExperienceOrbDragId(dragId)) {
+      setDraft({ kind: 'currency', dragId, currencyType: 'experience_orb' })
+      setError(null)
+      return
+    }
+    if (isExperiencePotionDragId(dragId)) {
+      setDraft({ kind: 'currency', dragId, currencyType: 'experience_potion' })
       setError(null)
       return
     }

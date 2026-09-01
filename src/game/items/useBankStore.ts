@@ -10,7 +10,12 @@ import type { GemCounts, GemTier, GemTypeId } from './gemTypes'
 import { type GearSlotType } from './forgeCosts'
 import { useInventoryStore, occupiedSlotCount, INVENTORY_SLOT_CAP, type ItemInstance } from './useInventoryStore'
 
-type BankCurrencyType = 'comet' | 'fallen_star'
+// vip_token/experience_orb/experience_potion added 2026-12-07 (see
+// 20261207020000_vip_orb_potion_warehouse_storage.sql) — same physical
+// Storage shape as comet/fallen_star (bank_currency_item), but with BOTH
+// directions exposed in the UI (comet/fallen_star's deposit direction is
+// UI-retired, see the comment below, but still exists server-side).
+type BankCurrencyType = 'comet' | 'fallen_star' | 'vip_token' | 'experience_orb' | 'experience_potion'
 
 interface BankItemResult {
   ok: boolean
@@ -217,8 +222,14 @@ interface BankState {
   withdrawItemFromStorage: (itemId: string, characterId: string) => Promise<WithdrawItemFromStorageResult>
   // Deposit into physical Comet/Fallen Star Bank Storage (bank_currency_item)
   // was retired 2026-08-07 (confirmed with the user) — Withdraw stays so any
-  // already-banked physical units are still reachable from BankGrid.
+  // already-banked physical units are still reachable from BankGrid. VIP
+  // Token/Experience Orb/Experience Potion (2026-12-07) use both directions,
+  // see depositCurrencyItem below.
   withdrawCurrencyItem: (characterId: string, currencyType: BankCurrencyType, amount: number) => Promise<BankItemResult>
+  // VIP Token/Experience Orb/Experience Potion only (2026-12-07) — Comet/
+  // Fallen Star's own deposit direction stays retired from the UI. Same
+  // client-side "Storage is full" pre-check as depositItemToStorage below.
+  depositCurrencyItem: (characterId: string, currencyType: BankCurrencyType, amount: number) => Promise<BankItemResult>
   // Comet Box "Open" (2026-08-25) — see OpenCometBoxResult above.
   openCometBox: (characterId: string) => Promise<OpenCometBoxResult>
   // VIP Token "Use" (groundwork only) — see UseVipTokenResult above.
@@ -265,13 +276,21 @@ export const useBankStore = create<BankState>((set, get) => ({
     set({ bankedItems: (data ?? []) as ItemInstance[], loaded: true })
   },
 
-  // Only gear tiles + banked Comet/Fallen Star units count toward Storage's
-  // 40-slot cap — banked stones live as squares now (see BankSquares.tsx),
-  // not grid tiles, and points pools are a fungible balance, not a physical
-  // stack of tiles, same as currency isn't slot-based.
+  // Only gear tiles + banked Comet/Fallen Star/VIP Token/Experience Orb/
+  // Experience Potion units count toward Storage's 40-slot cap — banked
+  // stones live as squares now (see BankSquares.tsx), not grid tiles, and
+  // points pools are a fungible balance, not a physical stack of tiles, same
+  // as currency isn't slot-based.
   occupiedSlotCount: () => {
     const player = usePlayerRecordStore.getState()
-    return get().bankedItems.length + player.cometBankCount + player.fallenStarBankCount
+    return (
+      get().bankedItems.length +
+      player.cometBankCount +
+      player.fallenStarBankCount +
+      player.vipTokenBankCount +
+      player.experienceOrbBankCount +
+      player.experiencePotionBankCount
+    )
   },
 
   addBankedItem: (item) => set((state) => ({ bankedItems: [...state.bankedItems, item] })),
@@ -521,6 +540,29 @@ export const useBankStore = create<BankState>((set, get) => ({
     return applyBankCurrencyItemResult(currencyType, data as BankItemResult)
   },
 
+  depositCurrencyItem: async (characterId, currencyType, amount) => {
+    if (get().occupiedSlotCount() >= BANK_SLOT_CAP) {
+      set({ fullMessage: 'Storage is full.' })
+      return { ok: false }
+    }
+
+    set({ busy: true, fullMessage: null })
+    const { data, error } = await supabase.rpc('bank_currency_item', {
+      character_id: characterId,
+      currency_type: currencyType,
+      direction: 'deposit',
+      amount,
+    })
+    set({ busy: false })
+
+    if (error) {
+      console.error('Deposit currency item call failed', error)
+      return { ok: false }
+    }
+
+    return applyBankCurrencyItemResult(currencyType, data as BankItemResult)
+  },
+
   openCometBox: async (characterId) => {
     set({ busy: true })
     const { data, error } = await supabase.rpc('open_comet_box', { p_character_id: characterId })
@@ -611,9 +653,18 @@ function applyBankCurrencyItemResult(currencyType: BankCurrencyType, result: Ban
   if (currencyType === 'comet') {
     useCurrencyStore.getState().setComets(result.count)
     usePlayerRecordStore.getState().setCometBankCount(result.bank_count)
-  } else {
+  } else if (currencyType === 'fallen_star') {
     useCurrencyStore.getState().setFallenStars(result.count)
     usePlayerRecordStore.getState().setFallenStarBankCount(result.bank_count)
+  } else if (currencyType === 'vip_token') {
+    useCurrencyStore.getState().setVipTokens(result.count)
+    usePlayerRecordStore.getState().setVipTokenBankCount(result.bank_count)
+  } else if (currencyType === 'experience_orb') {
+    useCurrencyStore.getState().setExperienceOrbs(result.count)
+    usePlayerRecordStore.getState().setExperienceOrbBankCount(result.bank_count)
+  } else {
+    useCurrencyStore.getState().setExperiencePotions(result.count)
+    usePlayerRecordStore.getState().setExperiencePotionBankCount(result.bank_count)
   }
 
   return result

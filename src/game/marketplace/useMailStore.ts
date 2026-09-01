@@ -6,7 +6,7 @@ import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { useProgressionStore } from '../stats/useProgressionStore'
 import type { ListableCurrencyType } from './useMarketplaceStore'
 
-// Admin Mail (2026-08-13) adds two currency kinds that are mail-claimable but
+// Admin Mail (2026-08-13) adds currency kinds that are mail-claimable but
 // deliberately NOT marketplace-listable (Lottery Tickets/Ascension Points
 // aren't tradeable items) — kept as a separate superset type so
 // ListableCurrencyType (which also governs what a player can list for sale)
@@ -16,19 +16,16 @@ import type { ListableCurrencyType } from './useMarketplaceStore'
 // characters.gold directly instead of routing through Mail. 'comet_box'
 // (added for the World Boss/Gold Donation reward overhaul,
 // 20260904000000_event_reward_overhaul.sql) is the same story — Mail-
-// claimable, never marketplace-listable. 'vip_token' (groundwork only) is
-// the same story too — Admin Mail can grant it, but it's never a
-// marketplace-listable currency type. 'experience_orb'/'experience_potion'
-// (20261206000000_experience_orb_and_potion.sql) are the same story again.
+// claimable, never marketplace-listable. VIP Token/Experience Orb/
+// Experience Potion used to be mail-only-too, but became marketplace-listable
+// 2026-12-07 (20261207010000_vip_orb_potion_tradeable_bankable.sql), so
+// they're picked up via ListableCurrencyType now instead of listed here.
 export type MailCurrencyType =
   | ListableCurrencyType
   | 'lottery_ticket'
   | 'ascension_points'
   | 'gold'
   | 'comet_box'
-  | 'vip_token'
-  | 'experience_orb'
-  | 'experience_potion'
 
 // Mail (see CLAUDE.md's Marketplace section and
 // supabase/migrations/20260802050000_add_marketplace.sql). Sale proceeds

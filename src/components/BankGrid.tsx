@@ -8,8 +8,16 @@ import {
   FALLEN_STAR_ICON_SRC,
   MATERIAL_COLOR,
   COMET_ICON_SRC,
+  VIP_TOKEN_COLOR,
+  VIP_TOKEN_ICON_SRC,
+  CONSUMABLE_COLOR,
+  EXPERIENCE_ORB_ICON_SRC,
+  EXPERIENCE_POTION_ICON_SRC,
   buildFallenStarTooltip,
   buildCometTooltip,
+  buildVipTokenTooltip,
+  buildExperienceOrbTooltip,
+  buildExperiencePotionTooltip,
 } from '../game/items/forgeCosts'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
@@ -33,7 +41,30 @@ interface BankGridProps {
   characterId: string
 }
 
-type SelectedBankedSlot = { kind: 'item'; id: string } | { kind: 'currency'; currencyType: 'comet' | 'fallen_star' } | null
+// VIP Token/Experience Orb/Experience Potion (2026-12-07, see
+// 20261207020000_vip_orb_potion_warehouse_storage.sql) join Comet/Fallen Star
+// as physical Storage tiles here — same bank_currency_item mechanic, just
+// with deposit also exposed (via InventoryPanel's own per-tile popover)
+// rather than deposit staying UI-retired.
+type BankedCurrencyType = 'comet' | 'fallen_star' | 'vip_token' | 'experience_orb' | 'experience_potion'
+
+const BANKED_CURRENCY_META: Record<
+  BankedCurrencyType,
+  { label: string; iconSrc: string; color: string; tooltip: () => ReturnType<typeof buildCometTooltip> }
+> = {
+  comet: { label: 'Comet', iconSrc: COMET_ICON_SRC, color: MATERIAL_COLOR, tooltip: buildCometTooltip },
+  fallen_star: { label: 'Fallen Star', iconSrc: FALLEN_STAR_ICON_SRC, color: FALLEN_STAR_COLOR, tooltip: buildFallenStarTooltip },
+  vip_token: { label: 'VIP Token', iconSrc: VIP_TOKEN_ICON_SRC, color: VIP_TOKEN_COLOR, tooltip: buildVipTokenTooltip },
+  experience_orb: { label: 'Experience Orb', iconSrc: EXPERIENCE_ORB_ICON_SRC, color: CONSUMABLE_COLOR, tooltip: buildExperienceOrbTooltip },
+  experience_potion: {
+    label: 'Experience Potion',
+    iconSrc: EXPERIENCE_POTION_ICON_SRC,
+    color: CONSUMABLE_COLOR,
+    tooltip: buildExperiencePotionTooltip,
+  },
+}
+
+type SelectedBankedSlot = { kind: 'item'; id: string } | { kind: 'currency'; currencyType: BankedCurrencyType } | null
 
 export default function BankGrid({ characterId }: BankGridProps) {
   const bankedItems = useBankStore((state) => state.bankedItems)
@@ -46,6 +77,9 @@ export default function BankGrid({ characterId }: BankGridProps) {
 
   const cometBankCount = usePlayerRecordStore((state) => state.cometBankCount)
   const fallenStarBankCount = usePlayerRecordStore((state) => state.fallenStarBankCount)
+  const vipTokenBankCount = usePlayerRecordStore((state) => state.vipTokenBankCount)
+  const experienceOrbBankCount = usePlayerRecordStore((state) => state.experienceOrbBankCount)
+  const experiencePotionBankCount = usePlayerRecordStore((state) => state.experiencePotionBankCount)
 
   const [selectedBankedSlot, setSelectedBankedSlot] = useState<SelectedBankedSlot>(null)
   const [bankedPopoverAnchorRect, setBankedPopoverAnchorRect] = useState<DOMRect | null>(null)
@@ -62,7 +96,20 @@ export default function BankGrid({ characterId }: BankGridProps) {
   const fallenStarShown = Math.min(fallenStarBankCount, remainingAfterComets)
   const bankedFallenStarTiles = Array.from({ length: fallenStarShown }, (_, index) => index)
 
-  const occupiedCount = bankedItems.length + cometShown + fallenStarShown
+  // VIP Token/Experience Orb/Experience Potion (2026-12-07) — same greedy
+  // budget-clamp chain, allocated last.
+  const remainingAfterFallenStars = Math.max(0, remainingAfterComets - bankedFallenStarTiles.length)
+  const vipTokenShown = Math.min(vipTokenBankCount, remainingAfterFallenStars)
+  const bankedVipTokenTiles = Array.from({ length: vipTokenShown }, (_, index) => index)
+  const remainingAfterVipTokens = Math.max(0, remainingAfterFallenStars - bankedVipTokenTiles.length)
+  const experienceOrbShown = Math.min(experienceOrbBankCount, remainingAfterVipTokens)
+  const bankedExperienceOrbTiles = Array.from({ length: experienceOrbShown }, (_, index) => index)
+  const remainingAfterExperienceOrbs = Math.max(0, remainingAfterVipTokens - bankedExperienceOrbTiles.length)
+  const experiencePotionShown = Math.min(experiencePotionBankCount, remainingAfterExperienceOrbs)
+  const bankedExperiencePotionTiles = Array.from({ length: experiencePotionShown }, (_, index) => index)
+
+  const occupiedCount =
+    bankedItems.length + cometShown + fallenStarShown + vipTokenShown + experienceOrbShown + experiencePotionShown
   const emptySlotCount = Math.max(0, BANK_SLOT_CAP - occupiedCount)
 
   const selectedBankedItem =
@@ -125,22 +172,37 @@ export default function BankGrid({ characterId }: BankGridProps) {
     }
   }
 
-  const handleWithdrawBankedCurrency = async (currencyType: 'comet' | 'fallen_star') => {
+  const bankedCurrencyOwned = (currencyType: BankedCurrencyType): number => {
+    switch (currencyType) {
+      case 'comet':
+        return cometBankCount
+      case 'fallen_star':
+        return fallenStarBankCount
+      case 'vip_token':
+        return vipTokenBankCount
+      case 'experience_orb':
+        return experienceOrbBankCount
+      case 'experience_potion':
+        return experiencePotionBankCount
+    }
+  }
+
+  const handleWithdrawBankedCurrency = async (currencyType: BankedCurrencyType) => {
     setBankedActionError(null)
     setBankedActionBusy(true)
     const result = await withdrawCurrencyItem(characterId, currencyType, 1)
     setBankedActionBusy(false)
 
     if (!result.ok) {
-      setBankedActionError(`Couldn't withdraw that ${currencyType === 'comet' ? 'Comet' : 'Fallen Star'}.`)
+      setBankedActionError(`Couldn't withdraw that ${BANKED_CURRENCY_META[currencyType].label}.`)
       return
     }
 
     closeBankedPopover()
   }
 
-  const handleWithdrawAllBankedCurrency = async (currencyType: 'comet' | 'fallen_star') => {
-    const owned = currencyType === 'comet' ? cometBankCount : fallenStarBankCount
+  const handleWithdrawAllBankedCurrency = async (currencyType: BankedCurrencyType) => {
+    const owned = bankedCurrencyOwned(currencyType)
     if (owned <= 0) {
       return
     }
@@ -150,7 +212,7 @@ export default function BankGrid({ characterId }: BankGridProps) {
     setBankedActionBusy(false)
 
     if (!result.ok) {
-      setBankedActionError(`Couldn't withdraw your ${currencyType === 'comet' ? 'Comets' : 'Fallen Stars'}.`)
+      setBankedActionError(`Couldn't withdraw your ${BANKED_CURRENCY_META[currencyType].label}s.`)
       return
     }
 
@@ -242,6 +304,39 @@ export default function BankGrid({ characterId }: BankGridProps) {
               </div>
             ))}
 
+            {/* VIP Token/Experience Orb/Experience Potion banked tiles
+                (2026-12-07) — same non-stacking convention as Comet/Fallen
+                Star above. */}
+            {(
+              [
+                ['vip_token', bankedVipTokenTiles],
+                ['experience_orb', bankedExperienceOrbTiles],
+                ['experience_potion', bankedExperiencePotionTiles],
+              ] as const
+            ).flatMap(([currencyType, tiles]) =>
+              tiles.map((index) => {
+                const meta = BANKED_CURRENCY_META[currencyType]
+                return (
+                  <div
+                    key={`banked-${currencyType}-${index}`}
+                    data-tooltip-action-anchor
+                    onClick={(event) => toggleBankedSlot({ kind: 'currency', currencyType }, event.currentTarget.getBoundingClientRect())}
+                  >
+                    <InventorySlot
+                      slotId={`banked-${currencyType}-${index}`}
+                      filled
+                      sizeClassName={SLOT_SIZE_CLASS}
+                      iconSrc={meta.iconSrc}
+                      qualityColor={meta.color}
+                      label={`${meta.label} (Storage)`}
+                      tooltip={meta.tooltip()}
+                      selected={selectedBankedSlot?.kind === 'currency' && selectedBankedSlot.currencyType === currencyType}
+                    />
+                  </div>
+                )
+              }),
+            )}
+
             {Array.from({ length: emptySlotCount }, (_, index) => (
               <InventorySlot key={`empty-${index}`} slotId={`bank-empty-${index}`} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
             ))}
@@ -281,7 +376,7 @@ export default function BankGrid({ characterId }: BankGridProps) {
       {selectedBankedCurrencyType && bankedPopoverAnchorRect && (
         <TooltipActionPopover
           anchorRect={bankedPopoverAnchorRect}
-          tooltip={selectedBankedCurrencyType === 'comet' ? buildCometTooltip() : buildFallenStarTooltip()}
+          tooltip={BANKED_CURRENCY_META[selectedBankedCurrencyType].tooltip()}
           actions={[
             {
               label: bankedActionBusy ? 'Withdrawing…' : 'Withdraw',

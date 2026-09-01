@@ -12,10 +12,19 @@ import { useMailStore } from './useMailStore'
 // on it at all).
 export type ListingStatus = 'active' | 'sold' | 'cancelled' | 'expired'
 export type ListingCurrency = 'gold' | 'ascension_points'
-// The 4 currency "items" that can be listed alongside gear (2026-08-03) —
-// each listing is always exactly 1 unit, same as gear is always exactly 1
-// unique item. See 20260803010000_marketplace_currency_listings.sql.
-export type ListableCurrencyType = 'comet' | 'fallen_star' | 'comet_scroll' | 'fallen_star_scroll'
+// The currency "items" that can be listed alongside gear (2026-08-03) — each
+// listing is always exactly 1 unit, same as gear is always exactly 1 unique
+// item. See 20260803010000_marketplace_currency_listings.sql. VIP Token/
+// Experience Orb/Experience Potion added 2026-12-07 (see
+// 20261207010000_vip_orb_potion_tradeable_bankable.sql).
+export type ListableCurrencyType =
+  | 'comet'
+  | 'fallen_star'
+  | 'comet_scroll'
+  | 'fallen_star_scroll'
+  | 'vip_token'
+  | 'experience_orb'
+  | 'experience_potion'
 // Exactly one of item_id/currency_type is set per row (DB check constraint)
 // — a listing lists either a real gear item or one of the currency types.
 export type ListingTarget = { kind: 'item'; itemId: string } | { kind: 'currency'; currencyType: ListableCurrencyType }

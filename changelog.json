@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.126.6",
+    "date": "2026-09-02",
+    "changes": [
+      "VIP Tokens, Experience Orbs, and Experience Potions can now be listed on the Marketplace and deposited into account-wide Bank Storage, same as Comets and Fallen Stars"
+    ]
+  },
+  {
     "version": "1.126.5",
     "date": "2026-09-02",
     "changes": [

@@ -14,10 +14,10 @@ import type { ListableCurrencyType } from '../game/marketplace/useMarketplaceSto
 import type { ItemInstance } from '../game/items/useInventoryStore'
 import type { ItemTemplate } from '../game/items/useItemTemplatesStore'
 
-// What's currently staged to list — either a real gear item or one of the 4
-// listable currency types (Comet/Fallen Star/their Scrolls, 2026-08-03),
-// always exactly 1 unit either way (matching gear's own "1 listing = 1
-// unique item" model).
+// What's currently staged to list — either a real gear item or one of the
+// listable currency types (Comet/Fallen Star/their Scrolls, 2026-08-03; VIP
+// Token/Experience Orb/Experience Potion, 2026-12-07), always exactly 1 unit
+// either way (matching gear's own "1 listing = 1 unique item" model).
 export type ListingDraftTarget =
   | { kind: 'item'; item: ItemInstance; template: ItemTemplate | null }
   | { kind: 'currency'; currencyType: ListableCurrencyType }

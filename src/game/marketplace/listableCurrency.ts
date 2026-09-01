@@ -39,6 +39,12 @@ export function listableCurrencyLabel(type: ListableCurrencyType): string {
       return 'Comet Scroll'
     case 'fallen_star_scroll':
       return 'Fallen Star Scroll'
+    case 'vip_token':
+      return 'VIP Token'
+    case 'experience_orb':
+      return 'Experience Orb'
+    case 'experience_potion':
+      return 'Experience Potion'
   }
 }
 
@@ -58,6 +64,12 @@ export function listableCurrencyVisual(type: ListableCurrencyType): ListableCurr
       return { iconSrc: COMET_SCROLL_ICON_SRC, qualityColor: MATERIAL_COLOR }
     case 'fallen_star_scroll':
       return { iconSrc: FALLEN_STAR_SCROLL_ICON_SRC, qualityColor: FALLEN_STAR_COLOR }
+    case 'vip_token':
+      return { iconSrc: VIP_TOKEN_ICON_SRC, qualityColor: VIP_TOKEN_COLOR }
+    case 'experience_orb':
+      return { iconSrc: EXPERIENCE_ORB_ICON_SRC, qualityColor: CONSUMABLE_COLOR }
+    case 'experience_potion':
+      return { iconSrc: EXPERIENCE_POTION_ICON_SRC, qualityColor: CONSUMABLE_COLOR }
   }
 }
 
@@ -85,9 +97,9 @@ export function mailCurrencyLabel(type: MailCurrencyType): string {
   if (type === 'ascension_points') return 'Ascension Points'
   if (type === 'gold') return 'Gold'
   if (type === 'comet_box') return 'Comet Box'
-  if (type === 'vip_token') return 'VIP Token'
-  if (type === 'experience_orb') return 'Experience Orb'
-  if (type === 'experience_potion') return 'Experience Potion'
+  // vip_token/experience_orb/experience_potion became listable 2026-12-07
+  // (see 20261207010000_vip_orb_potion_tradeable_bankable.sql) — their
+  // label now lives on listableCurrencyLabel, reached via this fallback.
   return listableCurrencyLabel(type)
 }
 
@@ -96,9 +108,6 @@ export function mailCurrencyVisual(type: MailCurrencyType): ListableCurrencyVisu
   if (type === 'ascension_points') return { iconSrc: ASCENSION_POINTS_ICON_SRC, qualityColor: ASCENSION_POINTS_COLOR }
   if (type === 'gold') return { icon: '💰', qualityColor: GOLD_COLOR }
   if (type === 'comet_box') return { iconSrc: COMET_BOX_ICON_SRC, qualityColor: MATERIAL_COLOR }
-  if (type === 'vip_token') return { iconSrc: VIP_TOKEN_ICON_SRC, qualityColor: VIP_TOKEN_COLOR }
-  if (type === 'experience_orb') return { iconSrc: EXPERIENCE_ORB_ICON_SRC, qualityColor: CONSUMABLE_COLOR }
-  if (type === 'experience_potion') return { iconSrc: EXPERIENCE_POTION_ICON_SRC, qualityColor: CONSUMABLE_COLOR }
   return listableCurrencyVisual(type)
 }
 

@@ -114,6 +114,15 @@ type SelectedSlot =
   | { kind: 'experience_potion'; dragId: string }
   | null
 
+// Display label for handleDepositCurrencyItem/handleDepositAllCurrencyItem's
+// error messages below (2026-12-07, see
+// 20261207020000_vip_orb_potion_warehouse_storage.sql).
+const DEPOSIT_CURRENCY_ITEM_LABEL: Record<'vip_token' | 'experience_orb' | 'experience_potion', string> = {
+  vip_token: 'VIP Token',
+  experience_orb: 'Experience Orb',
+  experience_potion: 'Experience Potion',
+}
+
 interface InventoryPanelProps {
   // Gear items/stone tiers currently sitting in Forge's Upgrade Slot and/or Fuel
   // zone (if any) — their cells render empty here instead of filled, so nothing is
@@ -324,6 +333,9 @@ export default function InventoryPanel({
   const depositStone = useBankStore((state) => state.depositStone)
   const depositGem = useBankStore((state) => state.depositGem)
   const depositCurrency = useBankStore((state) => state.depositCurrency)
+  // VIP Token/Experience Orb/Experience Potion physical Storage deposit
+  // (2026-12-07) — see handleDepositCurrencyItem below.
+  const depositCurrencyItem = useBankStore((state) => state.depositCurrencyItem)
   const showGainToast = useGainToastStore((state) => state.show)
   // Snap-highlight (2026-08-07) — a no-op false on any page without an
   // active DragDropProvider (Shop/Marketplace/Equipment/etc.), only ever
@@ -880,6 +892,51 @@ export default function InventoryPanel({
 
     if (!result.ok) {
       setBankDepositError(`Couldn't bank your ${currencyType === 'comet' ? 'Comets' : 'Fallen Stars'}.`)
+      return
+    }
+
+    closeBankPopover()
+  }
+
+  // Deposit into physical account-wide Storage (bank_currency_item, same
+  // mechanic as gear's handleBankDepositItem below and Comet/Fallen Star's
+  // own withdraw-only physical Storage) — VIP Token/Experience Orb/
+  // Experience Potion only (2026-12-07). Reuses bankDepositBusy/
+  // bankDepositError, same as every other Deposit/Bank action in this
+  // enableBankDeposit-only popover set.
+  const handleDepositCurrencyItem = async (currencyType: 'vip_token' | 'experience_orb' | 'experience_potion') => {
+    if (!characterId) {
+      return
+    }
+    setBankDepositError(null)
+    setBankDepositBusy(true)
+    const result = await depositCurrencyItem(characterId, currencyType, 1)
+    setBankDepositBusy(false)
+
+    if (!result.ok) {
+      setBankDepositError(`Couldn't deposit that ${DEPOSIT_CURRENCY_ITEM_LABEL[currencyType]}.`)
+      return
+    }
+
+    closeBankPopover()
+  }
+
+  const handleDepositAllCurrencyItem = async (currencyType: 'vip_token' | 'experience_orb' | 'experience_potion') => {
+    if (!characterId) {
+      return
+    }
+    const owned =
+      currencyType === 'vip_token' ? vipTokens : currencyType === 'experience_orb' ? experienceOrbs : experiencePotions
+    if (owned <= 0) {
+      return
+    }
+    setBankDepositError(null)
+    setBankDepositBusy(true)
+    const result = await depositCurrencyItem(characterId, currencyType, owned)
+    setBankDepositBusy(false)
+
+    if (!result.ok) {
+      setBankDepositError(`Couldn't deposit your ${DEPOSIT_CURRENCY_ITEM_LABEL[currencyType]}s.`)
       return
     }
 
@@ -2116,13 +2173,28 @@ export default function InventoryPanel({
         <TooltipActionPopover
           anchorRect={vipTokenPopoverAnchorRect}
           tooltip={buildVipTokenTooltip()}
-          actions={[
-            {
-              label: vipTokenBusy ? 'Using…' : `Use (+${VIP_TOKEN_DURATION_DAYS}d VIP)`,
-              onClick: () => void handleUseVipToken(),
-              disabled: vipTokenBusy,
-            },
-          ]}
+          actions={
+            enableBankDeposit
+              ? [
+                  {
+                    label: bankDepositBusy ? 'Depositing…' : 'Deposit',
+                    onClick: () => void handleDepositCurrencyItem('vip_token'),
+                    disabled: bankDepositBusy,
+                  },
+                  {
+                    label: 'Deposit All',
+                    onClick: () => void handleDepositAllCurrencyItem('vip_token'),
+                    disabled: bankDepositBusy,
+                  },
+                ]
+              : [
+                  {
+                    label: vipTokenBusy ? 'Using…' : `Use (+${VIP_TOKEN_DURATION_DAYS}d VIP)`,
+                    onClick: () => void handleUseVipToken(),
+                    disabled: vipTokenBusy,
+                  },
+                ]
+          }
           onClose={closeVipTokenPopover}
         />
       )}
@@ -2131,13 +2203,28 @@ export default function InventoryPanel({
         <TooltipActionPopover
           anchorRect={experienceOrbPopoverAnchorRect}
           tooltip={buildExperienceOrbTooltip()}
-          actions={[
-            {
-              label: experienceOrbBusy ? 'Using…' : 'Use',
-              onClick: () => void handleUseExperienceOrb(),
-              disabled: experienceOrbBusy,
-            },
-          ]}
+          actions={
+            enableBankDeposit
+              ? [
+                  {
+                    label: bankDepositBusy ? 'Depositing…' : 'Deposit',
+                    onClick: () => void handleDepositCurrencyItem('experience_orb'),
+                    disabled: bankDepositBusy,
+                  },
+                  {
+                    label: 'Deposit All',
+                    onClick: () => void handleDepositAllCurrencyItem('experience_orb'),
+                    disabled: bankDepositBusy,
+                  },
+                ]
+              : [
+                  {
+                    label: experienceOrbBusy ? 'Using…' : 'Use',
+                    onClick: () => void handleUseExperienceOrb(),
+                    disabled: experienceOrbBusy,
+                  },
+                ]
+          }
           onClose={closeExperienceOrbPopover}
         />
       )}
@@ -2146,13 +2233,28 @@ export default function InventoryPanel({
         <TooltipActionPopover
           anchorRect={experiencePotionPopoverAnchorRect}
           tooltip={buildExperiencePotionTooltip()}
-          actions={[
-            {
-              label: experiencePotionBusy ? 'Using…' : `Use (2x EXP for ${EXPERIENCE_POTION_DURATION_HOURS}h)`,
-              onClick: () => void handleUseExperiencePotion(),
-              disabled: experiencePotionBusy,
-            },
-          ]}
+          actions={
+            enableBankDeposit
+              ? [
+                  {
+                    label: bankDepositBusy ? 'Depositing…' : 'Deposit',
+                    onClick: () => void handleDepositCurrencyItem('experience_potion'),
+                    disabled: bankDepositBusy,
+                  },
+                  {
+                    label: 'Deposit All',
+                    onClick: () => void handleDepositAllCurrencyItem('experience_potion'),
+                    disabled: bankDepositBusy,
+                  },
+                ]
+              : [
+                  {
+                    label: experiencePotionBusy ? 'Using…' : `Use (2x EXP for ${EXPERIENCE_POTION_DURATION_HOURS}h)`,
+                    onClick: () => void handleUseExperiencePotion(),
+                    disabled: experiencePotionBusy,
+                  },
+                ]
+          }
           onClose={closeExperiencePotionPopover}
         />
       )}

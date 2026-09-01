@@ -32,6 +32,13 @@ interface PlayerRow {
   gear_composition_points: GearCompositionPoints
   comet_bank_count: number
   fallen_star_bank_count: number
+  // VIP Token/Experience Orb/Experience Potion physical Storage counts
+  // (2026-12-07, see 20261207020000_vip_orb_potion_warehouse_storage.sql) —
+  // same shape as comet_bank_count/fallen_star_bank_count above, rendered as
+  // account-wide tiles in BankGrid.tsx's Storage grid.
+  vip_token_bank_count: number
+  experience_orb_bank_count: number
+  experience_potion_bank_count: number
   composition_stones_banked: CompositionStones
   // Gems' own account-wide bank balance (2026-08-09) — see transfer_gem.
   // Same key format as characters.gems ("<gemId>_<tier>").
@@ -88,6 +95,9 @@ interface PlayerRecordState {
   gearCompositionPoints: GearCompositionPoints
   cometBankCount: number
   fallenStarBankCount: number
+  vipTokenBankCount: number
+  experienceOrbBankCount: number
+  experiencePotionBankCount: number
   stonesBanked: CompositionStones
   gemsBanked: GemCounts
   // Achievements rework (2026-08-06) — see PlayerRow's own comment above.
@@ -108,6 +118,9 @@ interface PlayerRecordState {
   setGearCompositionPoints: (value: GearCompositionPoints) => void
   setCometBankCount: (value: number) => void
   setFallenStarBankCount: (value: number) => void
+  setVipTokenBankCount: (value: number) => void
+  setExperienceOrbBankCount: (value: number) => void
+  setExperiencePotionBankCount: (value: number) => void
   setStonesBanked: (value: CompositionStones) => void
   setGemsBanked: (value: GemCounts) => void
   setAccountZoneAttackBonusPct: (value: Record<string, number>) => void
@@ -126,6 +139,9 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
   gearCompositionPoints: DEFAULT_GEAR_COMPOSITION_POINTS,
   cometBankCount: 0,
   fallenStarBankCount: 0,
+  vipTokenBankCount: 0,
+  experienceOrbBankCount: 0,
+  experiencePotionBankCount: 0,
   stonesBanked: DEFAULT_STONES_BANKED,
   gemsBanked: DEFAULT_GEMS_BANKED,
   accountZoneAttackBonusPct: {},
@@ -135,7 +151,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
     const { data, error } = await supabase
       .from('players')
       .select(
-        'last_seen_version, bank_gold, bank_comets, bank_fallen_stars, unlocked_classes, lucky_free_ticket_claimed_at, ascension_points, bank_points, gear_composition_points, comet_bank_count, fallen_star_bank_count, composition_stones_banked, gems_banked, account_zone_attack_bonus_pct, account_zone_drop_bonus_pct',
+        'last_seen_version, bank_gold, bank_comets, bank_fallen_stars, unlocked_classes, lucky_free_ticket_claimed_at, ascension_points, bank_points, gear_composition_points, comet_bank_count, fallen_star_bank_count, vip_token_bank_count, experience_orb_bank_count, experience_potion_bank_count, composition_stones_banked, gems_banked, account_zone_attack_bonus_pct, account_zone_drop_bonus_pct',
       )
       .eq('id', userId)
       .maybeSingle<PlayerRow>()
@@ -170,6 +186,9 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
         gearCompositionPoints: DEFAULT_GEAR_COMPOSITION_POINTS,
         cometBankCount: 0,
         fallenStarBankCount: 0,
+        vipTokenBankCount: 0,
+        experienceOrbBankCount: 0,
+        experiencePotionBankCount: 0,
         stonesBanked: DEFAULT_STONES_BANKED,
         gemsBanked: DEFAULT_GEMS_BANKED,
         accountZoneAttackBonusPct: {},
@@ -190,6 +209,9 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
       gearCompositionPoints: data.gear_composition_points,
       cometBankCount: data.comet_bank_count,
       fallenStarBankCount: data.fallen_star_bank_count,
+      vipTokenBankCount: data.vip_token_bank_count,
+      experienceOrbBankCount: data.experience_orb_bank_count,
+      experiencePotionBankCount: data.experience_potion_bank_count,
       stonesBanked: data.composition_stones_banked,
       gemsBanked: data.gems_banked ?? DEFAULT_GEMS_BANKED,
       accountZoneAttackBonusPct: data.account_zone_attack_bonus_pct ?? {},
@@ -228,6 +250,9 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
   setGearCompositionPoints: (value) => set({ gearCompositionPoints: value }),
   setCometBankCount: (value) => set({ cometBankCount: value }),
   setFallenStarBankCount: (value) => set({ fallenStarBankCount: value }),
+  setVipTokenBankCount: (value) => set({ vipTokenBankCount: value }),
+  setExperienceOrbBankCount: (value) => set({ experienceOrbBankCount: value }),
+  setExperiencePotionBankCount: (value) => set({ experiencePotionBankCount: value }),
   setStonesBanked: (value) => set({ stonesBanked: value }),
   setGemsBanked: (value) => set({ gemsBanked: value }),
   setAccountZoneAttackBonusPct: (value) => set({ accountZoneAttackBonusPct: value }),
