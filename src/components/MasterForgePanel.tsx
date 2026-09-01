@@ -22,6 +22,18 @@ import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 
+// Promotion materials (Lunar Chest, Umbrite Ore, Jade Shard, Opaline Gem) and
+// Mining Ore (Iron/Silver/Gold) have no stats and no upgrade chain — the
+// backend rejects a Quality Upgrade on either slot_type. Quiver is
+// deliberately NOT excluded here (unlike regular Forge's own
+// isUpgradeEligibleSlotType, ForgeStandardPanel.tsx) — it just fails
+// downstream with "no further upgrades" like any other maxed item. Shared by
+// handleSelectItem (blocks the drop) and isTileEligible (dims the tile
+// beforehand) so the two can't drift apart.
+function isMasterForgeEligibleSlotType(slotType: string | undefined): boolean {
+  return slotType !== 'promotion-material' && slotType !== 'material'
+}
+
 function describeFailure(error?: string): string {
   switch (error) {
     case 'not_enough_fallen_stars':
@@ -94,17 +106,22 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
   }
 
   const handleSelectItem = (id: string) => {
-    // Promotion materials (Lunar Chest, Umbrite Ore, Jade Shard, Opaline
-    // Gem) and Mining Ore (Iron/Silver/Gold) have no stats and no upgrade
-    // chain — same exclusion as the regular Forge's Quiver check
-    // (ForgeStandardPanel.tsx), extended to both slot_types since the
-    // backend now rejects a Quality Upgrade on either.
     const template = templates.find((entry) => entry.id === items.find((item) => item.id === id)?.template_id)
-    if (template?.slot_type === 'promotion-material' || template?.slot_type === 'material') {
+    if (!isMasterForgeEligibleSlotType(template?.slot_type)) {
       return
     }
     setSelectedItemId(id)
     setResult(null)
+  }
+
+  // No material-drop second phase here (Master Forge computes its cost
+  // automatically once Quality/Level is picked) — eligibility is just "is
+  // this a gear item Master Forge will actually accept," constant
+  // regardless of whether an item is already staged.
+  const isTileEligible = (dragId: string): boolean => {
+    const item = items.find((entry) => entry.id === dragId)
+    const template = item ? templates.find((entry) => entry.id === item.template_id) : undefined
+    return Boolean(item) && isMasterForgeEligibleSlotType(template?.slot_type)
   }
 
   const handleRemove = () => {
@@ -199,7 +216,13 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
         title="Master Forge"
         onBack={onBack}
         inventory={
-          <InventoryPanel columns={5} reservedItemIds={selectedItemId ? [selectedItemId] : []} onTileDrop={handleTileDrop} tapToPlaceEnabled />
+          <InventoryPanel
+            columns={5}
+            reservedItemIds={selectedItemId ? [selectedItemId] : []}
+            onTileDrop={handleTileDrop}
+            isTileEligible={isTileEligible}
+            tapToPlaceEnabled
+          />
         }
       >
         <p className="max-w-sm text-center text-[11px] text-slate-300">

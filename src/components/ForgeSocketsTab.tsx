@@ -163,13 +163,32 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
     }
   }
 
+  // Coarser than handleDropGem's own per-socket index check (there's no
+  // single "eligible" answer once one socket is unlocked and the other
+  // isn't) — a gem tile dims only once *no* socket could take it at all
+  // (socketCount 0, e.g. before Unlock is pressed, or an armor piece that
+  // hasn't proc'd one yet).
+  const isTileEligible = (dragId: string): boolean => {
+    if (!selectedItem) {
+      return items.some((item) => item.id === dragId)
+    }
+
+    return socketCount > 0 && parseGemDragId(dragId) !== null
+  }
+
   return (
     <DragDropProvider>
       <ForgeTwoColumnLayout
         title="Sockets"
         onBack={onBack}
         inventory={
-          <InventoryPanel columns={5} reservedItemIds={selectedItemId ? [selectedItemId] : []} onTileDrop={handleTileDrop} tapToPlaceEnabled />
+          <InventoryPanel
+            columns={5}
+            reservedItemIds={selectedItemId ? [selectedItemId] : []}
+            onTileDrop={handleTileDrop}
+            isTileEligible={isTileEligible}
+            tapToPlaceEnabled
+          />
         }
       >
           <div className="flex items-start justify-center gap-6">

@@ -148,6 +148,28 @@ export default function ForgeCompositionTab({ onBack }: ForgeCompositionTabProps
     }
   }
 
+  // Mirrors handleDropItemId/handleDropMaterial's own accept/reject checks
+  // (not a new set of rules) so the Inventory grid's dimming can't drift out
+  // of sync with what a drop actually does. Ignores the max-2-fuel-slots cap
+  // and the already-materialEntries/already-selectedItemId id checks — those
+  // tiles are already hidden via reservedItemIds, not dimmed.
+  const isTileEligible = (dragId: string): boolean => {
+    if (!selectedItem) {
+      return items.some((item) => item.id === dragId)
+    }
+
+    if (isCometDragId(dragId) || isFallenStarDragId(dragId)) {
+      return false
+    }
+
+    if (parseStoneDragId(dragId) !== null) {
+      return true
+    }
+
+    const item = items.find((entry) => entry.id === dragId)
+    return item !== undefined && !item.locked
+  }
+
   const handleFeed = async () => {
     if (!selectedItem) {
       return
@@ -184,6 +206,7 @@ export default function ForgeCompositionTab({ onBack }: ForgeCompositionTabProps
             columns={5}
             reservedItemIds={[...(selectedItemId ? [selectedItemId] : []), ...materialEntries.map((entry) => entry.id)]}
             onTileDrop={handleTileDrop}
+            isTileEligible={isTileEligible}
             tapToPlaceEnabled
           />
         }

@@ -213,6 +213,22 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
     }
   }
 
+  // Bless mirrors handleDropBlessGem's own gemId/tier check exactly — every
+  // other gem shows an error there rather than being silently rejected, but
+  // dimming still treats it as ineligible since dropping it can't succeed.
+  const isTileEligible = (dragId: string): boolean => {
+    if (!selectedItem) {
+      return items.some((item) => item.id === dragId)
+    }
+
+    const parsed = parseGemDragId(dragId)
+    if (subMode === 'bless') {
+      return parsed !== null && parsed.gemId === 'bastion' && parsed.tier === 'ascended'
+    }
+
+    return parsed !== null
+  }
+
   const handleBless = async () => {
     if (!selectedItem || !blessGem || blessing || isBlessMaxed) {
       return
@@ -278,7 +294,13 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
         title="Enchantress"
         onBack={onBack}
         inventory={
-          <InventoryPanel columns={5} reservedItemIds={selectedItemId ? [selectedItemId] : []} onTileDrop={handleTileDrop} tapToPlaceEnabled />
+          <InventoryPanel
+            columns={5}
+            reservedItemIds={selectedItemId ? [selectedItemId] : []}
+            onTileDrop={handleTileDrop}
+            isTileEligible={isTileEligible}
+            tapToPlaceEnabled
+          />
         }
       >
         <div className="grid w-full max-w-xs grid-cols-2 gap-2">

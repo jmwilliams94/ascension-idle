@@ -234,6 +234,16 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
     }
   }
 
+  // Mirrors handleDropItemId's own guard — locked gear can't be salvaged,
+  // and nothing drops while a salvage animation is already in flight.
+  const isTileEligible = (dragId: string): boolean => {
+    if (phase !== 'idle') {
+      return false
+    }
+    const item = items.find((entry) => entry.id === dragId)
+    return item !== undefined && !item.locked
+  }
+
   const handleSalvage = () => {
     if (!selectedItem || phase !== 'idle') {
       return
@@ -317,7 +327,14 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
       <ForgeTwoColumnLayout
         title="Salvage"
         onBack={onBack}
-        inventory={<InventoryPanel columns={5} reservedItemIds={selectedItemId ? [selectedItemId] : []} onTileDrop={handleTileDrop} />}
+        inventory={
+          <InventoryPanel
+            columns={5}
+            reservedItemIds={selectedItemId ? [selectedItemId] : []}
+            onTileDrop={handleTileDrop}
+            isTileEligible={isTileEligible}
+          />
+        }
       >
         <AscensionCard className="w-full max-w-xs" contentClassName="p-3 text-center text-xs text-slate-400">
           <p>Drag in unwanted gear to salvage it for Ascension Points — no gold, but works on any quality tier.</p>
