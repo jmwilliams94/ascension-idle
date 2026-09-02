@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.128.5",
+    "date": "2026-09-03",
+    "changes": [
+      "Zone Bosses now have much more HP overall (15,000 up to 250,000 depending on the zone, rounded to the nearest 5,000), so the weakest ones can no longer be killed in a couple of hits"
+    ]
+  },
+  {
     "version": "1.128.4",
     "date": "2026-09-02",
     "changes": [
