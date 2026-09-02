@@ -92,7 +92,7 @@ export default function PotionTypeContainer({
           onClick={() => bestStack && canUse && onUse(bestStack.id)}
         />
 
-        <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
+        <div className="flex min-w-0 flex-1 flex-col items-center gap-1">
           <span className="text-heading-label">{headingLabel}</span>
           <button
             type="button"
