@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.126.11",
+    "date": "2026-09-02",
+    "changes": [
+      "Wuxia's Thunder lightning strike is now sized to match the enemy portrait instead of a full-screen bolt, and starts from the top edge of the portrait"
+    ]
+  },
+  {
     "version": "1.126.10",
     "date": "2026-09-02",
     "changes": [

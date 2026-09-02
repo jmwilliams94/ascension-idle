@@ -35,11 +35,27 @@ const TOTAL_MS = FLASH_MS + HOLD_MS + FADE_MS
 
 export function createLightning(width: number, height: number, seed: number, options?: FxEffectOptions): FxEffect {
   const rand = mulberry32(seed)
+  const bounds = options?.clip
+  // FxLayer always passes the full-page canvas size as width/height, even
+  // for a clipped request -- everything below that scales off those (the
+  // jag displacement, branch reach, stroke width/glow) used to size itself
+  // for a full-screen strike regardless, which read as oversized once almost
+  // all of a page-proportioned bolt got clipped down to a small container
+  // (2026-11, reported by the user re: the Wuxia Thunder strike). When a
+  // clip rect is present, scale off its own (much smaller) dimensions
+  // instead, and knock the stroke/glow down a size to match.
+  const scaleWidth = bounds?.width ?? width
+  const scaleHeight = bounds?.height ?? height
+  const boldness = bounds ? 0.5 : 1
   const targetX = options?.x ?? width * (0.3 + rand() * 0.4)
   const targetY = options?.y ?? height * (0.35 + rand() * 0.3)
-  const start: Point = { x: targetX + (rand() - 0.5) * width * 0.3, y: -20 }
+  // Starts at the clip rect's own top edge (the container's top border) when
+  // bounded, instead of the page-relative "falls from off the top of the
+  // screen" -20 used for the old full-screen effect.
+  const startY = bounds ? bounds.y : -20
+  const start: Point = { x: targetX + (rand() - 0.5) * scaleWidth * 0.3, y: startY }
   const end: Point = { x: targetX, y: targetY }
-  const path = buildBolt(rand, start, end, width * 0.18, 6)
+  const path = buildBolt(rand, start, end, scaleWidth * 0.18, 6)
 
   // A couple of short branches peeling off partway down the main bolt, each
   // its own (shallower) midpoint-displacement run so they don't just look
@@ -47,8 +63,8 @@ export function createLightning(width: number, height: number, seed: number, opt
   const branches = Array.from({ length: 2 + Math.floor(rand() * 2) }, () => {
     const t = 0.25 + rand() * 0.5
     const from = path[Math.floor(t * (path.length - 1))]
-    const branchEnd: Point = { x: from.x + (rand() - 0.5) * width * 0.15, y: from.y + height * (0.08 + rand() * 0.12) }
-    return buildBolt(rand, from, branchEnd, width * 0.05, 3)
+    const branchEnd: Point = { x: from.x + (rand() - 0.5) * scaleWidth * 0.15, y: from.y + scaleHeight * (0.08 + rand() * 0.12) }
+    return buildBolt(rand, from, branchEnd, scaleWidth * 0.05, 3)
   })
 
   let elapsed = 0
@@ -61,9 +77,9 @@ export function createLightning(width: number, height: number, seed: number, opt
     }
     ctx.globalAlpha = alpha
     ctx.strokeStyle = COLOR
-    ctx.lineWidth = lineWidth
+    ctx.lineWidth = lineWidth * boldness
     ctx.shadowColor = COLOR
-    ctx.shadowBlur = 18
+    ctx.shadowBlur = 18 * boldness
     ctx.stroke()
   }
 
