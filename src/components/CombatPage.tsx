@@ -34,6 +34,7 @@ import { equipPickaxe } from '../game/mining/pickaxeEquipActions'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { DragDropProvider } from './dragDrop'
+import { useFxStore } from '../game/fx/useFxStore'
 
 // Matches getLevelDiffColor's tiers — White is an even match, Green means the
 // character comfortably outlevels the monster (reduced EXP), Red/Black mean
@@ -435,6 +436,51 @@ export default function CombatPage() {
           (entry) => (entry.kind === 'player-damage' || entry.kind === 'dodge') && now - entry.timestamp < FLOATING_NUMBER_LIFETIME_MS,
         )
 
+  // Enemy portrait's own unclipped wrapper (see the mobile/desktop portrait
+  // blocks below) — only one is ever visibly sized at a time (the other is
+  // `display: none` behind the lg breakpoint), so the Thunder-strike effect
+  // below picks whichever one currently has real dimensions.
+  const enemyPortraitMobileRef = useRef<HTMLDivElement>(null)
+  const enemyPortraitDesktopRef = useRef<HTMLDivElement>(null)
+  // Only ever advanced from inside the effect below, never read during
+  // render — tracks how far into `log` the Thunder-lightning trigger has
+  // already looked, so re-equipping Thunder mid-fight can't replay a burst
+  // of lightning for physical hits that landed before it was ever equipped.
+  const lastThunderLogTimestampRef = useRef(0)
+
+  // Lightning FX (2026-11, requested by the user) — fires once per new
+  // 'damage'/'miss' log entry while Thunder is the active skill (Thunder is
+  // Wuxia's only skill, so `dealsMagicDamage` here means exactly "a Wuxia
+  // just attacked with Thunder," see its own comment above). Confined to the
+  // enemy portrait's own bounding rect via FxEffectOptions.clip (FxLayer.tsx)
+  // rather than the effect's usual full-screen span, per the user's request
+  // that it stay "inside the enemy container (the one with the image)."
+  useEffect(() => {
+    const newEntries = log.filter(
+      (entry) => (entry.kind === 'damage' || entry.kind === 'miss') && entry.timestamp > lastThunderLogTimestampRef.current,
+    )
+    if (newEntries.length === 0) {
+      return
+    }
+    lastThunderLogTimestampRef.current = newEntries[newEntries.length - 1].timestamp
+    if (!dealsMagicDamage) {
+      return
+    }
+    const mobileRect = enemyPortraitMobileRef.current?.getBoundingClientRect()
+    const desktopRect = enemyPortraitDesktopRef.current?.getBoundingClientRect()
+    const rect = mobileRect && mobileRect.width > 0 ? mobileRect : desktopRect
+    if (!rect || rect.width === 0 || rect.height === 0) {
+      return
+    }
+    for (let i = 0; i < newEntries.length; i += 1) {
+      useFxStore.getState().trigger('lightning', {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+        clip: { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
+      })
+    }
+  }, [log, dealsMagicDamage])
+
   const activeType = monsterTypeId ? ENEMY_TYPES[monsterTypeId] : null
   const currentZone = ZONES[currentZoneId]
   // Respawn gap (see useCombatStore's RESPAWN_GAP_MS) — `now` already ticks
@@ -568,47 +614,54 @@ export default function CombatPage() {
               {currentZone.backgroundUrl && <div className="absolute inset-0 bg-slate-950/70" />}
               <div className="relative">
                 <div className="flex items-center gap-4">
-                <div
-                  className={`relative h-32 w-32 shrink-0 ascension-card-frame ${isRareInstance ? 'is-tinted' : ''}`}
-                  style={isRareInstance ? RARE_PORTRAIT_TINT_STYLE : undefined}
-                >
-                  <div className="ascension-card-inner relative h-full w-full overflow-hidden">
-                    {activeType.portraitUrl ? (
-                      <img
-                        key={monsterInstanceKey}
-                        src={activeType.portraitUrl}
-                        alt={activeType.displayName}
-                        className={`h-full w-full object-contain p-[15%] transition-opacity ${isRespawning ? 'opacity-30 grayscale' : ''}`}
-                      />
-                    ) : (
-                      <div
-                        key={monsterInstanceKey}
-                        className={`h-full w-full transition-opacity ${isRespawning ? 'opacity-30 grayscale' : ''}`}
-                        style={{ backgroundColor: hexColor(activeType.color) }}
-                      />
-                    )}
-                    {isRespawning && <DeadOverlay seconds={respawnSecondsLeft} />}
+                <div className="relative h-32 w-32 shrink-0" ref={enemyPortraitMobileRef}>
+                  <div
+                    className={`relative h-full w-full ascension-card-frame ${isRareInstance ? 'is-tinted' : ''}`}
+                    style={isRareInstance ? RARE_PORTRAIT_TINT_STYLE : undefined}
+                  >
+                    <div className="ascension-card-inner relative h-full w-full overflow-hidden">
+                      {activeType.portraitUrl ? (
+                        <img
+                          key={monsterInstanceKey}
+                          src={activeType.portraitUrl}
+                          alt={activeType.displayName}
+                          className={`h-full w-full object-contain p-[15%] transition-opacity ${isRespawning ? 'opacity-30 grayscale' : ''}`}
+                        />
+                      ) : (
+                        <div
+                          key={monsterInstanceKey}
+                          className={`h-full w-full transition-opacity ${isRespawning ? 'opacity-30 grayscale' : ''}`}
+                          style={{ backgroundColor: hexColor(activeType.color) }}
+                        />
+                      )}
+                      {isRespawning && <DeadOverlay seconds={respawnSecondsLeft} />}
+                    </div>
                   </div>
+                  {/* Rendered as a sibling of the clipped .ascension-card-frame
+                      portrait, not a child of it (2026-11) — that class's own
+                      chamfer clip-path (see index.css) clips its children too,
+                      which was cutting these numbers off at the corners once
+                      they were centered/enlarged. z-20 keeps them above
+                      RowCombatPanel/the Resume button stacked below. */}
                   <AnimatePresence>
                     {floatingNumbers.map((entry) => (
                       <motion.div
                         key={entry.id}
                         initial={{ opacity: 1, y: 0 }}
-                        animate={{ opacity: 0, y: -32 }}
+                        animate={{ opacity: 0, y: -20 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.8, ease: 'easeOut' }}
-                        className={`pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 font-heading font-bold ${
+                        className={`pointer-events-none absolute inset-0 z-20 flex items-center justify-center font-heading font-bold ${
                           entry.kind === 'miss' ? 'text-slate-300' : outgoingDamageColorClass
                         }`}
                         // Nicer-looking damage numbers (2026-08-26, requested by
                         // the user): the game's own Cinzel `.font-heading` font
-                        // instead of the default sans-serif, ~50% larger than
-                        // the prior text-sm (0.875rem * 1.5 = 1.3125rem) via
-                        // inline style so it reliably wins over the class's own
-                        // font-size (same convention as this page's character-
-                        // name label above), plus a drop shadow so white/light-
-                        // blue text still pops against light monster art.
-                        style={{ fontSize: '1.3125rem', textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
+                        // instead of the default sans-serif. Centered in the
+                        // portrait and enlarged again (2026-11, requested by the
+                        // user) via inline style so it reliably wins over the
+                        // class's own font-size, plus a drop shadow so white/
+                        // light-blue text still pops against light monster art.
+                        style={{ fontSize: '2.25rem', textShadow: '0 2px 6px rgba(0,0,0,0.9)' }}
                       >
                         {entry.kind === 'miss' ? 'Miss' : `-${entry.amount}`}
                       </motion.div>
@@ -668,12 +721,13 @@ export default function CombatPage() {
                   <motion.div
                     key={entry.id}
                     initial={{ opacity: 1, y: 0 }}
-                    animate={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 0, y: -16 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.8, ease: 'easeOut' }}
-                    className={`pointer-events-none absolute right-0 top-0 text-sm font-bold ${
+                    className={`pointer-events-none absolute inset-0 z-20 flex items-center justify-center font-heading text-lg font-bold ${
                       entry.kind === 'dodge' ? 'text-slate-300' : 'text-rose-300'
                     }`}
+                    style={{ textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
                   >
                     {entry.kind === 'dodge' ? 'Miss' : `-${entry.amount}`}
                   </motion.div>
@@ -933,12 +987,13 @@ export default function CombatPage() {
                   <motion.div
                     key={entry.id}
                     initial={{ opacity: 1, y: 0 }}
-                    animate={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 0, y: -16 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.8, ease: 'easeOut' }}
-                    className={`pointer-events-none absolute right-0 top-0 text-sm font-bold ${
+                    className={`pointer-events-none absolute inset-0 z-20 flex items-center justify-center font-heading text-lg font-bold ${
                       entry.kind === 'dodge' ? 'text-slate-300' : 'text-rose-300'
                     }`}
+                    style={{ textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
                   >
                     {entry.kind === 'dodge' ? 'Miss' : `-${entry.amount}`}
                   </motion.div>
@@ -1025,47 +1080,43 @@ export default function CombatPage() {
               {currentZone.backgroundUrl && <div className="absolute inset-0 bg-slate-950/70" />}
               <div className="relative">
                 <div className="flex items-center gap-4">
-                <div
-                  className={`relative h-40 w-40 shrink-0 ascension-card-frame ${isRareInstance ? 'is-tinted' : ''}`}
-                  style={isRareInstance ? RARE_PORTRAIT_TINT_STYLE : undefined}
-                >
-                  <div className="ascension-card-inner relative h-full w-full overflow-hidden">
-                    {activeType.portraitUrl ? (
-                      <img
-                        key={monsterInstanceKey}
-                        src={activeType.portraitUrl}
-                        alt={activeType.displayName}
-                        className={`h-full w-full object-contain p-[15%] transition-opacity ${isRespawning ? 'opacity-30 grayscale' : ''}`}
-                      />
-                    ) : (
-                      <div
-                        key={monsterInstanceKey}
-                        className={`h-full w-full transition-opacity ${isRespawning ? 'opacity-30 grayscale' : ''}`}
-                        style={{ backgroundColor: hexColor(activeType.color) }}
-                      />
-                    )}
-                    {isRespawning && <DeadOverlay seconds={respawnSecondsLeft} />}
+                <div className="relative h-40 w-40 shrink-0" ref={enemyPortraitDesktopRef}>
+                  <div
+                    className={`relative h-full w-full ascension-card-frame ${isRareInstance ? 'is-tinted' : ''}`}
+                    style={isRareInstance ? RARE_PORTRAIT_TINT_STYLE : undefined}
+                  >
+                    <div className="ascension-card-inner relative h-full w-full overflow-hidden">
+                      {activeType.portraitUrl ? (
+                        <img
+                          key={monsterInstanceKey}
+                          src={activeType.portraitUrl}
+                          alt={activeType.displayName}
+                          className={`h-full w-full object-contain p-[15%] transition-opacity ${isRespawning ? 'opacity-30 grayscale' : ''}`}
+                        />
+                      ) : (
+                        <div
+                          key={monsterInstanceKey}
+                          className={`h-full w-full transition-opacity ${isRespawning ? 'opacity-30 grayscale' : ''}`}
+                          style={{ backgroundColor: hexColor(activeType.color) }}
+                        />
+                      )}
+                      {isRespawning && <DeadOverlay seconds={respawnSecondsLeft} />}
+                    </div>
                   </div>
+                  {/* See the mobile portrait block above for why this is a
+                      sibling of the clipped .ascension-card-frame, not a child. */}
                   <AnimatePresence>
                     {floatingNumbers.map((entry) => (
                       <motion.div
                         key={entry.id}
                         initial={{ opacity: 1, y: 0 }}
-                        animate={{ opacity: 0, y: -32 }}
+                        animate={{ opacity: 0, y: -20 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.8, ease: 'easeOut' }}
-                        className={`pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 font-heading font-bold ${
+                        className={`pointer-events-none absolute inset-0 z-20 flex items-center justify-center font-heading font-bold ${
                           entry.kind === 'miss' ? 'text-slate-300' : outgoingDamageColorClass
                         }`}
-                        // Nicer-looking damage numbers (2026-08-26, requested by
-                        // the user): the game's own Cinzel `.font-heading` font
-                        // instead of the default sans-serif, ~50% larger than
-                        // the prior text-sm (0.875rem * 1.5 = 1.3125rem) via
-                        // inline style so it reliably wins over the class's own
-                        // font-size (same convention as this page's character-
-                        // name label above), plus a drop shadow so white/light-
-                        // blue text still pops against light monster art.
-                        style={{ fontSize: '1.3125rem', textShadow: '0 1px 3px rgba(0,0,0,0.85)' }}
+                        style={{ fontSize: '2.5rem', textShadow: '0 2px 6px rgba(0,0,0,0.9)' }}
                       >
                         {entry.kind === 'miss' ? 'Miss' : `-${entry.amount}`}
                       </motion.div>

@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.126.10",
+    "date": "2026-09-02",
+    "changes": [
+      "Floating combat damage numbers are now larger and centered in the middle of the enemy/player portraits, and no longer get clipped at the portrait's edges",
+      "Wuxia's Thunder attack now flashes a lightning bolt over the enemy portrait when it strikes"
+    ]
+  },
+  {
     "version": "1.126.9",
     "date": "2026-09-02",
     "changes": [

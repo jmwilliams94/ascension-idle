@@ -24,4 +24,12 @@ export interface FxEffectOptions {
   // pass one.
   x?: number
   y?: number
+  // Confines this one effect's drawing to a rectangle in the same viewport
+  // CSS-pixel space as x/y (e.g. a UI element's own getBoundingClientRect())
+  // instead of the full page -- FxLayer clips its canvas context to this rect
+  // for just this effect's draw() call, so nothing it paints (bolt, branches,
+  // the full-canvas flash wash) escapes past the given container's edges.
+  // Omitted (the default) draws across the whole full-screen canvas like
+  // every existing caller.
+  clip?: { x: number; y: number; width: number; height: number }
 }

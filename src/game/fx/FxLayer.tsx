@@ -61,7 +61,12 @@ export default function FxLayer() {
     resize()
     window.addEventListener('resize', resize)
 
-    const live: FxEffect[] = []
+    // Pairs each live effect with the clip rect (if any) its own trigger()
+    // request carried -- kept alongside the effect rather than inside it
+    // since clipping is applied generically here in the loop, not something
+    // any individual effect factory (lightning.ts, comet.ts, ...) needs to
+    // know about.
+    const live: { effect: FxEffect; clip?: { x: number; y: number; width: number; height: number } }[] = []
     let lastTime = performance.now()
     let raf = 0
     let running = false
@@ -74,18 +79,31 @@ export default function FxLayer() {
       if (queue.length > 0) {
         useFxStore.setState({ queue: [] })
         for (const request of queue) {
-          live.push(createEffect(request.kind, width, height, request.id, request.options))
+          live.push({
+            effect: createEffect(request.kind, width, height, request.id, request.options),
+            clip: request.options?.clip,
+          })
         }
       }
 
       ctx.clearRect(0, 0, width, height)
       for (let i = live.length - 1; i >= 0; i -= 1) {
-        const finished = live[i].update(dt)
+        const item = live[i]
+        const finished = item.effect.update(dt)
         if (finished) {
           live.splice(i, 1)
           continue
         }
-        live[i].draw(ctx, width, height)
+        if (item.clip) {
+          ctx.save()
+          ctx.beginPath()
+          ctx.rect(item.clip.x, item.clip.y, item.clip.width, item.clip.height)
+          ctx.clip()
+          item.effect.draw(ctx, width, height)
+          ctx.restore()
+        } else {
+          item.effect.draw(ctx, width, height)
+        }
       }
 
       if (live.length > 0) {
