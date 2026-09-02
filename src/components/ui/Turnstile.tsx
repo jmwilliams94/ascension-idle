@@ -51,7 +51,26 @@ function loadTurnstileScript(): Promise<void> {
   return promise
 }
 
-const SCRIPT_RETRY_DELAYS_MS = [1000, 3000, 6000]
+const SCRIPT_RETRY_DELAYS_MS = [500, 1500, 3000]
+
+// Waits out the backoff delay, but resolves early the moment the browser
+// reports connectivity is back -- a fixed-only backoff was adding up to 10s
+// of dead time (sum of the old, longer delays) right after a resume/reload,
+// exactly when the network is most likely to reconnect mid-wait.
+function waitForNextAttempt(delayMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    const onOnline = () => {
+      clearTimeout(timer)
+      window.removeEventListener('online', onOnline)
+      resolve()
+    }
+    const timer = setTimeout(() => {
+      window.removeEventListener('online', onOnline)
+      resolve()
+    }, delayMs)
+    window.addEventListener('online', onOnline)
+  })
+}
 
 async function loadTurnstileScriptWithRetry(isCancelled: () => boolean): Promise<void> {
   for (const delay of SCRIPT_RETRY_DELAYS_MS) {
@@ -60,7 +79,7 @@ async function loadTurnstileScriptWithRetry(isCancelled: () => boolean): Promise
       return
     } catch {
       if (isCancelled()) return
-      await new Promise((resolve) => setTimeout(resolve, delay))
+      await waitForNextAttempt(delay)
     }
   }
   return loadTurnstileScript()

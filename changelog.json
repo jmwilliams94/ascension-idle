@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.126.18",
+    "date": "2026-09-02",
+    "changes": [
+      "The sign-in screen now shows the app's version number at the bottom",
+      "Sped up recovery when the sign-in verification check fails to load right after reconnecting to the network"
+    ]
+  },
+  {
     "version": "1.126.17",
     "date": "2026-09-02",
     "changes": [

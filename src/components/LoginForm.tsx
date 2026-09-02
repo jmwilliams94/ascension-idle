@@ -4,6 +4,7 @@ import { AscensionCard } from './ui/AscensionCard'
 import { Button } from './ui/Button'
 import LegalModal from './legal/LegalModal'
 import Turnstile, { type TurnstileHandle } from './ui/Turnstile'
+import { APP_VERSION } from '../version'
 
 type Mode = 'sign-in' | 'sign-up' | 'reset-request'
 
@@ -218,6 +219,13 @@ export default function LoginForm() {
           Terms &amp; Conditions
         </button>
       </div>
+
+      {/* Only version display anywhere in the client UI (2026-09-02) -- a
+          quick, always-visible source of truth for support conversations:
+          asking a player what they see here tells you whether they're
+          actually on the build you think they are, without guessing at
+          service-worker/cache state. */}
+      <p className="mt-2 text-[11px] text-slate-600">v{APP_VERSION}</p>
 
       {legalDoc && <LegalModal initialDoc={legalDoc} onClose={() => setLegalDoc(null)} />}
     </div>
