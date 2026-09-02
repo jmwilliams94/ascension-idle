@@ -10,6 +10,17 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&display=swap" rel="stylesheet" />
     <title>Ascension Idle</title>
+    <!-- Every close/reopen of the installed PWA is a real cold reload on iOS
+         (WKWebView torn down while backgrounded) -- this inline style matches
+         body's own --ascension-ink-soft background so the very first paint,
+         before the bundled CSS has loaded, is already dark instead of the
+         browser's default white, softening that unavoidable reload's flash. -->
+    <style>
+      html,
+      body {
+        background: #131a24;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

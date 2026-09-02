@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.126.17",
+    "date": "2026-09-02",
+    "changes": [
+      "Softened the white flash when reopening the installed app on mobile with a dark background that shows before the page finishes loading"
+    ]
+  },
+  {
     "version": "1.126.16",
     "date": "2026-09-02",
     "changes": [
