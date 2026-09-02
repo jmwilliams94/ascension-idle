@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.126.12",
+    "date": "2026-09-02",
+    "changes": [
+      "Floating combat damage numbers now hang around and fade out slower"
+    ]
+  },
+  {
     "version": "1.126.11",
     "date": "2026-09-02",
     "changes": [

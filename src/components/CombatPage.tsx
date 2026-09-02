@@ -89,8 +89,12 @@ export function hexColor(value: number): string {
 // which had no matching CSS rule anywhere and rendered as a no-op.
 const RARE_PORTRAIT_TINT_STYLE = { '--ascension-tint': '#f59e0b' } as CSSProperties
 
-// How long a floating damage number stays visible after its log entry lands.
-const FLOATING_NUMBER_LIFETIME_MS = 800
+// How long a floating damage number stays visible after its log entry lands
+// (2026-11: slowed from 800ms to 1600ms, requested by the user — must stay
+// in sync with the matching motion.div `transition` duration below, since
+// entries are dropped from the filtered array the instant they age out of
+// this window regardless of whether their own fade animation has finished).
+const FLOATING_NUMBER_LIFETIME_MS = 1600
 
 // Row Combat: clear every row slot whenever the player switches which
 // enemy they're fighting (2026-08-17, requested by the user) — otherwise
@@ -650,7 +654,7 @@ export default function CombatPage() {
                         initial={{ opacity: 1, y: 0 }}
                         animate={{ opacity: 0, y: -20 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.8, ease: 'easeOut' }}
+                        transition={{ duration: 1.6, ease: 'easeOut' }}
                         className={`pointer-events-none absolute inset-0 z-20 flex items-center justify-center font-heading font-bold ${
                           entry.kind === 'miss' ? 'text-slate-300' : outgoingDamageColorClass
                         }`}
@@ -723,7 +727,7 @@ export default function CombatPage() {
                     initial={{ opacity: 1, y: 0 }}
                     animate={{ opacity: 0, y: -16 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.8, ease: 'easeOut' }}
+                    transition={{ duration: 1.6, ease: 'easeOut' }}
                     className={`pointer-events-none absolute inset-0 z-20 flex items-center justify-center font-heading text-lg font-bold ${
                       entry.kind === 'dodge' ? 'text-slate-300' : 'text-rose-300'
                     }`}
@@ -989,7 +993,7 @@ export default function CombatPage() {
                     initial={{ opacity: 1, y: 0 }}
                     animate={{ opacity: 0, y: -16 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.8, ease: 'easeOut' }}
+                    transition={{ duration: 1.6, ease: 'easeOut' }}
                     className={`pointer-events-none absolute inset-0 z-20 flex items-center justify-center font-heading text-lg font-bold ${
                       entry.kind === 'dodge' ? 'text-slate-300' : 'text-rose-300'
                     }`}
@@ -1112,7 +1116,7 @@ export default function CombatPage() {
                         initial={{ opacity: 1, y: 0 }}
                         animate={{ opacity: 0, y: -20 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.8, ease: 'easeOut' }}
+                        transition={{ duration: 1.6, ease: 'easeOut' }}
                         className={`pointer-events-none absolute inset-0 z-20 flex items-center justify-center font-heading font-bold ${
                           entry.kind === 'miss' ? 'text-slate-300' : outgoingDamageColorClass
                         }`}
