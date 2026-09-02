@@ -242,6 +242,19 @@ export default function InventorySlot({
           <img
             src={iconSrc}
             alt=""
+            // Stops the browser's own native HTML5 image-drag gesture from
+            // hijacking a real pointer-based drag (dragDropContext.ts) —
+            // <img> is natively draggable by default in every browser.
+            // index.css's `-webkit-user-drag: none` only covers WebKit/
+            // Chromium; Firefox has no CSS equivalent and honors this HTML
+            // attribute instead, so without it a Firefox mousedown+move on
+            // a tile's icon starts a native OS-level drag (the custom
+            // pointermove/pointerup sequence a real drop depends on then
+            // never completes) while Chrome/Safari, shielded by the CSS
+            // property, look fine — exactly the "works everywhere except
+            // Firefox" split reported for dragging a gem onto a Forge
+            // socket, 2026-09-02.
+            draggable={false}
             className={`relative z-10 object-contain ${iconSizeClassName}`}
             onError={() => setIconLoadFailed(true)}
           />

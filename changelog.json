@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.128.3",
+    "date": "2026-09-02",
+    "changes": [
+      "Fixed dragging item/gem/material tiles in Forge/Bank not working in Firefox — the browser's own native image-drag was hijacking the gesture there"
+    ]
+  },
+  {
     "version": "1.128.2",
     "date": "2026-09-02",
     "changes": [
