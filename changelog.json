@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.128.4",
+    "date": "2026-09-02",
+    "changes": [
+      "Fixed the last few updates failing to deploy (an out-of-sync dependency lockfile), so this and the recent Firefox drag-and-drop / gem-tap fixes should now actually reach players"
+    ]
+  },
+  {
     "version": "1.128.3",
     "date": "2026-09-02",
     "changes": [
