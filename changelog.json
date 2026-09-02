@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.126.19",
+    "date": "2026-09-02",
+    "changes": [
+      "Fixed the app sometimes reloading itself on its own, mid-interaction, on mobile -- most noticeable as the sign-in screen unexpectedly refreshing and re-showing the password autofill prompt"
+    ]
+  },
+  {
     "version": "1.126.18",
     "date": "2026-09-02",
     "changes": [

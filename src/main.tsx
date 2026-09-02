@@ -21,6 +21,23 @@ const UPDATE_CHECK_INTERVAL_MS = 60_000
 const updateSW = registerSW({
   immediate: true,
   onNeedRefresh: () => useAppUpdateStore.getState().setNeedRefresh(true),
+  // vite-plugin-pwa's own default here (when this isn't provided) is an
+  // unconditional window.location.reload() the instant the new service
+  // worker becomes the controller -- which can happen with no user action at
+  // all whenever the *old* worker naturally loses its last client (e.g. an
+  // installed PWA getting torn down by iOS while backgrounded, then
+  // relaunched). That silently reloaded the page mid-interaction -- e.g.
+  // right as a native autofill sheet was up -- looking like a jarring,
+  // repeating refresh loop (reported by the user, 2026-09-02). Only reload
+  // when the player actually clicked UpdateBanner's Refresh button
+  // (useAppUpdateStore's applyUpdate sets `refreshing` before doing anything
+  // else) -- an unprompted activation just lets the new worker quietly take
+  // over for the next real navigation instead.
+  onNeedReload: () => {
+    if (useAppUpdateStore.getState().refreshing) {
+      window.location.reload()
+    }
+  },
   onRegisteredSW(_url, registration) {
     if (!registration) {
       return
