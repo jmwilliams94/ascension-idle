@@ -1,9 +1,16 @@
 [
   {
+    "version": "1.127.1",
+    "date": "2026-09-02",
+    "changes": [
+      "Moved the new potion quick-use row (best potion you own, with your total count, plus the VIP Auto button) to the Hunting tab where it belongs, replacing the old separate HP/Mana rows there — Inventory's own potion tiles are unchanged"
+    ]
+  },
+  {
     "version": "1.127.0",
     "date": "2026-09-02",
     "changes": [
-      "Redesigned the Inventory's HP/Mana potions into a single row of two containers (best potion you own, with your total count), instead of a separate tile per tier — click the icon to drink one",
+      "Redesigned the Hunting tab's HP/Mana potion quick-use rows into a single row of two containers (best potion you own, with your total count), instead of separate name/count and Use-button rows — click the icon to drink one",
       "Added VIP Auto-Use Potions: an Auto button next to each potion container automatically drinks your best potion whenever that pool drops below 30%, both while playing and while away (Mana only while away; HP requires actively playing)"
     ]
   },

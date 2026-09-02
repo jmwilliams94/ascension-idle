@@ -15,8 +15,8 @@ import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { usePotionStore } from '../game/items/usePotionStore'
-import { POTION_TYPES } from '../game/items/potionTypes'
-import { findBestHpPotionStack, findBestMpPotionStack } from '../game/items/potionSelectors'
+import { HP_POTION_ORDER, MP_POTION_ORDER } from '../game/items/potionTypes'
+import PotionTypeContainer from './PotionTypeContainer'
 import { useSkillsStore } from '../game/skills/useSkillsStore'
 import { SKILL_TYPES } from '../game/skills/skillData'
 import EventsCardStack from './EventsCardStack'
@@ -494,14 +494,6 @@ export default function CombatPage() {
   const respawnSecondsLeft = respawnReadyAt > 0 ? Math.max(0, Math.ceil((respawnReadyAt - now) / 1000)) : 0
   const isRespawning = respawnSecondsLeft > 0
 
-  // "Best available" HP/Mana potion (confirmed with the user, 2026-07-31 for
-  // HP; Mana quick-use added alongside the MP bar itself) — the highest-tier
-  // owned stack with any left, so the strongest potion is always the one
-  // surfaced here rather than whichever happens to sit first in Inventory.
-  // Shared with InventoryPanel's potion row/PotionAutoUseEngine — see
-  // potionSelectors.ts.
-  const bestHpPotionStack = findBestHpPotionStack(potionStacks)
-  const bestMpPotionStack = findBestMpPotionStack(potionStacks)
   const dropdownMonsterId = selectedMonsterId ?? currentZone.monsterOrder[0] ?? null
 
   const handleFight = (typeId: EnemyTypeId) => {
@@ -751,53 +743,12 @@ export default function CombatPage() {
               </div>
             )}
 
-            <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs">
-              {bestHpPotionStack ? (
-                <>
-                  <span className="flex min-w-0 items-center gap-2 text-slate-200">
-                    <span className="shrink-0 text-base">🧪</span>
-                    <span className="truncate">
-                      {POTION_TYPES[bestHpPotionStack.potionType].displayName} ({bestHpPotionStack.count})
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    disabled={maxPlayerHp > 0 && currentPlayerHp >= maxPlayerHp}
-                    onClick={() => void handleUsePotion(bestHpPotionStack!.id)}
-                    className="shrink-0 rounded border border-sky-500 bg-sky-500/10 px-3 py-1.5 font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-transparent disabled:text-slate-600"
-                  >
-                    {maxPlayerHp > 0 && currentPlayerHp >= maxPlayerHp ? 'HP full' : 'Use'}
-                  </button>
-                </>
-              ) : (
-                <span className="text-slate-600">No HP potions — visit the Shop</span>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <PotionTypeContainer kind="hp" order={HP_POTION_ORDER} stacks={potionStacks} onUse={handleUsePotion} />
+              {activeSkill && (
+                <PotionTypeContainer kind="mp" order={MP_POTION_ORDER} stacks={potionStacks} onUse={handleUsePotion} />
               )}
             </div>
-
-            {activeSkill && (
-              <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs">
-                {bestMpPotionStack ? (
-                  <>
-                    <span className="flex min-w-0 items-center gap-2 text-slate-200">
-                      <span className="shrink-0 text-base">💧</span>
-                      <span className="truncate">
-                        {POTION_TYPES[bestMpPotionStack.potionType].displayName} ({bestMpPotionStack.count})
-                      </span>
-                    </span>
-                    <button
-                      type="button"
-                      disabled={maxPlayerMp > 0 && currentPlayerMp >= maxPlayerMp}
-                      onClick={() => void handleUsePotion(bestMpPotionStack!.id)}
-                      className="shrink-0 rounded border border-sky-500 bg-sky-500/10 px-3 py-1.5 font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-transparent disabled:text-slate-600"
-                    >
-                      {maxPlayerMp > 0 && currentPlayerMp >= maxPlayerMp ? 'MP full' : 'Use'}
-                    </button>
-                  </>
-                ) : (
-                  <span className="text-slate-600">No Mana potions — visit the Shop</span>
-                )}
-              </div>
-            )}
           </AscensionCard>
         )}
 
@@ -1011,56 +962,15 @@ export default function CombatPage() {
               </div>
             )}
 
-            {/* Consumable slot (confirmed with the user, 2026-07-31) — surfaces the
-                best (highest-tier) owned HP potion right on the Combat page so
+            {/* Consumable row (confirmed with the user, 2026-07-31) — surfaces the
+                best (highest-tier) owned potions right on the Combat page so
                 healing mid-fight doesn't require leaving to the Inventory grid. */}
-            <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs">
-              {bestHpPotionStack ? (
-                <>
-                  <span className="flex min-w-0 items-center gap-2 text-slate-200">
-                    <span className="shrink-0 text-base">🧪</span>
-                    <span className="truncate">
-                      {POTION_TYPES[bestHpPotionStack.potionType].displayName} ({bestHpPotionStack.count})
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    disabled={maxPlayerHp > 0 && currentPlayerHp >= maxPlayerHp}
-                    onClick={() => void handleUsePotion(bestHpPotionStack!.id)}
-                    className="shrink-0 rounded border border-sky-500 bg-sky-500/10 px-2 py-1 font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-transparent disabled:text-slate-600"
-                  >
-                    {maxPlayerHp > 0 && currentPlayerHp >= maxPlayerHp ? 'HP full' : 'Use'}
-                  </button>
-                </>
-              ) : (
-                <span className="text-slate-600">No HP potions — visit the Shop</span>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <PotionTypeContainer kind="hp" order={HP_POTION_ORDER} stacks={potionStacks} onUse={handleUsePotion} />
+              {activeSkill && (
+                <PotionTypeContainer kind="mp" order={MP_POTION_ORDER} stacks={potionStacks} onUse={handleUsePotion} />
               )}
             </div>
-
-            {activeSkill && (
-              <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs">
-                {bestMpPotionStack ? (
-                  <>
-                    <span className="flex min-w-0 items-center gap-2 text-slate-200">
-                      <span className="shrink-0 text-base">💧</span>
-                      <span className="truncate">
-                        {POTION_TYPES[bestMpPotionStack.potionType].displayName} ({bestMpPotionStack.count})
-                      </span>
-                    </span>
-                    <button
-                      type="button"
-                      disabled={maxPlayerMp > 0 && currentPlayerMp >= maxPlayerMp}
-                      onClick={() => void handleUsePotion(bestMpPotionStack!.id)}
-                      className="shrink-0 rounded border border-sky-500 bg-sky-500/10 px-2 py-1 font-medium text-sky-300 hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:border-slate-800 disabled:bg-transparent disabled:text-slate-600"
-                    >
-                      {maxPlayerMp > 0 && currentPlayerMp >= maxPlayerMp ? 'MP full' : 'Use'}
-                    </button>
-                  </>
-                ) : (
-                  <span className="text-slate-600">No Mana potions — visit the Shop</span>
-                )}
-              </div>
-            )}
           </AscensionCard>
         )}
 
