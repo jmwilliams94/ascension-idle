@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.126.26",
+    "date": "2026-09-02",
+    "changes": [
+      "Rebalanced Level Upgrade success odds for Tempered/Infused/Radiant/Ascended gear (each tier now has its own tuned range instead of simply halving each time), which also adjusts Master Forge's guaranteed-success cost for those tiers"
+    ]
+  },
+  {
     "version": "1.126.25",
     "date": "2026-09-02",
     "changes": [

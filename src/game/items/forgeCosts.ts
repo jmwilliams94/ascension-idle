@@ -51,16 +51,25 @@ export function previewMasterForgeWeaponLevelCost(): number {
 // no odds at all, per the existing "no success rate is ever shown" design —
 // this mirror is Master-Forge-only).
 //
-// Level Upgrade: 100% (item's own level is the lowest in its family chain) to
-// 80% (highest), halved again for every quality tier above Normal (raised
-// from 95%/75% 2026-08-21, per the user — the low end is now a true
-// guaranteed-success roll, see the maxChance override below). Quality
-// Upgrade: 85% to 75% by the same level-position logic, x0.58 per quality
-// tier above Normal (retuned 2026-08-19 from x0.65 — the user asked for
+// Level Upgrade: per-quality-tier min/max, hand-tuned rather than derived
+// from a single compounding multiplier (retuned 2026-09-02, per the user —
+// supersedes the earlier x0.5-per-tier halving from Normal's 100/80):
+// Normal 100->80, Tempered 75->50, Infused 50->25, Radiant 25->15,
+// Ascended 20->10 (see LEVEL_UPGRADE_CHANCE_RANGE below). Quality Upgrade:
+// 85% to 75% by the same level-position logic, x0.58 per quality tier above
+// Normal (retuned 2026-08-19 from x0.65 — the user asked for
 // Radiant->Ascended specifically to land "closer to the 15% mark," which
 // x0.58 does almost exactly: ~14.6-16.6%). Both PLACEHOLDER curves, same
 // disclosed-not-final status as every other economy number in this game.
 const QUALITY_TIER_INDEX: Record<string, number> = { normal: 0, tempered: 1, infused: 2, radiant: 3, ascended: 4 }
+
+const LEVEL_UPGRADE_CHANCE_RANGE: Record<string, [number, number]> = {
+  normal: [100, 80],
+  tempered: [75, 50],
+  infused: [50, 25],
+  radiant: [25, 15],
+  ascended: [20, 10],
+}
 
 export function computeUpgradeSuccessChancePct(
   templates: ItemTemplate[],
@@ -76,13 +85,20 @@ export function computeUpgradeSuccessChancePct(
 
   const t = maxLevel > minLevel ? Math.min(1, Math.max(0, (requiredLevel - minLevel) / (maxLevel - minLevel))) : 0
 
-  const qualityIndex = QUALITY_TIER_INDEX[qualityTier] ?? 0
-  // Level Upgrade's low end is a deliberate guaranteed-success roll (maxChance
-  // 100); Quality Upgrade keeps the "never literally guaranteed" clamp (99).
-  const [baseMin, baseMax, tierMultiplier, maxChance] = upgradeType === 'level' ? [100, 80, 0.5, 100] : [85, 75, 0.58, 99]
+  if (upgradeType === 'level') {
+    const [baseMin, baseMax] = LEVEL_UPGRADE_CHANCE_RANGE[qualityTier] ?? LEVEL_UPGRADE_CHANCE_RANGE.normal
+    // Level Upgrade's low end is a deliberate guaranteed-success roll (maxChance 100).
+    const chance = baseMin - t * (baseMin - baseMax)
+    return Math.min(100, Math.max(1, chance))
+  }
 
+  const qualityIndex = QUALITY_TIER_INDEX[qualityTier] ?? 0
+  const baseMin = 85
+  const baseMax = 75
+  const tierMultiplier = 0.58
+  // Quality Upgrade keeps the "never literally guaranteed" clamp (99).
   const chance = (baseMin - t * (baseMin - baseMax)) * tierMultiplier ** qualityIndex
-  return Math.min(maxChance, Math.max(1, chance))
+  return Math.min(99, Math.max(1, chance))
 }
 
 // Master Forge (2026-08-05, confirmed with the user: "a Forge master will
