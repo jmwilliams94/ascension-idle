@@ -4,6 +4,7 @@ import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import App from './App.tsx'
 import { useAppUpdateStore } from './lib/useAppUpdateStore'
+import { recordEvent } from './lib/debugTrail'
 
 // Prompt-based update (was silent autoUpdate) — a new build installs in the
 // background, then UpdateBanner.tsx shows a "Refresh" prompt instead of
@@ -20,7 +21,10 @@ const UPDATE_CHECK_INTERVAL_MS = 60_000
 
 const updateSW = registerSW({
   immediate: true,
-  onNeedRefresh: () => useAppUpdateStore.getState().setNeedRefresh(true),
+  onNeedRefresh: () => {
+    recordEvent('sw:need-refresh')
+    useAppUpdateStore.getState().setNeedRefresh(true)
+  },
   // vite-plugin-pwa's own default here (when this isn't provided) is an
   // unconditional window.location.reload() the instant the new service
   // worker becomes the controller -- which can happen with no user action at
@@ -34,11 +38,14 @@ const updateSW = registerSW({
   // else) -- an unprompted activation just lets the new worker quietly take
   // over for the next real navigation instead.
   onNeedReload: () => {
-    if (useAppUpdateStore.getState().refreshing) {
+    const refreshing = useAppUpdateStore.getState().refreshing
+    recordEvent('sw:need-reload', `refreshing=${refreshing}`)
+    if (refreshing) {
       window.location.reload()
     }
   },
   onRegisteredSW(_url, registration) {
+    recordEvent('sw:registered', `hasRegistration=${Boolean(registration)}`)
     if (!registration) {
       return
     }

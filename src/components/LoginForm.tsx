@@ -5,6 +5,7 @@ import { Button } from './ui/Button'
 import LegalModal from './legal/LegalModal'
 import Turnstile, { type TurnstileHandle } from './ui/Turnstile'
 import { APP_VERSION } from '../version'
+import { formatTrail, clearTrail } from '../lib/debugTrail'
 
 type Mode = 'sign-in' | 'sign-up' | 'reset-request'
 
@@ -42,6 +43,23 @@ export default function LoginForm() {
   const [hasVerified, setHasVerified] = useState(false)
   const turnstileConfigured = Boolean(import.meta.env.VITE_TURNSTILE_SITE_KEY)
   const turnstileRef = useRef<TurnstileHandle>(null)
+
+  // Temporary diagnostic viewer (2026-09-02, see debugTrail.ts) -- tap the
+  // version number 5x within 2s to reveal the persisted event trail.
+  const [showDebugTrail, setShowDebugTrail] = useState(false)
+  const versionTapCountRef = useRef(0)
+  const versionTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handleVersionTap = () => {
+    versionTapCountRef.current += 1
+    if (versionTapTimerRef.current) clearTimeout(versionTapTimerRef.current)
+    versionTapTimerRef.current = setTimeout(() => {
+      versionTapCountRef.current = 0
+    }, 2000)
+    if (versionTapCountRef.current >= 5) {
+      versionTapCountRef.current = 0
+      setShowDebugTrail(true)
+    }
+  }
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -225,7 +243,37 @@ export default function LoginForm() {
           asking a player what they see here tells you whether they're
           actually on the build you think they are, without guessing at
           service-worker/cache state. */}
-      <p className="mt-2 text-[11px] text-slate-600">v{APP_VERSION}</p>
+      <button type="button" onClick={handleVersionTap} className="mt-2 text-[11px] text-slate-600">
+        v{APP_VERSION}
+      </button>
+
+      {showDebugTrail && (
+        <div className="fixed inset-0 z-[100] flex flex-col bg-black/95 p-4 text-slate-200">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-sm font-bold">Debug trail</span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  clearTrail()
+                  setShowDebugTrail(false)
+                }}
+                className="rounded border border-slate-600 px-2 py-1 text-xs"
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDebugTrail(false)}
+                className="rounded border border-slate-600 px-2 py-1 text-xs"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+          <pre className="flex-1 overflow-auto text-[10px] leading-tight whitespace-pre-wrap">{formatTrail()}</pre>
+        </div>
+      )}
 
       {legalDoc && <LegalModal initialDoc={legalDoc} onClose={() => setLegalDoc(null)} />}
     </div>

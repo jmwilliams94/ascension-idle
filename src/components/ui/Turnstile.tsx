@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
+import { recordEvent } from '../../lib/debugTrail'
 
 const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined
 
@@ -126,27 +127,34 @@ const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(({ onVerify, onExp
     let cancelled = false
     let cleanupGestureListeners: (() => void) | undefined
 
+    recordEvent('turnstile:script-load-start')
+
     loadTurnstileScriptWithRetry(() => cancelled)
       .then(() => {
+        recordEvent('turnstile:script-loaded', `cancelled=${cancelled} hasContainer=${Boolean(containerRef.current)}`)
         if (cancelled || !containerRef.current || !window.turnstile) return
         widgetIdRef.current = window.turnstile.render(containerRef.current, {
           sitekey: SITE_KEY,
           execution: 'execute',
           callback: (token) => {
+            recordEvent('turnstile:verified', `tokenLen=${token.length}`)
             needsExecuteRef.current = false
             onVerifyRef.current(token)
           },
           'expired-callback': () => {
+            recordEvent('turnstile:expired')
             needsExecuteRef.current = true
             onExpireRef.current?.()
           },
           'error-callback': () => {
+            recordEvent('turnstile:error-callback')
             needsExecuteRef.current = true
             onExpireRef.current?.()
             return true
           },
           theme: 'dark',
         })
+        recordEvent('turnstile:rendered', `widgetId=${widgetIdRef.current}`)
 
         // Safari's Storage Access API (needed under "Prevent Cross-Site
         // Tracking"/ITP) only grants access when requested synchronously
@@ -155,8 +163,10 @@ const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(({ onVerify, onExp
         // it silently fails and the widget collapses to blank. Deferring via
         // execution:'execute' and firing that from the page's first
         // pointer/key interaction gives it one.
-        const runExecute = () => {
+        const runExecute = (event: Event) => {
+          recordEvent('turnstile:gesture-fired', `type=${event.type} needsExecute=${needsExecuteRef.current}`)
           if (needsExecuteRef.current && widgetIdRef.current && window.turnstile) {
+            recordEvent('turnstile:execute-called')
             window.turnstile.execute(widgetIdRef.current)
           }
         }
@@ -168,12 +178,14 @@ const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(({ onVerify, onExp
         }
       })
       .catch(() => {
+        recordEvent('turnstile:script-load-failed')
         // All retries exhausted (e.g. still offline). Widget silently fails
         // to appear; handleSubmit's missing-token check still blocks
         // submission, so this just shows as a stuck form rather than erroring.
       })
 
     return () => {
+      recordEvent('turnstile:effect-cleanup')
       cancelled = true
       cleanupGestureListeners?.()
       if (widgetIdRef.current && window.turnstile) {

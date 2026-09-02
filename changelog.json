@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.126.20",
+    "date": "2026-09-02",
+    "changes": [
+      "Internal: added a hidden diagnostic trail to the sign-in screen to help track down the remaining refresh issue"
+    ]
+  },
+  {
     "version": "1.126.19",
     "date": "2026-09-02",
     "changes": [
