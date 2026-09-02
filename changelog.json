@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.126.25",
+    "date": "2026-09-02",
+    "changes": [
+      "Fixed a bug where a mail sent to \"all players\" could be claimed once per character instead of once per account on accounts with more than one character"
+    ]
+  },
+  {
     "version": "1.126.24",
     "date": "2026-09-02",
     "changes": [
