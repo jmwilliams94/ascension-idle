@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.126.27",
+    "date": "2026-09-02",
+    "changes": [
+      "Lowered Radiant and Ascended Level Upgrade success odds further, raising their Master Forge cost accordingly"
+    ]
+  },
+  {
     "version": "1.126.26",
     "date": "2026-09-02",
     "changes": [

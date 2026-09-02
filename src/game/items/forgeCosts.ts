@@ -53,9 +53,10 @@ export function previewMasterForgeWeaponLevelCost(): number {
 //
 // Level Upgrade: per-quality-tier min/max, hand-tuned rather than derived
 // from a single compounding multiplier (retuned 2026-09-02, per the user —
-// supersedes the earlier x0.5-per-tier halving from Normal's 100/80):
-// Normal 100->80, Tempered 75->50, Infused 50->25, Radiant 25->15,
-// Ascended 20->10 (see LEVEL_UPGRADE_CHANCE_RANGE below). Quality Upgrade:
+// supersedes the earlier x0.5-per-tier halving from Normal's 100/80).
+// Radiant/Ascended lowered again same day (Master Forge felt too cheap at
+// those tiers): Normal 100->80, Tempered 75->50, Infused 50->25,
+// Radiant 15->10, Ascended 10->5 (see LEVEL_UPGRADE_CHANCE_RANGE below). Quality Upgrade:
 // 85% to 75% by the same level-position logic, x0.58 per quality tier above
 // Normal (retuned 2026-08-19 from x0.65 — the user asked for
 // Radiant->Ascended specifically to land "closer to the 15% mark," which
@@ -67,8 +68,8 @@ const LEVEL_UPGRADE_CHANCE_RANGE: Record<string, [number, number]> = {
   normal: [100, 80],
   tempered: [75, 50],
   infused: [50, 25],
-  radiant: [25, 15],
-  ascended: [20, 10],
+  radiant: [15, 10],
+  ascended: [10, 5],
 }
 
 export function computeUpgradeSuccessChancePct(
