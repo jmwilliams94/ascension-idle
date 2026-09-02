@@ -166,6 +166,17 @@ const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(({ onVerify, onExp
         const runExecute = (event: Event) => {
           recordEvent('turnstile:gesture-fired', `type=${event.type} needsExecute=${needsExecuteRef.current}`)
           if (needsExecuteRef.current && widgetIdRef.current && window.turnstile) {
+            // Flip immediately, not just on the verify callback -- previously
+            // this stayed true until a token actually arrived, so every
+            // touch/keypress before that (typing, tapping another field, etc.)
+            // called execute() again on top of a still-in-flight attempt.
+            // Debug trail evidence (2026-09-02): 7 execute() calls in ~2s on
+            // one page load, each stacking a fresh Cloudflare challenge
+            // without the previous one finishing or being torn down -- the
+            // likely real cause of the memory blowout behind the iOS
+            // WKWebView kills this whole investigation has been chasing.
+            // error-callback/expired-callback below re-arm it for a genuine retry.
+            needsExecuteRef.current = false
             recordEvent('turnstile:execute-called')
             window.turnstile.execute(widgetIdRef.current)
           }

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.126.22",
+    "date": "2026-09-02",
+    "changes": [
+      "Fixed the sign-in verification check re-triggering itself on every touch instead of waiting for the first attempt to finish, which was likely the real cause of the mobile refresh issue"
+    ]
+  },
+  {
     "version": "1.126.21",
     "date": "2026-09-02",
     "changes": [
