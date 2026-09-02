@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.126.14",
+    "date": "2026-09-02",
+    "changes": [
+      "Gold Donation buff banner now matches the app-update banner's full-width bar style (in green) instead of its own floating pill, with a Dismiss button in place of the X",
+      "The app-update banner now always takes the top slot over the Gold Donation buff banner if both would show at once"
+    ]
+  },
+  {
     "version": "1.126.13",
     "date": "2026-09-02",
     "changes": [
