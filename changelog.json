@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.129.1",
+    "date": "2026-09-03",
+    "changes": [
+      "Fixed Zone Boss kills paying out the old flat, non-scaling rewards instead of the intended zone-scaled reward pool",
+      "Fixed two characters tied at the damage cap sometimes getting different reward tiers despite equal contribution",
+      "Rebalanced the Zone Boss reward pool so Comet Scrolls now outscale Fallen Stars at every tier (was inverted at the top tier)"
+    ]
+  },
+  {
     "version": "1.129.0",
     "date": "2026-09-03",
     "changes": [
