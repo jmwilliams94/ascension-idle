@@ -132,7 +132,14 @@ export default function LoginForm() {
                 <input
                   id="password"
                   type="password"
-                  autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
+                  // 'off' (not 'current-password') -- the field starts disabled until
+                  // Turnstile verifies, then flips to enabled. Safari/1Password notice a
+                  // newly-fillable password field at that moment and re-offer the native
+                  // autofill sheet a second time, which looks like the page refreshing
+                  // (its light backdrop flashes over this dark UI). Turning off the
+                  // suggestion entirely means the user fills it manually (typing, or
+                  // 1Password's own share-sheet/keyboard-accessory fill) instead.
+                  autoComplete={mode === 'sign-in' ? 'off' : 'new-password'}
                   required
                   minLength={6}
                   value={password}

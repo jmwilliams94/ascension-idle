@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.126.16",
+    "date": "2026-09-02",
+    "changes": [
+      "Sign-in no longer offers to autofill your saved password on mobile, since it was popping the fill prompt up a second time right after the verification check finished"
+    ]
+  },
+  {
     "version": "1.126.15",
     "date": "2026-09-02",
     "changes": [
