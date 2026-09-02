@@ -58,6 +58,10 @@ export default function PotionTypeContainer({
   const canUse = Boolean(bestStack) && !isFull
   const autoOn = autoUsePotions[kind]
   const label = kind === 'hp' ? 'HP' : 'Mana'
+  // "Health"/"Mana" — the heading label above the Auto button. Kept distinct
+  // from `label` above, which stays the "HP" abbreviation used everywhere
+  // else (tooltips, the "No HP potions" message) — this one's spelled out.
+  const headingLabel = kind === 'hp' ? 'Health' : 'Mana'
   const fallbackIcon = kind === 'hp' ? '🧪' : '💧'
 
   const tooltip: ItemTooltipData | undefined = type
@@ -88,27 +92,28 @@ export default function PotionTypeContainer({
           onClick={() => bestStack && canUse && onUse(bestStack.id)}
         />
 
-        <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate-300">{label}</span>
-
-        <button
-          type="button"
-          aria-pressed={autoOn && isVipActive}
-          title={isVipActive ? `Auto-use ${label} potions below 30%` : 'Requires VIP'}
-          onClick={() => {
-            if (!isVipActive) {
-              showRequiresVipToast('Requires VIP')
-              return
-            }
-            void updateVipAutomationSettings({ autoUsePotions: { ...autoUsePotions, [kind]: !autoOn } })
-          }}
-          className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
-            autoOn && isVipActive
-              ? 'border-purple-500 bg-purple-600 text-white hover:bg-purple-500'
-              : 'border-purple-600 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20'
-          }`}
-        >
-          Auto
-        </button>
+        <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
+          <span className="text-heading-label">{headingLabel}</span>
+          <button
+            type="button"
+            aria-pressed={autoOn && isVipActive}
+            title={isVipActive ? `Auto-use ${label} potions below 30%` : 'Requires VIP'}
+            onClick={() => {
+              if (!isVipActive) {
+                showRequiresVipToast('Requires VIP')
+                return
+              }
+              void updateVipAutomationSettings({ autoUsePotions: { ...autoUsePotions, [kind]: !autoOn } })
+            }}
+            className={`w-full rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+              autoOn && isVipActive
+                ? 'border-purple-500 bg-purple-600 text-white hover:bg-purple-500'
+                : 'border-purple-600 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20'
+            }`}
+          >
+            Auto
+          </button>
+        </div>
       </div>
     </div>
   )
