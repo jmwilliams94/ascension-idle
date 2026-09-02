@@ -41,8 +41,14 @@ interface AppUpdateState {
   // during whatever gap exists before the page navigates away.
   refreshing: boolean
   updateSW: ((reloadPage?: boolean) => Promise<void>) | null
+  // Set once by main.tsx's onRegisteredSW (2026-09-02) — lets
+  // staleClientFetch.ts force an out-of-cycle registration.update() check
+  // the instant a request looks like a stale-client schema mismatch,
+  // instead of only ever finding out up to UPDATE_CHECK_INTERVAL_MS late.
+  registration: ServiceWorkerRegistration | null
   setNeedRefresh: (needRefresh: boolean) => void
   setUpdateSW: (updateSW: (reloadPage?: boolean) => Promise<void>) => void
+  setRegistration: (registration: ServiceWorkerRegistration) => void
   applyUpdate: () => void
 }
 
@@ -50,8 +56,10 @@ export const useAppUpdateStore = create<AppUpdateState>((set, get) => ({
   needRefresh: false,
   refreshing: false,
   updateSW: null,
+  registration: null,
   setNeedRefresh: (needRefresh) => set({ needRefresh }),
   setUpdateSW: (updateSW) => set({ updateSW }),
+  setRegistration: (registration) => set({ registration }),
   applyUpdate: () => {
     set({ refreshing: true })
     void get().updateSW?.(true)

@@ -4,6 +4,7 @@ import RotateDeviceOverlay from './components/RotateDeviceOverlay'
 import SessionConflictModal from './components/SessionConflictModal'
 import SessionEvictedToast from './components/SessionEvictedToast'
 import UpdateBanner from './components/UpdateBanner'
+import StaleClientNotice from './components/StaleClientNotice'
 import WhatsNewModal from './components/WhatsNewModal'
 import { useAuthStore } from './lib/useAuthStore'
 import { useActiveCharacterStore, getStoredCharacterId, setStoredCharacterId } from './lib/useActiveCharacterStore'
@@ -124,6 +125,7 @@ function App() {
     <>
       <RotateDeviceOverlay />
       <UpdateBanner />
+      <StaleClientNotice />
       <SessionConflictModal />
       <SessionEvictedToast />
 

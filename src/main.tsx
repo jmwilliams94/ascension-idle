@@ -49,6 +49,7 @@ const updateSW = registerSW({
     if (!registration) {
       return
     }
+    useAppUpdateStore.getState().setRegistration(registration)
     setInterval(() => {
       void registration.update()
     }, UPDATE_CHECK_INTERVAL_MS)
