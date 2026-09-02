@@ -57,6 +57,15 @@ interface PlayerRow {
   // base drop frequency — see resolve-combat/index.ts's own
   // accountDropMultiplier usage.
   account_zone_drop_bonus_pct: Record<string, number>
+  // Granular push-notification opt-out (2026-12-11) — gates each server-side
+  // cron trigger's own eligibility query (notify_zone_boss_spawned/
+  // notify_gold_donation_started/notify_lucky_ticket_ready), independent of
+  // the master push-subscription toggle in useNotificationStore. Default
+  // true via the column default, not client-side, so a row that predates
+  // this feature reads as opted-in.
+  notify_zone_boss: boolean
+  notify_gold_donation: boolean
+  notify_lucky_ticket: boolean
 }
 
 interface PlayerRecordState {
@@ -103,6 +112,10 @@ interface PlayerRecordState {
   // Achievements rework (2026-08-06) — see PlayerRow's own comment above.
   accountZoneAttackBonusPct: Record<string, number>
   accountZoneDropBonusPct: Record<string, number>
+  // Granular push-notification opt-out — see PlayerRow's own comment above.
+  notifyZoneBoss: boolean
+  notifyGoldDonation: boolean
+  notifyLuckyTicket: boolean
   loadPlayerRecord: (userId: string) => Promise<void>
   dismissWhatsNew: (userId: string) => Promise<void>
   // Reflects a successful transfer_currency RPC result in the local cache —
@@ -125,6 +138,15 @@ interface PlayerRecordState {
   setGemsBanked: (value: GemCounts) => void
   setAccountZoneAttackBonusPct: (value: Record<string, number>) => void
   setAccountZoneDropBonusPct: (value: Record<string, number>) => void
+  // Optimistically flips the local flag, then persists it — mirrors
+  // dismissWhatsNew's own set-then-await-update shape. Reverts the local
+  // flag if the write fails so the toggle can't silently drift from what's
+  // actually saved.
+  setNotificationPref: (
+    userId: string,
+    column: 'notify_zone_boss' | 'notify_gold_donation' | 'notify_lucky_ticket',
+    value: boolean,
+  ) => Promise<void>
 }
 
 export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
@@ -146,12 +168,15 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
   gemsBanked: DEFAULT_GEMS_BANKED,
   accountZoneAttackBonusPct: {},
   accountZoneDropBonusPct: {},
+  notifyZoneBoss: true,
+  notifyGoldDonation: true,
+  notifyLuckyTicket: true,
 
   loadPlayerRecord: async (userId) => {
     const { data, error } = await supabase
       .from('players')
       .select(
-        'last_seen_version, bank_gold, bank_comets, bank_fallen_stars, unlocked_classes, lucky_free_ticket_claimed_at, ascension_points, bank_points, gear_composition_points, comet_bank_count, fallen_star_bank_count, vip_token_bank_count, experience_orb_bank_count, experience_potion_bank_count, composition_stones_banked, gems_banked, account_zone_attack_bonus_pct, account_zone_drop_bonus_pct',
+        'last_seen_version, bank_gold, bank_comets, bank_fallen_stars, unlocked_classes, lucky_free_ticket_claimed_at, ascension_points, bank_points, gear_composition_points, comet_bank_count, fallen_star_bank_count, vip_token_bank_count, experience_orb_bank_count, experience_potion_bank_count, composition_stones_banked, gems_banked, account_zone_attack_bonus_pct, account_zone_drop_bonus_pct, notify_zone_boss, notify_gold_donation, notify_lucky_ticket',
       )
       .eq('id', userId)
       .maybeSingle<PlayerRow>()
@@ -193,6 +218,9 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
         gemsBanked: DEFAULT_GEMS_BANKED,
         accountZoneAttackBonusPct: {},
         accountZoneDropBonusPct: {},
+        notifyZoneBoss: true,
+        notifyGoldDonation: true,
+        notifyLuckyTicket: true,
       })
       return
     }
@@ -216,6 +244,9 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
       gemsBanked: data.gems_banked ?? DEFAULT_GEMS_BANKED,
       accountZoneAttackBonusPct: data.account_zone_attack_bonus_pct ?? {},
       accountZoneDropBonusPct: data.account_zone_drop_bonus_pct ?? {},
+      notifyZoneBoss: data.notify_zone_boss ?? true,
+      notifyGoldDonation: data.notify_gold_donation ?? true,
+      notifyLuckyTicket: data.notify_lucky_ticket ?? true,
     })
 
     if (!data.last_seen_version) {
@@ -257,4 +288,19 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
   setGemsBanked: (value) => set({ gemsBanked: value }),
   setAccountZoneAttackBonusPct: (value) => set({ accountZoneAttackBonusPct: value }),
   setAccountZoneDropBonusPct: (value) => set({ accountZoneDropBonusPct: value }),
+
+  setNotificationPref: async (userId, column, value) => {
+    const stateKey = (
+      { notify_zone_boss: 'notifyZoneBoss', notify_gold_donation: 'notifyGoldDonation', notify_lucky_ticket: 'notifyLuckyTicket' } as const
+    )[column]
+    const previous = usePlayerRecordStore.getState()[stateKey]
+    set({ [stateKey]: value } as Partial<PlayerRecordState>)
+
+    const { error } = await supabase.from('players').update({ [column]: value }).eq('id', userId)
+
+    if (error) {
+      console.error(`Failed to save ${column}`, error)
+      set({ [stateKey]: previous } as Partial<PlayerRecordState>)
+    }
+  },
 }))

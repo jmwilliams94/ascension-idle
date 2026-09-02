@@ -1,8 +1,26 @@
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '../lib/useAuthStore'
 import { useNotificationStore } from '../lib/useNotificationStore'
+import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 import { supabase } from '../lib/supabaseClient'
 import { ToggleSwitch } from './ui/ToggleSwitch'
+
+// One row per server-triggered push (2026-12-11) — each backed by its own
+// players.notify_* boolean column and its own pg_cron eligibility check
+// (notify_zone_boss_spawned/notify_gold_donation_started/
+// notify_lucky_ticket_ready). Only rendered once the master toggle above is
+// on; a per-type toggle means nothing while the device isn't subscribed at
+// all.
+const NOTIFICATION_TYPES = [
+  { key: 'notifyZoneBoss', column: 'notify_zone_boss', label: 'Zone Boss spawns', description: 'When a new Zone Boss appears.' },
+  {
+    key: 'notifyGoldDonation',
+    column: 'notify_gold_donation',
+    label: 'Gold Donation Events',
+    description: 'When a new Gold Donation Event opens for donations.',
+  },
+  { key: 'notifyLuckyTicket', column: 'notify_lucky_ticket', label: 'Lucky Lad free rolls', description: 'When your free roll cooldown is up.' },
+] as const
 
 // iOS Safari only supports Web Push once the PWA is running standalone (Home
 // Screen installed, iOS 16.4+) -- requesting permission outside that context
@@ -24,6 +42,11 @@ export default function NotificationsSettingsPanel() {
   const refresh = useNotificationStore((state) => state.refresh)
   const enable = useNotificationStore((state) => state.enable)
   const disable = useNotificationStore((state) => state.disable)
+  const notifyZoneBoss = usePlayerRecordStore((state) => state.notifyZoneBoss)
+  const notifyGoldDonation = usePlayerRecordStore((state) => state.notifyGoldDonation)
+  const notifyLuckyTicket = usePlayerRecordStore((state) => state.notifyLuckyTicket)
+  const setNotificationPref = usePlayerRecordStore((state) => state.setNotificationPref)
+  const notificationPrefs = { notifyZoneBoss, notifyGoldDonation, notifyLuckyTicket }
   const [testState, setTestState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [testErrorDetail, setTestErrorDetail] = useState<string | null>(null)
@@ -121,10 +144,7 @@ export default function NotificationsSettingsPanel() {
               <p className="text-sm font-medium text-slate-100">Push Notifications</p>
               <ToggleSwitch checked={subscribed} onChange={(checked) => void handleToggle(checked)} label="Push Notifications" disabled={busy || !accountId} />
             </div>
-            <p className="text-[11px] text-slate-300">
-              Get notified on this device even when Ascension Idle isn't open. Nothing is wired up to send a real alert yet -- this
-              just turns the pipeline on.
-            </p>
+            <p className="text-[11px] text-slate-300">Get notified on this device even when Ascension Idle isn't open.</p>
             {permission === 'denied' && (
               <p className="text-[11px] text-red-400">
                 Notifications are blocked for this site at the browser/OS level -- re-enable them there first.
@@ -132,6 +152,28 @@ export default function NotificationsSettingsPanel() {
             )}
             {errorMessage && <p className="text-[11px] text-red-400">{errorMessage}</p>}
           </div>
+
+          {subscribed && (
+            <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-950/40 p-3">
+              <p className="text-sm font-medium text-slate-100">Notify me about</p>
+              <div className="space-y-2">
+                {NOTIFICATION_TYPES.map(({ key, column, label, description }) => (
+                  <div key={column} className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-medium text-slate-100">{label}</p>
+                      <p className="text-[11px] text-slate-400">{description}</p>
+                    </div>
+                    <ToggleSwitch
+                      checked={notificationPrefs[key]}
+                      onChange={(checked) => accountId && void setNotificationPref(accountId, column, checked)}
+                      label={label}
+                      disabled={!accountId}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {subscribed && (
             <div className="space-y-2 rounded-xl border border-slate-800 bg-slate-950/40 p-3">
