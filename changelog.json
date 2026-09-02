@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.126.15",
+    "date": "2026-09-02",
+    "changes": [
+      "Fixed the sign-in verification check sometimes never appearing after reopening the app from the home screen, if the network wasn't fully reconnected yet"
+    ]
+  },
+  {
     "version": "1.126.14",
     "date": "2026-09-02",
     "changes": [

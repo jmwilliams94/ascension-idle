@@ -24,11 +24,17 @@ declare global {
 
 let scriptPromise: Promise<void> | null = null
 
+// A cold PWA resume on iOS (WKWebView torn down while backgrounded, reopen =
+// fresh page load) often races the network radio reconnecting -- the very
+// first fetch of this script can fail with no user-visible sign of why.
+// Failing the cached promise permanently would strand the login form with no
+// Turnstile widget for the rest of the session, so a rejection clears the
+// cache and lets the next call (retried below) try again from scratch.
 function loadTurnstileScript(): Promise<void> {
   if (window.turnstile) return Promise.resolve()
   if (scriptPromise) return scriptPromise
 
-  scriptPromise = new Promise((resolve, reject) => {
+  const promise: Promise<void> = new Promise<void>((resolve, reject) => {
     const script = document.createElement('script')
     script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
     script.async = true
@@ -36,9 +42,28 @@ function loadTurnstileScript(): Promise<void> {
     script.onload = () => resolve()
     script.onerror = () => reject(new Error('Failed to load Turnstile script'))
     document.head.appendChild(script)
+  }).catch((error: unknown) => {
+    scriptPromise = null
+    throw error
   })
+  scriptPromise = promise
 
-  return scriptPromise
+  return promise
+}
+
+const SCRIPT_RETRY_DELAYS_MS = [1000, 3000, 6000]
+
+async function loadTurnstileScriptWithRetry(isCancelled: () => boolean): Promise<void> {
+  for (const delay of SCRIPT_RETRY_DELAYS_MS) {
+    try {
+      await loadTurnstileScript()
+      return
+    } catch {
+      if (isCancelled()) return
+      await new Promise((resolve) => setTimeout(resolve, delay))
+    }
+  }
+  return loadTurnstileScript()
 }
 
 export interface TurnstileHandle {
@@ -82,7 +107,7 @@ const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(({ onVerify, onExp
     let cancelled = false
     let cleanupGestureListeners: (() => void) | undefined
 
-    loadTurnstileScript()
+    loadTurnstileScriptWithRetry(() => cancelled)
       .then(() => {
         if (cancelled || !containerRef.current || !window.turnstile) return
         widgetIdRef.current = window.turnstile.render(containerRef.current, {
@@ -124,8 +149,9 @@ const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(({ onVerify, onExp
         }
       })
       .catch(() => {
-        // Widget silently fails to appear; handleSubmit's missing-token check
-        // still blocks submission, so this just shows as a stuck form.
+        // All retries exhausted (e.g. still offline). Widget silently fails
+        // to appear; handleSubmit's missing-token check still blocks
+        // submission, so this just shows as a stuck form rather than erroring.
       })
 
     return () => {
