@@ -9,7 +9,6 @@ interface TurnstileRenderOptions {
   'expired-callback'?: () => void
   'error-callback'?: () => boolean | void
   theme?: 'light' | 'dark' | 'auto'
-  execution?: 'render' | 'execute'
 }
 
 declare global {
@@ -18,7 +17,6 @@ declare global {
       render: (container: HTMLElement, options: TurnstileRenderOptions) => string
       reset: (widgetId: string) => void
       remove: (widgetId: string) => void
-      execute: (widgetId: string) => void
     }
   }
 }
@@ -103,7 +101,6 @@ const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(({ onVerify, onExp
   const widgetIdRef = useRef<string | null>(null)
   const onVerifyRef = useRef(onVerify)
   const onExpireRef = useRef(onExpire)
-  const needsExecuteRef = useRef(true)
 
   useEffect(() => {
     onVerifyRef.current = onVerify
@@ -112,12 +109,11 @@ const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(({ onVerify, onExp
 
   useImperativeHandle(ref, () => ({
     reset: () => {
+      // Default execution:'render' mode (see the effect below) re-verifies
+      // automatically as soon as reset() runs -- no manual re-trigger needed.
       if (widgetIdRef.current && window.turnstile) {
         window.turnstile.reset(widgetIdRef.current)
       }
-      // execution:'execute' means reset() alone won't re-verify -- the next
-      // gesture listener firing needs to know it must call execute() again.
-      needsExecuteRef.current = true
     },
   }))
 
@@ -125,7 +121,6 @@ const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(({ onVerify, onExp
     if (!SITE_KEY) return
 
     let cancelled = false
-    let cleanupGestureListeners: (() => void) | undefined
 
     recordEvent('turnstile:script-load-start')
 
@@ -133,60 +128,38 @@ const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(({ onVerify, onExp
       .then(() => {
         recordEvent('turnstile:script-loaded', `cancelled=${cancelled} hasContainer=${Boolean(containerRef.current)}`)
         if (cancelled || !containerRef.current || !window.turnstile) return
+        // Plain default execution:'render' (2026-09-02, was execution:'execute'
+        // deferred to the page's first pointerdown/keydown) -- that gesture-
+        // deferred pattern was written to work around an older Safari ITP
+        // quirk, but turned out to be the trigger for a confirmed, currently
+        // open Cloudflare/WebKit bug: calling execute() from inside a fresh
+        // touch handler kills and reloads the whole page on iOS (see
+        // community.cloudflare.com/t/turnstile-kills-and-reloads-the-page-on-
+        // first-challenge-of-a-session-on-ios-26-5-w/940075). Confirmed via
+        // this app's own debug trail (2026-09-02): every reload traced back
+        // to a touch immediately followed by an execute() call. Verifying
+        // automatically on mount instead removes that trigger entirely.
+        // Tradeoff accepted (user's explicit call): under Safari's "Prevent
+        // Cross-Site Tracking" this can occasionally render blank with no
+        // token instead of crashing -- a stuck form, not a crash loop.
         widgetIdRef.current = window.turnstile.render(containerRef.current, {
           sitekey: SITE_KEY,
-          execution: 'execute',
           callback: (token) => {
             recordEvent('turnstile:verified', `tokenLen=${token.length}`)
-            needsExecuteRef.current = false
             onVerifyRef.current(token)
           },
           'expired-callback': () => {
             recordEvent('turnstile:expired')
-            needsExecuteRef.current = true
             onExpireRef.current?.()
           },
           'error-callback': () => {
             recordEvent('turnstile:error-callback')
-            needsExecuteRef.current = true
             onExpireRef.current?.()
             return true
           },
           theme: 'dark',
         })
         recordEvent('turnstile:rendered', `widgetId=${widgetIdRef.current}`)
-
-        // Safari's Storage Access API (needed under "Prevent Cross-Site
-        // Tracking"/ITP) only grants access when requested synchronously
-        // inside a real user gesture. Turnstile's default auto-render mode
-        // starts verifying on mount with no gesture behind it, so on Safari
-        // it silently fails and the widget collapses to blank. Deferring via
-        // execution:'execute' and firing that from the page's first
-        // pointer/key interaction gives it one.
-        const runExecute = (event: Event) => {
-          recordEvent('turnstile:gesture-fired', `type=${event.type} needsExecute=${needsExecuteRef.current}`)
-          if (needsExecuteRef.current && widgetIdRef.current && window.turnstile) {
-            // Flip immediately, not just on the verify callback -- previously
-            // this stayed true until a token actually arrived, so every
-            // touch/keypress before that (typing, tapping another field, etc.)
-            // called execute() again on top of a still-in-flight attempt.
-            // Debug trail evidence (2026-09-02): 7 execute() calls in ~2s on
-            // one page load, each stacking a fresh Cloudflare challenge
-            // without the previous one finishing or being torn down -- the
-            // likely real cause of the memory blowout behind the iOS
-            // WKWebView kills this whole investigation has been chasing.
-            // error-callback/expired-callback below re-arm it for a genuine retry.
-            needsExecuteRef.current = false
-            recordEvent('turnstile:execute-called')
-            window.turnstile.execute(widgetIdRef.current)
-          }
-        }
-        document.addEventListener('pointerdown', runExecute)
-        document.addEventListener('keydown', runExecute)
-        cleanupGestureListeners = () => {
-          document.removeEventListener('pointerdown', runExecute)
-          document.removeEventListener('keydown', runExecute)
-        }
       })
       .catch(() => {
         recordEvent('turnstile:script-load-failed')
@@ -198,7 +171,6 @@ const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(({ onVerify, onExp
     return () => {
       recordEvent('turnstile:effect-cleanup')
       cancelled = true
-      cleanupGestureListeners?.()
       if (widgetIdRef.current && window.turnstile) {
         window.turnstile.remove(widgetIdRef.current)
       }

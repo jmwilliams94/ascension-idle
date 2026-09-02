@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.126.23",
+    "date": "2026-09-02",
+    "changes": [
+      "The sign-in verification check now starts automatically instead of waiting for your first tap, avoiding a known Cloudflare/iOS bug that could crash and reload the page"
+    ]
+  },
+  {
     "version": "1.126.22",
     "date": "2026-09-02",
     "changes": [
