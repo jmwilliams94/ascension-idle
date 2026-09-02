@@ -338,11 +338,12 @@ function Square({
 // by the user — Gold deposits were silently capped at 40 gold).
 //
 // Slider step + number formatting mirror GoldDonationModal's donation
-// slider (requested by the user) — GOLD_STEP snaps drags to round
-// thousands instead of a step of 1, and every Gold figure here uses
+// slider (requested by the user) — GOLD_STEP matches DONATION_STEP's
+// 250,000 so drags snap to the same round increments instead of a step of
+// 1, and every Gold figure here uses
 // formatGoldAmount/goldColorClass so it reads the same k/M-tiered way the
 // top HUD bar (ExpBar.tsx) does, rather than a raw toLocaleString() number.
-const GOLD_STEP = 1_000
+const GOLD_STEP = 250_000
 
 function CurrencyPanel({
   label,
