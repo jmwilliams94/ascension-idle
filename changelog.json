@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.126.21",
+    "date": "2026-09-02",
+    "changes": [
+      "The sign-in screen now loads much less of the game up front, which should help with the mobile refresh issue tied to it running low on memory"
+    ]
+  },
+  {
     "version": "1.126.20",
     "date": "2026-09-02",
     "changes": [

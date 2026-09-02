@@ -1,7 +1,5 @@
-import { useEffect, useRef } from 'react'
+import { lazy, Suspense, useEffect, useRef } from 'react'
 import AuthGate from './components/AuthGate'
-import CharacterSelectScreen from './components/CharacterSelectScreen'
-import GameShell from './components/GameShell'
 import RotateDeviceOverlay from './components/RotateDeviceOverlay'
 import SessionConflictModal from './components/SessionConflictModal'
 import SessionEvictedToast from './components/SessionEvictedToast'
@@ -13,6 +11,18 @@ import { usePlayerRecordStore } from './lib/usePlayerRecordStore'
 import { useItemTemplatesStore } from './game/items/useItemTemplatesStore'
 import { usePromotionStore } from './game/items/usePromotionStore'
 import { useSessionConflictStore } from './game/social/useSessionConflictStore'
+
+// Split out of the main bundle (2026-09-02) -- these two pull in the entire
+// game engine (combat/forge/inventory/market/mining, all item/zone/monster
+// data catalogs) and were previously static imports, so that whole ~1.3MB
+// chunk was downloaded and evaluated even on the login screen, before any
+// session exists to use it. Diagnosed as a likely contributor to an iOS
+// WKWebView memory-pressure kill+relaunch happening on the login screen
+// (reported by the user, evidenced by a debug trail showing a page reload
+// with no pagehide/beforeunload at all -- the signature of an abrupt OS-level
+// process kill, not a normal navigation or any reload our own code triggers).
+const GameShell = lazy(() => import('./components/GameShell'))
+const CharacterSelectScreen = lazy(() => import('./components/CharacterSelectScreen'))
 
 function App() {
   const session = useAuthStore((state) => state.session)
@@ -46,13 +56,20 @@ function App() {
     void screen.orientation?.lock?.('portrait-primary').catch(() => {})
   }, [])
 
+  // Gated on userId (2026-09-02, was unconditional) -- these load the same
+  // heavy item/promotion data catalogs GameShell needs, no reason to fetch or
+  // hold them in memory before a session exists to use them.
   useEffect(() => {
-    loadTemplates()
-  }, [loadTemplates])
+    if (userId) {
+      loadTemplates()
+    }
+  }, [userId, loadTemplates])
 
   useEffect(() => {
-    loadPromotionTiers()
-  }, [loadPromotionTiers])
+    if (userId) {
+      loadPromotionTiers()
+    }
+  }, [userId, loadPromotionTiers])
 
   useEffect(() => {
     if (userId) {
@@ -115,7 +132,15 @@ function App() {
           <WhatsNewModal entries={whatsNewEntries} onDismiss={() => dismissWhatsNew(userId)} />
         )}
 
-        {characterId ? <GameShell characterId={characterId} /> : <CharacterSelectScreen />}
+        <Suspense
+          fallback={
+            <div className="ascension-page-bg flex min-h-screen items-center justify-center">
+              <p className="font-heading text-heading-label ascension-glow-pulse text-base">Loading…</p>
+            </div>
+          }
+        >
+          {characterId ? <GameShell characterId={characterId} /> : <CharacterSelectScreen />}
+        </Suspense>
       </AuthGate>
     </>
   )
