@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.126.8",
+    "date": "2026-09-02",
+    "changes": [
+      "Account Bank's Gold deposit/withdraw slider now snaps to round amounts and displays Gold the same k/M-tiered way it appears at the top of the screen"
+    ]
+  },
+  {
     "version": "1.126.7",
     "date": "2026-09-02",
     "changes": [

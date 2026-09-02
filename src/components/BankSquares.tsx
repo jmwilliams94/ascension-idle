@@ -17,6 +17,7 @@ import {
   getStoneIconSrc,
 } from '../game/items/forgeCosts'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
+import { formatGoldAmount, goldColorClass } from '../game/stats/formatGold'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useBankStore } from '../game/items/useBankStore'
@@ -335,6 +336,14 @@ function Square({
 // real Inventory tile capped at 40 slots; Gold has no such tile, so its
 // slider just runs the full available balance (fixed 2026-08-14, reported
 // by the user — Gold deposits were silently capped at 40 gold).
+//
+// Slider step + number formatting mirror GoldDonationModal's donation
+// slider (requested by the user) — GOLD_STEP snaps drags to round
+// thousands instead of a step of 1, and every Gold figure here uses
+// formatGoldAmount/goldColorClass so it reads the same k/M-tiered way the
+// top HUD bar (ExpBar.tsx) does, rather than a raw toLocaleString() number.
+const GOLD_STEP = 1_000
+
 function CurrencyPanel({
   label,
   wallet,
@@ -359,6 +368,7 @@ function CurrencyPanel({
 
   const available = mode === 'deposit' ? wallet : bank
   const sliderMax = Math.max(0, available)
+  const sliderStep = Math.min(GOLD_STEP, Math.max(1, sliderMax))
   const validAmount = amount > 0
 
   const handleConfirm = async () => {
@@ -423,28 +433,33 @@ function CurrencyPanel({
       </div>
 
       <div className="flex items-center justify-between text-[11px] text-slate-300">
-        <span>Wallet: {wallet.toLocaleString()}</span>
-        <span>Bank: {bank.toLocaleString()}</span>
+        <span>
+          Wallet: <span className={goldColorClass(wallet)}>{formatGoldAmount(wallet)}</span>
+        </span>
+        <span>
+          Bank: <span className={goldColorClass(bank)}>{formatGoldAmount(bank)}</span>
+        </span>
       </div>
 
       <div className="ascension-chip-frame">
         <div className="ascension-chip-inner p-3">
         <div className="flex items-center justify-between">
           <span className="text-xs text-slate-300">Amount</span>
-          <span className="text-lg font-semibold text-slate-100">{amount.toLocaleString()}</span>
+          <span className="text-sm font-medium text-amber-300">{formatGoldAmount(Math.min(amount, sliderMax))}</span>
         </div>
         <input
           type="range"
           min={0}
           max={sliderMax}
+          step={sliderStep}
           value={Math.min(amount, sliderMax)}
           disabled={sliderMax === 0}
           onChange={(event) => setAmount(Number(event.target.value))}
-          className="mt-2 w-full accent-amber-400 disabled:opacity-40"
+          className="mt-2 w-full accent-amber-500 disabled:opacity-40"
         />
         <div className="mt-1 flex justify-between text-[10px] text-slate-600">
           <span>0</span>
-          <span>{sliderMax.toLocaleString()}</span>
+          <span>{formatGoldAmount(sliderMax)}</span>
         </div>
         </div>
       </div>
