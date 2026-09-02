@@ -159,6 +159,34 @@ const BASE_MP = 20
 const MP_PER_SPIRIT = 5
 const BASE_ATTACK_SPEED = 1.0
 
+// Mirrors src/game/items/potionTypes.ts's MP_POTION_ORDER + healAmount, and
+// use_potion_stack's own v_restore_amount case (20261112000000_rescale_mp_
+// potions.sql) — must stay in sync across all three. Ascending tier order,
+// weakest to strongest — VIP auto-potion (2026-09-02, see
+// resolve_combat_apply_results's own p_mp_potions_consumed comment) always
+// drinks from the strongest owned tier first, same "best available"
+// convention the client's own findBestPotionStack uses.
+const MP_POTION_HEAL_AMOUNTS: Record<string, number> = {
+  mossglow_tonic: 75,
+  whisperleaf_draught: 140,
+  moonpetal_elixir: 200,
+  starlight_brew: 350,
+  emberwind_panacea: 500,
+  nightbloom_draught: 750,
+  voidglass_elixir: 1000,
+  astral_draught: 1500,
+}
+const MP_POTION_ORDER = [
+  'mossglow_tonic',
+  'whisperleaf_draught',
+  'moonpetal_elixir',
+  'starlight_brew',
+  'emberwind_panacea',
+  'nightbloom_draught',
+  'voidglass_elixir',
+  'astral_draught',
+]
+
 function computeDerivedStats(
   attributes: Attributes,
   equipmentBonus: {
@@ -861,6 +889,13 @@ interface CharacterSnapshot {
   // (expPotionMultiplier below) while in the future. Not cleared here on
   // expiry; it just naturally stops applying once now() passes it.
   exp_potion_expires_at: string | null
+  // VIP auto-potion gating (2026-09-02, see resolve_combat_apply_results's
+  // own p_mp_potions_consumed comment) — mirrors
+  // useCharacterStore.vipExpiresAt / useVipAutomationStore.settings exactly.
+  // Both already ride along for free on the full-row to_jsonb(c) gather
+  // query; no new column or gather_state change needed for either.
+  vip_expires_at: string | null
+  vip_automation_settings: { autoUsePotions?: { hp?: boolean; mp?: boolean } } | null
 }
 
 interface EquippedItemRow {
@@ -897,6 +932,9 @@ interface GatherStateResult {
   equipped_items?: EquippedItemRow[]
   gear_count?: number
   potion_count?: number
+  // New (2026-09-02, see resolve_combat_gather_state's migration) — real
+  // per-stack rows (both kinds) for the MP auto-potion top-up pass below.
+  potion_stacks?: { id: string; potion_type: string; count: number }[]
   holding_count?: number
   character_kills?: { kills: number | string; claimed_tier_index: number } | null
   account_kills?: { kills: number | string } | null
@@ -1558,6 +1596,14 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // (timeToKillMs > remainingAffordable) never trips.
   let mpAffordableAttackMs = Infinity
   let startingMp = 0
+  // VIP auto-potion (2026-09-02, see resolve_combat_apply_results's own
+  // p_mp_potions_consumed comment) — total MP restored and which real
+  // potion_stacks rows it came from, both filled in by the top-up loop
+  // below. Netted out of mpSpent once walkCombat returns, and passed to the
+  // apply RPC so the actual stacks get decremented atomically alongside
+  // everything else this call persists.
+  let totalPotionMpHealed = 0
+  const mpPotionsConsumedPayload: { stack_id: string; count: number }[] = []
   if (canAttackAtAll && activeSkill && activeSkill.mpCost > 0) {
     maxMpForSpend = BASE_MP + attributes.spirit * MP_PER_SPIRIT
     // Clamped to maxMp for this call's own gating math — this alone was
@@ -1567,6 +1613,51 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     // attack time. The RPC call below now also clamps what actually gets
     // written back.
     startingMp = Math.min(character.current_mp ?? maxMpForSpend, maxMpForSpend)
+
+    const isVipActive = Boolean(character.vip_expires_at && new Date(character.vip_expires_at) > new Date())
+    const autoUseMp = isVipActive && character.vip_automation_settings?.autoUsePotions?.mp === true
+
+    if (autoUseMp) {
+      // Local mutable copy — remaining tracks stock as this loop drinks
+      // from it, real potion_stacks rows aren't touched until the apply RPC
+      // below actually persists mpPotionsConsumedPayload.
+      const stacks = (gathered.potion_stacks ?? []).map((s) => ({ ...s, remaining: s.count }))
+      const findBestStack = () => {
+        for (let i = MP_POTION_ORDER.length - 1; i >= 0; i -= 1) {
+          const match = stacks.find((s) => s.potion_type === MP_POTION_ORDER[i] && s.remaining > 0)
+          if (match) return match
+        }
+        return null
+      }
+      const thresholdMp = maxMpForSpend * 0.3
+
+      // Conservative, disclosed gap (mirrors this file's other similar
+      // gaps, e.g. the Bless-enchant one on incomingDps above): this
+      // decides how many potions to pre-drink from the FULL elapsed window
+      // affording continuous attacking, before walkCombat runs — a fight
+      // that's actually wall-clock-bound instead (long knockout loops
+      // eating budget without consuming MP) can occasionally drink a
+      // potion that turns out not to have been strictly necessary. Bounded
+      // by real owned stock (findBestStack returns null once exhausted),
+      // plus a hard iteration cap as a pure defensive backstop.
+      for (let guard = 0; guard < 200; guard += 1) {
+        const affordableMsToThreshold = Math.floor(Math.max(0, startingMp - thresholdMp) / activeSkill.mpCost) * attackIntervalMs
+        if (affordableMsToThreshold >= effectiveElapsedMs) break
+
+        const stack = findBestStack()
+        if (!stack) break
+
+        const healAmount = MP_POTION_HEAL_AMOUNTS[stack.potion_type] ?? 0
+        startingMp = Math.min(maxMpForSpend, startingMp + healAmount)
+        totalPotionMpHealed += healAmount
+        stack.remaining -= 1
+
+        const existing = mpPotionsConsumedPayload.find((p) => p.stack_id === stack.id)
+        if (existing) existing.count += 1
+        else mpPotionsConsumedPayload.push({ stack_id: stack.id, count: 1 })
+      }
+    }
+
     const castsAffordable = Math.floor(startingMp / activeSkill.mpCost)
     mpAffordableAttackMs = castsAffordable * attackIntervalMs
   }
@@ -1839,7 +1930,11 @@ async function handleResolveCombat(req: Request): Promise<Response> {
       // average (same as gold/EXP/damage) — there's no discrete "attack" for
       // this to floor against, so mpSpent is just the direct proportional
       // amount, exactly like every other continuous reward in this function.
-      mpSpent = (walkResult.attackTimeConsumedMs / attackIntervalMs) * activeSkill.mpCost
+      // Netted against any VIP auto-potion healing from the top-up loop
+      // above — a negative mpSpent correctly reads as a net gain to
+      // resolve_combat_apply_results's `current_mp - p_mp_spent` write
+      // (e.g. drank more than this call's own casts spent).
+      mpSpent = (walkResult.attackTimeConsumedMs / attackIntervalMs) * activeSkill.mpCost - totalPotionMpHealed
     }
   }
 
@@ -1984,6 +2079,11 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     // and the 20261205000000 migration for the write-side overfill/NULL-init
     // bugs this closes.
     p_max_mp: mpSpent !== null ? maxMpForSpend : null,
+    // VIP auto-potion (2026-09-02) — real potion_stacks rows to decrement,
+    // filled in by the top-up loop above. Always [] when nothing was drunk
+    // this call (not VIP, setting off, MP never dipped toward 30%, or no
+    // stock left).
+    p_mp_potions_consumed: mpPotionsConsumedPayload,
   })
 
   if (applyError || !applyData) {

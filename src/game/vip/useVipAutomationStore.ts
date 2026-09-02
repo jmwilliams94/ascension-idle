@@ -23,6 +23,12 @@ export interface VipAutomationSettings {
   autoSalvage: { enabled: boolean; minTier: SalvageTier }
   autoBank: { enabled: boolean; minLevel: number }
   priority: LiquidationPriority
+  // Auto-drinks the best owned HP/Mana potion whenever that pool would drop
+  // below 30% of max (2026-09-02) — see PotionAutoUseEngine.tsx (live play)
+  // and resolve-combat/index.ts's own mirror (MP only — see that file's own
+  // comment on why HP can't be represented the same way in the offline
+  // model). Independent per kind since a player may only want one automated.
+  autoUsePotions: { hp: boolean; mp: boolean }
 }
 
 const SALVAGE_TIERS: SalvageTier[] = ['tempered', 'infused', 'radiant', 'ascended']
@@ -33,6 +39,7 @@ export const DEFAULT_VIP_AUTOMATION_SETTINGS: VipAutomationSettings = {
   autoSalvage: { enabled: false, minTier: 'tempered' },
   autoBank: { enabled: false, minLevel: 1 },
   priority: 'bank_first',
+  autoUsePotions: { hp: false, mp: false },
 }
 
 // Tolerant of anything the column could contain — a brand-new character's
@@ -46,6 +53,7 @@ function normalize(saved: unknown): VipAutomationSettings {
   const raw = saved as Record<string, unknown>
   const autoSalvage = (raw.autoSalvage ?? {}) as Record<string, unknown>
   const autoBank = (raw.autoBank ?? {}) as Record<string, unknown>
+  const autoUsePotions = (raw.autoUsePotions ?? {}) as Record<string, unknown>
 
   return {
     autoSellOre: raw.autoSellOre === true,
@@ -59,6 +67,10 @@ function normalize(saved: unknown): VipAutomationSettings {
       minLevel: Math.min(12, Math.max(1, Math.round(Number(autoBank.minLevel)) || 1)),
     },
     priority: raw.priority === 'salvage_first' ? 'salvage_first' : 'bank_first',
+    autoUsePotions: {
+      hp: autoUsePotions.hp === true,
+      mp: autoUsePotions.mp === true,
+    },
   }
 }
 
@@ -87,6 +99,7 @@ export const useVipAutomationStore = create<VipAutomationState>((set, get) => ({
       ...partial,
       autoSalvage: { ...current.autoSalvage, ...partial.autoSalvage },
       autoBank: { ...current.autoBank, ...partial.autoBank },
+      autoUsePotions: { ...current.autoUsePotions, ...partial.autoUsePotions },
     }
 
     // Optimistic local update, reconciled from the server's own cleaned/

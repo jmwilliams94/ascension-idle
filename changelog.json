@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.127.0",
+    "date": "2026-09-02",
+    "changes": [
+      "Redesigned the Inventory's HP/Mana potions into a single row of two containers (best potion you own, with your total count), instead of a separate tile per tier — click the icon to drink one",
+      "Added VIP Auto-Use Potions: an Auto button next to each potion container automatically drinks your best potion whenever that pool drops below 30%, both while playing and while away (Mana only while away; HP requires actively playing)"
+    ]
+  },
+  {
     "version": "1.126.27",
     "date": "2026-09-02",
     "changes": [

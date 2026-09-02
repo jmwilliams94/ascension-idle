@@ -33,6 +33,8 @@ import MoneyBagRevealModal from './MoneyBagRevealModal'
 import GearSnapshotClaimModal from './GearSnapshotClaimModal'
 import VipSettingsModal from './VipSettingsModal'
 import VipAutomationEngine from '../game/vip/VipAutomationEngine'
+import PotionAutoUseEngine from '../game/items/PotionAutoUseEngine'
+import RequiresVipToast from './RequiresVipToast'
 import SalvageRevealToast from './SalvageRevealToast'
 import FireworkOverlay from './FireworkOverlay'
 import LevelUpBanner from './LevelUpBanner'
@@ -576,6 +578,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <KillRewardToast />
       <UnclaimedLootBadge />
       <GainToastHost />
+      <RequiresVipToast />
       <CombatEngine />
       <RowCombatEngine />
       <MiningEngine />
@@ -591,6 +594,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <GearSnapshotClaimModal />
       <VipSettingsModal />
       <VipAutomationEngine />
+      <PotionAutoUseEngine />
 
       {/* pb-24 (was pb-6, matched by py-6 on lg): clearance for
           MobileBottomNav's fixed bar below `lg` — without it, the bar covers

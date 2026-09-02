@@ -77,8 +77,11 @@ import {
 } from '../game/items/gemTypes'
 import { INVENTORY_SLOT_CAP, useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemTemplatesStore'
-import { usePotionStore } from '../game/items/usePotionStore'
+import { usePotionStore, type PotionStack } from '../game/items/usePotionStore'
+import { findBestPotionStack, totalPotionCount } from '../game/items/potionSelectors'
 import { useCombatStore } from '../game/combat/useCombatStore'
+import { useVipAutomationStore } from '../game/vip/useVipAutomationStore'
+import { useRequiresVipToastStore } from '../game/vip/useRequiresVipToastStore'
 import { useMarketplaceStore } from '../game/marketplace/useMarketplaceStore'
 import { useMailStore } from '../game/marketplace/useMailStore'
 import { useCurrencyStore } from '../game/stats/useCurrencyStore'
@@ -88,7 +91,7 @@ import { CLASS_DEFINITIONS } from '../game/stats/classes'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { equipPickaxe } from '../game/mining/pickaxeEquipActions'
-import { POTION_TYPES, type PotionTypeId } from '../game/items/potionTypes'
+import { POTION_TYPES, HP_POTION_ORDER, MP_POTION_ORDER, type PotionTypeId } from '../game/items/potionTypes'
 import { useBankStore } from '../game/items/useBankStore'
 import { useGainToastStore } from '../game/hud/useGainToastStore'
 import { useMoneyBagRevealStore } from '../game/items/useMoneyBagRevealStore'
@@ -218,7 +221,7 @@ interface InventoryPanelProps {
   isTileEligible?: (dragId: string) => boolean
 }
 
-// Isolated so only this tiny button subscribes to the live HP/MP that ticks
+// Isolated so only this tiny row subscribes to the live HP/MP that ticks
 // every 100ms while combat runs in the background (CombatEngine.tsx) —
 // InventoryPanel itself used to select currentPlayerHp/maxPlayerHp/
 // currentPlayerMp/maxPlayerMp directly, which meant the *entire* grid (every
@@ -228,32 +231,90 @@ interface InventoryPanelProps {
 // object-in-deps bug (v1.116.7) — subscribing to something that changes far
 // more often than what's actually being computed from it, at the top of a
 // component big enough that the re-render cost isn't free.
-function PotionUseButton({ potionType, onUse }: { potionType: PotionTypeId; onUse: () => void }) {
+//
+// One container per kind (2026-09-02, replaces the old "one grid tile per
+// owned tier" layout) — shows the best owned tier's icon and the total count
+// across every tier of that kind (not just the best tier's own stack count),
+// click-to-use the best tier directly (no more select-then-Use-button
+// popover), plus a VIP-gated Auto button (PotionAutoUseEngine.tsx does the
+// actual auto-drinking once enabled).
+function PotionTypeContainer({
+  kind,
+  order,
+  stacks,
+  onUse,
+}: {
+  kind: 'hp' | 'mp'
+  order: readonly PotionTypeId[]
+  stacks: PotionStack[]
+  onUse: (stackId: string) => void
+}) {
   const currentPlayerHp = useCombatStore((state) => state.currentPlayerHp)
   const maxPlayerHp = useCombatStore((state) => state.maxPlayerHp)
   const currentPlayerMp = useCombatStore((state) => state.currentPlayerMp)
   const maxPlayerMp = useCombatStore((state) => state.maxPlayerMp)
+  const vipExpiresAt = useCharacterStore((state) => state.vipExpiresAt)
+  const autoUsePotions = useVipAutomationStore((state) => state.settings.autoUsePotions)
+  const updateVipAutomationSettings = useVipAutomationStore((state) => state.updateSettings)
+  const showRequiresVipToast = useRequiresVipToastStore((state) => state.show)
 
-  const type = POTION_TYPES[potionType]
-  const hpFull = type.kind === 'hp' && maxPlayerHp > 0 && currentPlayerHp >= maxPlayerHp
-  const mpFull = type.kind === 'mp' && maxPlayerMp > 0 && currentPlayerMp >= maxPlayerMp
-  const disabled = hpFull || mpFull
-  const label = hpFull ? 'HP already full' : mpFull ? 'MP already full' : 'Use'
+  const isVipActive = Boolean(vipExpiresAt && new Date(vipExpiresAt).getTime() > Date.now())
+  const bestStack = findBestPotionStack(stacks, order)
+  const total = totalPotionCount(stacks, order)
+  const type = bestStack ? POTION_TYPES[bestStack.potionType] : null
+  const isFull = kind === 'hp' ? maxPlayerHp > 0 && currentPlayerHp >= maxPlayerHp : maxPlayerMp > 0 && currentPlayerMp >= maxPlayerMp
+  const canUse = Boolean(bestStack) && !isFull
+  const autoOn = autoUsePotions[kind]
+  const label = kind === 'hp' ? 'HP' : 'Mana'
+
+  const useTitle = !bestStack ? `No ${label} potions — visit the Shop` : isFull ? `${label} already full` : `Use ${type?.displayName}`
 
   return (
-    <button
-      type="button"
-      disabled={disabled}
-      title={hpFull ? 'HP already full' : mpFull ? 'MP already full' : undefined}
-      onClick={onUse}
-      className={`mt-3 w-full rounded-lg border px-3 py-1.5 text-xs font-medium ${
-        disabled
-          ? 'cursor-not-allowed border-slate-800 text-slate-600'
-          : 'border-sky-500 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'
-      }`}
-    >
-      {label}
-    </button>
+    <div className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/60 px-2.5 py-2">
+      <button
+        type="button"
+        disabled={!canUse}
+        title={useTitle}
+        onClick={() => bestStack && onUse(bestStack.id)}
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 p-1 text-lg transition ${
+          canUse ? 'hover:brightness-110' : 'cursor-not-allowed opacity-50'
+        }`}
+        style={{ borderColor: CONSUMABLE_COLOR, backgroundColor: `${CONSUMABLE_COLOR}22` }}
+      >
+        {type?.iconSrc ? (
+          <img src={type.iconSrc} alt="" className="h-full w-full object-contain" />
+        ) : kind === 'hp' ? (
+          '🧪'
+        ) : (
+          '💧'
+        )}
+      </button>
+
+      <div className="text-xs leading-tight">
+        <p className="font-medium text-slate-200">{label} Potions</p>
+        <p className="text-slate-400">{total}</p>
+      </div>
+
+      <button
+        type="button"
+        aria-pressed={autoOn && isVipActive}
+        title={isVipActive ? `Auto-use ${label} potions below 30%` : 'Requires VIP'}
+        onClick={() => {
+          if (!isVipActive) {
+            showRequiresVipToast('Requires VIP')
+            return
+          }
+          void updateVipAutomationSettings({ autoUsePotions: { ...autoUsePotions, [kind]: !autoOn } })
+        }}
+        className={`ml-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+          autoOn && isVipActive
+            ? 'border-purple-500 bg-purple-600 text-white hover:bg-purple-500'
+            : 'border-purple-600 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20'
+        }`}
+      >
+        Auto
+      </button>
+    </div>
   )
 }
 
@@ -604,8 +665,6 @@ export default function InventoryPanel({
   const compareTooltip = buildCompareTooltipForItem(selectedTemplate)
   const selectedStoneTier = selectedSlot?.kind === 'stone' ? selectedSlot.tier : undefined
   const selectedGem = selectedSlot?.kind === 'gem' ? { gemId: selectedSlot.gemId, tier: selectedSlot.tier } : undefined
-  const selectedPotionStack =
-    selectedSlot?.kind === 'potion' ? visiblePotionStacks.find((stack) => stack.id === selectedSlot.id) : undefined
   const selectedCurrencyType = selectedSlot?.kind === 'currency' ? selectedSlot.currencyType : undefined
   const selectedScrollType = selectedSlot?.kind === 'scroll' ? selectedSlot.currencyType : undefined
 
@@ -1331,6 +1390,18 @@ export default function InventoryPanel({
           {experiencePotionError && <span className="text-xs text-amber-400">{experiencePotionError}</span>}
         </div>
 
+        {/* HP/Mana potion summary row (2026-09-02) — replaces the old "one
+            grid tile per owned tier" layout with a single fixed row of 2
+            containers (best-owned-tier icon + total count across every
+            tier), each with its own VIP-only Auto button. Still counted
+            toward occupiedCount/baseStoneBudget below exactly as before
+            (visiblePotionStacks.length) — only how they're *rendered*
+            changed, not the underlying slot economy. */}
+        <div className="mt-2 flex flex-wrap justify-center gap-2">
+          <PotionTypeContainer kind="hp" order={HP_POTION_ORDER} stacks={potionStacks} onUse={handlePotionUse} />
+          <PotionTypeContainer kind="mp" order={MP_POTION_ORDER} stacks={potionStacks} onUse={handlePotionUse} />
+        </div>
+
         {/* overflow-x-auto is a defensive backstop, not the primary fix — the
             responsive tile/track sizes above (SLOT_SIZE_CLASS/gridColsClass)
             should already fit any phone width; this just guarantees the grid
@@ -1345,36 +1416,6 @@ export default function InventoryPanel({
           }`}
         >
         <div className={`grid ${gridColsClass} gap-1.5`}>
-          {visiblePotionStacks.map((stack) => {
-            const type = POTION_TYPES[stack.potionType]
-            const potionTooltip: ItemTooltipData = {
-              title: type.displayName,
-              icon: type.kind === 'hp' ? '🧪' : '💧',
-              iconSrc: type.iconSrc,
-              iconColor: CONSUMABLE_COLOR,
-              lines: [type.kind === 'hp' ? 'HP Potion' : 'Mana Potion', `${stack.count} / ${type.stackSize}`],
-              stats: [type.description],
-            }
-
-            return (
-              <InventorySlot
-                key={stack.id}
-                slotId={stack.id}
-                filled
-                sizeClassName={SLOT_SIZE_CLASS}
-                icon={type.kind === 'hp' ? '🧪' : '💧'}
-                iconSrc={type.iconSrc}
-                qualityColor={CONSUMABLE_COLOR}
-                label={`${type.displayName} (${stack.count}/${type.stackSize})`}
-                tooltip={potionTooltip}
-                badge={`${stack.count}/${type.stackSize}`}
-                selected={selectedSlot?.kind === 'potion' && selectedSlot.id === stack.id}
-                dimmed={dimmedFor(stack.id)}
-                onClick={() => toggleSlot({ kind: 'potion', id: stack.id })}
-              />
-            )
-          })}
-
           {stoneTiles.map(({ tier, dragId }) => {
             if (reservedItemIds.includes(dragId)) {
               return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
@@ -2292,34 +2333,6 @@ export default function InventoryPanel({
           />
         )}
       {bagError && <p className="text-xs text-amber-400">{bagError}</p>}
-
-      {selectedPotionStack && (
-        <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
-          <div className="flex items-center gap-3">
-            <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 p-1 text-lg"
-              style={{ borderColor: CONSUMABLE_COLOR, backgroundColor: `${CONSUMABLE_COLOR}22` }}
-            >
-              {POTION_TYPES[selectedPotionStack.potionType].iconSrc ? (
-                <img src={POTION_TYPES[selectedPotionStack.potionType].iconSrc} alt="" className="h-full w-full object-contain" />
-              ) : POTION_TYPES[selectedPotionStack.potionType].kind === 'hp' ? (
-                '🧪'
-              ) : (
-                '💧'
-              )}
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-200">{POTION_TYPES[selectedPotionStack.potionType].displayName}</p>
-              <p className="text-xs text-slate-300">{POTION_TYPES[selectedPotionStack.potionType].description}</p>
-              <p className="text-xs text-slate-300">
-                {selectedPotionStack.count} / {POTION_TYPES[selectedPotionStack.potionType].stackSize}
-              </p>
-            </div>
-          </div>
-
-          <PotionUseButton potionType={selectedPotionStack.potionType} onUse={() => void handlePotionUse(selectedPotionStack.id)} />
-        </div>
-      )}
 
       {selectedItem &&
         !equipPopoverEnabled &&

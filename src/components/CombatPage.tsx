@@ -15,7 +15,8 @@ import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { usePotionStore } from '../game/items/usePotionStore'
-import { POTION_TYPES, HP_POTION_ORDER, MP_POTION_ORDER } from '../game/items/potionTypes'
+import { POTION_TYPES } from '../game/items/potionTypes'
+import { findBestHpPotionStack, findBestMpPotionStack } from '../game/items/potionSelectors'
 import { useSkillsStore } from '../game/skills/useSkillsStore'
 import { SKILL_TYPES } from '../game/skills/skillData'
 import EventsCardStack from './EventsCardStack'
@@ -497,22 +498,10 @@ export default function CombatPage() {
   // HP; Mana quick-use added alongside the MP bar itself) — the highest-tier
   // owned stack with any left, so the strongest potion is always the one
   // surfaced here rather than whichever happens to sit first in Inventory.
-  let bestHpPotionStack: (typeof potionStacks)[number] | null = null
-  for (let i = HP_POTION_ORDER.length - 1; i >= 0; i -= 1) {
-    const found = potionStacks.find((stack) => stack.potionType === HP_POTION_ORDER[i] && stack.count > 0)
-    if (found) {
-      bestHpPotionStack = found
-      break
-    }
-  }
-  let bestMpPotionStack: (typeof potionStacks)[number] | null = null
-  for (let i = MP_POTION_ORDER.length - 1; i >= 0; i -= 1) {
-    const found = potionStacks.find((stack) => stack.potionType === MP_POTION_ORDER[i] && stack.count > 0)
-    if (found) {
-      bestMpPotionStack = found
-      break
-    }
-  }
+  // Shared with InventoryPanel's potion row/PotionAutoUseEngine — see
+  // potionSelectors.ts.
+  const bestHpPotionStack = findBestHpPotionStack(potionStacks)
+  const bestMpPotionStack = findBestMpPotionStack(potionStacks)
   const dropdownMonsterId = selectedMonsterId ?? currentZone.monsterOrder[0] ?? null
 
   const handleFight = (typeId: EnemyTypeId) => {
