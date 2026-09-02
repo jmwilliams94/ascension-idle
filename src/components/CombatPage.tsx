@@ -743,7 +743,7 @@ export default function CombatPage() {
               </div>
             )}
 
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className={`mt-3 grid gap-2 ${activeSkill ? 'grid-cols-2' : 'grid-cols-1'}`}>
               <PotionTypeContainer kind="hp" order={HP_POTION_ORDER} stacks={potionStacks} onUse={handleUsePotion} />
               {activeSkill && (
                 <PotionTypeContainer kind="mp" order={MP_POTION_ORDER} stacks={potionStacks} onUse={handleUsePotion} />
@@ -965,7 +965,7 @@ export default function CombatPage() {
             {/* Consumable row (confirmed with the user, 2026-07-31) — surfaces the
                 best (highest-tier) owned potions right on the Combat page so
                 healing mid-fight doesn't require leaving to the Inventory grid. */}
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className={`mt-3 grid gap-2 ${activeSkill ? 'grid-cols-2' : 'grid-cols-1'}`}>
               <PotionTypeContainer kind="hp" order={HP_POTION_ORDER} stacks={potionStacks} onUse={handleUsePotion} />
               {activeSkill && (
                 <PotionTypeContainer kind="mp" order={MP_POTION_ORDER} stacks={potionStacks} onUse={handleUsePotion} />

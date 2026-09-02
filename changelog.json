@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.127.2",
+    "date": "2026-09-02",
+    "changes": [
+      "Fixed the Hunting tab's potion containers to always sit side by side instead of stacking",
+      "Potion icons now match the standard Inventory/gear icon size and border styling, with your total count shown as a corner badge on the icon itself instead of separate text"
+    ]
+  },
+  {
     "version": "1.127.1",
     "date": "2026-09-02",
     "changes": [

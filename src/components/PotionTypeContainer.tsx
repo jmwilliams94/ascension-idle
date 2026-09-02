@@ -1,6 +1,8 @@
+import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import { CONSUMABLE_COLOR } from '../game/items/forgeCosts'
 import { findBestPotionStack, totalPotionCount } from '../game/items/potionSelectors'
 import { POTION_TYPES, type PotionTypeId } from '../game/items/potionTypes'
+import type { ItemTooltipData } from '../game/items/itemTooltip'
 import type { PotionStack } from '../game/items/usePotionStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
@@ -9,12 +11,20 @@ import { useRequiresVipToastStore } from '../game/vip/useRequiresVipToastStore'
 
 // Hunting tab's HP/Mana potion quick-use widget (2026-09-02) — replaces the
 // old "2 separate rows" (a full-width HP row, then a full-width Mana row
-// shown only while activeSkill) on CombatPage.tsx with one compact row of 2
-// fixed containers, one per kind. Shows the best owned tier's icon and the
-// total count across every tier of that kind (not just the best tier's own
-// stack count), click-to-use the best tier directly, plus a VIP-gated Auto
-// button (PotionAutoUseEngine.tsx does the actual auto-drinking once
-// enabled).
+// shown only while activeSkill) on CombatPage.tsx with 2 fixed containers
+// side by side (CombatPage.tsx lays them out in a grid-cols-2 row, not
+// flex-wrap, so they never stack even on narrow mobile widths).
+//
+// Reuses InventorySlot for the icon itself (2026-09-02, v1.127.2 — an
+// earlier pass hand-rolled a plain <button> here, which lost the standard
+// item-quality-frame border every other gear/item tile has and rendered at
+// a non-standard size) so this reads as the same "unit" as every other
+// item tile in the game (Inventory, Forge, Bank, Loot Holding) — same
+// SLOT_SIZE_CLASS size, same gradient-border frame (qualityColor =
+// CONSUMABLE_COLOR, matching the old per-tier Inventory tiles' own color),
+// and the total count across every tier of that kind (not just the best
+// tier's own stack count) rendered as InventorySlot's own bottom-right
+// `badge`, exactly like every stack count elsewhere in the game.
 //
 // Isolated in its own component (not inlined in CombatPage.tsx) so only
 // this subscribes to the live HP/MP that ticks every 100ms while combat
@@ -48,54 +58,58 @@ export default function PotionTypeContainer({
   const canUse = Boolean(bestStack) && !isFull
   const autoOn = autoUsePotions[kind]
   const label = kind === 'hp' ? 'HP' : 'Mana'
+  const fallbackIcon = kind === 'hp' ? '🧪' : '💧'
 
-  const useTitle = !bestStack ? `No ${label} potions — visit the Shop` : isFull ? `${label} already full` : `Use ${type?.displayName}`
+  const tooltip: ItemTooltipData | undefined = type
+    ? {
+        title: type.displayName,
+        icon: fallbackIcon,
+        iconSrc: type.iconSrc,
+        iconColor: CONSUMABLE_COLOR,
+        lines: [kind === 'hp' ? 'HP Potion' : 'Mana Potion', `${total} owned`],
+        stats: [type.description],
+      }
+    : undefined
 
   return (
-    <div className="flex flex-1 items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-xs">
-      <button
-        type="button"
-        disabled={!canUse}
-        title={useTitle}
-        onClick={() => bestStack && onUse(bestStack.id)}
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2 p-1 text-base transition ${
-          canUse ? 'hover:brightness-110' : 'cursor-not-allowed opacity-50'
-        }`}
-        style={{ borderColor: CONSUMABLE_COLOR, backgroundColor: `${CONSUMABLE_COLOR}22` }}
-      >
-        {type?.iconSrc ? (
-          <img src={type.iconSrc} alt="" className="h-full w-full object-contain" />
-        ) : kind === 'hp' ? (
-          '🧪'
-        ) : (
-          '💧'
-        )}
-      </button>
+    <div className="ascension-chip-frame">
+      <div className="ascension-chip-inner flex items-center gap-2 p-2">
+        <InventorySlot
+          slotId={`potion-quick-use-${kind}`}
+          filled
+          sizeClassName={SLOT_SIZE_CLASS}
+          icon={fallbackIcon}
+          iconSrc={type?.iconSrc}
+          qualityColor={CONSUMABLE_COLOR}
+          badge={bestStack ? String(total) : undefined}
+          label={!bestStack ? `No ${label} potions — visit the Shop` : isFull ? `${label} already full` : `Use ${type?.displayName}`}
+          tooltip={tooltip}
+          dimmed={!canUse}
+          onClick={() => bestStack && canUse && onUse(bestStack.id)}
+        />
 
-      <div className="min-w-0 flex-1 leading-tight">
-        <p className="truncate font-medium text-slate-200">{label} Potions</p>
-        <p className="text-slate-400">{total}</p>
+        <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate-300">{label}</span>
+
+        <button
+          type="button"
+          aria-pressed={autoOn && isVipActive}
+          title={isVipActive ? `Auto-use ${label} potions below 30%` : 'Requires VIP'}
+          onClick={() => {
+            if (!isVipActive) {
+              showRequiresVipToast('Requires VIP')
+              return
+            }
+            void updateVipAutomationSettings({ autoUsePotions: { ...autoUsePotions, [kind]: !autoOn } })
+          }}
+          className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+            autoOn && isVipActive
+              ? 'border-purple-500 bg-purple-600 text-white hover:bg-purple-500'
+              : 'border-purple-600 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20'
+          }`}
+        >
+          Auto
+        </button>
       </div>
-
-      <button
-        type="button"
-        aria-pressed={autoOn && isVipActive}
-        title={isVipActive ? `Auto-use ${label} potions below 30%` : 'Requires VIP'}
-        onClick={() => {
-          if (!isVipActive) {
-            showRequiresVipToast('Requires VIP')
-            return
-          }
-          void updateVipAutomationSettings({ autoUsePotions: { ...autoUsePotions, [kind]: !autoOn } })
-        }}
-        className={`shrink-0 rounded-lg border px-3 py-1.5 font-medium transition ${
-          autoOn && isVipActive
-            ? 'border-purple-500 bg-purple-600 text-white hover:bg-purple-500'
-            : 'border-purple-600 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20'
-        }`}
-      >
-        Auto
-      </button>
     </div>
   )
 }
