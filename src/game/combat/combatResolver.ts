@@ -117,6 +117,20 @@ export function playerDefenseMultiplierForLevelDiff(characterLevel: number, mons
   return PLAYER_DEFENSE_MULTIPLIER_BY_COLOR[getLevelDiffColor(characterLevel, monsterLevel)]
 }
 
+// Deep-black overage bonus (2026-09-02, requested by the user — black
+// monsters should feel like a wall, not just a flat "hits harder" bracket).
+// Beyond the 5-level black threshold itself, incoming damage keeps climbing
+// the further past that line the monster's level sits: +100% per level past
+// 5, uncapped, linear. A monster exactly 5 levels over gets no bonus here
+// (baseline black behavior, same as before this existed); 6 over is 2x, 10
+// over is 6x. Multiplies on top of playerDefenseMultiplierForLevelDiff's
+// flat Defense-strip above, not a replacement for it. Mirrored in
+// resolve-combat/index.ts (offline/AFK sim's incomingDps calc).
+export function deepBlackDamageMultiplier(characterLevel: number, monsterLevel: number): number {
+  const levelsPastBlackThreshold = Math.max(0, monsterLevel - characterLevel - 5)
+  return 1 + levelsPastBlackThreshold
+}
+
 // expMultiplier — the White/Green/Red/Black level-diff bonus (see
 // expMultiplierForLevelDiff above). Visual-log flavor only now (2026-08-11
 // rewrite) — the kill-moment log line's own gold/EXP numbers, no longer fed

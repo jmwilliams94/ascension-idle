@@ -16,6 +16,7 @@ import { useSkillsStore } from '../skills/useSkillsStore'
 import {
   MONSTER_ATTACK_INTERVAL_MS,
   applyDamageReduction,
+  deepBlackDamageMultiplier,
   expMultiplierForLevelDiff,
   killRewards,
   monsterAttackDamage,
@@ -579,7 +580,8 @@ export const useCombatStore = create<CombatState>((set, get) => ({
         // applied after Defense mitigation, not folded into it (Bless is a
         // gear-enchant bonus, not a Defense stat).
         const damage = applyDamageReduction(
-          resolvePhysicalDamage(monsterAttackDamage(type), effectivePlayerDefense),
+          resolvePhysicalDamage(monsterAttackDamage(type), effectivePlayerDefense) *
+            deepBlackDamageMultiplier(characterLevel, type.level),
           derived.damageReductionPct,
         )
         const nextPlayerHp = Math.max(0, currentPlayerHp - damage)

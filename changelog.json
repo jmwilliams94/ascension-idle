@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.126.7",
+    "date": "2026-09-02",
+    "changes": [
+      "Monsters more than 5 levels above your character now hit progressively harder the further above you they are, on top of the existing black-name damage penalty"
+    ]
+  },
+  {
     "version": "1.126.6",
     "date": "2026-09-02",
     "changes": [

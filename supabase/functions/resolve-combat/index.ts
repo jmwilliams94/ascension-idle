@@ -371,6 +371,16 @@ const PLAYER_DEFENSE_MULTIPLIER_BY_COLOR: Record<LevelDiffColor, number> = {
   black: 0.1,
 }
 
+// Deep-black overage bonus — mirrors combatResolver.ts's
+// deepBlackDamageMultiplier exactly (+100% incoming damage per level past
+// the 5-level black threshold, uncapped, linear). Fed into incomingDps below
+// so offline/AFK knockout simulation matches live combat's punishment for
+// fighting far-above-level monsters.
+function deepBlackDamageMultiplier(characterLevel: number, monsterLevel: number): number {
+  const levelsPastBlackThreshold = Math.max(0, monsterLevel - characterLevel - 5)
+  return 1 + levelsPastBlackThreshold
+}
+
 const MAX_DAMAGE_REDUCTION_PCT = 90
 
 function applyDamageReduction(damage: number, reductionPct: number): number {
@@ -1500,7 +1510,8 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   const incomingHitChance = 1 - Math.min(derived.dodge * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
   const damageReductionPct = bastionBonusPct
   const expectedIncomingDamagePerHit = applyDamageReduction(
-    resolvePhysicalDamage(monster.attack_damage, effectivePlayerDefense),
+    resolvePhysicalDamage(monster.attack_damage, effectivePlayerDefense) *
+      deepBlackDamageMultiplier(character.level, monster.level),
     damageReductionPct,
   )
   const incomingDps = (incomingHitChance * expectedIncomingDamagePerHit) / MONSTER_ATTACK_INTERVAL_MS
