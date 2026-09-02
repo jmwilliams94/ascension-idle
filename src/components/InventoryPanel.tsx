@@ -46,6 +46,7 @@ import {
   buildStoneTooltip,
   buildMoneyBagTooltip,
   buildGemBagTooltip,
+  getMoneyBagIconForTotalGold,
   compositionPointValue,
   fallenStarDragId,
   fallenStarScrollDragId,
@@ -1045,7 +1046,7 @@ export default function InventoryPanel({
     closeBagPopover()
 
     if (totalGold > 0) {
-      showMoneyBagReveal({ kind: 'gold', amount: totalGold })
+      showMoneyBagReveal({ kind: 'gold', amount: totalGold, iconSrc: getMoneyBagIconForTotalGold(totalGold) })
     }
     if (anyFailed) {
       setBagError("Couldn't open all of your money bags.")

@@ -721,3 +721,22 @@ export const MONEY_BAG_GOLD_BY_CLASS: Record<number, number> = {
   9: 9000000,
   10: 15000000,
 }
+
+// "Open All" (InventoryPanel.tsx's handleOpenAllBags) sums every opened
+// Money Bag's gold into a single total before showing one reveal card --
+// each individual bag (and its template/icon) is already gone by then, so
+// there's no real bag left to read an icon from. Picks whichever Class 1-10
+// icon "makes sense" for the combined total instead (requested by the user,
+// 2026-11), using the same gold ramp above: the highest class whose own
+// single-bag amount the total meets or beats. A big total from several small
+// bags still reads as "a big haul" this way, same as it would opening one
+// bag that size for real.
+export function getMoneyBagIconForTotalGold(totalGold: number): string | undefined {
+  let bestClass = 1
+  for (const [classStr, threshold] of Object.entries(MONEY_BAG_GOLD_BY_CLASS)) {
+    if (totalGold >= threshold) {
+      bestClass = Math.max(bestClass, Number(classStr))
+    }
+  }
+  return getGearIconSrc(`Class ${bestClass} Money Bag`)
+}

@@ -32,6 +32,14 @@ interface BurstStyle extends CSSProperties {
   '--ember-fall': string
 }
 
+// Same `--ascension-tint` custom property KillRewardToast/VIP's own badge
+// use to color `.ascension-chip-frame.is-tinted` (2026-11, restyled to match
+// "our styling" per the user — this card previously used a plain
+// rounded-xl/border/backdrop-blur box, the pre-Prism-Obsidian look).
+interface TintStyle extends CSSProperties {
+  '--ascension-tint': string
+}
+
 // Confetti-style burst (2026-08-13, requested by the user — bring
 // SalvageRevealToast's own "bursts out then trickles downward" ember
 // physics here too), same coloring as before (gold for a gold reveal, the
@@ -92,27 +100,39 @@ export default function MoneyBagRevealModal() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.92 }}
             transition={{ duration: 0.25 }}
-            className="relative flex items-center gap-2 rounded-xl border bg-slate-900/95 px-3 py-2 shadow-xl backdrop-blur will-change-transform"
-            style={{ borderColor: `${color}80` }}
+            className="relative will-change-transform"
           >
+            {/* EmberBurst radiates well past this card's own edges by design
+                (BURST_RADIUS) -- rendered as a sibling of the chip frame
+                below, not a child of it, since .ascension-chip-frame's own
+                chamfer clip-path (see index.css) would otherwise cut the
+                burst off right at the card's border, same fix as
+                AscensionCard's activeEventColor/EventEmberBorder pattern. */}
             <EmberBurst seed={seed} color={color as string} />
             <div
-              className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2"
-              style={{ borderColor: color, backgroundColor: `${color}22` }}
+              className="ascension-chip-frame is-tinted shadow-lg"
+              style={{ '--ascension-tint': color } as TintStyle}
             >
-              {isGem && reveal.kind === 'gem' ? (
-                <img src={getGemIconSrc(reveal.gemId, reveal.tier)} alt="" className="h-4/5 w-4/5 object-contain" />
-              ) : reveal?.kind === 'gold' && reveal.iconSrc ? (
-                <img src={reveal.iconSrc} alt="" className="h-4/5 w-4/5 object-contain" />
-              ) : (
-                <span className="text-xl">💰</span>
-              )}
-            </div>
-            <div className="relative z-10">
-              <p className="text-sm font-semibold" style={{ color }}>
-                {reveal.kind === 'gold' ? `${reveal.amount.toLocaleString()} Gold` : title}
-              </p>
-              {subtitle && <p className="text-xs text-slate-400">{subtitle}</p>}
+              <div className="ascension-chip-inner flex items-center gap-2 px-3 py-2">
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border-2"
+                  style={{ borderColor: color, backgroundColor: `${color}22` }}
+                >
+                  {isGem && reveal.kind === 'gem' ? (
+                    <img src={getGemIconSrc(reveal.gemId, reveal.tier)} alt="" className="h-4/5 w-4/5 object-contain" />
+                  ) : reveal?.kind === 'gold' && reveal.iconSrc ? (
+                    <img src={reveal.iconSrc} alt="" className="h-4/5 w-4/5 object-contain" />
+                  ) : (
+                    <span className="text-xl">💰</span>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color }}>
+                    {reveal.kind === 'gold' ? `${reveal.amount.toLocaleString()} Gold` : title}
+                  </p>
+                  {subtitle && <p className="text-xs text-slate-400">{subtitle}</p>}
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
