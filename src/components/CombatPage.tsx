@@ -451,7 +451,12 @@ export default function CombatPage() {
   // render — tracks how far into `log` the Thunder-lightning trigger has
   // already looked, so re-equipping Thunder mid-fight can't replay a burst
   // of lightning for physical hits that landed before it was ever equipped.
-  const lastThunderLogTimestampRef = useRef(0)
+  // Seeded with the mount time (not 0) so navigating back to this tab after
+  // combat kept resolving in the background doesn't treat the whole backlog
+  // of log entries accumulated while away as "new" and fire them all in one
+  // synchronous burst — every entry already in `log` at mount has a
+  // timestamp <= this, so only genuinely new ones qualify.
+  const lastThunderLogTimestampRef = useRef(Date.now())
 
   // Lightning FX (2026-11, requested by the user) — fires once per new
   // 'damage'/'miss' log entry while Thunder is the active skill (Thunder is

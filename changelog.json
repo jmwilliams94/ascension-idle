@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.128.1",
+    "date": "2026-09-02",
+    "changes": [
+      "Fixed a bug where leaving the Hunting tab and coming back could dump a big backlog of lightning strike effects on the enemy all at once"
+    ]
+  },
+  {
     "version": "1.128.0",
     "date": "2026-09-02",
     "changes": [
