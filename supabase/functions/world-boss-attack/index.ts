@@ -4,8 +4,8 @@
 // KNOWN DUPLICATION, ACCEPTED (same relationship resolve-combat/index.ts
 // already has with the client): getAttributesForLevel/ATTRIBUTE_ANCHORS,
 // computeDerivedStats, scaledStat/QUALITY_STAT_MULTIPLIERS,
-// compositionBonusStat, resolvePhysicalDamage below are copied verbatim from
-// resolve-combat/index.ts, which is itself a deliberate, disclosed copy of
+// compositionBonusStat, resolvePhysicalDamage, SKILL_TYPES below are copied
+// verbatim from resolve-combat/index.ts, which is itself a deliberate, disclosed copy of
 // src/game/stats/{derivedStats,classes}.ts and src/game/items/equipmentBonus.ts.
 // No supabase/functions/_shared/ folder exists in this project — every Edge
 // Function is fully self-contained — so this is a second copy of the same
@@ -250,6 +250,19 @@ interface CharacterSnapshot {
   class: string | null
   level: number
   equipped_quiver_id: string | null
+  equipped_skill_id: string | null
+}
+
+// Mirrors resolve-combat/index.ts's own SKILL_TYPES — see that file for the
+// full sourcing writeup. Only one skill exists today (Thunder, Wuxia-only).
+interface SkillDefinition {
+  classId: string
+  requiredLevel: number
+  effectDamage: number
+}
+
+const SKILL_TYPES: Record<string, SkillDefinition> = {
+  thunder: { classId: 'wuxia', requiredLevel: 1, effectDamage: 1 },
 }
 
 interface EquippedItemRow {
@@ -374,11 +387,6 @@ async function handleWorldBossAttack(req: Request): Promise<Response> {
   }
 
   const derived = computeDerivedStats(attributes, equipmentBonus)
-  // Composition folded in first (unscaled — no zone bonus exists here to
-  // compound with, unlike resolve-combat), then Drake/Ember's gem bonus %
-  // applied last, per the user's explicit ordering.
-  const physicalSubtotal = derived.physicalAttack + compositionPhysicalAttackBonus
-  const magicSubtotal = derived.magicAttack + compositionMagicAttackBonus
 
   // Hunter must have the Quiver equipped to attack at all — same gate live
   // combat enforces.
@@ -386,21 +394,52 @@ async function handleWorldBossAttack(req: Request): Promise<Response> {
     return json({ ok: false, error: 'quiver_required' })
   }
 
+  // Active skill (see SKILL_TYPES above) — class- and level-revalidated here
+  // rather than trusting character.equipped_skill_id at face value, same
+  // doctrine as resolve-combat/index.ts's own copy of this check.
+  const candidateSkill = character.equipped_skill_id ? SKILL_TYPES[character.equipped_skill_id] : undefined
+  const activeSkill =
+    candidateSkill && candidateSkill.classId === character.class && character.level >= candidateSkill.requiredLevel
+      ? candidateSkill
+      : null
+
+  // Composition folded in first (unscaled — no zone bonus exists here to
+  // compound with, unlike resolve-combat), then Drake/Ember's gem bonus %
+  // applied last, per the user's explicit ordering.
+  const physicalSubtotal = derived.physicalAttack + compositionPhysicalAttackBonus
+  const magicSubtotal = derived.magicAttack + compositionMagicAttackBonus + (activeSkill?.effectDamage ?? 0)
+
+  // Magic-only while a skill is active, physical-only otherwise (bug fix,
+  // 2026-09-02, reported by the user — a Wuxia felt no weaker against a
+  // high-magic-defense boss and out-damaged their Hunter). This used to
+  // unconditionally roll AND sum both a physical and a magic attack every
+  // hit, regardless of class/active skill — the "old uniform sum" combat
+  // math that was deliberately dropped from live Hunting in the 2026-11
+  // damage-formula change (see CLAUDE.combat-and-loot.md's Damage formula
+  // entry) but never carried over here, a disclosed scope gap at the time.
+  // Concretely: every non-Wuxia class has ~0 magicAttack (Spirit stays 0 in
+  // their attribute anchors), so the old code's magicDamage leg was always
+  // near the 10%-of-attack floor for them — but a Wuxia has ~0 Strength and
+  // a real Backsword physical_attack stat, so they got a full-strength
+  // physical hit AND a full-strength magic hit summed on every attack: double
+  // the damage components of every other class, with the physical half
+  // sailing past a "magical specialty" boss's weak (1.3x) physical_defense
+  // side no matter how high that boss's magic_defense is set. Now mirrors
+  // resolve-combat/index.ts's own attackMidpoint gating: exactly one damage
+  // type per hit, resolved against that boss's matching defense side.
+
   // Zone Boss (2026-11-13): each boss has its own physical_defense/
   // magic_defense (see the zone_boss_rotation migration) instead of one flat
-  // BOSS_DEFENSE — the physical- and magic-sourced subtotals are rolled and
-  // mitigated separately against the matching defense, then summed, so a
-  // boss's specialty side genuinely suppresses the matching attack type
-  // instead of one shared number treating every attacker's gear the same.
-  const physicalDamage = resolvePhysicalDamage(
-    rollDamageInRange(physicalSubtotal * (1 + drakeBonusPct / 100)),
-    spawn.physical_defense,
+  // BOSS_DEFENSE — a boss's specialty side genuinely suppresses the matching
+  // attack type instead of one shared number treating every attacker's gear
+  // the same.
+  const attackMidpoint = activeSkill
+    ? magicSubtotal * (1 + emberBonusPct / 100)
+    : physicalSubtotal * (1 + drakeBonusPct / 100)
+  const damage = resolvePhysicalDamage(
+    rollDamageInRange(attackMidpoint),
+    activeSkill ? spawn.magic_defense : spawn.physical_defense,
   )
-  const magicDamage = resolvePhysicalDamage(
-    rollDamageInRange(magicSubtotal * (1 + emberBonusPct / 100)),
-    spawn.magic_defense,
-  )
-  const damage = physicalDamage + magicDamage
 
   const { data: applyData, error: applyError } = await db.rpc('apply_world_boss_attack', {
     p_character_id: characterId,

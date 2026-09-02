@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.126.24",
+    "date": "2026-09-02",
+    "changes": [
+      "Fixed Zone Boss fights dealing both a physical and a magic hit on every attack instead of just one — casters no longer bypass a boss's magic defense with a free physical hit on the side"
+    ]
+  },
+  {
     "version": "1.126.23",
     "date": "2026-09-02",
     "changes": [
