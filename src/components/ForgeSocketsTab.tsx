@@ -75,6 +75,10 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
   // Socketing is irreversible (gems can never be removed), so the drop only
   // stages a preview; the RPC doesn't fire until the player explicitly confirms.
   const [pendingSocket, setPendingSocket] = useState<{ index: number; gemId: GemTypeId; tier: GemTier } | null>(null)
+  // Mobile tap-to-place target (2026-09-02) — see ForgeSocketSlot's own
+  // `selected`/`onSelect` doc comment. Tapping a socket sets this; the next
+  // tapped gem (InventoryPanel's generic 'gem' drop key) fills it.
+  const [selectedSocketIndex, setSelectedSocketIndex] = useState<number | null>(null)
 
   const selectedItem = items.find((item) => item.id === selectedItemId) ?? null
   const selectedTemplate = selectedItem ? (templates.find((t) => t.id === selectedItem.template_id) ?? null) : null
@@ -94,6 +98,7 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
     setUnlockError(null)
     setSocketError(null)
     setPendingSocket(null)
+    setSelectedSocketIndex(null)
   }
 
   const handleDropItemId = (itemId: string) => {
@@ -104,6 +109,7 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
     setUnlockError(null)
     setSocketError(null)
     setPendingSocket(null)
+    setSelectedSocketIndex(null)
   }
 
   const handleUnlock = async () => {
@@ -160,6 +166,17 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
     }
     if (overTarget === 'socket-1') {
       handleDropGem(1, id)
+      return
+    }
+    if (overTarget === 'gem') {
+      // Mobile tap-to-place (see ForgeSocketSlot's selected/onSelect doc
+      // comment) — a tapped gem can't say which socket it means on its own,
+      // so it's routed here at whichever socket the player tapped first.
+      // No-ops if none is selected yet, same as a real drag missing every
+      // drop zone would.
+      if (selectedSocketIndex !== null) {
+        handleDropGem(selectedSocketIndex, id)
+      }
     }
   }
 
@@ -198,12 +215,16 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
               unlocked={socketCount >= 1}
               filledKey={selectedItem?.sockets[0] ?? null}
               pendingGem={pendingSocket?.index === 0 ? pendingSocket : null}
+              selected={selectedSocketIndex === 0}
+              onSelect={() => setSelectedSocketIndex(0)}
             />
             <ForgeSocketSlot
               index={1}
               unlocked={socketCount >= 2}
               filledKey={selectedItem?.sockets[1] ?? null}
               pendingGem={pendingSocket?.index === 1 ? pendingSocket : null}
+              selected={selectedSocketIndex === 1}
+              onSelect={() => setSelectedSocketIndex(1)}
             />
           </div>
 
@@ -244,7 +265,9 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
             )}
 
             {socketCount > 0 && !pendingSocket && (
-              <p className="text-center text-[11px] text-slate-300">Drag a gem from below onto a socket to fill it.</p>
+              <p className="text-center text-[11px] text-slate-300">
+                Drag a gem from below onto a socket to fill it, or tap a socket then tap a gem.
+              </p>
             )}
 
             {pendingSocket && (

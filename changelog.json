@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.128.2",
+    "date": "2026-09-02",
+    "changes": [
+      "Fixed tapping a gem not socketing it on mobile in Forge's Sockets tab — tap a socket first, then tap a gem, as an alternative to dragging"
+    ]
+  },
+  {
     "version": "1.128.1",
     "date": "2026-09-02",
     "changes": [

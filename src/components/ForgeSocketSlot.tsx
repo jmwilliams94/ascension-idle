@@ -19,9 +19,20 @@ interface ForgeSocketSlotProps {
   // committed fill, since socketing is irreversible and shouldn't happen on
   // drop alone.
   pendingGem?: { gemId: GemTypeId; tier: GemTier } | null
+  // Mobile tap-to-place target (2026-09-02, fixes a reported "can't drag
+  // gems into Socket 1" bug) — InventoryPanel's tapToPlaceEnabled/shift-click
+  // shortcut drops a tapped gem via a generic 'gem' drop-zone key, since a
+  // tap alone can't say which of the (up to) 2 sockets it means the way a
+  // real pointer drag's own x/y position can. Tapping a socket first marks
+  // it as that destination (see ForgeSocketsTab's selectedSocketIndex) so
+  // the next tapped gem lands here. Only meaningful while unlocked; ignored
+  // entirely for a real drag, which resolves its target from pointer
+  // position as always.
+  selected?: boolean
+  onSelect?: () => void
 }
 
-export default function ForgeSocketSlot({ index, unlocked, filledKey, pendingGem }: ForgeSocketSlotProps) {
+export default function ForgeSocketSlot({ index, unlocked, filledKey, pendingGem, selected, onSelect }: ForgeSocketSlotProps) {
   const isDropTarget = useIsDropTarget(`socket-${index}`)
   const parsed = filledKey ? parseGemStorageKey(filledKey) : null
 
@@ -34,8 +45,15 @@ export default function ForgeSocketSlot({ index, unlocked, filledKey, pendingGem
       {unlocked ? (
         <div
           data-drop-zone={`socket-${index}`}
-          className={`${SLOT_SIZE_CLASS} shrink-0 rounded-lg transition-shadow ${
-            isDropTarget ? 'ring-2 ring-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.6)]' : pendingGem ? 'ring-2 ring-dashed ring-amber-400/70' : ''
+          onClick={onSelect}
+          className={`${SLOT_SIZE_CLASS} shrink-0 rounded-lg transition-shadow ${onSelect ? 'cursor-pointer' : ''} ${
+            isDropTarget
+              ? 'ring-2 ring-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.6)]'
+              : pendingGem
+                ? 'ring-2 ring-dashed ring-amber-400/70'
+                : selected
+                  ? 'ring-2 ring-sky-400'
+                  : ''
           }`}
         >
           {pendingGem ? (
