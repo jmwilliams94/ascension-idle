@@ -11,6 +11,7 @@ import PlanPanel from './PlanPanel'
 import SuggestionsPanel from './SuggestionsPanel'
 import BugReportPanel from './BugReportPanel'
 import NotificationsSettingsPanel from './NotificationsSettingsPanel'
+import VipShopPanel from './VipShopPanel'
 import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 
 // Lazy -- three/@react-three/fiber/drei/postprocessing alone push the main
@@ -96,6 +97,12 @@ export default function SettingsModal({ characterId, onClose }: { characterId: s
         </Suspense>
       ),
     },
+    // "Get VIP" (2026-09-03) — real-money VIP Token purchase via Stripe,
+    // deliberately isAdmin-gated for now while it's still being tested live;
+    // same cosmetic-only gating precedent as the Admin tab below (real
+    // enforcement is server-side: stripe-checkout's own ownership check).
+    // Un-gate once ready to actually offer this to every player.
+    ...(isAdmin ? [{ id: 'shop', label: 'Get VIP', content: <VipShopPanel characterId={characterId} /> }] : []),
     // Admin tab (2026-08-13, requested by the user) — only ever shown for the
     // hardcoded admin account (see useIsAdmin's own doc comment); real
     // enforcement lives server-side in the RPCs it calls, this is cosmetic.
