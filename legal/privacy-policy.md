@@ -1,7 +1,7 @@
 # Privacy Policy
 
 **Ascension Idle**
-Last updated: 1 September 2026
+Last updated: 3 September 2026
 
 This Privacy Policy explains how Jordan Williams (**"we"**, **"us"**, **"our"**) collects, holds, uses and discloses personal information in connection with the Ascension Idle browser game (the **"Game"**). It is written to comply with the Australian Privacy Principles (APPs) in the *Privacy Act 1988* (Cth).
 
@@ -23,7 +23,7 @@ We only collect what the Game actually needs to run your account and let you pla
 - **Push notification data** (only if you opt in): your browser's push subscription endpoint and encryption keys, plus basic browser/device information, so we can deliver notifications like "your Lucky Lad ticket is ready." You can withdraw this at any time from Settings.
 - **Technical/log data**: standard web server and infrastructure logs (e.g. IP address, browser type, request timestamps) collected automatically by our hosting and infrastructure providers (see section 5) for security and reliability purposes.
 
-We do **not** currently collect payment/financial information, and we do not currently run advertising. Section 8 below explains what will change if we introduce those features.
+We do **not** currently run advertising. We do process payment-related data for the optional VIP Token purchase — we do not directly store your full card details, that's handled by our payment processor, Stripe. Section 8 below has the details.
 
 ## 3. How we collect personal information
 
@@ -48,6 +48,7 @@ We share personal information with the service providers that run the Game's inf
 
 - **Supabase** (database, authentication, and backend hosting) — stores your account and gameplay data.
 - **GitHub Pages** — serves the Game's web app files.
+- **Stripe** (payment processing) — if you make a VIP Token purchase, handles your payment details directly; we receive confirmation that payment succeeded plus non-sensitive transaction metadata (amount, currency, a transaction reference), not your full card details.
 - A push notification delivery service, only for the push subscription data described above, if you opt in.
 
 We may also disclose personal information if required by law, or to protect the rights, property, or safety of Jordan Williams, our players, or the public (for example, in response to a valid legal request).
@@ -60,14 +61,15 @@ Some of the service providers listed in section 5 may store or process data outs
 
 The Game currently uses browser local storage and a service worker (for offline app functionality and update handling) — not tracking cookies or third-party analytics. If we introduce advertising (see section 8), some cookies or device identifiers may be introduced by our advertising partners at that time, and this Policy will be updated accordingly before that happens.
 
-## 8. Planned features: advertising and payments
+## 8. Payments, and a planned feature: advertising
 
-We're planning to introduce, in future updates:
+**VIP Token purchases** are processed through Stripe, our third-party payment processor. When you buy a VIP Token, Stripe collects and handles your payment details directly (card number, billing details) — we never see or store your full card details. We receive confirmation that payment succeeded plus non-sensitive transaction metadata (amount, currency, a transaction reference, and which of your characters the purchase was for), which we use to deliver the VIP Token and keep a purchase record. See [Stripe's own Privacy Policy](https://stripe.com/au/privacy) for what they collect and how they handle it.
+
+We're also planning to introduce, in a future update:
 
 - **Optional rewarded advertising** (e.g. watch an ad for an in-game bonus), served through a third-party advertising network. When this launches, this Policy will be updated to name the specific provider(s) and describe what they collect (typically device/advertising identifiers, IP address, and ad interaction data) and how you can manage ad personalisation where the provider supports it.
-- **An optional paid VIP Token purchase**, processed through a third-party payment processor (e.g. Stripe). When this launches, this Policy will be updated to describe what payment-related data is collected — we do not intend to store your full card details ourselves; that will be handled directly by the payment processor.
 
-We will update the "Last updated" date above and, for material changes, take reasonable steps to notify active players (e.g. an in-game notice) before these features go live.
+We will update the "Last updated" date above and, for material changes, take reasonable steps to notify active players (e.g. an in-game notice) before that feature goes live.
 
 ## 9. Data security
 
@@ -82,7 +84,7 @@ We retain your account and gameplay data for as long as your account is active, 
 
 ## 11. Children's privacy
 
-Ascension Idle is intended for players aged **13 and over**. If you are under 18, you should have a parent or guardian's permission to create an account, and definitely before making any purchase once paid features are introduced. We don't knowingly collect personal information from children under 13; if you believe a child under 13 has created an account, please contact us at **support@ascensionidle.com** and we'll take reasonable steps to delete it.
+Ascension Idle is intended for players aged **13 and over**. If you are under 18, you should have a parent or guardian's permission to create an account, and definitely before making any purchase. We don't knowingly collect personal information from children under 13; if you believe a child under 13 has created an account, please contact us at **support@ascensionidle.com** and we'll take reasonable steps to delete it.
 
 ## 12. Access, correction, and complaints
 
