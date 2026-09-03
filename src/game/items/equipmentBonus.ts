@@ -307,12 +307,13 @@ export function previewSellPrice(price: number, qualityTier: string, durabilityF
 }
 
 // Client-side mirror of salvage_item's SQL case statement (see
-// 20260807060000_salvage_ap_table_and_bonus_rebalance.sql, socket bonus added
-// 20260824000000) — must stay in sync. Forge's Salvage tab: no gold, same
-// per-tier AP as sell_item's gold payout (Salvage's only difference from Sell
-// is forfeiting the gold), plus a flat socket bonus — 20 AP for 1 unlocked
-// socket, 160 AP for 2 (gems/composition/enchant on the item are not
-// refunded in any way, same as everything else lost on salvage).
+// 20260807060000_salvage_ap_table_and_bonus_rebalance.sql; the flat socket
+// bonus added 20260824000000 was removed again 20261214000000 — sockets no
+// longer affect salvage AP) — must stay in sync. Forge's Salvage tab: no
+// gold, same per-tier AP as sell_item's gold payout (Salvage's only
+// difference from Sell is forfeiting the gold). Gems/composition/enchant on
+// the item are not refunded in any way, same as everything else lost on
+// salvage.
 const SALVAGE_AP_BY_QUALITY: Record<string, number> = {
   normal: 0,
   tempered: 1,
@@ -321,10 +322,8 @@ const SALVAGE_AP_BY_QUALITY: Record<string, number> = {
   ascended: 4,
 }
 
-const SALVAGE_AP_SOCKET_BONUS_BY_COUNT: Record<number, number> = { 0: 0, 1: 20, 2: 160 }
-
-export function previewSalvageApValue(qualityTier: string, socketCount = 0): number {
-  return (SALVAGE_AP_BY_QUALITY[qualityTier] ?? 0) + (SALVAGE_AP_SOCKET_BONUS_BY_COUNT[socketCount] ?? 0)
+export function previewSalvageApValue(qualityTier: string): number {
+  return SALVAGE_AP_BY_QUALITY[qualityTier] ?? 0
 }
 
 // Gear Durability (2026-08-14) — client mirror of the SQL compute_max_durability

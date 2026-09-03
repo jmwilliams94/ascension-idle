@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.130.2",
+    "date": "2026-09-03",
+    "changes": [
+      "Salvaging a weapon with unlocked sockets now grants the same Ascension Points as any other item of its quality — the extra bonus for sockets has been removed"
+    ]
+  },
+  {
     "version": "1.130.1",
     "date": "2026-09-03",
     "changes": [
