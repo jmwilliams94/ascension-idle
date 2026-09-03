@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.130.0",
+    "date": "2026-09-03",
+    "changes": [
+      "Zone Boss attacks now deal reduced damage when your damage type matches the boss's defensive specialty, so no single character can solo their damage cap against it"
+    ]
+  },
+  {
     "version": "1.129.3",
     "date": "2026-09-03",
     "changes": [
