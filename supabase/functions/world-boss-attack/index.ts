@@ -4,15 +4,14 @@
 // KNOWN DUPLICATION, ACCEPTED (same relationship resolve-combat/index.ts
 // already has with the client): getAttributesForLevel/ATTRIBUTE_ANCHORS,
 // computeDerivedStats, scaledStat/QUALITY_STAT_MULTIPLIERS,
-// compositionBonusStat, SKILL_TYPES below are copied verbatim from
-// resolve-combat/index.ts, which is itself a deliberate, disclosed copy of
+// compositionBonusStat, resolvePhysicalDamage, SKILL_TYPES below are copied
+// verbatim from resolve-combat/index.ts, which is itself a deliberate, disclosed copy of
 // src/game/stats/{derivedStats,classes}.ts and src/game/items/equipmentBonus.ts.
 // No supabase/functions/_shared/ folder exists in this project — every Edge
 // Function is fully self-contained — so this is a second copy of the same
 // already-duplicated math rather than a third, independent re-derivation.
 // If any of resolve-combat's copies of this math change, mirror the change
-// here too. resolveZoneBossDamage below is NOT one of these mirrored
-// pieces — it's this file's own boss-only addition (see its comment).
+// here too.
 //
 // Deliberately NOT copied from resolve-combat: the account-wide zone attack
 // bonus (a boss has no zone) and gear durability decay (no natural elapsed-
@@ -199,35 +198,33 @@ function sumSocketedGemBonusPct(sockets: (string | null)[] | undefined, gemId: '
 
 const MIN_DAMAGE_PERCENT_OF_ATTACK = 0.1
 
-// Zone Boss specialty-side damage penalty (v1.130.0, requested by the user
-// after a maxed Wuxia was found averaging ~4,500 dmg/hit against Nyxharrow's
-// specialty-side magic_defense — enough to solo-hit the 34% per-character
-// damage cap in ~14 attempts). A flat defense bump can't fix this: modeling
-// showed even pushing Nyxharrow's magic_defense from 630 up to 1,440 (8x its
-// current multiplier) still left that same Wuxia at ~130-150% of the cap
-// over 20 attempts, because the flat subtraction is too small relative to
-// an endgame attack roll to matter. This applies AFTER defense mitigation
-// but BEFORE the 10% floor above, so it only cuts into hits that already
-// cleared defense — an undergeared character sitting at the floor is
-// unaffected. Applied symmetrically to both damage types, not just magic
-// (the user's explicit call) — a same-shape imbalance could exist on the
-// physical side against a physical-specialty boss for a heavily-invested
-// Hunter build (composition + Drake sockets), and Zone Boss has no
-// equivalent of live Hunting's MONSTER_MAGIC_DEFENSE_ANCHORS table
-// (combatResolver.ts) to lean on instead — see CLAUDE.combat-and-loot.md's
-// Damage formula entry for why that table doesn't extend here.
-const SPECIALTY_SIDE_DAMAGE_PENALTY_PCT = 0.5
-
-function resolveZoneBossDamage(attack: number, defense: number, isSpecialtySide: boolean): number {
+function resolvePhysicalDamage(attack: number, defense: number): number {
   const mitigated = attack - defense
-  const penalized = isSpecialtySide ? mitigated * (1 - SPECIALTY_SIDE_DAMAGE_PENALTY_PCT) : mitigated
   const floor = Math.round(attack * MIN_DAMAGE_PERCENT_OF_ATTACK)
-  return Math.round(Math.max(penalized, floor, 1))
+  return Math.max(mitigated, floor, 1)
 }
+
+// A same-session flat 50% specialty-side damage penalty (added, then
+// removed here) was a stopgap for a Wuxia out-damaging a Hunter against a
+// magic-specialty boss even while hitting the "correct", suppressed defense
+// side. Root cause found and fixed properly instead:
+// ensure_world_boss_spawn's magic_defense used to be derived from the same
+// `base_defense = level * 1.5` formula as physical_defense — that's
+// monsterDefense's own formula (combatResolver.ts), sized for physical
+// attacks, never for a real magic attacker's much larger raw output. Fixed
+// in migration 20261214020000_zone_boss_magic_defense_baseline_fix.sql by
+// deriving magic_defense from a new zone_boss_magic_defense_base() SQL
+// function instead — a direct port of combatResolver.ts's own
+// MONSTER_MAGIC_DEFENSE_ANCHORS table, the one already proven to equalize
+// Hunter/Wuxia damage against normal monsters. That fix alone now
+// correctly suppresses a maxed Wuxia to near the 10% floor against a
+// magic-specialty boss, making this file's own penalty redundant — kept
+// here would only double-suppress a moderately-geared character's off-type
+// damage for no benefit, so it's gone.
 
 // Mirrors src/game/combat/combatResolver.ts's damageRangeFromMidpoint/
 // rollDamageInRange — the attack value itself is rolled in this range
-// *before* resolveZoneBossDamage subtracts defense (same composition order
+// *before* resolvePhysicalDamage subtracts defense (same composition order
 // as useCombatStore.runTick's `resolvePhysicalDamage(rollDamageInRange(attackMidpoint), defense)`),
 // so a boss attempt has real min/max variance instead of one fixed number.
 const DAMAGE_ROLL_MIN_RATIO = 0.9
@@ -457,14 +454,10 @@ async function handleWorldBossAttack(req: Request): Promise<Response> {
   const attackMidpoint = activeSkill
     ? magicSubtotal * (1 + emberBonusPct / 100)
     : physicalSubtotal * (1 + drakeBonusPct / 100)
-  const defense = activeSkill ? spawn.magic_defense : spawn.physical_defense
-  // The specialty side is always the higher of the two (base_defense * 3.5
-  // vs * 1.3, see the rotation migration) — comparing the two stored values
-  // directly avoids needing a separate defense_profile field on the spawn.
-  const isSpecialtySide = activeSkill
-    ? spawn.magic_defense > spawn.physical_defense
-    : spawn.physical_defense > spawn.magic_defense
-  const damage = resolveZoneBossDamage(rollDamageInRange(attackMidpoint), defense, isSpecialtySide)
+  const damage = resolvePhysicalDamage(
+    rollDamageInRange(attackMidpoint),
+    activeSkill ? spawn.magic_defense : spawn.physical_defense,
+  )
 
   const { data: applyData, error: applyError } = await db.rpc('apply_world_boss_attack', {
     p_character_id: characterId,

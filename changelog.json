@@ -3,7 +3,7 @@
     "version": "1.130.0",
     "date": "2026-09-03",
     "changes": [
-      "Zone Boss attacks now deal reduced damage when your damage type matches the boss's defensive specialty, so no single character can solo their damage cap against it"
+      "Fixed Zone Boss magic damage being far too strong against magic-defense bosses (and far too weak against physical-defense ones) — physical and magic attacks are now properly countered by their matching boss specialty"
     ]
   },
   {
