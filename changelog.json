@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.129.3",
+    "date": "2026-09-03",
+    "changes": [
+      "Minor behind-the-scenes account and settings improvements"
+    ]
+  },
+  {
     "version": "1.129.2",
     "date": "2026-09-03",
     "changes": [

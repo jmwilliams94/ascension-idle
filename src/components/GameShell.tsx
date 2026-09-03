@@ -72,8 +72,7 @@ import { useMineStore } from '../game/mining/useMineStore'
 import { useMiningStore } from '../game/mining/useMiningStore'
 import { useIdleModeStore } from '../game/mining/useIdleModeStore'
 import { runOfflineMiningProgressCheck } from '../game/mining/offlineMiningProgress'
-import { useGainToastStore } from '../game/hud/useGainToastStore'
-import { VIP_TOKEN_ICON_SRC } from '../game/items/forgeCosts'
+import StripePurchaseSuccessModal from './StripePurchaseSuccessModal'
 
 // Lazy (2026-11, bug fix) — WarpLayer pulls in @react-three/fiber + three
 // directly (the same heavy toolchain RenderingTestPanel.tsx's own lazy-load
@@ -119,6 +118,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
   const signOut = useAuthStore((state) => state.signOut)
   const setActiveCharacterId = useActiveCharacterStore((state) => state.setActiveCharacterId)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [stripeSuccessOpen, setStripeSuccessOpen] = useState(false)
 
   const loaded = useCharacterRecordStore((state) => state.loaded)
   const loadCharacterRecord = useCharacterRecordStore((state) => state.loadCharacterRecord)
@@ -140,7 +140,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
   // tied to the character-record load effect below, since nothing on
   // `characters` changed (the token is mailed, not credited directly; see
   // migration 20261213000000_stripe_vip_token_purchase.sql). Strips the
-  // query param either way so a refresh doesn't re-fire the toast.
+  // query param either way so a refresh doesn't re-show the modal.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const stripeResult = params.get('stripe')
@@ -149,12 +149,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
     }
 
     if (stripeResult === 'success') {
-      useGainToastStore.getState().show({
-        label: 'VIP Token -- check your Mail!',
-        amount: 1,
-        iconSrc: VIP_TOKEN_ICON_SRC,
-        color: '#8b5cf6',
-      })
+      setStripeSuccessOpen(true)
     }
 
     window.history.replaceState({}, '', window.location.pathname)
@@ -591,6 +586,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       </header>
 
       {settingsOpen && <SettingsModal characterId={characterId} onClose={() => setSettingsOpen(false)} />}
+      {stripeSuccessOpen && <StripePurchaseSuccessModal onClose={() => setStripeSuccessOpen(false)} />}
       <InventoryFullModal />
       <OfflineProgressModal />
       <MoneyBagRevealModal />
