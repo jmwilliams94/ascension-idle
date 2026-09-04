@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.130.6",
+    "date": "2026-09-04",
+    "changes": [
+      "Restored a hat that was accidentally removed from a character's equipment during the previous update, with matching quality and upgrades"
+    ]
+  },
+  {
     "version": "1.130.5",
     "date": "2026-09-04",
     "changes": [
