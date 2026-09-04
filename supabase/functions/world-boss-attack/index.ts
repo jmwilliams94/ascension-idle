@@ -129,10 +129,15 @@ function computeDerivedStats(
   equipmentBonus: { physicalAttack?: number; magicAttack?: number; dexterity?: number },
 ) {
   const hp = BASE_HP + attributes.vitality * 24 + attributes.strength * 3 + attributes.agility * 3 + attributes.spirit * 3
-  const physicalAttack = attributes.strength * PHYSICAL_ATTACK_PER_STRENGTH + (equipmentBonus.physicalAttack ?? 0)
-  const magicAttack = attributes.spirit * MAGIC_ATTACK_PER_SPIRIT + (equipmentBonus.magicAttack ?? 0)
+  // Split out from physicalAttack/magicAttack (2026-09-05) so Drake/Ember
+  // gem bonuses can be scoped to gear-only damage — mirrors
+  // src/game/stats/derivedStats.ts / resolve-combat/index.ts exactly.
+  const attributePhysicalAttack = attributes.strength * PHYSICAL_ATTACK_PER_STRENGTH
+  const attributeMagicAttack = attributes.spirit * MAGIC_ATTACK_PER_SPIRIT
+  const physicalAttack = attributePhysicalAttack + (equipmentBonus.physicalAttack ?? 0)
+  const magicAttack = attributeMagicAttack + (equipmentBonus.magicAttack ?? 0)
   const dexterity = attributes.agility * 1 + (equipmentBonus.dexterity ?? 0)
-  return { hp, physicalAttack, magicAttack, attackSpeed: BASE_ATTACK_SPEED, dexterity }
+  return { hp, physicalAttack, magicAttack, attributePhysicalAttack, attributeMagicAttack, attackSpeed: BASE_ATTACK_SPEED, dexterity }
 }
 
 // Mirrors src/game/items/equipmentBonus.ts
@@ -423,9 +428,15 @@ async function handleWorldBossAttack(req: Request): Promise<Response> {
 
   // Composition folded in first (unscaled — no zone bonus exists here to
   // compound with, unlike resolve-combat), then Drake/Ember's gem bonus %
-  // applied last, per the user's explicit ordering.
-  const physicalSubtotal = derived.physicalAttack + compositionPhysicalAttackBonus
-  const magicSubtotal = derived.magicAttack + compositionMagicAttackBonus + (activeSkill?.effectDamage ?? 0)
+  // applied last, per the user's explicit ordering. Gem bonus scoped to
+  // gear-only damage (2026-09-05 bug fix) — mirrors resolve-combat/
+  // index.ts's own attackMidpoint exactly, see that file's comment for the
+  // full reasoning.
+  const attributePhysicalScaled = derived.attributePhysicalAttack
+  const gearPhysicalSubtotal = derived.physicalAttack - derived.attributePhysicalAttack + compositionPhysicalAttackBonus
+  const attributeMagicScaled = derived.attributeMagicAttack
+  const gearMagicSubtotal =
+    derived.magicAttack - derived.attributeMagicAttack + compositionMagicAttackBonus + (activeSkill?.effectDamage ?? 0)
 
   // Magic-only while a skill is active, physical-only otherwise (bug fix,
   // 2026-09-02, reported by the user — a Wuxia felt no weaker against a
@@ -452,8 +463,8 @@ async function handleWorldBossAttack(req: Request): Promise<Response> {
   // attack type instead of one shared number treating every attacker's gear
   // the same.
   const attackMidpoint = activeSkill
-    ? magicSubtotal * (1 + emberBonusPct / 100)
-    : physicalSubtotal * (1 + drakeBonusPct / 100)
+    ? attributeMagicScaled + gearMagicSubtotal * (1 + emberBonusPct / 100)
+    : attributePhysicalScaled + gearPhysicalSubtotal * (1 + drakeBonusPct / 100)
   const damage = resolvePhysicalDamage(
     rollDamageInRange(attackMidpoint),
     activeSkill ? spawn.magic_defense : spawn.physical_defense,

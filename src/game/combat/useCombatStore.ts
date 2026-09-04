@@ -513,31 +513,48 @@ export const useCombatStore = create<CombatState>((set, get) => ({
     // bonus % can apply last, to the right type, after quality tier and
     // composition are both already folded in — per the user's explicit
     // ordering request.
-    const physicalSubtotal = derived.physicalAttack * (1 + accountAttackBonusPct / 100) + derived.compositionPhysicalAttackBonus
+    //
+    // Gem bonus scoped to gear-only damage, excluding the attribute-derived
+    // share (2026-09-05, bug fix reported by the user — gem bonuses used to
+    // multiply the WHOLE subtotal, attribute included; since Spirit's own
+    // flat contribution is ~3x Strength's at the same level, the same %
+    // gem investment added a proportionally bigger absolute bonus to Wuxia
+    // than to an identically-geared Hunter even after the Backsword/
+    // Bracelet gear-scale fix equalized everything else). The
+    // attribute-derived share (`attributePhysicalAttack`/
+    // `attributeMagicAttack`) is still scaled by the account-wide zone
+    // attack bonus % same as before, just carved out of the gem-multiplied
+    // bracket — only the gear + composition (+ skill effectDamage) portion
+    // gets Drake/Ember's %.
+    const attributePhysicalScaled = derived.attributePhysicalAttack * (1 + accountAttackBonusPct / 100)
+    const gearPhysicalSubtotal =
+      (derived.physicalAttack - derived.attributePhysicalAttack) * (1 + accountAttackBonusPct / 100) +
+      derived.compositionPhysicalAttackBonus
+    const attributeMagicScaled = derived.attributeMagicAttack * (1 + accountAttackBonusPct / 100)
     // The active skill's own flat effectDamage folds in here (before Ember's
     // multiplier, same treatment as compositionMagicAttackBonus) rather than
     // being added to attackMidpoint afterward, so a socketed Ember gem still
     // boosts it like any other magic damage.
-    const magicSubtotal =
-      derived.magicAttack * (1 + accountAttackBonusPct / 100) +
+    const gearMagicSubtotal =
+      (derived.magicAttack - derived.attributeMagicAttack) * (1 + accountAttackBonusPct / 100) +
       derived.compositionMagicAttackBonus +
       (activeSkill?.effectDamage ?? 0)
-    // While a skill is active, damage is magic-only (drops physicalSubtotal
-    // entirely) — see activeSkill's own comment above. With no skill
-    // equipped, damage is physical-only (drops magicSubtotal), matching how
-    // every other class's own auto-attack already works in practice (2026-11
-    // bug fix, requested by the user — Bow/Club/Longsword/Blade have never
-    // carried a magic_attack stat at all, so this was already a no-op for
-    // them; only Backsword carries both, which made a skill-less Wuxia
-    // silently double-dip on both stats at once). This supersedes the
-    // original "uniform physical+magic sum for every class, no branching"
-    // design (kept when Backsword had no real physical_attack stat yet, to
-    // avoid a skill-less Wuxia dealing 0 damage) — Backsword's
-    // physical_attack was given real reference-sourced values in the
-    // 2026-10-17 retune, so that concern no longer applies.
+    // While a skill is active, damage is magic-only (drops physical entirely)
+    // — see activeSkill's own comment above. With no skill equipped, damage
+    // is physical-only (drops magic), matching how every other class's own
+    // auto-attack already works in practice (2026-11 bug fix, requested by
+    // the user — Bow/Club/Longsword/Blade have never carried a magic_attack
+    // stat at all, so this was already a no-op for them; only Backsword
+    // carries both, which made a skill-less Wuxia silently double-dip on
+    // both stats at once). This supersedes the original "uniform
+    // physical+magic sum for every class, no branching" design (kept when
+    // Backsword had no real physical_attack stat yet, to avoid a skill-less
+    // Wuxia dealing 0 damage) — Backsword's physical_attack was given real
+    // reference-sourced values in the 2026-10-17 retune, so that concern no
+    // longer applies.
     const attackMidpoint = activeSkill
-      ? magicSubtotal * (1 + derived.emberBonusPct / 100)
-      : physicalSubtotal * (1 + derived.drakeBonusPct / 100)
+      ? attributeMagicScaled + gearMagicSubtotal * (1 + derived.emberBonusPct / 100)
+      : attributePhysicalScaled + gearPhysicalSubtotal * (1 + derived.drakeBonusPct / 100)
 
     // Lazy-init the player's HP the first time combat ever ticks (0/0 sentinel —
     // see the CombatState field comments) rather than resetting it on every

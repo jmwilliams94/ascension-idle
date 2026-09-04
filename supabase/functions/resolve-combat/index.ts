@@ -198,8 +198,13 @@ function computeDerivedStats(
   },
 ) {
   const hp = BASE_HP + attributes.vitality * 24 + attributes.strength * 3 + attributes.agility * 3 + attributes.spirit * 3
-  const physicalAttack = attributes.strength * PHYSICAL_ATTACK_PER_STRENGTH + (equipmentBonus.physicalAttack ?? 0)
-  const magicAttack = attributes.spirit * MAGIC_ATTACK_PER_SPIRIT + (equipmentBonus.magicAttack ?? 0)
+  // Split out from physicalAttack/magicAttack (2026-09-05) so Drake/Ember
+  // gem bonuses can be scoped to gear-only damage — see attackMidpoint's own
+  // comment below. Mirrors src/game/stats/derivedStats.ts exactly.
+  const attributePhysicalAttack = attributes.strength * PHYSICAL_ATTACK_PER_STRENGTH
+  const attributeMagicAttack = attributes.spirit * MAGIC_ATTACK_PER_SPIRIT
+  const physicalAttack = attributePhysicalAttack + (equipmentBonus.physicalAttack ?? 0)
+  const magicAttack = attributeMagicAttack + (equipmentBonus.magicAttack ?? 0)
   // Mirrors derivedStats.ts — 1 dexterity per Agility point plus Bows'/Rings'
   // own dexterity stat (a separate gear pool from dodge, which is Boots-only).
   // Used here for outgoing hit chance (see the deterministic hitChance calc
@@ -214,7 +219,17 @@ function computeDerivedStats(
   // attacking for its entire real-world duration — see walkCombat below.
   const physicalDefense = equipmentBonus.physicalDefense ?? 0
   const dodge = attributes.agility * 1 + (equipmentBonus.dodge ?? 0)
-  return { hp, physicalAttack, magicAttack, attackSpeed: BASE_ATTACK_SPEED, dexterity, physicalDefense, dodge }
+  return {
+    hp,
+    physicalAttack,
+    magicAttack,
+    attributePhysicalAttack,
+    attributeMagicAttack,
+    attackSpeed: BASE_ATTACK_SPEED,
+    dexterity,
+    physicalDefense,
+    dodge,
+  }
 }
 
 // Mirrors src/game/skills/skillData.ts — must stay in sync. See
@@ -1496,15 +1511,25 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // multiplier (see compositionPhysicalAttackBonus's declaration above), then
   // Drake/Ember's own socketed gem bonus % applied last, per the user's
   // explicit ordering (2026-08-26) — mirrors useCombatStore.runTick exactly.
-  const physicalSubtotal = derived.physicalAttack * (1 + accountAttackBonusPct / 100) + compositionPhysicalAttackBonus
-  const magicSubtotal =
-    derived.magicAttack * (1 + accountAttackBonusPct / 100) + compositionMagicAttackBonus + (activeSkill?.effectDamage ?? 0)
+  // Gem bonus scoped to gear-only damage (2026-09-05 bug fix) — mirrors
+  // useCombatStore.runTick exactly, see that file's own comment for the
+  // full reasoning (Spirit's flat contribution is ~3x Strength's, so
+  // multiplying the whole subtotal gave Wuxia a bigger absolute gem bonus
+  // than an identically-geared Hunter for the same % investment).
+  const attributePhysicalScaled = derived.attributePhysicalAttack * (1 + accountAttackBonusPct / 100)
+  const gearPhysicalSubtotal =
+    (derived.physicalAttack - derived.attributePhysicalAttack) * (1 + accountAttackBonusPct / 100) + compositionPhysicalAttackBonus
+  const attributeMagicScaled = derived.attributeMagicAttack * (1 + accountAttackBonusPct / 100)
+  const gearMagicSubtotal =
+    (derived.magicAttack - derived.attributeMagicAttack) * (1 + accountAttackBonusPct / 100) +
+    compositionMagicAttackBonus +
+    (activeSkill?.effectDamage ?? 0)
   // Magic-only while a skill is active, physical-only otherwise (2026-11 bug
   // fix) — mirrors useCombatStore.runTick exactly, see that file's own
   // comment for the full reasoning.
   const attackMidpoint = activeSkill
-    ? magicSubtotal * (1 + emberBonusPct / 100)
-    : physicalSubtotal * (1 + drakeBonusPct / 100)
+    ? attributeMagicScaled + gearMagicSubtotal * (1 + emberBonusPct / 100)
+    : attributePhysicalScaled + gearPhysicalSubtotal * (1 + drakeBonusPct / 100)
   // Same White/Green/Red/Black level-diff EXP multiplier applied to both
   // kill EXP and damage-dealt EXP below (see EXP_MULTIPLIER_BY_COLOR/
   // getLevelDiffColor), precomputed once here.

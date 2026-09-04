@@ -20,6 +20,17 @@ export interface DerivedStats {
   mp: number
   physicalAttack: number
   magicAttack: number
+  // Attribute-only share of physicalAttack/magicAttack above (Strength/
+  // Spirit's own contribution, before gear is added in) — 2026-09-05, split
+  // out specifically so Drake/Ember gem bonuses can be scoped to gear-only
+  // damage (see useCombatStore.ts's attackMidpoint) instead of also
+  // multiplying Spirit's much larger flat contribution than Strength's,
+  // which was inflating Wuxia's gem-bonus damage relative to Hunter's for
+  // the same gem investment. physicalAttack/magicAttack themselves are
+  // unchanged (still the full attribute+gear total, used everywhere else —
+  // StatsPanel, tooltips, non-gem math).
+  attributePhysicalAttack: number
+  attributeMagicAttack: number
   attackSpeed: number
   // Mitigates incoming monster damage (see combatResolver.ts's
   // resolvePhysicalDamage) — gear-only for now (necklace/hat/coat), closing a
@@ -128,8 +139,10 @@ export function computeDerivedStats(attributes: Attributes, equipmentBonus: Equi
     (equipmentBonus.enchantHpBonus ?? 0) +
     (equipmentBonus.gearHpBonus ?? 0)
   const mp = BASE_MP + spirit * 5
-  const physicalAttack = strength * PHYSICAL_ATTACK_PER_STRENGTH + (equipmentBonus.physicalAttack ?? 0)
-  const magicAttack = spirit * MAGIC_ATTACK_PER_SPIRIT + (equipmentBonus.magicAttack ?? 0)
+  const attributePhysicalAttack = strength * PHYSICAL_ATTACK_PER_STRENGTH
+  const attributeMagicAttack = spirit * MAGIC_ATTACK_PER_SPIRIT
+  const physicalAttack = attributePhysicalAttack + (equipmentBonus.physicalAttack ?? 0)
+  const magicAttack = attributeMagicAttack + (equipmentBonus.magicAttack ?? 0)
   const physicalDefense = equipmentBonus.physicalDefense ?? 0
   const magicDefense = equipmentBonus.magicDefense ?? 0
   // PLACEHOLDER: 1 dodge per Agility point, plus Boots' own dodge stat — the
@@ -146,6 +159,8 @@ export function computeDerivedStats(attributes: Attributes, equipmentBonus: Equi
     mp,
     physicalAttack,
     magicAttack,
+    attributePhysicalAttack,
+    attributeMagicAttack,
     attackSpeed: BASE_ATTACK_SPEED,
     physicalDefense,
     magicDefense,

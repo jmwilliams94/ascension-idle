@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.131.1",
+    "date": "2026-09-05",
+    "changes": [
+      "Fixed socketed gem damage bonuses (Drake/Ember) boosting more of a Wuxia's total damage than a Hunter's for the same gems — gem bonuses now apply only to gear-based damage, closing the last of the Wuxia/Hunter damage gap"
+    ]
+  },
+  {
     "version": "1.131.0",
     "date": "2026-09-04",
     "changes": [
