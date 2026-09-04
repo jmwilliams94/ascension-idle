@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.130.4",
+    "date": "2026-09-04",
+    "changes": [
+      "Fixed Wuxia weapon damage scaling far too fast above level 110, letting high-level characters hit way harder than intended against normal monsters"
+    ]
+  },
+  {
     "version": "1.130.3",
     "date": "2026-09-04",
     "changes": [

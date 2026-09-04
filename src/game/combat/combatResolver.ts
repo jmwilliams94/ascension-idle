@@ -304,14 +304,19 @@ export function monsterDefense(type: EnemyTypeDef, characterLevel: number): numb
 //
 // Not a clean closed-form curve (unlike monsterDefense's flat `level * 1.5`)
 // since it's downstream of two independently hand-tuned weapon-item tables
-// that don't grow at the same rate — Backsword's own magic_attack curve
-// accelerates sharply past level 110 in particular (a separate, unexplained
-// irregularity in that item family's own numbers, flagged but not touched
-// here — Option 1, a monster-side magic-defense counter, was the requested
-// fix, not a weapon-curve re-derivation). Recompute this table (see
-// scratchpad methodology in the commit that added it) if Backsword/
-// Bracelet/Bow/Ring's base_stats or the Spirit/Strength attribute anchors
-// ever change.
+// that don't grow at the same rate. **Recomputed 2026-09-04** (bug fix,
+// reported by the user — a level-127 Wuxia was one-shotting endgame
+// monsters): Backsword/Bracelet's own required_level > 110/115 tail used to
+// accelerate sharply (a separate irregularity in that item family's raw
+// numbers, previously flagged here but left untouched) — see
+// 20261216000000_recompound_backsword_bracelet_curves.sql, which replaced
+// that tail with a continuation of the same compounding rate the sourced
+// data already established below the breakpoint. The 100/105/110 anchors
+// below are unchanged (nothing below the breakpoint moved); 115/120/125/130
+// are recomputed off the new Backsword/Bracelet numbers using the exact
+// same formula this table was originally derived with. Recompute again
+// (see that migration's own methodology) if Backsword/Bracelet/Bow/Ring's
+// base_stats or the Spirit/Strength attribute anchors ever change.
 const MONSTER_MAGIC_DEFENSE_ANCHORS: [level: number, magicDefense: number][] = [
   [1, 7],
   [5, 25],
@@ -336,10 +341,10 @@ const MONSTER_MAGIC_DEFENSE_ANCHORS: [level: number, magicDefense: number][] = [
   [100, 993],
   [105, 1135],
   [110, 1188],
-  [115, 1437],
-  [120, 1584],
-  [125, 2249],
-  [130, 2987],
+  [115, 1312],
+  [120, 1539],
+  [125, 1740],
+  [130, 1976],
 ]
 
 function monsterMagicDefenseBase(monsterLevel: number): number {

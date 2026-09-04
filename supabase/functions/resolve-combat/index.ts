@@ -615,10 +615,10 @@ const MONSTER_MAGIC_DEFENSE_ANCHORS: Array<[number, number]> = [
   [100, 993],
   [105, 1135],
   [110, 1188],
-  [115, 1437],
-  [120, 1584],
-  [125, 2249],
-  [130, 2987],
+  [115, 1312],
+  [120, 1539],
+  [125, 1740],
+  [130, 1976],
 ]
 
 function monsterMagicDefenseBase(monsterLevel: number): number {
