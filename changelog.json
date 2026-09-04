@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.131.4",
+    "date": "2026-09-05",
+    "changes": [
+      "Added a push notification 1 hour before the weekly PvP Tournament starts, with its own on/off toggle in Settings > Notifications"
+    ]
+  },
+  {
     "version": "1.131.3",
     "date": "2026-09-05",
     "changes": [

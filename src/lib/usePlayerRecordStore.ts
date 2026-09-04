@@ -66,6 +66,7 @@ interface PlayerRow {
   notify_zone_boss: boolean
   notify_gold_donation: boolean
   notify_lucky_ticket: boolean
+  notify_pvp_tournament: boolean
 }
 
 interface PlayerRecordState {
@@ -116,6 +117,7 @@ interface PlayerRecordState {
   notifyZoneBoss: boolean
   notifyGoldDonation: boolean
   notifyLuckyTicket: boolean
+  notifyPvpTournament: boolean
   loadPlayerRecord: (userId: string) => Promise<void>
   dismissWhatsNew: (userId: string) => Promise<void>
   // Reflects a successful transfer_currency RPC result in the local cache —
@@ -144,7 +146,7 @@ interface PlayerRecordState {
   // actually saved.
   setNotificationPref: (
     userId: string,
-    column: 'notify_zone_boss' | 'notify_gold_donation' | 'notify_lucky_ticket',
+    column: 'notify_zone_boss' | 'notify_gold_donation' | 'notify_lucky_ticket' | 'notify_pvp_tournament',
     value: boolean,
   ) => Promise<void>
 }
@@ -171,12 +173,13 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
   notifyZoneBoss: true,
   notifyGoldDonation: true,
   notifyLuckyTicket: true,
+  notifyPvpTournament: true,
 
   loadPlayerRecord: async (userId) => {
     const { data, error } = await supabase
       .from('players')
       .select(
-        'last_seen_version, bank_gold, bank_comets, bank_fallen_stars, unlocked_classes, lucky_free_ticket_claimed_at, ascension_points, bank_points, gear_composition_points, comet_bank_count, fallen_star_bank_count, vip_token_bank_count, experience_orb_bank_count, experience_potion_bank_count, composition_stones_banked, gems_banked, account_zone_attack_bonus_pct, account_zone_drop_bonus_pct, notify_zone_boss, notify_gold_donation, notify_lucky_ticket',
+        'last_seen_version, bank_gold, bank_comets, bank_fallen_stars, unlocked_classes, lucky_free_ticket_claimed_at, ascension_points, bank_points, gear_composition_points, comet_bank_count, fallen_star_bank_count, vip_token_bank_count, experience_orb_bank_count, experience_potion_bank_count, composition_stones_banked, gems_banked, account_zone_attack_bonus_pct, account_zone_drop_bonus_pct, notify_zone_boss, notify_gold_donation, notify_lucky_ticket, notify_pvp_tournament',
       )
       .eq('id', userId)
       .maybeSingle<PlayerRow>()
@@ -221,6 +224,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
         notifyZoneBoss: true,
         notifyGoldDonation: true,
         notifyLuckyTicket: true,
+        notifyPvpTournament: true,
       })
       return
     }
@@ -247,6 +251,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
       notifyZoneBoss: data.notify_zone_boss ?? true,
       notifyGoldDonation: data.notify_gold_donation ?? true,
       notifyLuckyTicket: data.notify_lucky_ticket ?? true,
+      notifyPvpTournament: data.notify_pvp_tournament ?? true,
     })
 
     if (!data.last_seen_version) {
@@ -291,7 +296,12 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
 
   setNotificationPref: async (userId, column, value) => {
     const stateKey = (
-      { notify_zone_boss: 'notifyZoneBoss', notify_gold_donation: 'notifyGoldDonation', notify_lucky_ticket: 'notifyLuckyTicket' } as const
+      {
+        notify_zone_boss: 'notifyZoneBoss',
+        notify_gold_donation: 'notifyGoldDonation',
+        notify_lucky_ticket: 'notifyLuckyTicket',
+        notify_pvp_tournament: 'notifyPvpTournament',
+      } as const
     )[column]
     const previous = usePlayerRecordStore.getState()[stateKey]
     set({ [stateKey]: value } as Partial<PlayerRecordState>)

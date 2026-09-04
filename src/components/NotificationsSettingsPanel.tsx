@@ -20,6 +20,12 @@ const NOTIFICATION_TYPES = [
     description: 'When a new Gold Donation Event opens for donations.',
   },
   { key: 'notifyLuckyTicket', column: 'notify_lucky_ticket', label: 'Lucky Lad free rolls', description: 'When your free roll cooldown is up.' },
+  {
+    key: 'notifyPvpTournament',
+    column: 'notify_pvp_tournament',
+    label: 'PvP Tournament',
+    description: 'One hour before the weekly Hunter tournament starts.',
+  },
 ] as const
 
 // iOS Safari only supports Web Push once the PWA is running standalone (Home
@@ -45,8 +51,9 @@ export default function NotificationsSettingsPanel() {
   const notifyZoneBoss = usePlayerRecordStore((state) => state.notifyZoneBoss)
   const notifyGoldDonation = usePlayerRecordStore((state) => state.notifyGoldDonation)
   const notifyLuckyTicket = usePlayerRecordStore((state) => state.notifyLuckyTicket)
+  const notifyPvpTournament = usePlayerRecordStore((state) => state.notifyPvpTournament)
   const setNotificationPref = usePlayerRecordStore((state) => state.setNotificationPref)
-  const notificationPrefs = { notifyZoneBoss, notifyGoldDonation, notifyLuckyTicket }
+  const notificationPrefs = { notifyZoneBoss, notifyGoldDonation, notifyLuckyTicket, notifyPvpTournament }
   const [testState, setTestState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [testErrorDetail, setTestErrorDetail] = useState<string | null>(null)
