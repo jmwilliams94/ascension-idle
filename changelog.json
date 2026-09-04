@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.131.3",
+    "date": "2026-09-05",
+    "changes": [
+      "PvP Tournament is now Hunter-only — other classes can no longer register, and existing non-Hunter registrations for the upcoming event have been cleared",
+      "PvP tab now shows the full registration ladder if any of your characters is registered, even while viewing through one that isn't"
+    ]
+  },
+  {
     "version": "1.131.2",
     "date": "2026-09-05",
     "changes": [

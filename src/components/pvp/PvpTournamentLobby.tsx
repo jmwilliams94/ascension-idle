@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react'
 import { AscensionCard } from '../ui/AscensionCard'
 import { Button } from '../ui/Button'
 import { usePvpTournamentStore } from '../../game/pvp/usePvpTournamentStore'
+import { useCharacterStore } from '../../game/stats/useCharacterStore'
+
+const REGISTER_ERROR_LABEL: Record<string, string> = {
+  class_not_eligible: 'This event is Hunter-class only.',
+  no_open_tournament: 'Registration is closed right now.',
+}
 
 // Phase 3 lobby — replaces PvpDuelBoard's old bare "No active duel right
 // now" placeholder. Most players are looking at this screen most of the
@@ -45,6 +51,7 @@ export default function PvpTournamentLobby({ characterId }: { characterId: strin
   const matches = usePvpTournamentStore((state) => state.matches)
   const busy = usePvpTournamentStore((state) => state.busy)
   const register = usePvpTournamentStore((state) => state.register)
+  const selectedClassId = useCharacterStore((state) => state.selectedClassId)
 
   const [registerError, setRegisterError] = useState<string | null>(null)
   const [now, setNow] = useState(() => Date.now())
@@ -54,7 +61,15 @@ export default function PvpTournamentLobby({ characterId }: { characterId: strin
     return () => window.clearInterval(id)
   }, [])
 
+  const isHunter = selectedClassId === 'hunter'
   const isRegistered = registrations.some((r) => r.characterId === characterId)
+  // The RLS policy behind `registrations` opens up account-wide the moment
+  // ANY of your characters is registered (see pvp_is_registered_for_tournament's
+  // own "no matter what class is viewing" intent) — so a non-empty list here
+  // already means "my account can see this," even while looking through a
+  // character that individually hasn't registered (e.g. switching to a
+  // Wuxia after registering a Hunter alt).
+  const hasLadderVisibility = isRegistered || registrations.length > 0
 
   const handleRegister = () => {
     setRegisterError(null)
@@ -66,7 +81,7 @@ export default function PvpTournamentLobby({ characterId }: { characterId: strin
   const roundsAscending = [...new Set(matches.map((m) => m.round))].sort((a, b) => a - b)
 
   return (
-    <AscensionCard title="PvP Tournament">
+    <AscensionCard title="PvP Tournament (Hunter Only)">
       <div className="space-y-4">
         {lastCompletedTournament?.winnerName && (
           <div className="rounded-md border border-amber-600/50 bg-amber-950/20 px-3 py-2 text-center">
@@ -95,16 +110,20 @@ export default function PvpTournamentLobby({ characterId }: { characterId: strin
 
             {isRegistered ? (
               <p className="text-center text-sm text-emerald-400">You're registered for this week's event.</p>
-            ) : (
+            ) : isHunter ? (
               <Button onClick={handleRegister} disabled={busy} className="mx-auto block w-full max-w-xs">
                 Register
               </Button>
+            ) : (
+              <p className="text-center text-sm text-slate-400">Switch to a Hunter character to register.</p>
             )}
-            {registerError && <p className="text-center text-xs text-rose-400">{registerError}</p>}
+            {registerError && (
+              <p className="text-center text-xs text-rose-400">{REGISTER_ERROR_LABEL[registerError] ?? registerError}</p>
+            )}
 
             <div>
-              <p className="text-heading-label mb-1">Ladder{isRegistered ? ` (${registrations.length})` : ''}</p>
-              {!isRegistered ? (
+              <p className="text-heading-label mb-1">Ladder{hasLadderVisibility ? ` (${registrations.length})` : ''}</p>
+              {!hasLadderVisibility ? (
                 // Anti-sniping (requested by the user): RLS hides every row
                 // here until your account has a character registered, so an
                 // empty list at this point means "hidden from you," not
