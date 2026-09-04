@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.130.5",
+    "date": "2026-09-04",
+    "changes": [
+      "Removed the level 121 and 126 Wuxia hats (Moonbound Cap, Heavensent Cap) — Wuxia hats now top out at level 120, same as intended"
+    ]
+  },
+  {
     "version": "1.130.4",
     "date": "2026-09-04",
     "changes": [
