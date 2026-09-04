@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.130.3",
+    "date": "2026-09-04",
+    "changes": [
+      "Fixed the PvP Tournament turn timer not enforcing its 15-second limit, which could let a duel stall indefinitely — this week's tournament has been reset and rescheduled to kick off tomorrow at the same time"
+    ]
+  },
+  {
     "version": "1.130.2",
     "date": "2026-09-03",
     "changes": [
