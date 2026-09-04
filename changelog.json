@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.131.0",
+    "date": "2026-09-04",
+    "changes": [
+      "Rebalanced Wuxia weapon/ring damage across all levels — Wuxia was dealing significantly more damage than Hunter for the same gear investment; damage output between the two classes is now much closer at equal levels and gear"
+    ]
+  },
+  {
     "version": "1.130.6",
     "date": "2026-09-04",
     "changes": [

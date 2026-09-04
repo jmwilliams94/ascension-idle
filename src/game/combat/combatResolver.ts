@@ -302,49 +302,69 @@ export function monsterDefense(type: EnemyTypeDef, characterLevel: number): numb
 // ~6-9 hit pacing target from the Nov rebalance), instead of magic
 // overshooting it by 2-4x.
 //
-// Not a clean closed-form curve (unlike monsterDefense's flat `level * 1.5`)
-// since it's downstream of two independently hand-tuned weapon-item tables
-// that don't grow at the same rate. **Recomputed 2026-09-04** (bug fix,
-// reported by the user — a level-127 Wuxia was one-shotting endgame
-// monsters): Backsword/Bracelet's own required_level > 110/115 tail used to
-// accelerate sharply (a separate irregularity in that item family's raw
-// numbers, previously flagged here but left untouched) — see
-// 20261216000000_recompound_backsword_bracelet_curves.sql, which replaced
-// that tail with a continuation of the same compounding rate the sourced
-// data already established below the breakpoint. The 100/105/110 anchors
-// below are unchanged (nothing below the breakpoint moved); 115/120/125/130
-// are recomputed off the new Backsword/Bracelet numbers using the exact
-// same formula this table was originally derived with. Recompute again
-// (see that migration's own methodology) if Backsword/Bracelet/Bow/Ring's
-// base_stats or the Spirit/Strength attribute anchors ever change.
+// **Rebuilt into a near-closed-form curve (v1.131.0, bug fix reported by
+// the user — "Wuxia is far more overpowered than Hunters as it currently
+// stands")**: this table used to be downstream of two independently
+// hand-tuned weapon-item tables (Bow/Ring vs. Backsword/Bracelet) that grew
+// at very different rates — Backsword/Bracelet's raw numbers ran ~3.5x
+// Bow/Ring's at the same level. That meant it only ever balanced the exact
+// baseline it was calibrated against (Infused quality, +0 composition, no
+// gems); any composition/gem % bonus (computed off each item's own raw
+// magnitude) added a far bigger *absolute* amount to Wuxia than to an
+// identically-invested Hunter — confirmed via live comparison at level 130,
+// Ascended/+7/2 Ascended gems: 950 (Hunter) vs. 2,363 (Wuxia) damage/hit, a
+// 2.49x gap, not just a level-120+ problem (the earlier 20261216000000 fix
+// only patched the extra spike past level 110, not this).
+// `20261219000000_equalize_wuxia_hunter_gear_scale.sql` fixed the root
+// cause instead of patching the counter-table again: Backsword's
+// physical_attack/magic_attack and Bracelet's magic_attack now literally
+// match Bow's/Ring's own real curve at the same required_level (Backsword
+// shares every one of Bow's breakpoints from 15-130; Bracelet's own
+// breakpoints don't overlap Ring's, so its values are Ring's compounding
+// formula evaluated at Bracelet's levels instead). With gear now equal in
+// magnitude, this table's anchors reduce almost entirely to
+// `physicalDefenseBase(level) + 2*(Spirit(level) - Strength(level))/0.75` —
+// the residual gear mismatch left by Ring/Bracelet's breakpoints not
+// lining up exactly is a few points, not worth a separate correction.
+// Verified same-build comparison post-fix: level 130 lands 950 vs. 1,065
+// (1.12x), level 60 lands 163 vs. 211 (1.29x) — down from 2.49x/2.15x.
+// **Known remaining gap**: Spirit's own attribute contribution (up to 265
+// at level 130 vs. Strength's 84) is still ~3.15x bigger, and gem bonuses
+// multiply the WHOLE attack subtotal (attribute + gear), so a Wuxia still
+// nets a somewhat bigger absolute gem bonus from that alone — closing it
+// fully would mean restricting gem bonuses to the gear-derived portion of
+// attack only, not attempted here. Recompute this table (following
+// `20261219000000`'s own methodology — mostly just Spirit/Strength
+// attribute math now) if Backsword/Bracelet/Bow/Ring's base_stats or the
+// Spirit/Strength attribute anchors ever change.
 const MONSTER_MAGIC_DEFENSE_ANCHORS: [level: number, magicDefense: number][] = [
-  [1, 7],
-  [5, 25],
-  [10, 30],
-  [15, 68],
-  [20, 103],
-  [25, 143],
-  [30, 172],
-  [35, 213],
-  [40, 257],
-  [45, 312],
-  [50, 350],
-  [55, 406],
-  [60, 439],
-  [65, 502],
-  [70, 540],
-  [75, 634],
-  [80, 675],
-  [85, 773],
-  [90, 822],
-  [95, 943],
-  [100, 993],
-  [105, 1135],
-  [110, 1188],
-  [115, 1312],
-  [120, 1539],
-  [125, 1740],
-  [130, 1976],
+  [1, 3],
+  [5, 17],
+  [10, 32],
+  [15, 58],
+  [20, 86],
+  [25, 118],
+  [30, 146],
+  [35, 178],
+  [40, 207],
+  [45, 233],
+  [50, 256],
+  [55, 283],
+  [60, 309],
+  [65, 333],
+  [70, 358],
+  [75, 388],
+  [80, 419],
+  [85, 448],
+  [90, 476],
+  [95, 506],
+  [100, 537],
+  [105, 561],
+  [110, 584],
+  [115, 608],
+  [120, 631],
+  [125, 655],
+  [130, 684],
 ]
 
 function monsterMagicDefenseBase(monsterLevel: number): number {
