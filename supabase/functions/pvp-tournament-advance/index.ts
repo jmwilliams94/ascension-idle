@@ -169,6 +169,7 @@ function computeMaxHp(snapshot: CharacterCombatSnapshot): number {
 interface Contestant {
   characterId: string
   characterName: string
+  accountId: string
 }
 
 function json(body: unknown, status = 200) {
@@ -186,6 +187,43 @@ function shuffle<T>(items: T[]): T[] {
     ;[copy[i], copy[j]] = [copy[j], copy[i]]
   }
   return copy
+}
+
+// Orders contestants so that the pairing loop below (which always pairs
+// consecutive slots — [0]v[1], [2]v[3], ...) never puts two characters from
+// the same account against each other, so long as that's mathematically
+// avoidable (no single account holds more than half the field). One
+// account can own several registered characters (alts), and nothing in
+// registration stops that — a plain shuffle can and did land two of a
+// player's own characters in the same slot pair (reported by the user,
+// reproduced in the 2026-08-31 test tournament: Switchee vs Wuxee, both
+// same account). Classic "reorganize array so no two adjacent elements
+// share a key" — group by account, shuffle within each group for
+// fairness, then repeatedly draw from the largest remaining group whose
+// key isn't the one just placed.
+function interleaveAvoidingSameAccountAdjacency(contestants: Contestant[]): Contestant[] {
+  const groups = new Map<string, Contestant[]>()
+  for (const c of shuffle(contestants)) {
+    const group = groups.get(c.accountId)
+    if (group) group.push(c)
+    else groups.set(c.accountId, [c])
+  }
+
+  let pools = [...groups.values()]
+  const result: Contestant[] = []
+  let lastAccountId: string | null = null
+
+  while (pools.length > 0) {
+    pools.sort((a, b) => b.length - a.length)
+    const candidates = pools.filter((pool) => pool[0].accountId !== lastAccountId)
+    const chosen = (candidates.length > 0 ? candidates : pools)[0]
+    const next = chosen.shift()!
+    result.push(next)
+    lastAccountId = next.accountId
+    pools = pools.filter((pool) => pool.length > 0)
+  }
+
+  return result
 }
 
 Deno.serve(async (req) => {
@@ -220,7 +258,7 @@ async function handleAdvance(req: Request): Promise<Response> {
 
   const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
-  let contestants: Contestant[]
+  let contestantsWithoutAccount: { characterId: string; characterName: string }[]
 
   if (round === 1) {
     const { data, error } = await db
@@ -233,7 +271,7 @@ async function handleAdvance(req: Request): Promise<Response> {
       return json({ ok: false, error: 'query_failed', detail: error.message }, 500)
     }
 
-    contestants = shuffle((data ?? []).map((row) => ({ characterId: row.character_id, characterName: row.character_name })))
+    contestantsWithoutAccount = (data ?? []).map((row) => ({ characterId: row.character_id, characterName: row.character_name }))
   } else {
     const { data, error } = await db
       .from('pvp_tournament_matches')
@@ -246,7 +284,7 @@ async function handleAdvance(req: Request): Promise<Response> {
       return json({ ok: false, error: 'query_failed', detail: error.message }, 500)
     }
 
-    contestants = (data ?? [])
+    contestantsWithoutAccount = (data ?? [])
       .filter((row) => row.winner_character_id)
       .map((row) => ({
         characterId: row.winner_character_id as string,
@@ -254,9 +292,29 @@ async function handleAdvance(req: Request): Promise<Response> {
       }))
   }
 
-  if (contestants.length === 0) {
+  if (contestantsWithoutAccount.length === 0) {
     return json({ ok: false, error: 'no_contestants' }, 400)
   }
+
+  // account_id isn't on either source table directly (pvp_tournament_registrations
+  // and pvp_tournament_matches both only snapshot character_id/character_name,
+  // same "no RLS path across accounts" reasoning as those tables' own name
+  // columns) -- fetched separately here so the anti-self-match pairing below
+  // has it for every round, not just round 1.
+  const { data: accountRows, error: accountError } = await db
+    .from('characters')
+    .select('id, account_id')
+    .in('id', contestantsWithoutAccount.map((c) => c.characterId))
+
+  if (accountError) {
+    console.error('pvp-tournament-advance account-id lookup failed:', accountError.message)
+    return json({ ok: false, error: 'query_failed', detail: accountError.message }, 500)
+  }
+
+  const accountIdByCharacterId = new Map((accountRows ?? []).map((row) => [row.id as string, row.account_id as string]))
+  const contestants: Contestant[] = interleaveAvoidingSameAccountAdjacency(
+    contestantsWithoutAccount.map((c) => ({ ...c, accountId: accountIdByCharacterId.get(c.characterId) ?? c.characterId }))
+  )
 
   if (contestants.length === 1) {
     // A single survivor with no one left to face — same "resolves

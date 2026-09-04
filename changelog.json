@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.131.2",
+    "date": "2026-09-05",
+    "changes": [
+      "Fixed PvP Tournament brackets sometimes pairing two of your own characters against each other",
+      "PvP Tournament tab now shows a live countdown to the next event alongside its start time"
+    ]
+  },
+  {
     "version": "1.131.1",
     "date": "2026-09-05",
     "changes": [

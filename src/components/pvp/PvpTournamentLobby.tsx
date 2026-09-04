@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AscensionCard } from '../ui/AscensionCard'
 import { Button } from '../ui/Button'
 import { usePvpTournamentStore } from '../../game/pvp/usePvpTournamentStore'
@@ -25,6 +25,19 @@ function formatEventTime(iso: string): string {
   })
 }
 
+// Same shape as ZoneBossCard's own formatCountdown — h:mm:ss once there's an
+// hours place, m:ss below that.
+function formatCountdown(msRemaining: number): string {
+  if (msRemaining <= 0) return '0:00'
+  const totalSeconds = Math.ceil(msRemaining / 1000)
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  return hours > 0
+    ? `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+    : `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
 export default function PvpTournamentLobby({ characterId }: { characterId: string }) {
   const currentTournament = usePvpTournamentStore((state) => state.currentTournament)
   const lastCompletedTournament = usePvpTournamentStore((state) => state.lastCompletedTournament)
@@ -34,6 +47,12 @@ export default function PvpTournamentLobby({ characterId }: { characterId: strin
   const register = usePvpTournamentStore((state) => state.register)
 
   const [registerError, setRegisterError] = useState<string | null>(null)
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(id)
+  }, [])
 
   const isRegistered = registrations.some((r) => r.characterId === characterId)
 
@@ -69,6 +88,9 @@ export default function PvpTournamentLobby({ characterId }: { characterId: strin
           <div className="space-y-3">
             <p className="text-center text-sm text-slate-400">
               Registration open — event starts <span className="text-slate-200">{formatEventTime(currentTournament.eventStartsAt)}</span>
+            </p>
+            <p className="text-center text-xs text-amber-300">
+              Starts in {formatCountdown(new Date(currentTournament.eventStartsAt).getTime() - now)}
             </p>
 
             {isRegistered ? (
