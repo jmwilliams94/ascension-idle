@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.132.2",
+    "date": "2026-09-05",
+    "changes": [
+      "The PvP champion-crowned announcement now shows the real sparkling Top Hunter badge instead of a plain trophy icon"
+    ]
+  },
+  {
     "version": "1.132.1",
     "date": "2026-09-05",
     "changes": [

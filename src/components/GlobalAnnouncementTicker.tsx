@@ -13,6 +13,7 @@ import {
   EXPERIENCE_POTION_ICON_SRC,
   getStoneIconSrc,
 } from '../game/items/forgeCosts'
+import { TopHunterBadge } from './pvp/TopHunterBadge'
 
 // Emoji fallback, kept for any kind resolveAnnouncementIconSrc can't turn
 // into a real icon (an unrecognized future kind, or a gear name that isn't
@@ -116,6 +117,15 @@ function resolveAnnouncementIconSrc(kind: string, message: string): string | und
 // clip an emoji glyph rather than scale it — so it just gets a shrink-0 to
 // match layout, sized by its surrounding text instead.
 export function AnnouncementIcon({ kind, message, imgClassName }: { kind: string; message: string; imgClassName: string }) {
+  // pvp_champion shows the actual TopHunterBadge (chip + ember sparkle),
+  // not a flat icon/emoji (2026-09-05, requested by the user — "the actual
+  // badge with the effects" like it renders next to the champion's name in
+  // Global Chat) -- same component every other champion-badge site uses,
+  // so this never drifts from what ChatOverlay/EquipmentPanel show.
+  if (kind === 'pvp_champion') {
+    return <TopHunterBadge compact />
+  }
+
   const iconSrc = resolveAnnouncementIconSrc(kind, message)
   if (iconSrc) {
     return <img src={iconSrc} alt="" className={imgClassName} />
