@@ -270,13 +270,41 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
 
     setSelectedItemId(itemId)
     setAttemptResult(null)
-    // Auto-fill the Material slot with the VIP's chosen auto-use currency
-    // (requested by the user) — even at 0 owned units, since the Forge RPC
-    // pulls the shortfall from the account Bank when this is set. No auto-use
-    // selected means the old behavior: an empty Material slot, filled
-    // manually from Inventory.
-    setMaterialEntries(isVipActive && autoUseBankMaterial ? [{ kind: 'currency', id: `vip-auto-${autoUseBankMaterial}`, currencyType: autoUseBankMaterial }] : [])
+    // Population of the Material slot itself is handled by the effect below,
+    // keyed on selectedItemId/autoUseBankMaterial — reset here, unconditionally,
+    // so both entry points (a real Inventory drag/tap and EquippedGearPicker's
+    // plain onSelect) start from the same clean state and let that one effect
+    // be the single source of truth for what fills in next.
+    setMaterialEntries([])
   }
+
+  // VIP auto-use Bank material population/switching (2026-09-05) — a real
+  // effect, not inline logic inside handleDropItemId, so both selection entry
+  // points (drag/tap from the Inventory grid and EquippedGearPicker) behave
+  // identically, and so re-picking a different auto-use currency while an
+  // item is already staged actually switches the Material slot instead of
+  // leaving the first pick "locked in" (both reported by the user). Only ever
+  // touches a Material slot that's empty or already holds our own synthetic
+  // `vip-auto-*` entry — a real currency the player dragged in manually is
+  // never clobbered.
+  useEffect(() => {
+    if (!selectedItemId) {
+      return
+    }
+
+    setMaterialEntries((current) => {
+      const isOwnAutoEntry = current.length > 0 && current[0].kind === 'currency' && current[0].id.startsWith('vip-auto-')
+      if (current.length > 0 && !isOwnAutoEntry) {
+        return current
+      }
+
+      if (isVipActive && autoUseBankMaterial) {
+        return [{ kind: 'currency', id: `vip-auto-${autoUseBankMaterial}`, currencyType: autoUseBankMaterial }]
+      }
+
+      return isOwnAutoEntry ? [] : current
+    })
+  }, [selectedItemId, autoUseBankMaterial, isVipActive])
 
   const handleRemove = () => {
     setSelectedItemId(null)
@@ -490,21 +518,20 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
           />
         }
       >
-        {/* Persistently visible (2026-09-05, moved off the EquippedGearPicker
-            row below per the user — it used to be scoped to !selectedItem and
-            disappeared the moment an item was staged, hiding the toggle right
-            when a player might want to check/change it). */}
-        <div className="flex justify-center">
-          <AutoUseBankMaterialCard />
-        </div>
-
         <div className="flex items-start justify-center gap-6">
           <ForgeUpgradeSlot item={selectedItem} template={selectedTemplate} onRemove={handleRemove} hold={hold} onHoldChange={setHold} />
           <ForgeMaterialSlot entries={materialEntries} templates={templates} onRemoveEntry={handleRemoveMaterial} />
           <ForgePreviewSlot previewItem={previewItem} previewTemplate={previewTemplate} slotId="forge-standard-preview" />
         </div>
 
-        {!selectedItem && <EquippedGearPicker onSelect={handleDropItemId} />}
+        {/* AutoUseBankMaterialCard sits to the right of the equipped-item
+            picker (its preferred spot, per the user), but is always rendered
+            — not conditional on !selectedItem like the picker itself — so it
+            never disappears once an item is staged. */}
+        <div className="flex w-full max-w-sm items-start justify-center gap-1.5">
+          <div className="min-w-0 flex-1">{!selectedItem && <EquippedGearPicker onSelect={handleDropItemId} />}</div>
+          <AutoUseBankMaterialCard />
+        </div>
 
         <div className="w-full max-w-xs space-y-2">
           {!selectedItem ? (

@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.131.9",
+    "date": "2026-09-05",
+    "changes": [
+      "Fixed VIP Auto-Use Bank material not switching between Comet and Fallen Star once one was picked, and not filling in for gear staged from Inventory",
+      "Moved the VIP Auto-Use panel back to sitting next to the Forge's \"or pick an equipped item\" row, while keeping it visible after an item is staged",
+      "Removed the redundant \"Forge\" label from the Forge sub-panels' back button — the page's own big Forge heading already says it"
+    ]
+  },
+  {
     "version": "1.131.8",
     "date": "2026-09-05",
     "changes": [

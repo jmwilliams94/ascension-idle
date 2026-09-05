@@ -27,8 +27,12 @@ export default function ForgeTwoColumnLayout({ title, onBack, inventory, childre
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <Button variant="secondary" onClick={onBack}>
-          ← Forge
+        {/* No "Forge" label here (2026-09-05, removed per the user) — GameShell
+            already wraps every tab, this one included, in its own persistent
+            large "FORGE" page-identity heading (TAB_TITLES['forge']), so
+            repeating the word on this back-to-hub arrow was pure redundancy. */}
+        <Button variant="secondary" onClick={onBack} aria-label="Back to Forge">
+          ←
         </Button>
         <h2 className="font-heading text-gradient-steel text-sm font-black uppercase tracking-[0.15em]">{title}</h2>
       </div>
