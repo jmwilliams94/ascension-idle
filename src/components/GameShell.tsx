@@ -39,6 +39,7 @@ import SalvageRevealToast from './SalvageRevealToast'
 import FireworkOverlay from './FireworkOverlay'
 import LevelUpBanner from './LevelUpBanner'
 import GoldDonationBuffBanner from './GoldDonationBuffBanner'
+import OutOfManaBanner from './OutOfManaBanner'
 import UnclaimedLootBadge from './UnclaimedLootBadge'
 import SettingsModal from './SettingsModal'
 import ShopPanel from './ShopPanel'
@@ -598,6 +599,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       </Suspense>
       <LevelUpBanner />
       <GoldDonationBuffBanner />
+      <OutOfManaBanner />
       <KillRewardToast />
       <UnclaimedLootBadge />
       <GainToastHost />

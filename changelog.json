@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.133.1",
+    "date": "2026-09-05",
+    "changes": [
+      "Added a dismissable banner that appears when you run out of Mana, so it's clear why your skill attacks have stopped"
+    ]
+  },
+  {
     "version": "1.133.0",
     "date": "2026-09-05",
     "changes": [
