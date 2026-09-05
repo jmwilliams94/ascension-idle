@@ -29,6 +29,14 @@ export interface VipAutomationSettings {
   // comment on why HP can't be represented the same way in the offline
   // model). Independent per kind since a player may only want one automated.
   autoUsePotions: { hp: boolean; mp: boolean }
+  // Lets Forge (quality_upgrade/level_upgrade/master_forge_upgrade only —
+  // not the Comet/Fallen Star Scroll batch paths, which spend a whole Scroll
+  // unit directly and never touch loose currency) draw a shortfall straight
+  // from the account Bank's points-style balance (bank_comets/
+  // bank_fallen_stars, ensure_forge_currency SQL) instead of refusing the
+  // upgrade when the character is out of loose units/Scrolls. Independent
+  // per currency, same shape as autoUsePotions.
+  autoUseBankMaterial: { comet: boolean; fallen_star: boolean }
 }
 
 const SALVAGE_TIERS: SalvageTier[] = ['tempered', 'infused', 'radiant', 'ascended']
@@ -40,6 +48,7 @@ export const DEFAULT_VIP_AUTOMATION_SETTINGS: VipAutomationSettings = {
   autoBank: { enabled: false, minLevel: 1 },
   priority: 'bank_first',
   autoUsePotions: { hp: false, mp: false },
+  autoUseBankMaterial: { comet: false, fallen_star: false },
 }
 
 // Tolerant of anything the column could contain — a brand-new character's
@@ -54,6 +63,7 @@ function normalize(saved: unknown): VipAutomationSettings {
   const autoSalvage = (raw.autoSalvage ?? {}) as Record<string, unknown>
   const autoBank = (raw.autoBank ?? {}) as Record<string, unknown>
   const autoUsePotions = (raw.autoUsePotions ?? {}) as Record<string, unknown>
+  const autoUseBankMaterial = (raw.autoUseBankMaterial ?? {}) as Record<string, unknown>
 
   return {
     autoSellOre: raw.autoSellOre === true,
@@ -70,6 +80,10 @@ function normalize(saved: unknown): VipAutomationSettings {
     autoUsePotions: {
       hp: autoUsePotions.hp === true,
       mp: autoUsePotions.mp === true,
+    },
+    autoUseBankMaterial: {
+      comet: autoUseBankMaterial.comet === true,
+      fallen_star: autoUseBankMaterial.fallen_star === true,
     },
   }
 }
@@ -100,6 +114,7 @@ export const useVipAutomationStore = create<VipAutomationState>((set, get) => ({
       autoSalvage: { ...current.autoSalvage, ...partial.autoSalvage },
       autoBank: { ...current.autoBank, ...partial.autoBank },
       autoUsePotions: { ...current.autoUsePotions, ...partial.autoUsePotions },
+      autoUseBankMaterial: { ...current.autoUseBankMaterial, ...partial.autoUseBankMaterial },
     }
 
     // Optimistic local update, reconciled from the server's own cleaned/

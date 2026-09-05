@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import AutoUseBankMaterialCard from './AutoUseBankMaterialCard'
 import EquippedGearPicker from './EquippedGearPicker'
 import ForgeMaterialSlot, { type MaterialEntry } from './ForgeMaterialSlot'
 import ForgePreviewSlot from './ForgePreviewSlot'
@@ -484,7 +485,14 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
           <ForgePreviewSlot previewItem={previewItem} previewTemplate={previewTemplate} slotId="forge-standard-preview" />
         </div>
 
-        {!selectedItem && <EquippedGearPicker onSelect={handleDropItemId} />}
+        {!selectedItem && (
+          <div className="flex w-full max-w-sm items-start justify-center gap-1.5">
+            <div className="min-w-0 flex-1">
+              <EquippedGearPicker onSelect={handleDropItemId} />
+            </div>
+            <AutoUseBankMaterialCard />
+          </div>
+        )}
 
         <div className="w-full max-w-xs space-y-2">
           {!selectedItem ? (

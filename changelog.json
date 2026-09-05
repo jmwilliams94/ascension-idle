@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.131.7",
+    "date": "2026-09-05",
+    "changes": [
+      "VIP: added an \"Auto-Use Bank\" panel next to the Forge's equipped-item picker — tick Comet and/or Fallen Star to let the Forge automatically pull the shortfall straight from your account Bank instead of stopping you when you're out",
+      "Fixed a bug where the Auto-Use Potions toggle in VIP Automations never actually saved"
+    ]
+  },
+  {
     "version": "1.131.6",
     "date": "2026-09-05",
     "changes": [
