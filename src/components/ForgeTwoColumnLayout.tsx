@@ -2,7 +2,13 @@ import type { ReactNode } from 'react'
 import { Button } from './ui/Button'
 
 interface ForgeTwoColumnLayoutProps {
-  title: string
+  // Optional (2026-09-05) — ForgeStandardPanel omits it since GameShell's own
+  // persistent large "FORGE" page-identity heading (TAB_TITLES['forge'],
+  // wraps every Forge sub-panel) already says the exact same word for that
+  // one panel. Every other sub-panel (Master Forge, Composition, Salvage,
+  // Sockets, Enchantress) still passes its own distinct title — those aren't
+  // redundant, so they're untouched.
+  title?: string
   onBack: () => void
   inventory: ReactNode
   children: ReactNode
@@ -27,14 +33,10 @@ export default function ForgeTwoColumnLayout({ title, onBack, inventory, childre
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        {/* No "Forge" label here (2026-09-05, removed per the user) — GameShell
-            already wraps every tab, this one included, in its own persistent
-            large "FORGE" page-identity heading (TAB_TITLES['forge']), so
-            repeating the word on this back-to-hub arrow was pure redundancy. */}
-        <Button variant="secondary" onClick={onBack} aria-label="Back to Forge">
-          ←
+        <Button variant="secondary" onClick={onBack}>
+          ← Forge
         </Button>
-        <h2 className="font-heading text-gradient-steel text-sm font-black uppercase tracking-[0.15em]">{title}</h2>
+        {title && <h2 className="font-heading text-gradient-steel text-sm font-black uppercase tracking-[0.15em]">{title}</h2>}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

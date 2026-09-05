@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.131.10",
+    "date": "2026-09-05",
+    "changes": [
+      "Restored the \"← Forge\" back button label (an earlier fix accidentally stripped the wrong redundant \"Forge\" text) and instead dropped the duplicate heading from the Standard Forge panel itself",
+      "Moved the VIP Auto-Use panel to the top-right of the Forge screen",
+      "VIP Auto-Use now shows an explicit Off option alongside Comet/Fallen Star, a Quantity readout once one is picked, and the Auto-Repeat toggle lives inside it too"
+    ]
+  },
+  {
     "version": "1.131.9",
     "date": "2026-09-05",
     "changes": [

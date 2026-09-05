@@ -441,17 +441,22 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
   const showAutoRepeat = autoRepeat || canAutoRepeatHere
   const confirmVisible = Boolean(previewItem) && !blockedByEquipLevel && !weaponNeedsMasterForge
 
+  // Disabled unless VIP, and — while not already running — unless a
+  // level-mode item is actually staged right now. Deliberately NOT disabled
+  // on !canAutoRepeatHere while autoRepeat is already true: the loop keeps
+  // running after the Upgrade Slot clears (see canAutoRepeatHere's own
+  // comment), and a "Working…" toggle must stay clickable to stop it.
   const autoRepeatButton = (
     <button
       type="button"
       onClick={() => setAutoRepeat((current) => !current)}
-      disabled={!isVipActive}
+      disabled={!isVipActive || (!autoRepeat && !canAutoRepeatHere)}
       aria-pressed={autoRepeat}
       title={isVipActive ? 'Auto-repeat: 1 Level Upgrade/sec across every other matching item' : 'Requires VIP'}
       style={AUTO_REPEAT_GLOW_STYLE}
       className={`${
         autoRepeat ? 'btn-glow-active' : 'btn-glow'
-      } rounded-lg px-4 py-2.5 text-sm font-heading font-bold uppercase tracking-[0.12em] transition disabled:cursor-not-allowed`}
+      } rounded-lg px-3 py-2 text-xs font-heading font-bold uppercase tracking-[0.1em] transition disabled:cursor-not-allowed disabled:opacity-50`}
     >
       {autoRepeat ? 'Working…' : 'Auto-Repeat'}
     </button>
@@ -506,7 +511,6 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
   return (
     <DragDropProvider>
       <ForgeTwoColumnLayout
-        title="Forge"
         onBack={onBack}
         inventory={
           <InventoryPanel
@@ -518,20 +522,20 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
           />
         }
       >
+        {/* Top-right of the panel (2026-09-05, per the user) — persistently
+            visible regardless of selection state, out of the way of the
+            actual upgrade flow below. */}
+        <div className="flex w-full justify-end">
+          <AutoUseBankMaterialCard repeatButton={autoRepeatButton} />
+        </div>
+
         <div className="flex items-start justify-center gap-6">
           <ForgeUpgradeSlot item={selectedItem} template={selectedTemplate} onRemove={handleRemove} hold={hold} onHoldChange={setHold} />
           <ForgeMaterialSlot entries={materialEntries} templates={templates} onRemoveEntry={handleRemoveMaterial} />
           <ForgePreviewSlot previewItem={previewItem} previewTemplate={previewTemplate} slotId="forge-standard-preview" />
         </div>
 
-        {/* AutoUseBankMaterialCard sits to the right of the equipped-item
-            picker (its preferred spot, per the user), but is always rendered
-            — not conditional on !selectedItem like the picker itself — so it
-            never disappears once an item is staged. */}
-        <div className="flex w-full max-w-sm items-start justify-center gap-1.5">
-          <div className="min-w-0 flex-1">{!selectedItem && <EquippedGearPicker onSelect={handleDropItemId} />}</div>
-          <AutoUseBankMaterialCard />
-        </div>
+        {!selectedItem && <EquippedGearPicker onSelect={handleDropItemId} />}
 
         <div className="w-full max-w-xs space-y-2">
           {!selectedItem ? (
@@ -570,11 +574,11 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
                       Cancel
                     </Button>
                   </div>
-                  {/* Its own row, not squeezed into the Confirm/Cancel line —
-                      Auto-Repeat is noticeably wider than Cancel, and sharing
-                      a row threw off Confirm/Cancel's usual centered-pair
-                      look (reported by the user 2026-08-29). */}
-                  {materialMode === 'level' && <div className="flex justify-center">{autoRepeatButton}</div>}
+                  {/* The Auto-Repeat toggle itself now lives in
+                      AutoUseBankMaterialCard, top-right of the panel
+                      (2026-09-05, per the user) — this is just its outcome
+                      status text, tied to whichever item was actually
+                      staged when the loop last stopped. */}
                   {autoRepeatSummary && <p className="text-center text-[11px] text-amber-400/80">{autoRepeatSummary}</p>}
                 </div>
               ) : (
@@ -586,15 +590,12 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
           )}
         </div>
 
-        {/* Confirm/Cancel need a level-mode item staged, but Auto-Repeat must
-            stay reachable even when one isn't (an already-maxed item staged,
-            or the loop still running after the Upgrade Slot got cleared) —
-            covered above whenever confirmVisible, this is the fallback. */}
-        {showAutoRepeat && !confirmVisible && (
-          <div className="flex w-full max-w-xs flex-col items-center gap-1">
-            {autoRepeatButton}
-            {autoRepeatSummary && <p className="text-center text-[11px] text-amber-400/80">{autoRepeatSummary}</p>}
-          </div>
+        {/* Same fallback as above — the toggle lives in the VIP card now, this
+            is just its status text surfacing even when Confirm/Cancel aren't
+            shown (an already-maxed item staged, or the loop still running
+            after the Upgrade Slot got cleared). */}
+        {showAutoRepeat && !confirmVisible && autoRepeatSummary && (
+          <p className="w-full max-w-xs text-center text-[11px] text-amber-400/80">{autoRepeatSummary}</p>
         )}
       </ForgeTwoColumnLayout>
     </DragDropProvider>
