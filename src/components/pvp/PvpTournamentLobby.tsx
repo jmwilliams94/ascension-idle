@@ -15,10 +15,17 @@ const REGISTER_ERROR_LABEL: Record<string, string> = {
 // actual weekly-event experience: last week's champion, the live
 // registration ladder, and the bracket once the event's underway.
 
-const RANK_ACCENT: Record<number, string> = {
-  1: 'text-amber-300',
-  2: 'text-slate-300',
-  3: 'text-orange-400',
+// Bracket capacity isn't a fixed cap — it's whatever pvp-tournament-advance
+// will actually seed at kickoff (next power of two ≥ registrant count, same
+// formula it uses). Showing that many slots up front (rather than just a
+// growing list) previews "how much room is left" without implying any real
+// ranking — registration ORDER means nothing here, matchups are shuffled
+// fresh the instant the event starts (see interleaveAvoidingSameAccountAdjacency),
+// specifically so nobody can read anything into who's next to whom before then.
+function nextPowerOfTwo(n: number): number {
+  let size = 1
+  while (size < n) size *= 2
+  return size
 }
 
 function formatEventTime(iso: string): string {
@@ -70,6 +77,8 @@ export default function PvpTournamentLobby({ characterId }: { characterId: strin
   // character that individually hasn't registered (e.g. switching to a
   // Wuxia after registering a Hunter alt).
   const hasLadderVisibility = isRegistered || registrations.length > 0
+  const bracketSize = Math.max(2, nextPowerOfTwo(registrations.length))
+  const slots = Array.from({ length: bracketSize }, (_, i) => registrations[i] ?? null)
 
   const handleRegister = () => {
     setRegisterError(null)
@@ -122,7 +131,9 @@ export default function PvpTournamentLobby({ characterId }: { characterId: strin
             )}
 
             <div>
-              <p className="text-heading-label mb-1">Ladder{hasLadderVisibility ? ` (${registrations.length})` : ''}</p>
+              <p className="text-heading-label mb-1">
+                Slots{hasLadderVisibility ? ` (${registrations.length}/${bracketSize} filled)` : ''}
+              </p>
               {!hasLadderVisibility ? (
                 // Anti-sniping (requested by the user): RLS hides every row
                 // here until your account has a character registered, so an
@@ -131,17 +142,28 @@ export default function PvpTournamentLobby({ characterId }: { characterId: strin
                 // rather than implying the ladder is actually empty.
                 <p className="text-center text-xs text-slate-300">Register to see who else has entered.</p>
               ) : (
-              <div className="max-h-64 space-y-1 overflow-y-auto">
-                {registrations.length === 0 && <p className="text-center text-xs text-slate-300">No one's registered yet.</p>}
-                {registrations.map((entry, index) => (
-                  <div key={entry.characterId} className="flex items-center gap-2 rounded-md border border-slate-800 bg-slate-900/40 px-3 py-1.5 text-sm">
-                    <span className={`w-8 shrink-0 font-bold ${RANK_ACCENT[index + 1] ?? 'text-slate-300'}`}>#{index + 1}</span>
-                    <span className="min-w-0 flex-1 truncate text-slate-200">
-                      {entry.characterName}
-                      {entry.characterId === characterId && <span className="ml-1 text-xs text-slate-300">(you)</span>}
-                    </span>
-                  </div>
-                ))}
+              <div className="space-y-1">
+                <p className="text-center text-[11px] text-slate-500">Matchups are shuffled once the event starts — order below means nothing.</p>
+                <div className="max-h-64 space-y-1 overflow-y-auto">
+                  {slots.map((entry, index) => (
+                    <div
+                      key={entry?.characterId ?? `open-${index}`}
+                      className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm ${
+                        entry ? 'border-slate-800 bg-slate-900/40' : 'border-dashed border-slate-800/60 bg-slate-900/10'
+                      }`}
+                    >
+                      <span className="w-14 shrink-0 text-xs font-medium text-slate-500">Slot {index + 1}</span>
+                      {entry ? (
+                        <span className="min-w-0 flex-1 truncate text-slate-200">
+                          {entry.characterName}
+                          {entry.characterId === characterId && <span className="ml-1 text-xs text-slate-300">(you)</span>}
+                        </span>
+                      ) : (
+                        <span className="min-w-0 flex-1 truncate italic text-slate-500">Open</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
               )}
             </div>

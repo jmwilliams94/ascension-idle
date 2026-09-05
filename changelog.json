@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.131.6",
+    "date": "2026-09-05",
+    "changes": [
+      "PvP Tournament tab now shows the full bracket as numbered slots, with \"Open\" for any not yet filled, so you can see how many spots are left before the event starts",
+      "Matchups still aren't decided until the event actually kicks off, so registering earlier or later has no effect on who you'll face"
+    ]
+  },
+  {
     "version": "1.131.5",
     "date": "2026-09-05",
     "changes": [
