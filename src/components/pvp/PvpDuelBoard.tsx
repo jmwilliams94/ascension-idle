@@ -3,9 +3,12 @@ import { AscensionCard } from '../ui/AscensionCard'
 import { Button } from '../ui/Button'
 import { usePvpDuelStore, opponentIdFor, zoneFor, requiredActionFor } from '../../game/pvp/usePvpDuelStore'
 import { BOARD_SIZE, ZONE_SIZE, MAX_ZONE_ORIGIN, NO_SHOW_SECONDS } from '../../game/pvp/pvpConstants'
+import type { PvpEventClassId } from '../../game/pvp/usePvpTournamentStore'
+import { useCharacterStore } from '../../game/stats/useCharacterStore'
 import PvpTurnTimer from './PvpTurnTimer'
 import PvpDamageToast from './PvpDamageToast'
 import PvpTournamentLobby from './PvpTournamentLobby'
+import PvpClassPicker from './PvpClassPicker'
 
 // Phase 2 duel UI — see CLAUDE.md's plan nifty-riding-journal. Single
 // composed panel (deliberately not split into separate Zone/Guess-picker
@@ -32,6 +35,13 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
   const busy = usePvpDuelStore((state) => state.busy)
   const placeZone = usePvpDuelStore((state) => state.placeZone)
   const guess = usePvpDuelStore((state) => state.guess)
+  const myClassId = useCharacterStore((state) => state.selectedClassId)
+
+  // 2x2 class picker (2026-09-05, requested by the user) — the PvP tab's
+  // landing screen; picking a class reveals that class's tournament lobby
+  // (or the active character's own live duel board, see the guard below)
+  // with a "Back" button that returns here.
+  const [selectedClass, setSelectedClass] = useState<PvpEventClassId | null>(null)
 
   // Tagged with the turnNumber it was picked during, rather than reset via a
   // separate effect on turnNumber change — a fresh turn (opponent moved, or
@@ -44,8 +54,31 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
   const pendingZone = duel && pendingSelection?.turnNumber === duel.turnNumber ? pendingSelection.zone : null
   const pendingTile = duel && pendingSelection?.turnNumber === duel.turnNumber ? pendingSelection.tile : null
 
-  if (!duel) {
-    return <PvpTournamentLobby characterId={characterId} />
+  if (!selectedClass) {
+    return <PvpClassPicker onSelect={setSelectedClass} />
+  }
+
+  const backButton = (
+    <button
+      type="button"
+      onClick={() => setSelectedClass(null)}
+      className="text-xs font-medium text-slate-400 hover:text-slate-200"
+    >
+      ← Back
+    </button>
+  )
+
+  // The active character's own duel only ever belongs to their own class's
+  // bracket — if they're browsing a DIFFERENT class's tab (or have no active
+  // duel at all), always show that class's read-only tournament lobby rather
+  // than risk rendering an unrelated duel under the wrong class's header.
+  if (!duel || selectedClass !== myClassId) {
+    return (
+      <div className="space-y-2">
+        {backButton}
+        <PvpTournamentLobby characterId={characterId} classId={selectedClass} />
+      </div>
+    )
   }
 
   const isPlayerA = duel.playerACharacterId === characterId
@@ -61,22 +94,25 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
     const wonText =
       duel.winnerCharacterId === characterId ? 'Victory!' : duel.winnerCharacterId ? 'Defeated' : 'Duel Over'
     return (
-      <AscensionCard title="PvP Duel">
-        <div className="relative space-y-2 text-center">
-          {/* The killing blow's own toast is queued the instant that HP
-              drop lands (usePvpDuelStore.setDuel), before this "duel over"
-              branch ever renders — still shown here so it isn't lost. */}
-          <PvpDamageToast />
-          <p className="font-heading text-lg font-bold uppercase tracking-wide text-gradient-steel">{wonText}</p>
-          {duel.status === 'forfeited' && <p className="text-sm text-slate-400">Ended by timeout forfeit.</p>}
-          <p className="text-sm text-slate-400">
-            {myName} vs {opponentName}
-          </p>
-          <Button variant="secondary" onClick={() => usePvpDuelStore.getState().setDuel(null)} className="mx-auto block">
-            Back to Tournament
-          </Button>
-        </div>
-      </AscensionCard>
+      <div className="space-y-2">
+        {backButton}
+        <AscensionCard title="PvP Duel">
+          <div className="relative space-y-2 text-center">
+            {/* The killing blow's own toast is queued the instant that HP
+                drop lands (usePvpDuelStore.setDuel), before this "duel over"
+                branch ever renders — still shown here so it isn't lost. */}
+            <PvpDamageToast />
+            <p className="font-heading text-lg font-bold uppercase tracking-wide text-gradient-steel">{wonText}</p>
+            {duel.status === 'forfeited' && <p className="text-sm text-slate-400">Ended by timeout forfeit.</p>}
+            <p className="text-sm text-slate-400">
+              {myName} vs {opponentName}
+            </p>
+            <Button variant="secondary" onClick={() => usePvpDuelStore.getState().setDuel(null)} className="mx-auto block">
+              Back to Tournament
+            </Button>
+          </div>
+        </AscensionCard>
+      </div>
     )
   }
 
@@ -159,7 +195,9 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
   }
 
   return (
-    <AscensionCard title="PvP Duel">
+    <div className="space-y-2">
+      {backButton}
+      <AscensionCard title="PvP Duel">
       <div className="relative space-y-3">
         <PvpDamageToast />
         <div className="flex items-center justify-between text-sm">
@@ -239,7 +277,8 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
 
         {actionError && <p className="text-center text-xs text-rose-400">{actionError}</p>}
       </div>
-    </AscensionCard>
+      </AscensionCard>
+    </div>
   )
 }
 

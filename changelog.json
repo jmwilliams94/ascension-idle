@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.133.0",
+    "date": "2026-09-05",
+    "changes": [
+      "PvP Tournament is now one independent event per class: pick your class from a new 2x2 screen (Hunter and Wuxia are live, Twin-soul and Juggernaut are Coming Soon) to see that class's own bracket, registration, and champion",
+      "Hunter's weekly tournament moves to Saturday 12pm Brisbane; Wuxia gets its own brand new tournament, Sunday 1pm Brisbane",
+      "Each class now crowns its own rotating champion badge (Top Hunter / Top Wuxia)"
+    ]
+  },
+  {
     "version": "1.132.3",
     "date": "2026-09-05",
     "changes": [

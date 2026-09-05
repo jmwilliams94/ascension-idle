@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { AscensionCard } from '../ui/AscensionCard'
 import { Button } from '../ui/Button'
-import { usePvpTournamentStore } from '../../game/pvp/usePvpTournamentStore'
+import { usePvpTournamentStore, type PvpEventClassId } from '../../game/pvp/usePvpTournamentStore'
 import { useCharacterStore } from '../../game/stats/useCharacterStore'
+import { CLASS_DEFINITIONS } from '../../game/stats/classes'
 import { PvpMatchRow } from './PvpMatchRow'
 import PvpBracketModal from './PvpBracketModal'
 
 const REGISTER_ERROR_LABEL: Record<string, string> = {
-  class_not_eligible: 'This event is Hunter-class only.',
+  class_not_eligible: 'Your active character is the wrong class for this event.',
   no_open_tournament: 'Registration is closed right now.',
 }
 
@@ -16,6 +17,12 @@ const REGISTER_ERROR_LABEL: Record<string, string> = {
 // time (only two are ever mid-duel at once), so it needs to carry the
 // actual weekly-event experience: last week's champion, the live
 // registration ladder, and the bracket once the event's underway.
+//
+// One independent event PER CLASS (2026-09-05) — this component now renders
+// whichever class the player picked on PvpDuelBoard's 2x2 class picker, not
+// always "the" (Hunter-only) tournament. Eligibility to register is compared
+// against the ACTIVE character's own class, same as before, just no longer
+// hardcoded to Hunter.
 
 // Bracket capacity isn't a fixed cap — it's whatever pvp-tournament-advance
 // will actually seed at kickoff (next power of two ≥ registrant count, same
@@ -53,11 +60,8 @@ function formatCountdown(msRemaining: number): string {
     : `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
-export default function PvpTournamentLobby({ characterId }: { characterId: string }) {
-  const currentTournament = usePvpTournamentStore((state) => state.currentTournament)
-  const lastCompletedTournament = usePvpTournamentStore((state) => state.lastCompletedTournament)
-  const registrations = usePvpTournamentStore((state) => state.registrations)
-  const matches = usePvpTournamentStore((state) => state.matches)
+export default function PvpTournamentLobby({ characterId, classId }: { characterId: string; classId: PvpEventClassId }) {
+  const { currentTournament, lastCompletedTournament, registrations, matches } = usePvpTournamentStore((state) => state.byClass[classId])
   const busy = usePvpTournamentStore((state) => state.busy)
   const register = usePvpTournamentStore((state) => state.register)
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
@@ -71,7 +75,7 @@ export default function PvpTournamentLobby({ characterId }: { characterId: strin
     return () => window.clearInterval(id)
   }, [])
 
-  const isHunter = selectedClassId === 'hunter'
+  const isEligibleClass = selectedClassId === classId
   const isRegistered = registrations.some((r) => r.characterId === characterId)
   // The RLS policy behind `registrations` opens up account-wide the moment
   // ANY of your characters is registered (see pvp_is_registered_for_tournament's
@@ -85,7 +89,7 @@ export default function PvpTournamentLobby({ characterId }: { characterId: strin
 
   const handleRegister = () => {
     setRegisterError(null)
-    void register(characterId).then((result) => {
+    void register(classId, characterId).then((result) => {
       if (!result.ok) setRegisterError(result.error ?? 'action_failed')
     })
   }
@@ -93,7 +97,7 @@ export default function PvpTournamentLobby({ characterId }: { characterId: strin
   const roundsAscending = [...new Set(matches.map((m) => m.round))].sort((a, b) => a - b)
 
   return (
-    <AscensionCard title="PvP Tournament (Hunter Only)">
+    <AscensionCard title={`${CLASS_DEFINITIONS[classId].displayName} Tournament`}>
       <div className="space-y-4">
         {lastCompletedTournament?.winnerName && (
           <div className="rounded-md border border-amber-600/50 bg-amber-950/20 px-3 py-2 text-center">
@@ -133,12 +137,14 @@ export default function PvpTournamentLobby({ characterId }: { characterId: strin
 
             {isRegistered ? (
               <p className="text-center text-sm text-emerald-400">You're registered for this week's event.</p>
-            ) : isHunter ? (
+            ) : isEligibleClass ? (
               <Button onClick={handleRegister} disabled={busy} className="mx-auto block w-full max-w-xs">
                 Register
               </Button>
             ) : (
-              <p className="text-center text-sm text-slate-400">Switch to a Hunter character to register.</p>
+              <p className="text-center text-sm text-slate-400">
+                Switch to a {CLASS_DEFINITIONS[classId].displayName} character to register.
+              </p>
             )}
             {registerError && (
               <p className="text-center text-xs text-rose-400">{REGISTER_ERROR_LABEL[registerError] ?? registerError}</p>

@@ -13,7 +13,7 @@ import type { ItemInstance } from '../game/items/useInventoryStore'
 import { useCharacterLoadoutStore, type LoadoutItem, type LoadoutSlot } from '../game/social/useCharacterLoadoutStore'
 import type { ClassId } from '../game/stats/classes'
 import { useLockBodyScroll } from '../lib/useLockBodyScroll'
-import { useCurrentPvpChampion } from '../game/pvp/usePvpTournamentStore'
+import { useCurrentPvpChampion, type PvpEventClassId } from '../game/pvp/usePvpTournamentStore'
 import { TopHunterBadge } from './pvp/TopHunterBadge'
 
 // Same paper-doll size/grid EquipmentPanel.tsx uses (see that file's own
@@ -74,17 +74,18 @@ export default function CharacterLoadoutModal() {
   const error = useCharacterLoadoutStore((state) => state.error)
   const loadout = useCharacterLoadoutStore((state) => state.loadout)
   const templates = useItemTemplatesStore((state) => state.templates)
-  const pvpChampion = useCurrentPvpChampion()
+  const loadoutClassId = loadout?.character.class
+  const pvpEventClassId = loadoutClassId === 'hunter' || loadoutClassId === 'wuxia' ? (loadoutClassId as PvpEventClassId) : null
+  const pvpChampion = useCurrentPvpChampion(pvpEventClassId)
   useLockBodyScroll(open)
 
   if (!open) {
     return null
   }
 
-  const isTopHunter = Boolean(loadout && pvpChampion && loadout.character.name === pvpChampion.name)
+  const isPvpChampion = Boolean(loadout && pvpChampion && loadout.character.name === pvpChampion.name)
 
-  const isHunter = loadout?.character.class === 'hunter'
-  const loadoutClassId = loadout?.character.class
+  const isHunter = loadoutClassId === 'hunter'
   const secondHandConfig = loadoutClassId ? SECOND_HAND_BY_CLASS[loadoutClassId] : undefined
   const weaponLoadoutItem = loadout?.equipment.weapon ?? null
   const weaponTemplate = weaponLoadoutItem ? templates.find((t) => t.id === weaponLoadoutItem.template_id) : undefined
@@ -97,7 +98,7 @@ export default function CharacterLoadoutModal() {
       >
         <div className="mb-4 flex items-center justify-between">
           <div>
-            {isTopHunter && (
+            {isPvpChampion && (
               <div className="mb-1.5">
                 <TopHunterBadge title={pvpChampion?.title ?? 'Top Hunter'} />
               </div>

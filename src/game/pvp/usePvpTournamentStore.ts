@@ -1,19 +1,29 @@
 import { create } from 'zustand'
 import { supabase } from '../../lib/supabaseClient'
 
-// PvP Tournament/ladder client state — see CLAUDE.md's plan
-// nifty-riding-journal (Phase 3). Unlike usePvpDuelStore, this is not
-// scoped to a single character — the ladder/bracket/champion are public,
-// global state every player watches. Refetches the relevant slice whole on
-// any realtime change (PvpTournamentConnection.tsx) rather than patching
-// incrementally — dataset is small (at most a few hundred rows), and this
-// avoids a whole client-side merge-reducer for state that's this cheap to
-// just re-read.
+// PvP Tournament/ladder client state — see CLAUDE.pvp.md. Not scoped to a
+// single character — the ladder/bracket/champion are public, global state
+// every player watches. Refetches the relevant slice whole on any realtime
+// change (PvpTournamentConnection.tsx) rather than patching incrementally —
+// dataset is small (at most a few hundred rows per class), and this avoids a
+// whole client-side merge-reducer for state that's this cheap to just re-read.
+//
+// One independent tournament PER CLASS (2026-09-05, requested by the user —
+// the PvP tab's new 2x2 class picker) — Hunter and Wuxia each run their own
+// bracket/registration/champion on their own weekly schedule (Saturday/Sunday
+// respectively), scoped server-side by pvp_tournaments.class_id. Twin-soul/
+// Juggernaut have no backend event yet (PVP_EVENT_CLASSES below only lists
+// the two that do) — extend that list the day their own event launches, no
+// other change needed here.
+
+export type PvpEventClassId = 'hunter' | 'wuxia'
+export const PVP_EVENT_CLASSES: PvpEventClassId[] = ['hunter', 'wuxia']
 
 export type PvpTournamentStatus = 'registration' | 'live' | 'completed'
 
 export interface PvpTournament {
   id: string
+  classId: PvpEventClassId
   status: PvpTournamentStatus
   eventStartsAt: string
   winnerCharacterId: string | null
@@ -49,6 +59,7 @@ export interface PvpTournamentMatch {
 function toTournament(row: Record<string, unknown>): PvpTournament {
   return {
     id: row.id as string,
+    classId: row.class_id as PvpEventClassId,
     status: row.status as PvpTournamentStatus,
     eventStartsAt: row.event_starts_at as string,
     winnerCharacterId: (row.winner_character_id as string | null) ?? null,
@@ -118,59 +129,85 @@ async function attachWinnerHp(matches: PvpTournamentMatch[]): Promise<PvpTournam
   })
 }
 
-interface PvpTournamentState {
+export interface PvpClassTournamentState {
   currentTournament: PvpTournament | null
   lastCompletedTournament: PvpTournament | null
   registrations: PvpTournamentRegistration[]
   matches: PvpTournamentMatch[]
-  busy: boolean
-  loadAll: () => Promise<void>
-  register: (characterId: string) => Promise<{ ok: boolean; error?: string }>
 }
 
-export const usePvpTournamentStore = create<PvpTournamentState>((set, get) => ({
+const EMPTY_CLASS_STATE: PvpClassTournamentState = {
   currentTournament: null,
   lastCompletedTournament: null,
   registrations: [],
   matches: [],
+}
+
+// One class's full slice — factored out of loadAll so it can run once per
+// entry in PVP_EVENT_CLASSES via Promise.all, same shape the old single-
+// tournament loadAll used to fetch for "the" (Hunter-only) tournament.
+async function loadClassTournament(classId: PvpEventClassId): Promise<PvpClassTournamentState> {
+  await supabase.rpc('ensure_pvp_tournament_registration_open', { p_class_id: classId })
+
+  const [{ data: current }, { data: lastCompleted }] = await Promise.all([
+    supabase
+      .from('pvp_tournaments')
+      .select('*')
+      .eq('class_id', classId)
+      .in('status', ['registration', 'live'])
+      .order('created_at', { ascending: false })
+      .limit(1),
+    supabase
+      .from('pvp_tournaments')
+      .select('*')
+      .eq('class_id', classId)
+      .eq('status', 'completed')
+      .order('updated_at', { ascending: false })
+      .limit(1),
+  ])
+
+  const currentTournament = current && current.length > 0 ? toTournament(current[0] as Record<string, unknown>) : null
+  const lastCompletedTournament = lastCompleted && lastCompleted.length > 0 ? toTournament(lastCompleted[0] as Record<string, unknown>) : null
+
+  if (!currentTournament) {
+    return { currentTournament, lastCompletedTournament, registrations: [], matches: [] }
+  }
+
+  const [{ data: regs }, { data: matches }] = await Promise.all([
+    supabase.from('pvp_tournament_registrations').select('*').eq('tournament_id', currentTournament.id).order('registered_at', { ascending: true }),
+    supabase.from('pvp_tournament_matches').select('*').eq('tournament_id', currentTournament.id).order('round', { ascending: true }).order('slot', { ascending: true }),
+  ])
+
+  const matchesWithHp = await attachWinnerHp((matches ?? []).map((row) => toMatch(row as Record<string, unknown>)))
+
+  return {
+    currentTournament,
+    lastCompletedTournament,
+    registrations: (regs ?? []).map((row) => toRegistration(row as Record<string, unknown>)),
+    matches: matchesWithHp,
+  }
+}
+
+interface PvpTournamentState {
+  byClass: Record<PvpEventClassId, PvpClassTournamentState>
+  busy: boolean
+  loadAll: () => Promise<void>
+  register: (classId: PvpEventClassId, characterId: string) => Promise<{ ok: boolean; error?: string }>
+}
+
+export const usePvpTournamentStore = create<PvpTournamentState>((set, get) => ({
+  byClass: {
+    hunter: EMPTY_CLASS_STATE,
+    wuxia: EMPTY_CLASS_STATE,
+  },
   busy: false,
 
   loadAll: async () => {
-    // Lazy-ensure, same convention as ensure_world_boss_spawn — guarantees
-    // there's always something open to register into, called on whoever's
-    // client happens to load this next.
-    await supabase.rpc('ensure_pvp_tournament_registration_open')
-
-    const [{ data: current }, { data: lastCompleted }] = await Promise.all([
-      supabase.from('pvp_tournaments').select('*').in('status', ['registration', 'live']).order('created_at', { ascending: false }).limit(1),
-      supabase.from('pvp_tournaments').select('*').eq('status', 'completed').order('updated_at', { ascending: false }).limit(1),
-    ])
-
-    const currentTournament = current && current.length > 0 ? toTournament(current[0] as Record<string, unknown>) : null
-    set({
-      currentTournament,
-      lastCompletedTournament: lastCompleted && lastCompleted.length > 0 ? toTournament(lastCompleted[0] as Record<string, unknown>) : null,
-    })
-
-    if (!currentTournament) {
-      set({ registrations: [], matches: [] })
-      return
-    }
-
-    const [{ data: regs }, { data: matches }] = await Promise.all([
-      supabase.from('pvp_tournament_registrations').select('*').eq('tournament_id', currentTournament.id).order('registered_at', { ascending: true }),
-      supabase.from('pvp_tournament_matches').select('*').eq('tournament_id', currentTournament.id).order('round', { ascending: true }).order('slot', { ascending: true }),
-    ])
-
-    const matchesWithHp = await attachWinnerHp((matches ?? []).map((row) => toMatch(row as Record<string, unknown>)))
-
-    set({
-      registrations: (regs ?? []).map((row) => toRegistration(row as Record<string, unknown>)),
-      matches: matchesWithHp,
-    })
+    const entries = await Promise.all(PVP_EVENT_CLASSES.map(async (classId) => [classId, await loadClassTournament(classId)] as const))
+    set({ byClass: Object.fromEntries(entries) as Record<PvpEventClassId, PvpClassTournamentState> })
   },
 
-  register: async (characterId) => {
+  register: async (classId, characterId) => {
     if (get().busy) return { ok: false, error: 'busy' }
     set({ busy: true })
     const { data, error } = await supabase.rpc('register_for_pvp_tournament', { p_character_id: characterId })
@@ -183,7 +220,8 @@ export const usePvpTournamentStore = create<PvpTournamentState>((set, get) => ({
 
     const result = data as { ok: boolean; error?: string }
     if (result.ok) {
-      void get().loadAll()
+      const slice = await loadClassTournament(classId)
+      set((state) => ({ byClass: { ...state.byClass, [classId]: slice } }))
     }
     return result
   },
@@ -193,43 +231,65 @@ export interface PvpChampion {
   characterId: string
   name: string
   title: string
+  classId: PvpEventClassId
 }
 
-// Rotating "Top Hunter" champion badge (2026-09-05, requested by the user) —
-// derived from existing tournament rows rather than stored anywhere new. The
-// most recently completed tournament's winner holds the title only until the
-// FOLLOWING tournament actually goes live (status flips to 'registration' ->
-// 'live') — at that instant nobody holds it (a brief gap through the live
-// event), until it completes and hands the badge to whoever wins next. Both
-// currentTournament/lastCompletedTournament are kept live app-wide by
-// PvpTournamentConnection.tsx (mounted unconditionally in GameShell, same as
-// GlobalActivityConnection), so this reflects in real time with no extra
-// fetch and works from any screen, not just the PvP tab.
-export function useCurrentPvpChampion(): PvpChampion | null {
-  const currentTournament = usePvpTournamentStore((state) => state.currentTournament)
-  const lastCompleted = usePvpTournamentStore((state) => state.lastCompletedTournament)
-
-  if (currentTournament?.status !== 'registration') {
+function deriveChampion(classId: PvpEventClassId, slice: PvpClassTournamentState | undefined): PvpChampion | null {
+  if (!slice || slice.currentTournament?.status !== 'registration') {
     return null
   }
+  const lastCompleted = slice.lastCompletedTournament
   if (!lastCompleted?.winnerCharacterId || !lastCompleted.winnerName) {
     return null
   }
-
   return {
     characterId: lastCompleted.winnerCharacterId,
     name: lastCompleted.winnerName,
     title: lastCompleted.championTitle ?? 'Champion',
+    classId,
   }
+}
+
+// Rotating champion badge ("Top Hunter" / "Top Wuxia", 2026-09-05, requested
+// by the user) — derived from existing tournament rows rather than stored
+// anywhere new. The most recently completed tournament's winner holds the
+// title only until the FOLLOWING tournament of the SAME class actually goes
+// live (status flips 'registration' -> 'live') — at that instant nobody
+// holds it (a brief gap through the live event), until it completes and
+// hands the badge to whoever wins next. `byClass` is kept live app-wide by
+// PvpTournamentConnection.tsx (mounted unconditionally in GameShell, same as
+// GlobalActivityConnection), so this reflects in real time with no extra
+// fetch and works from any screen, not just the PvP tab.
+//
+// classId is the character/loadout being VIEWED, not the viewer's own class
+// — pass null/undefined for a class with no event yet (Twin-soul/Juggernaut)
+// and this safely returns null.
+export function useCurrentPvpChampion(classId: PvpEventClassId | null | undefined): PvpChampion | null {
+  const slice = usePvpTournamentStore((state) => (classId ? state.byClass[classId] : undefined))
+  if (!classId) {
+    return null
+  }
+  return deriveChampion(classId, slice)
+}
+
+// Same derivation as above, but across every class with a real event at
+// once — for Global Chat, which doesn't know a message's sender's class from
+// the message alone and has to check "does this name match ANY current
+// champion" instead of one specific class's.
+export function useAllCurrentPvpChampions(): PvpChampion[] {
+  const byClass = usePvpTournamentStore((state) => state.byClass)
+  return PVP_EVENT_CLASSES.map((classId) => deriveChampion(classId, byClass[classId])).filter((c): c is PvpChampion => c !== null)
 }
 
 // On-demand bracket lookup (2026-09-05, requested by the user — "View
 // Bracket" button on a past tournament) — deliberately NOT folded into the
-// store's own `matches` field, which is scoped to currentTournament only and
-// kept live via PvpTournamentConnection's realtime subscription. A completed
-// tournament's bracket never changes again, so this is a one-off fetch for
-// whichever tournament the "View Bracket" modal is currently showing, not
-// something that needs a live subscription of its own.
+// store's own `matches` field, which is scoped to each class's
+// currentTournament only and kept live via PvpTournamentConnection's realtime
+// subscription. A completed tournament's bracket never changes again, so
+// this is a one-off fetch for whichever tournament the "View Bracket" modal
+// is currently showing, not something that needs a live subscription of its
+// own. Class-agnostic — pvp_tournament_matches is scoped by tournament_id,
+// which is already scoped to one class via its own pvp_tournaments row.
 export async function fetchPvpTournamentMatches(tournamentId: string): Promise<PvpTournamentMatch[]> {
   const { data } = await supabase
     .from('pvp_tournament_matches')

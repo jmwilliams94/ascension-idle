@@ -7,7 +7,7 @@ import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 import { AnnouncementIcon, AnnouncementMessage } from './GlobalAnnouncementTicker'
 import { VIP_TOKEN_ICON_SRC } from '../game/items/forgeCosts'
-import { useCurrentPvpChampion } from '../game/pvp/usePvpTournamentStore'
+import { useAllCurrentPvpChampions } from '../game/pvp/usePvpTournamentStore'
 import { TopHunterBadge } from './pvp/TopHunterBadge'
 
 interface FeedItem {
@@ -74,12 +74,14 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
 
   const activeCharacterName = useCharacterRecordStore((state) => state.characterName)
   const viewCharacter = useCharacterLoadoutStore((state) => state.viewCharacter)
-  // Name-matched against the live champion, same imperfect-but-good-enough
-  // convention as the activeCharacterName comparison below — chat_messages
-  // only ever stores a character_name snapshot, no character_id, and this
-  // must reflect the CURRENT champion (not a per-message snapshot like
-  // isVip), so it can't be resolved any other way here.
-  const pvpChampion = useCurrentPvpChampion()
+  // Name-matched against every class's live champion at once (a chat message
+  // doesn't carry the sender's class, so this can't be scoped to one class up
+  // front) — same imperfect-but-good-enough convention as the
+  // activeCharacterName comparison below. chat_messages only ever stores a
+  // character_name snapshot, no character_id, and this must reflect the
+  // CURRENT champion (not a per-message snapshot like isVip), so it can't be
+  // resolved any other way here.
+  const pvpChampions = useAllCurrentPvpChampions()
 
   const [draft, setDraft] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -184,8 +186,9 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
               {chatLoaded ? 'No messages yet — say something!' : 'Loading…'}
             </p>
           ) : (
-            feed.map((item) =>
-              item.kind === 'announcement' ? (
+            feed.map((item) => {
+              const champion = item.kind === 'chat' ? pvpChampions.find((c) => c.name === item.characterName) : undefined
+              return item.kind === 'announcement' ? (
                 <div
                   key={item.id}
                   className="flex items-start gap-2 rounded-md bg-amber-500/10 px-2 py-1 text-xs text-amber-200"
@@ -215,14 +218,12 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
                       <img src={VIP_TOKEN_ICON_SRC} alt="VIP" title="VIP" className="mr-1 inline-block h-3 w-3 align-middle object-contain" />
                     )}
                     {item.characterName}
-                    {pvpChampion && item.characterName === pvpChampion.name && (
-                      <TopHunterBadge title={pvpChampion.title} compact className="ml-1 align-middle" />
-                    )}
+                    {champion && <TopHunterBadge title={champion.title} compact className="ml-1 align-middle" />}
                   </button>
                   <span className="break-words">{item.message}</span>
                 </div>
-              ),
-            )
+              )
+            })
           )}
         </div>
 
