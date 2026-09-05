@@ -30,6 +30,7 @@ import { useInventoryStore, type ItemInstance } from '../game/items/useInventory
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { useMarketplaceStore } from '../game/marketplace/useMarketplaceStore'
 import { useMailStore } from '../game/marketplace/useMailStore'
+import { useVipAutomationStore } from '../game/vip/useVipAutomationStore'
 
 const RESULT_DISPLAY_MS = 2600
 
@@ -128,6 +129,11 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
   // Inventory is next eligible, until Comets or matching items run out.
   const vipExpiresAt = useCharacterStore((state) => state.vipExpiresAt)
   const isVipActive = Boolean(vipExpiresAt && new Date(vipExpiresAt).getTime() > Date.now())
+  // VIP auto-use Bank material (2026-09-05) — see AutoUseBankMaterialCard.
+  // When set, dropping a gear item into the Upgrade Slot below auto-fills
+  // the Material slot with this currency, even at 0 owned units, since the
+  // shortfall gets covered from the account Bank server-side.
+  const autoUseBankMaterial = useVipAutomationStore((state) => state.settings.autoUseBankMaterial)
   const [autoRepeat, setAutoRepeat] = useState(false)
   const [autoRepeatSummary, setAutoRepeatSummary] = useState<string | null>(null)
   const autoRepeatTargetRef = useRef<{ slotType: string; level: number } | null>(null)
@@ -264,7 +270,12 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
 
     setSelectedItemId(itemId)
     setAttemptResult(null)
-    setMaterialEntries([])
+    // Auto-fill the Material slot with the VIP's chosen auto-use currency
+    // (requested by the user) — even at 0 owned units, since the Forge RPC
+    // pulls the shortfall from the account Bank when this is set. No auto-use
+    // selected means the old behavior: an empty Material slot, filled
+    // manually from Inventory.
+    setMaterialEntries(isVipActive && autoUseBankMaterial ? [{ kind: 'currency', id: `vip-auto-${autoUseBankMaterial}`, currencyType: autoUseBankMaterial }] : [])
   }
 
   const handleRemove = () => {
@@ -479,20 +490,21 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
           />
         }
       >
+        {/* Persistently visible (2026-09-05, moved off the EquippedGearPicker
+            row below per the user — it used to be scoped to !selectedItem and
+            disappeared the moment an item was staged, hiding the toggle right
+            when a player might want to check/change it). */}
+        <div className="flex justify-center">
+          <AutoUseBankMaterialCard />
+        </div>
+
         <div className="flex items-start justify-center gap-6">
           <ForgeUpgradeSlot item={selectedItem} template={selectedTemplate} onRemove={handleRemove} hold={hold} onHoldChange={setHold} />
           <ForgeMaterialSlot entries={materialEntries} templates={templates} onRemoveEntry={handleRemoveMaterial} />
           <ForgePreviewSlot previewItem={previewItem} previewTemplate={previewTemplate} slotId="forge-standard-preview" />
         </div>
 
-        {!selectedItem && (
-          <div className="flex w-full max-w-sm items-start justify-center gap-1.5">
-            <div className="min-w-0 flex-1">
-              <EquippedGearPicker onSelect={handleDropItemId} />
-            </div>
-            <AutoUseBankMaterialCard />
-          </div>
-        )}
+        {!selectedItem && <EquippedGearPicker onSelect={handleDropItemId} />}
 
         <div className="w-full max-w-xs space-y-2">
           {!selectedItem ? (

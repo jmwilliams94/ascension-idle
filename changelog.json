@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.131.8",
+    "date": "2026-09-05",
+    "changes": [
+      "VIP Auto-Use Bank (Forge) is now single-select — choosing Comet or Fallen Star clears the other, and it stays visible the whole time you're working in the Forge instead of hiding once an item is staged",
+      "Dropping gear into the Forge's Upgrade Slot now auto-fills the Material slot with your selected VIP auto-use currency, even if you're holding none of it in Inventory — the Bank covers it"
+    ]
+  },
+  {
     "version": "1.131.7",
     "date": "2026-09-05",
     "changes": [
