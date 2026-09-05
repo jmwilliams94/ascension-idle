@@ -7,6 +7,7 @@ import type { GemCounts } from './gemCatalog'
 import { useInventoryStore, type ItemInstance } from './useInventoryStore'
 import type { GemTier, GemTypeId } from './gemCatalog'
 import { useFireworkStore } from './useFireworkStore'
+import { usePlayerRecordStore } from '../../lib/usePlayerRecordStore'
 
 // Shape returned by the quality_upgrade/level_upgrade Postgres functions (see
 // migration 20260727050000). Both currency deduction and the item write happen
@@ -29,6 +30,13 @@ interface QualityUpgradeResult {
   // a Scroll consumed via ensure_loose_currency's auto-unbundle left the
   // client's local Scroll count stale until an unrelated full reload.
   fallen_star_scrolls_remaining?: number
+  // VIP Auto-Use Bank Material (2026-09-05, see
+  // 20261227000000_vip_forge_bank_material_client_sync_fix.sql) — how much of
+  // this attempt's cost, if any, was drawn from the account Bank rather than
+  // the character's own Inventory, and the Bank's new balance afterward.
+  // Present (0/actual balance) even when nothing was drawn.
+  fallen_star_bank_used?: number
+  fallen_star_bank_remaining?: number
   // Armor-only RNG side effect (see 20260802010000_add_gear_sockets.sql) — the
   // item's full sockets array (unchanged if socket_gained is false) and
   // whether this particular attempt happened to roll a new one.
@@ -65,6 +73,9 @@ interface LevelUpgradeResult {
   comets_remaining?: number
   // Same post-unbundle-Scroll-count fix as Quality Upgrade above (Comet side).
   comet_scrolls_remaining?: number
+  // Same VIP Auto-Use Bank Material fields as Quality Upgrade above (Comet side).
+  comet_bank_used?: number
+  comet_bank_remaining?: number
   // Same armor-only RNG socket side effect as Quality Upgrade above.
   sockets?: ItemInstance['sockets']
   socket_gained?: boolean
@@ -90,6 +101,7 @@ interface MasterForgeUpgradeResult {
     | 'not_enough_room_to_unbundle'
   upgrade_type?: 'quality' | 'level'
   cost?: number
+  currency?: 'comet' | 'fallen_star'
   quality_tier?: string
   level?: number
   template_id?: string
@@ -99,6 +111,10 @@ interface MasterForgeUpgradeResult {
   // spent (see the fix note on QualityUpgradeResult above) — not split by
   // currency since only one is ever relevant per call (upgrade_type decides).
   scrolls_remaining?: number
+  // Same VIP Auto-Use Bank Material fields as Quality/Level Upgrade above —
+  // not split by currency here either, keyed off `currency` instead.
+  bank_used?: number
+  bank_remaining?: number
   result_level?: number
   character_level?: number
   sockets?: ItemInstance['sockets']
@@ -299,6 +315,9 @@ export const useForgeStore = create<ForgeState>((set) => ({
     if (result.ok && typeof result.fallen_star_scrolls_remaining === 'number') {
       useCurrencyStore.getState().setFallenStarScrolls(result.fallen_star_scrolls_remaining)
     }
+    if (result.ok && typeof result.fallen_star_bank_remaining === 'number') {
+      usePlayerRecordStore.getState().setBankBalances({ bankFallenStars: result.fallen_star_bank_remaining })
+    }
 
     return result
   },
@@ -334,6 +353,9 @@ export const useForgeStore = create<ForgeState>((set) => ({
     }
     if (result.ok && typeof result.comet_scrolls_remaining === 'number') {
       useCurrencyStore.getState().setCometScrolls(result.comet_scrolls_remaining)
+    }
+    if (result.ok && typeof result.comet_bank_remaining === 'number') {
+      usePlayerRecordStore.getState().setBankBalances({ bankComets: result.comet_bank_remaining })
     }
 
     return result
@@ -506,6 +528,11 @@ export const useForgeStore = create<ForgeState>((set) => ({
       } else if (result.upgrade_type === 'level') {
         useCurrencyStore.getState().setCometScrolls(result.scrolls_remaining)
       }
+    }
+    if (result.ok && typeof result.bank_remaining === 'number' && result.currency) {
+      usePlayerRecordStore.getState().setBankBalances(
+        result.currency === 'comet' ? { bankComets: result.bank_remaining } : { bankFallenStars: result.bank_remaining }
+      )
     }
 
     return result

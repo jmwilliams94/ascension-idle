@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.133.4",
+    "date": "2026-09-05",
+    "changes": [
+      "Fixed the VIP Auto-Use Bank Material display in the Forge not updating its shown quantity after each upgrade attempt"
+    ]
+  },
+  {
     "version": "1.133.3",
     "date": "2026-09-05",
     "changes": [
