@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
-import { COMET_ICON_SRC, effectiveCurrencyAvailable, FALLEN_STAR_ICON_SRC } from '../game/items/forgeCosts'
+import { COMET_ICON_SRC, FALLEN_STAR_ICON_SRC } from '../game/items/forgeCosts'
+import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
-import { useCurrencyStore } from '../game/stats/useCurrencyStore'
 import { useVipAutomationStore } from '../game/vip/useVipAutomationStore'
 
 // Violet, not the app's true `purple` (Ascension Points' own established
@@ -33,22 +33,16 @@ export default function AutoUseBankMaterialCard({ repeatButton }: AutoUseBankMat
   const isVipActive = Boolean(vipExpiresAt && new Date(vipExpiresAt).getTime() > Date.now())
   const selected = useVipAutomationStore((state) => state.settings.autoUseBankMaterial)
   const updateSettings = useVipAutomationStore((state) => state.updateSettings)
-  const comets = useCurrencyStore((state) => state.comets)
-  const cometScrolls = useCurrencyStore((state) => state.cometScrolls)
-  const fallenStars = useCurrencyStore((state) => state.fallenStars)
-  const fallenStarScrolls = useCurrencyStore((state) => state.fallenStarScrolls)
+  // The account Bank balance (bank_comets/bank_fallen_stars) — this feature's
+  // whole point is covering what Inventory can't, so the useful number here
+  // is what's actually sitting in reserve to draw from, not the Inventory
+  // count (which the Material slot/disabled-reason text already show).
+  const bankComets = usePlayerRecordStore((state) => state.bankComets)
+  const bankFallenStars = usePlayerRecordStore((state) => state.bankFallenStars)
 
   const vipTintStyle = { '--ascension-tint': VIP_TINT } as CSSProperties
 
-  // Inventory-side quantity only (loose + Scrolls) — the whole point of this
-  // feature is covering what Inventory *can't*, so this number is what's on
-  // hand before any Bank draw, not a combined total.
-  const quantity =
-    selected === 'comet'
-      ? effectiveCurrencyAvailable(comets, cometScrolls)
-      : selected === 'fallen_star'
-        ? effectiveCurrencyAvailable(fallenStars, fallenStarScrolls)
-        : null
+  const quantity = selected === 'comet' ? bankComets : selected === 'fallen_star' ? bankFallenStars : null
 
   const select = (currency: 'comet' | 'fallen_star' | null) => void updateSettings({ autoUseBankMaterial: currency })
 

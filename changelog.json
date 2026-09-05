@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.131.11",
+    "date": "2026-09-05",
+    "changes": [
+      "Fixed VIP Auto-Use's Quantity readout showing 0 — it was reading your Inventory count instead of your account Bank balance, the actual reserve this feature draws from"
+    ]
+  },
+  {
     "version": "1.131.10",
     "date": "2026-09-05",
     "changes": [
