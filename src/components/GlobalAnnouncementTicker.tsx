@@ -20,6 +20,7 @@ import {
 // below can reuse the same fallback map instead of a second copy.
 export const ANNOUNCEMENT_ICONS: Record<string, string> = {
   armor_socket: '💠',
+  composition_plus_8: '✨',
   lucky_comet_box: '☄️',
   lucky_comet_scroll: '🎰',
   lucky_fallen_star_scroll: '🎰',
@@ -60,6 +61,10 @@ function resolveAnnouncementIconSrc(kind: string, message: string): string | und
   switch (kind) {
     case 'armor_socket': {
       const match = message.match(/'s (.+) gained its (?:1st|2nd) socket!$/)
+      return match ? getGearIconSrc(match[1]) : undefined
+    }
+    case 'composition_plus_8': {
+      const match = message.match(/'s (.+) reached \+\d+!$/)
       return match ? getGearIconSrc(match[1]) : undefined
     }
     case 'lucky_vip_token':

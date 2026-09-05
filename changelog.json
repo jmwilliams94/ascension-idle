@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.131.13",
+    "date": "2026-09-05",
+    "changes": [
+      "Heads up: this week's PvP Tournament is the very first one we've run — bear with us if you spot bugs, and please report anything odd via Settings > Bug Reports"
+    ]
+  },
+  {
+    "version": "1.131.12",
+    "date": "2026-09-05",
+    "changes": [
+      "Added a global announcement when a character crafts a piece of gear up to +8 composition or higher"
+    ]
+  },
+  {
     "version": "1.131.11",
     "date": "2026-09-05",
     "changes": [
