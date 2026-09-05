@@ -5,7 +5,7 @@ import { useAnnouncementHistoryStore } from '../game/social/useAnnouncementHisto
 import { useCharacterLoadoutStore } from '../game/social/useCharacterLoadoutStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { useLockBodyScroll } from '../lib/useLockBodyScroll'
-import { AnnouncementIcon } from './GlobalAnnouncementTicker'
+import { AnnouncementIcon, AnnouncementMessage } from './GlobalAnnouncementTicker'
 import { VIP_TOKEN_ICON_SRC } from '../game/items/forgeCosts'
 import { useCurrentPvpChampion } from '../game/pvp/usePvpTournamentStore'
 import { TopHunterBadge } from './pvp/TopHunterBadge'
@@ -195,7 +195,9 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
                     message={item.message}
                     imgClassName="h-4 w-4 shrink-0 object-contain"
                   />
-                  <span className="min-w-0 flex-1 break-words">{item.message}</span>
+                  <span className="min-w-0 flex-1 break-words">
+                    <AnnouncementMessage kind={item.announcementKind ?? ''} message={item.message} />
+                  </span>
                 </div>
               ) : (
                 <div key={item.id} className="text-sm text-slate-200">

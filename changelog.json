@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.132.3",
+    "date": "2026-09-05",
+    "changes": [
+      "Fixed the champion-crowned announcement showing the Top Hunter badge in the wrong place — it now replaces the title text at the end of the message instead of sitting as an extra icon at the start",
+      "PvP bracket rows now color the losing side red (matching the winner's green) and show how much HP the winner had left underneath their name"
+    ]
+  },
+  {
     "version": "1.132.2",
     "date": "2026-09-05",
     "changes": [

@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import { useGlobalActivityStore } from '../game/social/useGlobalActivityStore'
 import { useAnnouncementHistoryStore } from '../game/social/useAnnouncementHistoryStore'
 import { getGearIconSrc } from '../game/items/equipmentBonus'
@@ -117,15 +117,6 @@ function resolveAnnouncementIconSrc(kind: string, message: string): string | und
 // clip an emoji glyph rather than scale it — so it just gets a shrink-0 to
 // match layout, sized by its surrounding text instead.
 export function AnnouncementIcon({ kind, message, imgClassName }: { kind: string; message: string; imgClassName: string }) {
-  // pvp_champion shows the actual TopHunterBadge (chip + ember sparkle),
-  // not a flat icon/emoji (2026-09-05, requested by the user — "the actual
-  // badge with the effects" like it renders next to the champion's name in
-  // Global Chat) -- same component every other champion-badge site uses,
-  // so this never drifts from what ChatOverlay/EquipmentPanel show.
-  if (kind === 'pvp_champion') {
-    return <TopHunterBadge compact />
-  }
-
   const iconSrc = resolveAnnouncementIconSrc(kind, message)
   if (iconSrc) {
     return <img src={iconSrc} alt="" className={imgClassName} />
@@ -135,6 +126,28 @@ export function AnnouncementIcon({ kind, message, imgClassName }: { kind: string
       {ANNOUNCEMENT_ICONS[kind] ?? '📣'}
     </span>
   )
+}
+
+// pvp_champion's message ends in its plain-text champion_title ("<name> has
+// been crowned the Top Hunter!") -- this swaps that trailing title for the
+// actual TopHunterBadge (chip + ember sparkle), the same component every
+// other champion-badge site uses, so the announcement shows the real badge
+// rather than a static stand-in (2026-09-05, requested by the user — the
+// badge replaces the title text itself, not an icon bolted on at the start
+// of the line). Every other kind renders as plain text, unchanged.
+export function AnnouncementMessage({ kind, message }: { kind: string; message: string }): ReactNode {
+  if (kind === 'pvp_champion') {
+    const match = message.match(/^(.*) has been crowned the (.+)!$/)
+    if (match) {
+      const [, prefix, title] = match
+      return (
+        <>
+          {prefix} has been crowned the <TopHunterBadge title={title} compact className="align-middle" />
+        </>
+      )
+    }
+  }
+  return message
 }
 
 // The last-10-global-announcements dropdown (2026-08-11) — reachable via the
@@ -158,7 +171,9 @@ function AnnouncementHistoryDropdown() {
           {entries.map((entry) => (
             <div key={entry.id} className="flex items-start gap-2 rounded-md px-1 py-1 text-xs text-slate-300">
               <AnnouncementIcon kind={entry.kind} message={entry.message} imgClassName="h-4 w-4 shrink-0 object-contain" />
-              <span className="min-w-0 flex-1">{entry.message}</span>
+              <span className="min-w-0 flex-1">
+                <AnnouncementMessage kind={entry.kind} message={entry.message} />
+              </span>
               <span className="shrink-0 text-[10px] text-slate-600">{new Date(entry.createdAt).toLocaleDateString()}</span>
             </div>
           ))}
@@ -225,7 +240,9 @@ export default function GlobalAnnouncementTicker() {
       >
         <div className="ascension-chip-inner flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-green-100 lg:gap-3 lg:px-4 lg:py-2 lg:text-sm">
           <AnnouncementIcon kind={announcement.kind} message={announcement.message} imgClassName="h-4 w-4 shrink-0 object-contain lg:h-5 lg:w-5" />
-          <span className="min-w-0 flex-1 truncate">{announcement.message}</span>
+          <span className="min-w-0 flex-1 truncate">
+            <AnnouncementMessage kind={announcement.kind} message={announcement.message} />
+          </span>
           <button
             type="button"
             onClick={() => {

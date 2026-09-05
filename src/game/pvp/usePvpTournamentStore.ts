@@ -38,6 +38,12 @@ export interface PvpTournamentMatch {
   duelId: string | null
   winnerCharacterId: string | null
   status: 'active' | 'completed'
+  // Winner's HP remaining at the moment the match ended (2026-09-05,
+  // requested by the user — "how close it was") — null for a bye (no real
+  // fight happened) or while attachWinnerHp hasn't resolved yet. Sourced from
+  // the underlying pvp_duels row, not stored on this table itself.
+  winnerHp: number | null
+  winnerMaxHp: number | null
 }
 
 function toTournament(row: Record<string, unknown>): PvpTournament {
@@ -71,7 +77,45 @@ function toMatch(row: Record<string, unknown>): PvpTournamentMatch {
     duelId: (row.duel_id as string | null) ?? null,
     winnerCharacterId: (row.winner_character_id as string | null) ?? null,
     status: row.status as 'active' | 'completed',
+    winnerHp: null,
+    winnerMaxHp: null,
   }
+}
+
+// Fills in winnerHp/winnerMaxHp from the underlying pvp_duels row for every
+// decided match that actually had a real duel (skips byes, and anything
+// still in progress with no winner yet) — a single batched `in (...)` fetch
+// rather than one query per match. pvp_duels is never deleted once created
+// (see CLAUDE.pvp.md), so this works for a tournament from any point in the
+// past, not just the current one.
+async function attachWinnerHp(matches: PvpTournamentMatch[]): Promise<PvpTournamentMatch[]> {
+  const duelIds = [...new Set(matches.filter((m) => m.duelId && m.winnerCharacterId).map((m) => m.duelId as string))]
+  if (duelIds.length === 0) {
+    return matches
+  }
+
+  const { data } = await supabase
+    .from('pvp_duels')
+    .select('id, player_a_character_id, player_b_character_id, player_a_hp, player_b_hp, player_a_max_hp, player_b_max_hp')
+    .in('id', duelIds)
+
+  const duelById = new Map((data ?? []).map((row) => [row.id as string, row as Record<string, unknown>]))
+
+  return matches.map((match) => {
+    if (!match.duelId || !match.winnerCharacterId) {
+      return match
+    }
+    const duel = duelById.get(match.duelId)
+    if (!duel) {
+      return match
+    }
+    const winnerIsA = match.winnerCharacterId === (duel.player_a_character_id as string)
+    return {
+      ...match,
+      winnerHp: (winnerIsA ? duel.player_a_hp : duel.player_b_hp) as number,
+      winnerMaxHp: (winnerIsA ? duel.player_a_max_hp : duel.player_b_max_hp) as number,
+    }
+  })
 }
 
 interface PvpTournamentState {
@@ -118,9 +162,11 @@ export const usePvpTournamentStore = create<PvpTournamentState>((set, get) => ({
       supabase.from('pvp_tournament_matches').select('*').eq('tournament_id', currentTournament.id).order('round', { ascending: true }).order('slot', { ascending: true }),
     ])
 
+    const matchesWithHp = await attachWinnerHp((matches ?? []).map((row) => toMatch(row as Record<string, unknown>)))
+
     set({
       registrations: (regs ?? []).map((row) => toRegistration(row as Record<string, unknown>)),
-      matches: (matches ?? []).map((row) => toMatch(row as Record<string, unknown>)),
+      matches: matchesWithHp,
     })
   },
 
@@ -192,5 +238,5 @@ export async function fetchPvpTournamentMatches(tournamentId: string): Promise<P
     .order('round', { ascending: true })
     .order('slot', { ascending: true })
 
-  return (data ?? []).map((row) => toMatch(row as Record<string, unknown>))
+  return attachWinnerHp((data ?? []).map((row) => toMatch(row as Record<string, unknown>)))
 }
