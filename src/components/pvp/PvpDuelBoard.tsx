@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { AscensionCard } from '../ui/AscensionCard'
 import { Button } from '../ui/Button'
 import { usePvpDuelStore, opponentIdFor, zoneFor, requiredActionFor } from '../../game/pvp/usePvpDuelStore'
-import { BOARD_SIZE, ZONE_SIZE, MAX_ZONE_ORIGIN } from '../../game/pvp/pvpConstants'
+import { BOARD_SIZE, ZONE_SIZE, MAX_ZONE_ORIGIN, NO_SHOW_SECONDS } from '../../game/pvp/pvpConstants'
 import PvpTurnTimer from './PvpTurnTimer'
 import PvpDamageToast from './PvpDamageToast'
 import PvpTournamentLobby from './PvpTournamentLobby'
@@ -176,7 +176,11 @@ export default function PvpDuelBoard({ characterId }: { characterId: string }) {
 
         <p className={`text-center text-sm ${isMyTurn ? 'text-amber-300' : 'text-slate-400'}`}>{statusLine}</p>
 
-        {duel.turnDeadline && <PvpTurnTimer deadline={duel.turnDeadline} />}
+        {/* turn_number stays 0 until either player has ever taken an action —
+            that's the only turn covered by start_pvp_duel's longer no-show
+            window (3 minutes); every turn after keeps the fast 15s pace, see
+            pvpConstants.ts's NO_SHOW_SECONDS comment. */}
+        {duel.turnDeadline && <PvpTurnTimer deadline={duel.turnDeadline} totalSeconds={duel.turnNumber === 0 ? NO_SHOW_SECONDS : undefined} />}
 
         <div
           className="mx-auto grid gap-1"

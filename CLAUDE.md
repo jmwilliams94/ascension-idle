@@ -64,6 +64,7 @@ Each file below is the confirmed design source of truth for its area. Anything m
 - [`CLAUDE.pwa-and-mobile.md`](CLAUDE.pwa-and-mobile.md) — PWA installability, resume detection, update flow, mobile layout/nav, touch drag-and-drop, Lucky Lad
 - [`CLAUDE.global-activity.md`](CLAUDE.global-activity.md) — Players Online presence, rare-event announcements, global chat, inspecting other players' gear
 - [`CLAUDE.server-events.md`](CLAUDE.server-events.md) — cross-player shared events (Zone Boss, an 8-boss rotation; a deferred gold-donation buff event), the Idling tab's Hunting/Mining/Events sub-mode switcher
+- [`CLAUDE.pvp.md`](CLAUDE.pvp.md) — PvP duels (hidden-position 1v1), the weekly Hunter-only Tournament/bracket, turn/no-show timeout handling, the rotating "Top Hunter" champion badge
 - [`CLAUDE.feedback-and-planning.md`](CLAUDE.feedback-and-planning.md) — Settings-menu Plans/Suggestions/Bug Reports, reply threads, admin gating
 
 ### Explicitly cut — do not implement

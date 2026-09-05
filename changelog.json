@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.132.0",
+    "date": "2026-09-05",
+    "changes": [
+      "Congratulations to Huntard, our first-ever PvP Tournament champion! Their character now carries a sparkling green \"Top Hunter\" badge — on their Equipment screen, next to their name in Global Chat, and on their inspect-gear view — until next week's winner takes it from them",
+      "Fixed a stuck tournament match (a no-show turn with no way to resolve it) — a duel's opening move now has a 3-minute window before an automatic forfeit, and duels are now swept for timeouts every minute instead of only when someone happens to check",
+      "Next week's PvP Tournament registration no longer opens until this week's event has actually finished"
+    ]
+  },
+  {
     "version": "1.131.13",
     "date": "2026-09-05",
     "changes": [

@@ -7,6 +7,8 @@ import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 import { AnnouncementIcon } from './GlobalAnnouncementTicker'
 import { VIP_TOKEN_ICON_SRC } from '../game/items/forgeCosts'
+import { useCurrentPvpChampion } from '../game/pvp/usePvpTournamentStore'
+import { TopHunterBadge } from './pvp/TopHunterBadge'
 
 interface FeedItem {
   id: string
@@ -72,6 +74,12 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
 
   const activeCharacterName = useCharacterRecordStore((state) => state.characterName)
   const viewCharacter = useCharacterLoadoutStore((state) => state.viewCharacter)
+  // Name-matched against the live champion, same imperfect-but-good-enough
+  // convention as the activeCharacterName comparison below — chat_messages
+  // only ever stores a character_name snapshot, no character_id, and this
+  // must reflect the CURRENT champion (not a per-message snapshot like
+  // isVip), so it can't be resolved any other way here.
+  const pvpChampion = useCurrentPvpChampion()
 
   const [draft, setDraft] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -205,6 +213,9 @@ export default function ChatOverlay({ characterId }: { characterId: string }) {
                       <img src={VIP_TOKEN_ICON_SRC} alt="VIP" title="VIP" className="mr-1 inline-block h-3 w-3 align-middle object-contain" />
                     )}
                     {item.characterName}
+                    {pvpChampion && item.characterName === pvpChampion.name && (
+                      <TopHunterBadge title={pvpChampion.title} compact className="ml-1 align-middle" />
+                    )}
                   </button>
                   <span className="break-words">{item.message}</span>
                 </div>

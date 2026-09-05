@@ -7,7 +7,7 @@ import { TURN_SECONDS } from '../../game/pvp/pvpConstants'
 // client clock skew only affects how smoothly the bar animates, never who
 // actually wins the race (pvp_duel_apply_action re-checks the real deadline
 // server-side regardless of what this shows).
-export default function PvpTurnTimer({ deadline }: { deadline: string | null }) {
+export default function PvpTurnTimer({ deadline, totalSeconds = TURN_SECONDS }: { deadline: string | null; totalSeconds?: number }) {
   // `now` is read (Date.now(), an impure call) only inside the lazy useState
   // initializer and the interval callback below — both sanctioned "effect
   // boundary" spots, never the render body itself. Ticks every 250ms while a
@@ -24,7 +24,7 @@ export default function PvpTurnTimer({ deadline }: { deadline: string | null }) 
   if (!deadline) return null
 
   const remainingMs = Math.max(0, new Date(deadline).getTime() - now)
-  const fraction = Math.min(1, remainingMs / (TURN_SECONDS * 1000))
+  const fraction = Math.min(1, remainingMs / (totalSeconds * 1000))
   const seconds = Math.ceil(remainingMs / 1000)
 
   return (

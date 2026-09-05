@@ -12,6 +12,9 @@ export const EVENT_EMBER_HEX: Record<EventEmberColor, string> = {
   buffActive: '#34D399', // Gold Donation buff triggered and live
   collecting: '#D4AF37', // Gold Donation pool open, buff not triggered yet
   luckyFree: '#FBBF24', // LuckyLad free 4h ticket ready — brighter than `collecting`'s gold so the two read as distinct
+  champion: '#84CC16', // PvP Tournament "Top Hunter" champion badge — a lime green, deliberately distinct from
+  // buffActive's green (#34D399, Gold Donation) and the plain green (#22c55e) used for
+  // GlobalAnnouncementTicker's chip tint, so the three don't collide when shown near each other.
 }
 
 // A slight colored ring around the button itself, on top of the floating

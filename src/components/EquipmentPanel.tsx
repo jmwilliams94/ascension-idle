@@ -24,6 +24,8 @@ import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { getCurrentPromotionTitle, getNextEligiblePromotionTier } from '../game/stats/promotionHelpers'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
+import { useCurrentPvpChampion } from '../game/pvp/usePvpTournamentStore'
+import { TopHunterBadge } from './pvp/TopHunterBadge'
 import PromotionModal from './PromotionModal'
 
 // Slot size for this paper-doll — scaled up from the default h-16 w-16 now that
@@ -106,6 +108,8 @@ export default function EquipmentPanel() {
   const promotionTiers = usePromotionStore((state) => state.tiers)
   const characterLevel = useProgressionStore((state) => state.level)
   const activeCharacterId = useActiveCharacterStore((state) => state.characterId)
+  const pvpChampion = useCurrentPvpChampion()
+  const isTopHunter = Boolean(activeCharacterId && pvpChampion?.characterId === activeCharacterId)
   const currentTitle = getCurrentPromotionTitle(promotionTiers, selectedClassId, promotionLevel)
   const nextPromotionTier = getNextEligiblePromotionTier(promotionTiers, selectedClassId, promotionLevel)
   const [promotionModalOpen, setPromotionModalOpen] = useState(false)
@@ -325,6 +329,11 @@ export default function EquipmentPanel() {
       <AscensionCard contentClassName="p-3">
         <div className="flex items-center justify-between gap-3">
           <div>
+            {isTopHunter && (
+              <div className="mb-1.5">
+                <TopHunterBadge title={pvpChampion?.title ?? 'Top Hunter'} />
+              </div>
+            )}
             <p className="text-sm text-slate-300">
               Title: <span className="font-medium text-amber-300">{currentTitle}</span>
             </p>

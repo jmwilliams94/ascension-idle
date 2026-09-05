@@ -142,3 +142,37 @@ export const usePvpTournamentStore = create<PvpTournamentState>((set, get) => ({
     return result
   },
 }))
+
+export interface PvpChampion {
+  characterId: string
+  name: string
+  title: string
+}
+
+// Rotating "Top Hunter" champion badge (2026-09-05, requested by the user) —
+// derived from existing tournament rows rather than stored anywhere new. The
+// most recently completed tournament's winner holds the title only until the
+// FOLLOWING tournament actually goes live (status flips to 'registration' ->
+// 'live') — at that instant nobody holds it (a brief gap through the live
+// event), until it completes and hands the badge to whoever wins next. Both
+// currentTournament/lastCompletedTournament are kept live app-wide by
+// PvpTournamentConnection.tsx (mounted unconditionally in GameShell, same as
+// GlobalActivityConnection), so this reflects in real time with no extra
+// fetch and works from any screen, not just the PvP tab.
+export function useCurrentPvpChampion(): PvpChampion | null {
+  const currentTournament = usePvpTournamentStore((state) => state.currentTournament)
+  const lastCompleted = usePvpTournamentStore((state) => state.lastCompletedTournament)
+
+  if (currentTournament?.status !== 'registration') {
+    return null
+  }
+  if (!lastCompleted?.winnerCharacterId || !lastCompleted.winnerName) {
+    return null
+  }
+
+  return {
+    characterId: lastCompleted.winnerCharacterId,
+    name: lastCompleted.winnerName,
+    title: lastCompleted.championTitle ?? 'Champion',
+  }
+}
