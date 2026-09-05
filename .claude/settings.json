@@ -4,7 +4,10 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git push *)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "WebFetch(domain:claude.ai)",
+      "Bash(git log *)",
+      "Bash(node -pe \"require\\('./package.json'\\).version\")"
     ],
     "deny": [
       "Bash(git push --force*)",
