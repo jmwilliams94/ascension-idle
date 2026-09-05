@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.133.2",
+    "date": "2026-09-05",
+    "changes": [
+      "Fixed attack effects (like lightning bolts) sometimes flashing on top of open menus and popups instead of staying behind them"
+    ]
+  },
+  {
     "version": "1.133.1",
     "date": "2026-09-05",
     "changes": [

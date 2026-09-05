@@ -176,17 +176,21 @@ function WarpMesh({ warp }: { warp: ActiveWarp }) {
 // capture-cost fixes; reported by the user specifically on mobile. Keeping
 // one warm context and just pausing/resuming its render loop avoids paying
 // that setup cost on every trigger while still not burning cycles while
-// idle. z-[88], between the real game UI and FxLayer's own 2D canvas
-// (z-[90]) -- comet/lightning's glow keeps drawing on top of the warped
+// idle. z-[45], between the real game UI and FxLayer's own 2D canvas
+// (z-[47]) -- comet/lightning's glow keeps drawing on top of the warped
 // snapshot underneath it, layering "real distortion" with "extra light VFX"
-// the way game hit-effects usually do.
+// the way game hit-effects usually do. Both sit below the app's z-50 modal
+// scale (BankActionModal, SettingsModal, etc.) so an in-flight lightning
+// bolt or warp doesn't render on top of an open menu/popup -- they used to
+// sit at z-[88]/z-[90], above every modal in the app, letting attack VFX
+// bleed over whatever overlay the player had open (reported by the user).
 export default function WarpLayer() {
   const active = useWarpStore((state) => state.active)
 
   return createPortal(
     <Canvas
       data-fx-exclude="true"
-      className="z-[88]"
+      className="z-[45]"
       // Canvas applies its own inline `position: relative; width/height:
       // 100%; pointer-events: auto` to this wrapper div by default -- an
       // inline style always beats a class-based utility in the cascade

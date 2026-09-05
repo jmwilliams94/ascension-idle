@@ -8,6 +8,11 @@ import type { FxEffect } from './effects/types'
 // bolts, comet impacts, upgrade ripples -- see effects/*.ts). Mounted once
 // in GameShell like FireworkOverlay/GainToastHost, portaled to document.body
 // so it sits above every real page regardless of where it's rendered from.
+// z-[47], deliberately below the app's z-50 modal scale (BankActionModal,
+// SettingsModal, etc.) so an in-flight attack effect never renders on top
+// of an open menu/popup -- it used to sit at z-[90], above every modal,
+// letting lightning bolts bleed over whatever overlay was open (reported
+// by the user). See WarpLayer.tsx's own comment for the paired z-[45].
 //
 // Canvas, not DOM/CSS, on purpose: tierEffects.tsx's ember system (dozens of
 // absolutely-positioned <span>s animated by CSS keyframes) works well for
@@ -145,7 +150,7 @@ export default function FxLayer() {
   }, [])
 
   return createPortal(
-    <canvas ref={canvasRef} data-fx-exclude="true" className="pointer-events-none fixed inset-0 z-[90]" />,
+    <canvas ref={canvasRef} data-fx-exclude="true" className="pointer-events-none fixed inset-0 z-[47]" />,
     document.body,
   )
 }

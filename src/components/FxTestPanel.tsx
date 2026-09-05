@@ -48,8 +48,8 @@ export default function FxTestPanel() {
       <div>
         <h2 className="text-lg font-semibold text-white">FX</h2>
         <p className="text-sm text-slate-400">
-          Full-screen canvas effects (FxLayer.tsx) — each one fires above everything on the page, including this
-          modal. A screenshot won't show the motion.
+          Full-screen canvas effects (FxLayer.tsx) — each one fires behind this modal (FX sits below the app's modal
+          layer on purpose). Close this panel to see it clearly. A screenshot won't show the motion.
         </p>
       </div>
 
