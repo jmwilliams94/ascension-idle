@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.132.1",
+    "date": "2026-09-05",
+    "changes": [
+      "Added a \"View Bracket\" button under Last Week's Champion in the PvP tab, showing the full round-by-round breakdown of who beat who",
+      "Global Chat now announces when a new PvP Tournament champion is crowned"
+    ]
+  },
+  {
     "version": "1.132.0",
     "date": "2026-09-05",
     "changes": [

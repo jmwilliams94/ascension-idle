@@ -3,6 +3,8 @@ import { AscensionCard } from '../ui/AscensionCard'
 import { Button } from '../ui/Button'
 import { usePvpTournamentStore } from '../../game/pvp/usePvpTournamentStore'
 import { useCharacterStore } from '../../game/stats/useCharacterStore'
+import { PvpMatchRow } from './PvpMatchRow'
+import PvpBracketModal from './PvpBracketModal'
 
 const REGISTER_ERROR_LABEL: Record<string, string> = {
   class_not_eligible: 'This event is Hunter-class only.',
@@ -62,6 +64,7 @@ export default function PvpTournamentLobby({ characterId }: { characterId: strin
 
   const [registerError, setRegisterError] = useState<string | null>(null)
   const [now, setNow] = useState(() => Date.now())
+  const [showBracket, setShowBracket] = useState(false)
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000)
@@ -103,7 +106,18 @@ export default function PvpTournamentLobby({ characterId }: { characterId: strin
                 </span>
               )}
             </p>
+            <button
+              type="button"
+              onClick={() => setShowBracket(true)}
+              className="mt-1.5 text-xs font-medium text-amber-300/80 underline hover:text-amber-200"
+            >
+              View Bracket
+            </button>
           </div>
+        )}
+
+        {showBracket && lastCompletedTournament && (
+          <PvpBracketModal tournament={lastCompletedTournament} characterId={characterId} onClose={() => setShowBracket(false)} />
         )}
 
         {!currentTournament && <p className="text-center text-sm text-slate-400">No tournament data available.</p>}
@@ -179,30 +193,13 @@ export default function PvpTournamentLobby({ characterId }: { characterId: strin
                 <div className="space-y-1">
                   {matches
                     .filter((m) => m.round === round)
-                    .map((match) => {
-                      const isBye = !match.characterBId
-                      const involvesMe = match.characterAId === characterId || match.characterBId === characterId
-                      return (
-                        <div
-                          key={match.id}
-                          className={`flex items-center justify-between gap-2 rounded-md border px-3 py-1.5 text-sm ${
-                            involvesMe ? 'border-amber-600/60 bg-amber-950/10' : 'border-slate-800 bg-slate-900/40'
-                          }`}
-                        >
-                          <span className={match.winnerCharacterId === match.characterAId ? 'font-bold text-emerald-400' : 'text-slate-300'}>
-                            {match.characterAName ?? '—'}
-                          </span>
-                          <span className="text-xs uppercase tracking-wide text-slate-600">{isBye ? 'bye' : 'vs'}</span>
-                          <span
-                            className={`text-right ${
-                              match.winnerCharacterId && match.winnerCharacterId === match.characterBId ? 'font-bold text-emerald-400' : 'text-slate-300'
-                            }`}
-                          >
-                            {match.characterBName ?? (isBye ? 'advances' : '—')}
-                          </span>
-                        </div>
-                      )
-                    })}
+                    .map((match) => (
+                      <PvpMatchRow
+                        key={match.id}
+                        match={match}
+                        highlight={match.characterAId === characterId || match.characterBId === characterId}
+                      />
+                    ))}
                 </div>
               </div>
             ))}

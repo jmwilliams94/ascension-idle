@@ -176,3 +176,21 @@ export function useCurrentPvpChampion(): PvpChampion | null {
     title: lastCompleted.championTitle ?? 'Champion',
   }
 }
+
+// On-demand bracket lookup (2026-09-05, requested by the user — "View
+// Bracket" button on a past tournament) — deliberately NOT folded into the
+// store's own `matches` field, which is scoped to currentTournament only and
+// kept live via PvpTournamentConnection's realtime subscription. A completed
+// tournament's bracket never changes again, so this is a one-off fetch for
+// whichever tournament the "View Bracket" modal is currently showing, not
+// something that needs a live subscription of its own.
+export async function fetchPvpTournamentMatches(tournamentId: string): Promise<PvpTournamentMatch[]> {
+  const { data } = await supabase
+    .from('pvp_tournament_matches')
+    .select('*')
+    .eq('tournament_id', tournamentId)
+    .order('round', { ascending: true })
+    .order('slot', { ascending: true })
+
+  return (data ?? []).map((row) => toMatch(row as Record<string, unknown>))
+}

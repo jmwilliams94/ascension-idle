@@ -38,6 +38,7 @@ export const ANNOUNCEMENT_ICONS: Record<string, string> = {
   level_130: '🏆',
   socket_dry_streak_end: '🎲',
   pet_obtained: '🐾',
+  pvp_champion: '🏆',
 }
 
 const GEM_IDS: GemTypeId[] = ['drake', 'ember', 'bastion', 'iris']
