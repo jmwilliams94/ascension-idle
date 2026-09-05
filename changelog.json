@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.133.3",
+    "date": "2026-09-05",
+    "changes": [
+      "Redeeming a VIP Token now announces it to everyone online"
+    ]
+  },
+  {
     "version": "1.133.2",
     "date": "2026-09-05",
     "changes": [

@@ -32,6 +32,7 @@ export const ANNOUNCEMENT_ICONS: Record<string, string> = {
   lucky_gear_radiant_coat: '🥋',
   lucky_gear_ascended_random: '🗡️',
   lucky_vip_token: '👑',
+  vip_token_used: '👑',
   lucky_experience_orb: '🔮',
   lucky_experience_potion: '🧪',
   lucky_money_bag: '💰',
@@ -70,6 +71,7 @@ function resolveAnnouncementIconSrc(kind: string, message: string): string | und
       return match ? getGearIconSrc(match[1]) : undefined
     }
     case 'lucky_vip_token':
+    case 'vip_token_used':
       return VIP_TOKEN_ICON_SRC
     case 'lucky_experience_orb':
       return EXPERIENCE_ORB_ICON_SRC
