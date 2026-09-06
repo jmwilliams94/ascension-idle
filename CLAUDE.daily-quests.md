@@ -1,0 +1,43 @@
+# Daily Quests
+
+Per-character (not account-wide) — each character rolls 3 of 5 possible quest types per day, reset at UTC midnight. Not the character-deletion footgun from root `CLAUDE.md` (that rule guards a cooldown gating a *shared/scarce account resource*, e.g. Lucky Lad's free ticket) — deleting a character here just forfeits that character's own daily progress, same as it already forfeits its kill-count ladder progress.
+
+## Schema
+
+`character_daily_quests` (`character_id` primary key, `reset_date`, `quests` jsonb, `updated_at`) — one row per character, rerolled in place (not accumulated history). No `insert`/`update`/`delete` grant to `authenticated`; all mutation goes through the RPCs below.
+
+`quests` is an array of exactly 3 `{slot, type, target, progress, claimed}` objects. `type` ∈ `quality_order | kill_count | world_boss_attacks | gold_donation | socket_obtain`.
+
+## The 5 quest types
+
+- **quality_order** — turn in (consumed on claim) an owned Tempered+ item of a randomly-rolled `slot_type` (one of `weapon/ring/necklace/boots/hat/coat/quiver` — pickaxe excluded, since it can never reach Tempered+ per the quality-lock in `20260930070000_block_pickaxe_quality_upgrade.sql`). Not tracked as a progress counter — validated live against `item_instances`/`item_templates` at claim time. Reward scales with the submitted quality: Tempered=1, Infused=2, Radiant=3, Ascended=5 "exp balls" worth of EXP — or that many Lottery Tickets if the character is level 130 (max).
+- **kill_count** — kill one specific randomly-picked monster (rolled from `enemy_types where level <= character.level`) a random 100-1000 times. Reward = 1 exp ball worth of EXP + 1 Comet Scroll.
+- **world_boss_attacks** — attack a World Boss 5 times, cumulative for the day. **Not** the same counter as `world_boss_participants.free_attempts_used`/`paid_attempts_used`, which reset per-spawn, not daily — this quest has its own counter via `bump_daily_quest_progress`. Reward = a random Money Bag.
+- **gold_donation** — any successful donation to the Gold Donation event, any amount. Reward = a random Money Bag.
+- **socket_obtain** — land a new socket via any Forge upgrade path. Reward = 1 Fallen Star Scroll.
+
+"1 exp ball's worth of EXP" = `required_exp_for_level(level) * experience_orb_percent_for_level(level)` (both already-standalone plpgsql functions from `20261206000000_experience_orb_and_potion.sql`) — for N exp balls, multiply by N. This is a disclosed 4th copy of the EXP curve (client TS, Deno edge function, plpgsql x2) per that migration's own header comment.
+
+Money Bag reward uses `pick_daily_quest_money_bag_class()` — the same relative weights as `pick_lucky_reward()`'s `money_bag` rows (classes 1-10: 12.66, 10.71, 6.25, 3.57, 5.5, 2.0, 0.7, 0.3, 0.3, 0.1), rolled against the raw unscaled sum (42.09) rather than renormalized to 100 first (mathematically identical, skips a scaling step). `grant_daily_quest_money_bag` duplicates `draw_lucky_ticket`'s money-bag branch (occupied-room check + `item_instances` insert) — a 3rd copy of that room-check block, kept duplicated like every existing copy.
+
+## RPCs (all in `20261228000000_daily_quests.sql`)
+
+- `ensure_daily_quests(p_character_id)` — public, `security definer`, ownership-checked. Lazy roll-on-read: if no row exists or `reset_date` is stale, rerolls via `roll_daily_quests` first. Mirrors the `ensure_world_boss_spawn`/`ensure_gold_donation_pool` idiom rather than `pg_cron`.
+- `claim_daily_quest(p_character_id, p_slot, p_item_id?)` — public, `security definer`, ownership-checked, locks the character row for the whole claim. Validates completion (quality_order validates `p_item_id` live; others check `progress >= target`), grants the reward, marks the slot claimed. Returns the new absolute currency counts (`comet_scroll_count`, `fallen_star_scroll_count`, `lottery_ticket_count`) alongside the reward so the client can set them absolutely rather than guess a delta.
+- `bump_daily_quest_progress(p_character_id, p_quest_type, p_monster_id?, p_amount?)` — internal, deliberately left with **default PUBLIC execute** (no `revoke`) so it's callable both from `security definer` RPCs (running as owner) and from the plain, service-role-only functions it's hooked into. Revoking it would reproduce the exact "helper needs an explicit grant to every calling role" gotcha in root `CLAUDE.md` (`compute_max_durability`).
+
+## The 4 hook points — must stay in sync
+
+Progress is server-verified, not client-trusted. Each hook is a `create or replace` of an *existing* function's full latest body with one `perform public.bump_daily_quest_progress(...)` line added — never edit the original migration in place. A future change to any of these 4 functions' bodies needs its bump call carried forward:
+
+- `resolve_combat_apply_results` (kill_count) — bumped inside the existing `if p_kills_delta > 0` block, matched against `p_monster_id`. Plain function, `service_role`-only grant (called by `resolve-combat`'s edge function).
+- `apply_world_boss_attack` (world_boss_attacks) — bumped right after the attempt actually consumes a free/paid slot (post payment/cooldown/cap gates), so a refused attack never counts. Plain function, `service_role`-only.
+- `donate_gold` (gold_donation) — bumped right after `gold_donation_participants.total_donated` updates. `security definer`.
+- `quality_upgrade` / `level_upgrade` / `master_forge_upgrade` / `level_upgrade_scroll` / `quality_upgrade_scroll` (socket_obtain) — 5 independent call sites, no shared "grant socket" helper exists between them. Each bumped immediately after its own `v_socket_gained := true` (inside the roll-loop for the two scroll variants, so it can fire more than once per Scroll batch — harmless, since `bump_daily_quest_progress` clamps `progress` at the target). All 5 are `security definer`.
+
+## Client
+
+- `src/game/dailyQuests/useDailyQuestsStore.ts` — `quests`, `busy`, `ensure`, `claim`. No Realtime subscription (unlike Gold Donation/Zone Boss) — purely per-character state, not cross-player shared state.
+- `src/components/DailyQuestsConnection.tsx` — non-visual, mounted in `GameShell`; calls `ensure` on mount plus every 5 minutes to catch the UTC-midnight rollover during a long-open tab.
+- `src/components/DailyQuestBadge.tsx` — fixed floating button, same visual family as `UnclaimedLootBadge.tsx` (own `translateZ(0)` compositing layer), positioned directly beside it (`left-16` vs `left-3`). Renders nothing until quests are loaded or all 3 are claimed.
+- `src/components/DailyQuestsModal.tsx` — quest list + claim UI; the quality_order card includes an inline inventory-item picker (filters `useInventoryStore.items` by slot_type/quality/not-equipped).

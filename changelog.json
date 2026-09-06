@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.134.0",
+    "date": "2026-09-06",
+    "changes": [
+      "Added Daily Quests: each character now gets 3 random quests every day (turn in a quality item, hunt down a target monster, attack a World Boss, donate Gold, or land a socket), with rewards ranging from EXP and Comet/Fallen Star Scrolls to Money Bags and Lottery Tickets. A new exclamation-mark button next to the unclaimed-rewards button opens your quests, and they reset every day at midnight UTC"
+    ]
+  },
+  {
     "version": "1.133.10",
     "date": "2026-09-06",
     "changes": [

@@ -41,6 +41,9 @@ import LevelUpBanner from './LevelUpBanner'
 import GoldDonationBuffBanner from './GoldDonationBuffBanner'
 import OutOfManaBanner from './OutOfManaBanner'
 import UnclaimedLootBadge from './UnclaimedLootBadge'
+import DailyQuestBadge from './DailyQuestBadge'
+import DailyQuestsModal from './DailyQuestsModal'
+import DailyQuestsConnection from './DailyQuestsConnection'
 import SettingsModal from './SettingsModal'
 import ShopPanel from './ShopPanel'
 import TabNav from './TabNav'
@@ -591,6 +594,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <InventoryFullModal />
       <OfflineProgressModal />
       <MoneyBagRevealModal />
+      <DailyQuestsModal />
       <SalvageRevealToast />
       <FireworkOverlay />
       <Suspense fallback={null}>
@@ -602,6 +606,8 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <OutOfManaBanner />
       <KillRewardToast />
       <UnclaimedLootBadge />
+      <DailyQuestBadge />
+      <DailyQuestsConnection characterId={characterId} />
       <GainToastHost />
       <RequiresVipToast />
       <CombatEngine />

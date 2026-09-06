@@ -60,6 +60,7 @@ Each file below is the confirmed design source of truth for its area. Anything m
 - [`CLAUDE.inventory-and-equipment.md`](CLAUDE.inventory-and-equipment.md) — 40-slot Inventory grid, tooltips/drag-drop, Equipment paper-doll page, HP/Mana potions
 - [`CLAUDE.marketplace-and-mail.md`](CLAUDE.marketplace-and-mail.md) — player-to-player trading, Ascension Points, Mail inbox, admin mail
 - [`CLAUDE.achievements-and-pets.md`](CLAUDE.achievements-and-pets.md) — per-character/account Kill Count ladders, zone-tier rewards, Lottery Ticket, pets
+- [`CLAUDE.daily-quests.md`](CLAUDE.daily-quests.md) — per-character daily quest pool (5 types, 3 rolled/day), UTC-midnight lazy reset, server-verified progress hooks
 - [`CLAUDE.persistence.md`](CLAUDE.persistence.md) — DB schema split, save/autosave strategy, AFK/offline simulation, migration & deployment notes
 - [`CLAUDE.pwa-and-mobile.md`](CLAUDE.pwa-and-mobile.md) — PWA installability, resume detection, update flow, mobile layout/nav, touch drag-and-drop, Lucky Lad
 - [`CLAUDE.global-activity.md`](CLAUDE.global-activity.md) — Players Online presence, rare-event announcements, global chat, inspecting other players' gear
