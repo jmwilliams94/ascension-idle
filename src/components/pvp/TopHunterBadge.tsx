@@ -25,7 +25,7 @@ export function TopHunterBadge({ title = 'Top Hunter', compact = false, classNam
       <span className="ascension-chip-frame is-tinted" style={{ '--ascension-tint': EVENT_EMBER_HEX[emberColor] } as CSSProperties}>
         <span
           className={`ascension-chip-inner flex items-center gap-1 whitespace-nowrap font-bold uppercase tracking-wide ${
-            isWuxia ? 'text-sky-100' : 'text-lime-100'
+            isWuxia ? 'text-blue-100' : 'text-lime-100'
           } ${compact ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-1 text-[10px]'}`}
         >
           🏆 {title}

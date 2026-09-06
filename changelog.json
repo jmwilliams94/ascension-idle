@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.133.10",
+    "date": "2026-09-06",
+    "changes": [
+      "Top Wuxia badge is now a darker blue so it doesn't blend in with the lighter blue used for your own name in chat"
+    ]
+  },
+  {
     "version": "1.133.9",
     "date": "2026-09-06",
     "changes": [
