@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.133.8",
+    "date": "2026-09-06",
+    "changes": [
+      "Inventory no longer dims items/materials while VIP Auto-Repeat is running, so you can watch it work"
+    ]
+  },
+  {
     "version": "1.133.7",
     "date": "2026-09-06",
     "changes": [

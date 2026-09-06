@@ -353,7 +353,14 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
   // Slot, then Comets/Fallen Stars/their Scrolls only once it is. Purely
   // visual (see InventorySlot's `dimmed` prop) — handleDropItemId/
   // handleDropMaterial below are what actually reject a mismatched drop.
+  // Suppressed entirely while Auto-Repeat is running (2026-09-06, requested by
+  // the user) — dragging a new material/item in has nothing to do with the
+  // automated loop, and dimming the rest of the grid just hides the very
+  // items the player is watching update as each attempt lands.
   const isTileEligible = (dragId: string): boolean => {
+    if (autoRepeat) {
+      return true
+    }
     if (!selectedItem) {
       const item = items.find((entry) => entry.id === dragId)
       const template = item ? templates.find((entry) => entry.id === item.template_id) : undefined
