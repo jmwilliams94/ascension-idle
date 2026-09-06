@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.134.4",
+    "date": "2026-09-06",
+    "changes": [
+      "Another attempt at the mobile bottom nav bar coming unstuck while scrolling: the Daily Quests button now stays in the page the whole time (just invisible until you have a quest) instead of popping in right after every refresh"
+    ]
+  },
+  {
     "version": "1.134.3",
     "date": "2026-09-06",
     "changes": [
