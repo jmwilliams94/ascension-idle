@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import BankActionModal from './BankActionModal'
+import { Button } from './ui/Button'
 import { useDailyQuestsModalStore } from '../game/dailyQuests/useDailyQuestsModalStore'
 import { useDailyQuestsStore, type DailyQuest } from '../game/dailyQuests/useDailyQuestsStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
@@ -8,7 +10,6 @@ import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
 import { formatItemDisplayName, getQualityColor } from '../game/items/equipmentBonus'
 import { ENEMY_TYPES } from '../game/zones/zoneData'
-import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 
 const QUEST_LABELS: Record<DailyQuest['type'], string> = {
   quality_order: 'Fulfil an Order',
@@ -88,29 +89,30 @@ function QualityOrderPicker({ quest, characterId }: { quest: DailyQuest; charact
   }
 
   return (
-    <div className="mt-2 space-y-1">
+    <div className="mt-2 space-y-1.5">
       {eligible.map((item) => {
         const template = templates.find((entry) => entry.id === item.template_id)
         return (
-          <button
-            key={item.id}
-            type="button"
-            disabled={busy}
-            onClick={async () => {
-              setError(null)
-              const result = await claim(characterId, quest.slot, item.id)
-              if (!result.ok) setError(result.error ?? 'rpc_failed')
-            }}
-            className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950/60 p-2 text-xs hover:border-sky-600 disabled:opacity-50"
-          >
-            <span className="flex min-w-0 items-center gap-2">
-              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: getQualityColor(item.quality_tier) }} />
-              <span className="truncate text-slate-200">
-                {template ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level) : 'Unknown item'}
+          <div key={item.id} className="ascension-chip-frame is-interactive">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={async () => {
+                setError(null)
+                const result = await claim(characterId, quest.slot, item.id)
+                if (!result.ok) setError(result.error ?? 'rpc_failed')
+              }}
+              className="ascension-chip-inner flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-xs disabled:opacity-50"
+            >
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: getQualityColor(item.quality_tier) }} />
+                <span className="truncate text-slate-200">
+                  {template ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level) : 'Unknown item'}
+                </span>
               </span>
-            </span>
-            <span className="shrink-0 text-sky-400">Turn in</span>
-          </button>
+              <span className="shrink-0 text-slate-300">Turn in</span>
+            </button>
+          </div>
         )
       })}
       {error && <p className="text-xs text-red-400">{error}</p>}
@@ -126,42 +128,44 @@ function QuestCard({ quest, characterId, atMaxLevel }: { quest: DailyQuest; char
   const target = questTarget(quest)
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-white">{QUEST_LABELS[quest.type]}</h3>
-        {quest.claimed && <span className="text-xs text-emerald-400">Claimed</span>}
-      </div>
-      <p className="mt-1 text-xs text-slate-400">{describeQuest(quest, atMaxLevel)}</p>
-      <p className="mt-1 text-xs text-slate-500">Reward: {rewardLabel(quest, atMaxLevel)}</p>
-
-      {quest.type !== 'quality_order' && target > 1 && !quest.claimed && (
-        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
-          <div
-            className="h-full bg-sky-500"
-            style={{ width: `${Math.min(100, Math.round((quest.progress / target) * 100))}%` }}
-          />
+    <div className="ascension-chip-frame">
+      <div className="ascension-chip-inner p-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-heading text-sm font-bold uppercase tracking-[0.08em] text-slate-100">{QUEST_LABELS[quest.type]}</h3>
+          {quest.claimed && <span className="text-xs text-emerald-400">Claimed</span>}
         </div>
-      )}
+        <p className="mt-1 text-xs text-slate-400">{describeQuest(quest, atMaxLevel)}</p>
+        <p className="mt-1 text-xs text-slate-500">Reward: {rewardLabel(quest, atMaxLevel)}</p>
 
-      {quest.claimed ? null : quest.type === 'quality_order' ? (
-        <QualityOrderPicker quest={quest} characterId={characterId} />
-      ) : (
-        <>
-          <button
-            type="button"
-            disabled={!complete || busy}
-            onClick={async () => {
-              setError(null)
-              const result = await claim(characterId, quest.slot)
-              if (!result.ok) setError(result.error ?? 'rpc_failed')
-            }}
-            className="mt-3 w-full rounded-lg border border-sky-600 px-3 py-1.5 text-sm text-sky-300 hover:bg-sky-500/10 disabled:cursor-not-allowed disabled:border-slate-700 disabled:text-slate-600"
-          >
-            {complete ? 'Claim' : 'Not complete yet'}
-          </button>
-          {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
-        </>
-      )}
+        {quest.type !== 'quality_order' && target > 1 && !quest.claimed && (
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+            <div
+              className="h-full bg-gradient-to-r from-slate-400 to-slate-200"
+              style={{ width: `${Math.min(100, Math.round((quest.progress / target) * 100))}%` }}
+            />
+          </div>
+        )}
+
+        {quest.claimed ? null : quest.type === 'quality_order' ? (
+          <QualityOrderPicker quest={quest} characterId={characterId} />
+        ) : (
+          <>
+            <Button
+              variant="primary"
+              disabled={!complete || busy}
+              onClick={async () => {
+                setError(null)
+                const result = await claim(characterId, quest.slot)
+                if (!result.ok) setError(result.error ?? 'rpc_failed')
+              }}
+              className="mt-3 w-full py-1.5 text-xs"
+            >
+              {complete ? 'Claim' : 'Not complete yet'}
+            </Button>
+            {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
+          </>
+        )}
+      </div>
     </div>
   )
 }
@@ -172,7 +176,6 @@ export default function DailyQuestsModal() {
   const quests = useDailyQuestsStore((state) => state.quests)
   const characterId = useActiveCharacterStore((state) => state.characterId)
   const level = useProgressionStore((state) => state.level)
-  useLockBodyScroll(open)
 
   if (!open || !characterId) {
     return null
@@ -182,22 +185,12 @@ export default function DailyQuestsModal() {
   const sortedQuests = [...quests].sort((a, b) => a.slot - b.slot)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white">Daily Quests</h2>
-          <button type="button" onClick={closeModal} className="text-slate-400 hover:text-white">
-            ✕
-          </button>
-        </div>
-        <p className="mt-1 text-xs text-slate-500">Resets every day at midnight UTC.</p>
-
-        <div className="mt-4 max-h-[70vh] space-y-3 overflow-y-auto">
-          {sortedQuests.map((quest) => (
-            <QuestCard key={quest.slot} quest={quest} characterId={characterId} atMaxLevel={atMaxLevel} />
-          ))}
-        </div>
+    <BankActionModal title="Daily Quests" subtitle="Resets every day at midnight UTC" onClose={closeModal} widthClassName="max-w-md">
+      <div className="max-h-[65vh] space-y-3 overflow-y-auto">
+        {sortedQuests.map((quest) => (
+          <QuestCard key={quest.slot} quest={quest} characterId={characterId} atMaxLevel={atMaxLevel} />
+        ))}
       </div>
-    </div>
+    </BankActionModal>
   )
 }
