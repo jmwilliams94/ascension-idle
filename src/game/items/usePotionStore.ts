@@ -36,6 +36,11 @@ interface PotionState {
   // useCombatStore.restorePlayerMp (real as of the skill-equip system, see
   // CLAUDE.combat-and-loot.md — Mana potions were shipped inert ahead of it).
   usePotion: (stackId: string) => Promise<void>
+  // Sells the entire stack at once for half its per-potion price (rounded),
+  // via sell_potion_stack — mirrors sellItem's gear sell but whole-stack
+  // since a potion stack is the unit the tooltip shows/sells, not one potion
+  // at a time. Deliberately not swept by Inventory's "Sell All Normal".
+  sellStack: (stackId: string, characterId: string) => Promise<{ ok: boolean; goldGained?: number }>
 }
 
 export const usePotionStore = create<PotionState>((set, get) => ({
@@ -129,5 +134,29 @@ export const usePotionStore = create<PotionState>((set, get) => ({
     }
 
     set((state) => ({ stacks: state.stacks.map((entry) => (entry.id === stackId ? { ...entry, count: result.count! } : entry)) }))
+  },
+
+  sellStack: async (stackId, characterId) => {
+    const { data, error } = await supabase.rpc('sell_potion_stack', {
+      p_stack_id: stackId,
+      p_character_id: characterId,
+    })
+
+    if (error) {
+      console.error('Potion sell failed', error)
+      return { ok: false }
+    }
+
+    const result = data as { ok: boolean; error?: string; gold_gained?: number; gold?: number }
+    if (!result.ok) {
+      return { ok: false }
+    }
+
+    if (typeof result.gold === 'number') {
+      useProgressionStore.getState().setGold(result.gold)
+    }
+
+    set((state) => ({ stacks: state.stacks.filter((entry) => entry.id !== stackId) }))
+    return { ok: true, goldGained: result.gold_gained }
   },
 }))

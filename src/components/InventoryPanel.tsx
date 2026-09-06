@@ -315,6 +315,7 @@ export default function InventoryPanel({
   const showGearClaimPrompt = useGearClaimPromptStore((state) => state.show)
   const potionStacks = usePotionStore((state) => state.stacks)
   const handlePotionUse = usePotionStore((state) => state.usePotion)
+  const sellPotionStack = usePotionStore((state) => state.sellStack)
   // Same "subscribe to the reactive data, not a stable selector-function
   // reference" fix as equippedIds above — myListings/mail entries, not
   // isListed/hasUnclaimedMail themselves.
@@ -1109,6 +1110,24 @@ export default function InventoryPanel({
 
     if (!result.ok) {
       setSellError("Couldn't sell that item.")
+      return
+    }
+
+    if (typeof result.goldGained === 'number') {
+      showGainToast({ label: 'Gold', amount: result.goldGained, icon: '💰', color: '#fbbf24' })
+    }
+    setSelectedSlot(null)
+  }
+
+  const handlePotionSell = async (stackId: string) => {
+    if (!characterId) return
+    setSellError(null)
+    setSellBusy(true)
+    const result = await sellPotionStack(stackId, characterId)
+    setSellBusy(false)
+
+    if (!result.ok) {
+      setSellError("Couldn't sell that potion stack.")
       return
     }
 
@@ -2318,6 +2337,22 @@ export default function InventoryPanel({
           </div>
 
           <PotionUseButton potionType={selectedPotionStack.potionType} onUse={() => void handlePotionUse(selectedPotionStack.id)} />
+
+          {enableSelling && (
+            <Button
+              variant="primary"
+              disabled={sellBusy}
+              onClick={() => void handlePotionSell(selectedPotionStack.id)}
+              className="mt-2 w-full"
+            >
+              {sellBusy
+                ? 'Selling…'
+                : `Sell Stack (${Math.round(
+                    POTION_TYPES[selectedPotionStack.potionType].price * 0.5 * selectedPotionStack.count,
+                  ).toLocaleString()} gold)`}
+            </Button>
+          )}
+          {sellError && <p className="mt-2 text-xs text-amber-400">{sellError}</p>}
         </div>
       )}
 
