@@ -58,6 +58,12 @@ export default function DailyQuestRewardModal() {
       qualityColor: CONSUMABLE_COLOR,
     }))
     summary = `${reward.amount} Lottery Ticket${reward.amount === 1 ? '' : 's'}`
+  } else if (reward.kind === 'lottery_ticket_and_comet_scroll') {
+    tiles = [
+      { key: 'ticket', iconSrc: LOTTERY_TICKET_ICON_SRC, label: 'Lottery Ticket', qualityColor: CONSUMABLE_COLOR },
+      { key: 'scroll', iconSrc: COMET_SCROLL_ICON_SRC, label: 'Comet Scroll', qualityColor: CONSUMABLE_COLOR },
+    ]
+    summary = `${reward.amount} Lottery Ticket${reward.amount === 1 ? '' : 's'} + 1 Comet Scroll`
   } else if (reward.kind === 'fallen_star_scroll') {
     tiles = [{ key: 'scroll', iconSrc: FALLEN_STAR_SCROLL_ICON_SRC, label: 'Fallen Star Scroll', qualityColor: CONSUMABLE_COLOR }]
     summary = '1 Fallen Star Scroll'

@@ -48,7 +48,7 @@ function rewardLabel(quest: DailyQuest, atMaxLevel: boolean): string {
     case 'quality_order':
       return atMaxLevel ? '1-5 Lottery Tickets' : '1-5 Experience Orbs worth of EXP'
     case 'kill_count':
-      return '1 Experience Orb worth of EXP + 1 Comet Scroll'
+      return atMaxLevel ? '1 Lottery Ticket + 1 Comet Scroll' : '1 Experience Orb worth of EXP + 1 Comet Scroll'
     case 'world_boss_attacks':
     case 'gold_donation':
       return 'A random Money Bag'

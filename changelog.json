@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.135.6",
+    "date": "2026-09-06",
+    "changes": [
+      "Fixed the Bounty Hunt daily quest paying out nothing but a Comet Scroll for level 130 characters — it now grants a Lottery Ticket instead of EXP at max level, same as the other EXP-reward daily quest already does"
+    ]
+  },
+  {
     "version": "1.135.5",
     "date": "2026-09-06",
     "changes": [

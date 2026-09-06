@@ -37,6 +37,7 @@ export type DailyQuestReward =
   | { kind: 'exp'; amount: number; exp: number; level: number; ball_count?: number }
   | { kind: 'lottery_ticket'; amount: number; lottery_ticket_count: number }
   | { kind: 'exp_and_comet_scroll'; exp_amount: number; exp: number; level: number; comet_scroll_count: number }
+  | { kind: 'lottery_ticket_and_comet_scroll'; amount: number; lottery_ticket_count: number; comet_scroll_count: number }
   | { kind: 'money_bag'; item: ItemInstance }
   | { kind: 'fallen_star_scroll'; amount: number; fallen_star_scroll_count: number }
 
@@ -119,6 +120,9 @@ export const useDailyQuestsStore = create<DailyQuestsState>((set, get) => ({
         useCurrencyStore.getState().setCometScrolls(reward.comet_scroll_count)
       } else if (reward.kind === 'lottery_ticket') {
         useCurrencyStore.getState().setLotteryTickets(reward.lottery_ticket_count)
+      } else if (reward.kind === 'lottery_ticket_and_comet_scroll') {
+        useCurrencyStore.getState().setLotteryTickets(reward.lottery_ticket_count)
+        useCurrencyStore.getState().setCometScrolls(reward.comet_scroll_count)
       } else if (reward.kind === 'fallen_star_scroll') {
         useCurrencyStore.getState().setFallenStarScrolls(reward.fallen_star_scroll_count)
       } else if (reward.kind === 'money_bag') {
