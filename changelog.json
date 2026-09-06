@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.133.9",
+    "date": "2026-09-06",
+    "changes": [
+      "Top Wuxia champion badge is now blue (border + embers) instead of reusing Top Hunter's green, so the two titles look distinct wherever they appear"
+    ]
+  },
+  {
     "version": "1.133.8",
     "date": "2026-09-06",
     "changes": [

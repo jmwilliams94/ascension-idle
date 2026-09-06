@@ -15,6 +15,9 @@ export const EVENT_EMBER_HEX: Record<EventEmberColor, string> = {
   champion: '#84CC16', // PvP Tournament "Top Hunter" champion badge — a lime green, deliberately distinct from
   // buffActive's green (#34D399, Gold Donation) and the plain green (#22c55e) used for
   // GlobalAnnouncementTicker's chip tint, so the three don't collide when shown near each other.
+  championWuxia: '#38BDF8', // PvP Tournament "Top Wuxia" champion badge (2026-09-06, requested by the user —
+  // "Top Hunter and Top Wuxia have their own designs") — sky blue, the same tone already used
+  // elsewhere in the app as an "info"/secondary accent (IconButton's `sky` accent, chat self-highlight).
 }
 
 // A slight colored ring around the button itself, on top of the floating

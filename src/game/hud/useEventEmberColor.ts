@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react'
 import { useZoneBossStore } from '../zoneboss/useZoneBossStore'
 import { useGoldDonationStore, getActiveGoldDonationEvent } from '../goldDonation/useGoldDonationStore'
 
-// 'champion' (2026-09-05) is never returned by useActiveEventEmberColor below
-// -- it's passed directly by TopHunterBadge.tsx, the rotating PvP Tournament
-// champion badge, which is a permanent per-character badge rather than one of
-// the timed Idling-button events this hook tracks. Kept in the same union so
-// EventEmberBorder/EVENT_EMBER_HEX stay a single shared lookup instead of a
-// parallel color system just for this one badge.
-export type EventEmberColor = 'boss' | 'buffActive' | 'collecting' | 'luckyFree' | 'champion'
+// 'champion'/'championWuxia' (2026-09-05, split into two 2026-09-06) are never
+// returned by useActiveEventEmberColor below -- they're passed directly by
+// TopHunterBadge.tsx, the rotating PvP Tournament champion badge, which is a
+// permanent per-character badge rather than one of the timed Idling-button
+// events this hook tracks (one color per class' title -- "Top Hunter" stays
+// lime, "Top Wuxia" is blue). Kept in the same union so EventEmberBorder/
+// EVENT_EMBER_HEX stay a single shared lookup instead of a parallel color
+// system just for this one badge.
+export type EventEmberColor = 'boss' | 'buffActive' | 'collecting' | 'luckyFree' | 'champion' | 'championWuxia'
 
 // Idling nav button embers (CLAUDE.server-events.md's Zone Boss + Gold
 // Donation Event). Zone Boss and Gold Donation run on independent random
