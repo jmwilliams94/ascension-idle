@@ -2,7 +2,6 @@ import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import { CONSUMABLE_COLOR } from '../game/items/forgeCosts'
 import { findBestPotionStack, totalPotionCount } from '../game/items/potionSelectors'
 import { POTION_TYPES, type PotionTypeId } from '../game/items/potionTypes'
-import type { ItemTooltipData } from '../game/items/itemTooltip'
 import type { PotionStack } from '../game/items/usePotionStore'
 import { useCombatStore } from '../game/combat/useCombatStore'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
@@ -64,17 +63,6 @@ export default function PotionTypeContainer({
   const headingLabel = kind === 'hp' ? 'Health' : 'Mana'
   const fallbackIcon = kind === 'hp' ? '🧪' : '💧'
 
-  const tooltip: ItemTooltipData | undefined = type
-    ? {
-        title: type.displayName,
-        icon: fallbackIcon,
-        iconSrc: type.iconSrc,
-        iconColor: CONSUMABLE_COLOR,
-        lines: [kind === 'hp' ? 'HP Potion' : 'Mana Potion', `${total} owned`],
-        stats: [type.description],
-      }
-    : undefined
-
   return (
     <div className="ascension-chip-frame">
       <div className="ascension-chip-inner flex items-center gap-2 p-2">
@@ -86,8 +74,12 @@ export default function PotionTypeContainer({
           iconSrc={type?.iconSrc}
           qualityColor={CONSUMABLE_COLOR}
           badge={bestStack ? String(total) : undefined}
+          // No `tooltip` here (2026-09-06, requested by the user) — unlike
+          // every other InventorySlot usage in the game, this tile is meant
+          // for a quick tap mid-fight, and the label text above already
+          // says what it does; Inventory/Shop's own potion tiles keep their
+          // tooltips.
           label={!bestStack ? `No ${label} potions — visit the Shop` : isFull ? `${label} already full` : `Use ${type?.displayName}`}
-          tooltip={tooltip}
           dimmed={!canUse}
           onClick={() => bestStack && canUse && onUse(bestStack.id)}
         />
