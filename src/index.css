@@ -23,6 +23,19 @@ body,
   min-height: 100%;
 }
 
+/* Kills Safari's double-tap-to-zoom gesture app-wide (2026-09-06, a player
+   reported the page zooming in when clicking things fast — a clicker-style
+   idle game makes rapid same-spot taps routine, which is exactly what
+   double-tap-zoom keys off). Still allows normal panning/scrolling and
+   pinch-zoom (per the `manipulation` value's spec — it strips only
+   non-standard gestures like double-tap-zoom), so this is a targeted first
+   attempt, not a full "disable zoom" — see CLAUDE.md if pinch-triggered
+   zoom (two fingers landing on separate buttons at once) turns out to be
+   the actual cause instead, which would need a different fix. */
+html {
+  touch-action: manipulation;
+}
+
 /* Only ever visible as the rubber-band overscroll color at the very top/
    bottom edges of the screen (the app's own GameShell div covers
    everything else). Tried a light-top/dark-bottom gradient here (fixed-px,

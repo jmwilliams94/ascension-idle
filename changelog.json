@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.135.3",
+    "date": "2026-09-06",
+    "changes": [
+      "Attempted fix for the game zooming in unexpectedly when tapping quickly on Safari — disabled the browser's double-tap-to-zoom gesture across the app"
+    ]
+  },
+  {
     "version": "1.135.2",
     "date": "2026-09-06",
     "changes": [
