@@ -204,10 +204,6 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
         stop('Auto-Forge stopped: VIP expired.')
         return
       }
-      if (useCurrencyStore.getState().comets < 1) {
-        stop('Auto-Forge stopped: out of Comets.')
-        return
-      }
 
       const currentItems = useInventoryStore.getState().items
       const currentTemplates = useItemTemplatesStore.getState().templates
@@ -234,7 +230,18 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
 
       autoRepeatStatsRef.current.attempts += 1
       const result = await levelUpgrade(nextItem.id)
-      if (result.ok && result.upgraded) {
+
+      // Rely on the RPC's own real affordability check rather than a local
+      // comets-only pre-check — level_upgrade can draw the shortfall from the
+      // account Bank instead (ensure_forge_currency, VIP + "Auto-Use Bank
+      // Material: Comet"), so a player relying on that setting has 0 local
+      // Comets by design and would otherwise get stopped here before the
+      // call that would have actually succeeded ever ran.
+      if (!result.ok) {
+        stop(`Auto-Forge stopped: ${describeFailure(result.error)}`)
+        return
+      }
+      if (result.upgraded) {
         autoRepeatStatsRef.current.successes += 1
       }
 

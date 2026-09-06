@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.133.7",
+    "date": "2026-09-06",
+    "changes": [
+      "Fixed VIP Auto-Repeat Forge upgrades stopping immediately with \"out of Comets\" for players using Auto-Use Bank Material instead of carried Comets"
+    ]
+  },
+  {
     "version": "1.133.6",
     "date": "2026-09-06",
     "changes": [
