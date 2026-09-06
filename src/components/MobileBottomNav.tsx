@@ -348,11 +348,25 @@ export default function MobileBottomNav() {
   // transform value (not toggling display/layout) is layout-free -- it just
   // invalidates this element's own compositing layer so WebKit repaints it
   // at its real current position.
+  //
+  // Forced reflow added (2026-09-06, reported by the user: this nudge
+  // demonstrably did not prevent a resume-drift, reproduced by switching
+  // away to another app and back) -- the original version set the
+  // intermediate transform then immediately scheduled the revert via
+  // requestAnimationFrame with nothing forcing the browser to actually
+  // flush/paint that intermediate value first. Browsers are free to batch
+  // consecutive style writes, so it's entirely possible WebKit never
+  // painted 'translateZ(0.001px)' at all before this same nudge overwrote
+  // it back to 'translateZ(0)' one frame later -- a same-value no-op from
+  // the compositor's perspective. Reading `offsetHeight` between the two
+  // writes forces a synchronous layout/style flush, guaranteeing the first
+  // value is actually applied before it's reverted.
   useEffect(() => {
     const nudge = () => {
       const el = navRef.current
       if (!el) return
       el.style.transform = 'translateZ(0.001px)'
+      void el.offsetHeight // forces the write above to actually flush/paint
       requestAnimationFrame(() => {
         if (navRef.current) navRef.current.style.transform = 'translateZ(0)'
       })

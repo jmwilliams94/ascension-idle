@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.134.5",
+    "date": "2026-09-06",
+    "changes": [
+      "Fixed the mobile nav bar's existing 'came unstuck after switching apps and back' repaint fix, which wasn't actually forcing a repaint in some cases"
+    ]
+  },
+  {
     "version": "1.134.4",
     "date": "2026-09-06",
     "changes": [
