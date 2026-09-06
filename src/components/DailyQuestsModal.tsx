@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react'
 import BankActionModal from './BankActionModal'
+import InventorySlot from './InventorySlot'
 import { Button } from './ui/Button'
 import { useDailyQuestsModalStore } from '../game/dailyQuests/useDailyQuestsModalStore'
 import { useDailyQuestsStore, type DailyQuest } from '../game/dailyQuests/useDailyQuestsStore'
+import { questTarget, eligibleQualityOrderItems } from '../game/dailyQuests/dailyQuestHelpers'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { useProgressionStore } from '../game/stats/useProgressionStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
-import { formatItemDisplayName, getQualityColor } from '../game/items/equipmentBonus'
+import { formatItemDisplayName, getQualityColor, getGearIconSrc } from '../game/items/equipmentBonus'
 import { ENEMY_TYPES } from '../game/zones/zoneData'
 
 const QUEST_LABELS: Record<DailyQuest['type'], string> = {
@@ -17,17 +19,6 @@ const QUEST_LABELS: Record<DailyQuest['type'], string> = {
   world_boss_attacks: 'World Boss Duty',
   gold_donation: 'Gold Donation',
   socket_obtain: 'Socket Prospecting',
-}
-
-function questTarget(quest: DailyQuest): number {
-  if (quest.type === 'kill_count') return Number(quest.target.required_kills ?? 0)
-  if (quest.type === 'world_boss_attacks') return Number(quest.target.required_attacks ?? 0)
-  return 1
-}
-
-function isComplete(quest: DailyQuest): boolean {
-  if (quest.type === 'quality_order') return true // checked live against inventory at claim time, not tracked as progress
-  return quest.progress >= questTarget(quest)
 }
 
 function describeQuest(quest: DailyQuest, atMaxLevel: boolean): string {
@@ -68,54 +59,55 @@ function rewardLabel(quest: DailyQuest, atMaxLevel: boolean): string {
   }
 }
 
-function QualityOrderPicker({ quest, characterId }: { quest: DailyQuest; characterId: string }) {
+// Grid of the character's own eligible Inventory tiles — the "Select" step
+// (requested by the user: "select should bring up your inventory where you
+// can select the gear you want to submit"), reusing the same InventorySlot
+// tile every other item grid in the game uses rather than a plain list.
+// Picking a tile doesn't submit anything by itself — it just reports the
+// choice back up to QuestCard, which is the one that actually calls claim().
+function QualityOrderPicker({
+  quest,
+  onSelect,
+  onCancel,
+}: {
+  quest: DailyQuest
+  onSelect: (itemId: string) => void
+  onCancel: () => void
+}) {
   const items = useInventoryStore((state) => state.items)
   const templates = useItemTemplatesStore((state) => state.templates)
   const isEquipped = useEquipmentStore((state) => state.isEquipped)
-  const claim = useDailyQuestsStore((state) => state.claim)
-  const busy = useDailyQuestsStore((state) => state.busy)
-  const [error, setError] = useState<string | null>(null)
-
   const slotType = String(quest.target.slot_type ?? '')
-  const eligible = items.filter((item) => {
-    if (item.location !== 'inventory' || isEquipped(item.id)) return false
-    if (!['tempered', 'infused', 'radiant', 'ascended'].includes(item.quality_tier)) return false
-    const template = templates.find((entry) => entry.id === item.template_id)
-    return template?.slot_type === slotType
-  })
-
-  if (eligible.length === 0) {
-    return <p className="mt-2 text-xs text-slate-500">You don't have a qualifying {slotType} to turn in yet.</p>
-  }
+  const eligible = eligibleQualityOrderItems(quest, items, templates, isEquipped)
 
   return (
-    <div className="mt-2 space-y-1.5">
-      {eligible.map((item) => {
-        const template = templates.find((entry) => entry.id === item.template_id)
-        return (
-          <div key={item.id} className="ascension-chip-frame is-interactive">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={async () => {
-                setError(null)
-                const result = await claim(characterId, quest.slot, item.id)
-                if (!result.ok) setError(result.error ?? 'rpc_failed')
-              }}
-              className="ascension-chip-inner flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-xs disabled:opacity-50"
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: getQualityColor(item.quality_tier) }} />
-                <span className="truncate text-slate-200">
-                  {template ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level) : 'Unknown item'}
-                </span>
-              </span>
-              <span className="shrink-0 text-slate-300">Turn in</span>
-            </button>
-          </div>
-        )
-      })}
-      {error && <p className="text-xs text-red-400">{error}</p>}
+    <div className="mt-2">
+      {eligible.length === 0 ? (
+        <p className="text-xs text-slate-500">You don't have a qualifying {slotType} to turn in yet.</p>
+      ) : (
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
+          {eligible.map((item) => {
+            const template = templates.find((entry) => entry.id === item.template_id)
+            const name = template ? formatItemDisplayName(template.name, item.quality_tier, item.composition_level) : 'Unknown item'
+            return (
+              <InventorySlot
+                key={item.id}
+                slotId={`quality-order-pick-${item.id}`}
+                filled
+                sizeClassName="aspect-square w-full"
+                iconSrc={getGearIconSrc(template?.name, item.quality_tier)}
+                icon="❔"
+                qualityColor={getQualityColor(item.quality_tier)}
+                label={name}
+                onClick={() => onSelect(item.id)}
+              />
+            )
+          })}
+        </div>
+      )}
+      <button type="button" onClick={onCancel} className="mt-2 text-xs text-slate-500 hover:text-slate-300">
+        Cancel
+      </button>
     </div>
   )
 }
@@ -123,9 +115,32 @@ function QualityOrderPicker({ quest, characterId }: { quest: DailyQuest; charact
 function QuestCard({ quest, characterId, atMaxLevel }: { quest: DailyQuest; characterId: string; atMaxLevel: boolean }) {
   const claim = useDailyQuestsStore((state) => state.claim)
   const busy = useDailyQuestsStore((state) => state.busy)
+  const items = useInventoryStore((state) => state.items)
+  const templates = useItemTemplatesStore((state) => state.templates)
   const [error, setError] = useState<string | null>(null)
-  const complete = isComplete(quest)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const target = questTarget(quest)
+  const isQualityOrder = quest.type === 'quality_order'
+  const complete = isQualityOrder ? selectedItemId !== null : quest.progress >= target
+
+  const selectedItem = selectedItemId ? items.find((item) => item.id === selectedItemId) : undefined
+  const selectedTemplate = selectedItem ? templates.find((entry) => entry.id === selectedItem.template_id) : undefined
+  const selectedName = selectedItem && selectedTemplate ? formatItemDisplayName(selectedTemplate.name, selectedItem.quality_tier, selectedItem.composition_level) : null
+
+  const handleClaim = async () => {
+    setError(null)
+    const result = await claim(characterId, quest.slot, selectedItemId ?? undefined)
+    if (!result.ok) {
+      setError(result.error ?? 'rpc_failed')
+      // The selected item may have stopped qualifying since it was picked
+      // (equipped, moved to Bank, sold, etc.) -- send the player back to the
+      // picker to choose again rather than leaving a dead Claim button.
+      if (isQualityOrder) {
+        setSelectedItemId(null)
+      }
+    }
+  }
 
   return (
     <div className="ascension-chip-frame">
@@ -137,7 +152,7 @@ function QuestCard({ quest, characterId, atMaxLevel }: { quest: DailyQuest; char
         <p className="mt-1 text-xs text-slate-400">{describeQuest(quest, atMaxLevel)}</p>
         <p className="mt-1 text-xs text-slate-500">Reward: {rewardLabel(quest, atMaxLevel)}</p>
 
-        {quest.type !== 'quality_order' && target > 1 && !quest.claimed && (
+        {!isQualityOrder && target > 1 && !quest.claimed && (
           <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
             <div
               className="h-full bg-gradient-to-r from-slate-400 to-slate-200"
@@ -146,20 +161,37 @@ function QuestCard({ quest, characterId, atMaxLevel }: { quest: DailyQuest; char
           </div>
         )}
 
-        {quest.claimed ? null : quest.type === 'quality_order' ? (
-          <QualityOrderPicker quest={quest} characterId={characterId} />
+        {quest.claimed ? null : isQualityOrder && pickerOpen ? (
+          <QualityOrderPicker
+            quest={quest}
+            onSelect={(itemId) => {
+              setSelectedItemId(itemId)
+              setPickerOpen(false)
+            }}
+            onCancel={() => setPickerOpen(false)}
+          />
+        ) : isQualityOrder && selectedItemId ? (
+          <>
+            <button
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              className="mt-2 flex w-full items-center justify-between gap-2 rounded-lg border border-slate-700 bg-slate-950/60 px-2.5 py-1.5 text-xs hover:border-slate-500"
+            >
+              <span className="truncate text-slate-200">{selectedName ?? 'Selected item'}</span>
+              <span className="shrink-0 text-slate-500">Change</span>
+            </button>
+            <Button variant="primary" disabled={busy} onClick={() => void handleClaim()} className="mt-2 w-full py-1.5 text-xs">
+              Claim
+            </Button>
+            {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
+          </>
+        ) : isQualityOrder ? (
+          <Button variant="secondary" onClick={() => setPickerOpen(true)} className="mt-3 w-full py-1.5 text-xs">
+            Select Item
+          </Button>
         ) : (
           <>
-            <Button
-              variant="primary"
-              disabled={!complete || busy}
-              onClick={async () => {
-                setError(null)
-                const result = await claim(characterId, quest.slot)
-                if (!result.ok) setError(result.error ?? 'rpc_failed')
-              }}
-              className="mt-3 w-full py-1.5 text-xs"
-            >
+            <Button variant="primary" disabled={!complete || busy} onClick={() => void handleClaim()} className="mt-3 w-full py-1.5 text-xs">
               {complete ? 'Claim' : 'Not complete yet'}
             </Button>
             {error && <p className="mt-1 text-xs text-red-400">{error}</p>}

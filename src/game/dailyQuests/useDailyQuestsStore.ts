@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabaseClient'
 import { useProgressionStore } from '../stats/useProgressionStore'
 import { useCurrencyStore } from '../stats/useCurrencyStore'
 import { useInventoryStore, type ItemInstance } from '../items/useInventoryStore'
+import { useDailyQuestRewardStore } from './useDailyQuestRewardStore'
 
 // Daily Quests — see CLAUDE.daily-quests.md. Per-character, server-verified
 // progress (resolve_combat_apply_results/apply_world_boss_attack/donate_gold/
@@ -33,7 +34,7 @@ export type DailyQuestClaimError =
   | 'rpc_failed'
 
 export type DailyQuestReward =
-  | { kind: 'exp'; amount: number; exp: number; level: number }
+  | { kind: 'exp'; amount: number; exp: number; level: number; ball_count?: number }
   | { kind: 'lottery_ticket'; amount: number; lottery_ticket_count: number }
   | { kind: 'exp_and_comet_scroll'; exp_amount: number; exp: number; level: number; comet_scroll_count: number }
   | { kind: 'money_bag'; item: ItemInstance }
@@ -123,6 +124,11 @@ export const useDailyQuestsStore = create<DailyQuestsState>((set, get) => ({
       } else if (reward.kind === 'money_bag') {
         useInventoryStore.getState().addItem(reward.item)
       }
+
+      // Explicit reveal, not a silent store update (requested by the user —
+      // no quest should just quietly land in the inventory/currency counts
+      // with no confirmation of what was actually won).
+      useDailyQuestRewardStore.getState().show(reward)
     }
 
     // Quality Order's turn-in item was deleted server-side — drop it locally

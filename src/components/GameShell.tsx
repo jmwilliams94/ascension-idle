@@ -43,6 +43,7 @@ import OutOfManaBanner from './OutOfManaBanner'
 import UnclaimedLootBadge from './UnclaimedLootBadge'
 import DailyQuestBadge from './DailyQuestBadge'
 import DailyQuestsModal from './DailyQuestsModal'
+import DailyQuestRewardModal from './DailyQuestRewardModal'
 import DailyQuestsConnection from './DailyQuestsConnection'
 import SettingsModal from './SettingsModal'
 import ShopPanel from './ShopPanel'
@@ -595,6 +596,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <OfflineProgressModal />
       <MoneyBagRevealModal />
       <DailyQuestsModal />
+      <DailyQuestRewardModal />
       <SalvageRevealToast />
       <FireworkOverlay />
       <Suspense fallback={null}>

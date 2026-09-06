@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.135.0",
+    "date": "2026-09-06",
+    "changes": [
+      "Reworked Daily Quest claiming: every quest now claims explicitly through a Claim button, the gear-turn-in quest gets a proper Select step showing your eligible Inventory items, and claiming any quest now pops up a reveal showing exactly what you won (Experience Orb icons, the actual Money Bag, etc.) instead of it silently landing in your inventory. The quest button's number now only counts quests you can actually claim right now, not just ones still in progress"
+    ]
+  },
+  {
     "version": "1.134.7",
     "date": "2026-09-06",
     "changes": [
