@@ -25,6 +25,7 @@ import { getCurrentPromotionTitle, getNextEligiblePromotionTier } from '../game/
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
 import { useCurrentPvpChampion, type PvpEventClassId } from '../game/pvp/usePvpTournamentStore'
+import { championEmberColor } from '../game/hud/eventEmberBorderData'
 import { TopHunterBadge } from './pvp/TopHunterBadge'
 import PromotionModal from './PromotionModal'
 
@@ -111,6 +112,7 @@ export default function EquipmentPanel() {
   const pvpEventClassId = selectedClassId === 'hunter' || selectedClassId === 'wuxia' ? (selectedClassId as PvpEventClassId) : null
   const pvpChampion = useCurrentPvpChampion(pvpEventClassId)
   const isPvpChampion = Boolean(activeCharacterId && pvpChampion?.characterId === activeCharacterId)
+  const sparkleColor = isPvpChampion && pvpChampion ? championEmberColor(pvpChampion.title) : null
   const currentTitle = getCurrentPromotionTitle(promotionTiers, selectedClassId, promotionLevel)
   const nextPromotionTier = getNextEligiblePromotionTier(promotionTiers, selectedClassId, promotionLevel)
   const [promotionModalOpen, setPromotionModalOpen] = useState(false)
@@ -181,7 +183,7 @@ export default function EquipmentPanel() {
 
   return (
     <div className="space-y-4">
-      <AscensionCard title={characterName || 'Character'}>
+      <AscensionCard title={characterName || 'Character'} sparkleColor={sparkleColor}>
       <div
         className="mx-auto grid max-w-sm gap-x-2 gap-y-3 lg:gap-x-3 lg:gap-y-4"
         style={{

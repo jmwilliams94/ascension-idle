@@ -251,6 +251,28 @@ a,
   animation: effect-core-pulse 2.2s ease-in-out infinite;
 }
 
+/* Character-screen background sparkle field (backgroundSparkleField.tsx,
+   2026-09-06) — particles hold a fixed position (unlike effect-ember-radiate/
+   effect-ember-border-emit, which travel toward --ember-dx/--ember-dy) and
+   just twinkle in and out, so a whole field of them reads as an ambient
+   starfield behind the character screen rather than an emission effect.
+   --sparkle-peak (set per-particle in JS) varies the peak brightness so the
+   field doesn't pulse in perfect unison. */
+@keyframes effect-sparkle-twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  50% {
+    opacity: var(--sparkle-peak, 0.85);
+    transform: scale(1);
+  }
+}
+.effect-sparkle-twinkle {
+  animation: effect-sparkle-twinkle 3s ease-in-out infinite;
+}
+
 /* FX layer screen-shake (2026-08-29) — driven by FxLayer.tsx's comet-impact
    effect (see game/fx/effects/comet.ts), toggled on document.documentElement
    directly rather than a React-managed class, since it's a one-shot fire-and

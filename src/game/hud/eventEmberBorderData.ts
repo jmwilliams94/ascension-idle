@@ -21,6 +21,15 @@ export const EVENT_EMBER_HEX: Record<EventEmberColor, string> = {
   // so the two blues read as distinct rather than blending together (2026-09-06, requested by the user).
 }
 
+// Shared title->color mapping for the per-class champion badge (2026-09-06,
+// factored out of TopHunterBadge.tsx once EquipmentPanel.tsx/
+// CharacterLoadoutModal.tsx also needed it for their background sparkle
+// field) — champion_title text is the only signal every call site has in
+// hand (see TopHunterBadge.tsx's own comment).
+export function championEmberColor(title: string): EventEmberColor {
+  return title.toLowerCase().includes('wuxia') ? 'championWuxia' : 'champion'
+}
+
 // A slight colored ring around the button itself, on top of the floating
 // embers, so the event state still reads even at a glance/small size
 // (2026-08-16, requested by the user). Uses `outline` rather than `border`/

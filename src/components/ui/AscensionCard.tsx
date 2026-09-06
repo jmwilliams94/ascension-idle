@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { EventEmberBorder } from '../../game/hud/eventEmberBorder'
 import { eventBorderTintStyle } from '../../game/hud/eventEmberBorderData'
+import { BackgroundSparkleField } from '../../game/hud/backgroundSparkleField'
 import type { EventEmberColor } from '../../game/hud/useEventEmberColor'
 
 interface AscensionCardProps {
@@ -36,6 +37,16 @@ interface AscensionCardProps {
    * GoldDonationCard pass this today, and neither passes `className`.
    */
   activeEventColor?: EventEmberColor | null
+  /**
+   * Background sparkle field (2026-09-06, requested by the user — character
+   * screens should sparkle a color tied to the viewed player's PvP badge).
+   * Unlike `activeEventColor`, this renders *inside* `.ascension-card-inner`
+   * (behind `children`, in front of the inner panel's own background) since
+   * it's meant to stay contained within the card's own chamfer rather than
+   * spill past it — no sibling-wrapper needed. null/undefined renders
+   * nothing. See backgroundSparkleField.tsx.
+   */
+  sparkleColor?: EventEmberColor | null
 }
 
 /**
@@ -52,11 +63,13 @@ export function AscensionCard({
   contentClassName = 'p-4',
   titleSize = 'default',
   activeEventColor = null,
+  sparkleColor = null,
 }: AscensionCardProps) {
   const isLarge = titleSize === 'large'
 
   const content = (
-    <div className={`ascension-card-inner ${contentClassName}`}>
+    <div className={`ascension-card-inner ${contentClassName} ${sparkleColor ? 'relative' : ''}`}>
+      {sparkleColor && <BackgroundSparkleField color={sparkleColor} />}
       {title && (
         <div className={`ascension-card-header ${isLarge ? 'ascension-card-header-lg' : ''}`}>
           <span className="ascension-card-header-line" />

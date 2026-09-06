@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import EquipmentSlot from './EquipmentSlot'
 import {
   buildGearTooltip,
@@ -14,6 +15,8 @@ import { useCharacterLoadoutStore, type LoadoutItem, type LoadoutSlot } from '..
 import type { ClassId } from '../game/stats/classes'
 import { useLockBodyScroll } from '../lib/useLockBodyScroll'
 import { useCurrentPvpChampion, type PvpEventClassId } from '../game/pvp/usePvpTournamentStore'
+import { championEmberColor } from '../game/hud/eventEmberBorderData'
+import { BackgroundSparkleField } from '../game/hud/backgroundSparkleField'
 import { TopHunterBadge } from './pvp/TopHunterBadge'
 
 // Same paper-doll size/grid EquipmentPanel.tsx uses (see that file's own
@@ -84,34 +87,36 @@ export default function CharacterLoadoutModal() {
   }
 
   const isPvpChampion = Boolean(loadout && pvpChampion && loadout.character.name === pvpChampion.name)
+  const sparkleColor = isPvpChampion && pvpChampion ? championEmberColor(pvpChampion.title) : null
 
   const isHunter = loadoutClassId === 'hunter'
   const secondHandConfig = loadoutClassId ? SECOND_HAND_BY_CLASS[loadoutClassId] : undefined
   const weaponLoadoutItem = loadout?.equipment.weapon ?? null
   const weaponTemplate = weaponLoadoutItem ? templates.find((t) => t.id === weaponLoadoutItem.template_id) : undefined
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4" onClick={close}>
-      <div
-        className="w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            {isPvpChampion && (
-              <div className="mb-1.5">
-                <TopHunterBadge title={pvpChampion?.title ?? 'Top Hunter'} />
-              </div>
-            )}
-            <h2 className="text-lg font-semibold text-white">
-              {loadout ? `${loadout.character.name} — Lv ${loadout.character.level}` : characterName}
-            </h2>
-            {loadout && <p className="text-xs text-amber-300">Gear Score: {loadout.gearScore}</p>}
+      <div className="ascension-card-frame w-full max-w-sm" onClick={(event) => event.stopPropagation()}>
+        <div className="ascension-card-inner relative p-5">
+          {sparkleColor && <BackgroundSparkleField color={sparkleColor} />}
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div>
+              {isPvpChampion && (
+                <div className="mb-1.5">
+                  <TopHunterBadge title={pvpChampion?.title ?? 'Top Hunter'} />
+                </div>
+              )}
+              <h2 className="text-lg font-semibold text-white">
+                {loadout ? `${loadout.character.name} — Lv ${loadout.character.level}` : characterName}
+              </h2>
+              {loadout && <p className="text-xs text-amber-300">Gear Score: {loadout.gearScore}</p>}
+            </div>
+            <div className="ascension-chip-frame is-interactive shrink-0">
+              <button type="button" onClick={close} aria-label="Close" className="ascension-chip-inner px-2 py-1 text-xs text-slate-400 hover:text-slate-100">
+                ✕
+              </button>
+            </div>
           </div>
-          <button type="button" onClick={close} aria-label="Close" className="text-slate-400 hover:text-slate-200">
-            ✕
-          </button>
-        </div>
 
         {loading && <p className="py-6 text-center text-sm text-slate-300">Loading…</p>}
         {!loading && error && (
@@ -202,7 +207,9 @@ export default function CharacterLoadoutModal() {
             )}
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

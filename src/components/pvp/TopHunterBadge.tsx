@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import { EventEmberBorder } from '../../game/hud/eventEmberBorder'
-import { EVENT_EMBER_HEX } from '../../game/hud/eventEmberBorderData'
+import { championEmberColor, EVENT_EMBER_HEX } from '../../game/hud/eventEmberBorderData'
 
 // Rotating PvP Tournament champion badge (2026-09-05, requested by the
 // user) — shown wherever the current champion's name appears: their own
@@ -18,8 +18,8 @@ import { EVENT_EMBER_HEX } from '../../game/hud/eventEmberBorderData'
 // is the only signal every call site actually has in hand — GlobalAnnouncementTicker
 // parses it out of a plain-text announcement message with no classId available at all.
 export function TopHunterBadge({ title = 'Top Hunter', compact = false, className = '' }: { title?: string; compact?: boolean; className?: string }) {
-  const isWuxia = title.toLowerCase().includes('wuxia')
-  const emberColor = isWuxia ? 'championWuxia' : 'champion'
+  const emberColor = championEmberColor(title)
+  const isWuxia = emberColor === 'championWuxia'
   return (
     <span className={`relative inline-flex ${className}`}>
       <span className="ascension-chip-frame is-tinted" style={{ '--ascension-tint': EVENT_EMBER_HEX[emberColor] } as CSSProperties}>

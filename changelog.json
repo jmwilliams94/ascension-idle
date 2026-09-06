@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.135.1",
+    "date": "2026-09-06",
+    "changes": [
+      "PvP Tournament champions now have a sparkling colored background on their character screen (lime for Top Hunter, blue for Top Wuxia) — visible on your own Equipment tab, in the popup that opens when you click a champion's name in Global Chat, and from the Gear Score Leaderboard. That popup also got a visual polish pass to match the rest of the game's UI"
+    ]
+  },
+  {
     "version": "1.135.0",
     "date": "2026-09-06",
     "changes": [
