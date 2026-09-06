@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.135.7",
+    "date": "2026-09-07",
+    "changes": [
+      "The Get VIP shop is now open to everyone (was admin-only while Stripe payments were still being tested)",
+      "Fixed Daily Quests resetting on UTC midnight instead of local (GMT+10) midnight, so they were rolling over hours later than expected"
+    ]
+  },
+  {
     "version": "1.135.6",
     "date": "2026-09-06",
     "changes": [
