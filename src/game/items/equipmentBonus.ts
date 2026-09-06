@@ -307,13 +307,11 @@ export function previewSellPrice(price: number, qualityTier: string, durabilityF
 }
 
 // Client-side mirror of salvage_item's SQL case statement (see
-// 20260807060000_salvage_ap_table_and_bonus_rebalance.sql; the flat socket
-// bonus added 20260824000000 was removed again 20261214000000 — sockets no
-// longer affect salvage AP) — must stay in sync. Forge's Salvage tab: no
-// gold, same per-tier AP as sell_item's gold payout (Salvage's only
-// difference from Sell is forfeiting the gold). Gems/composition/enchant on
-// the item are not refunded in any way, same as everything else lost on
-// salvage.
+// 20260807060000_salvage_ap_table_and_bonus_rebalance.sql) — must stay in
+// sync. Forge's Salvage tab: no gold, same per-tier AP as sell_item's gold
+// payout (Salvage's only difference from Sell is forfeiting the gold).
+// Gems/composition/enchant on the item are not refunded in any way, same as
+// everything else lost on salvage.
 const SALVAGE_AP_BY_QUALITY: Record<string, number> = {
   normal: 0,
   tempered: 1,
@@ -322,8 +320,23 @@ const SALVAGE_AP_BY_QUALITY: Record<string, number> = {
   ascended: 4,
 }
 
-export function previewSalvageApValue(qualityTier: string): number {
-  return SALVAGE_AP_BY_QUALITY[qualityTier] ?? 0
+// Flat socket bonus added 20261009000000_socket_gear_score_and_salvage_bonus.sql,
+// weapon-scoped removal in 20261229030000_socket_salvage_ap_weapon_only_removal.sql
+// (fixes 20261214030000_remove_socket_salvage_ap_bonus.sql, whose SQL body
+// dropped the bonus for every slot_type despite its own header saying
+// "weapons" — reported by the user, sockets weren't paying out on Wuxia's
+// Bracelet or any other non-weapon socketed gear). Weapons keep the
+// quality-tier-only payout; every other socketed slot_type still gets 20 AP
+// for 1 socket / 160 AP for 2.
+const SOCKET_SALVAGE_AP_BONUS: Record<number, number> = {
+  1: 20,
+  2: 160,
+}
+
+export function previewSalvageApValue(qualityTier: string, slotType?: string, socketCount = 0): number {
+  const base = SALVAGE_AP_BY_QUALITY[qualityTier] ?? 0
+  const socketBonus = slotType !== 'weapon' ? (SOCKET_SALVAGE_AP_BONUS[socketCount] ?? 0) : 0
+  return base + socketBonus
 }
 
 // Gear Durability (2026-08-14) — client mirror of the SQL compute_max_durability

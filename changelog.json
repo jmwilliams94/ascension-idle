@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.135.4",
+    "date": "2026-09-06",
+    "changes": [
+      "Fixed a bug where salvaging socketed armor/jewelry (rings, necklaces, boots, hats, coats — including Wuxia's Bracelet) no longer paid out its Ascension Point socket bonus. It should have only been removed from weapons; it was silently gone everywhere. Weapons remain unaffected (quality-tier AP only)"
+    ]
+  },
+  {
     "version": "1.135.3",
     "date": "2026-09-06",
     "changes": [
