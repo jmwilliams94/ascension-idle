@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import BankActionModal from './BankActionModal'
 import { Button } from './ui/Button'
 import { useDailyQuestsModalStore } from '../game/dailyQuests/useDailyQuestsModalStore'
@@ -174,8 +174,18 @@ export default function DailyQuestsModal() {
   const open = useDailyQuestsModalStore((state) => state.open)
   const closeModal = useDailyQuestsModalStore((state) => state.closeModal)
   const quests = useDailyQuestsStore((state) => state.quests)
+  const ensure = useDailyQuestsStore((state) => state.ensure)
   const characterId = useActiveCharacterStore((state) => state.characterId)
   const level = useProgressionStore((state) => state.level)
+
+  // Refetch on open, not just on mount/the 5-minute interval — otherwise
+  // progress made just before opening (e.g. donating gold, then checking
+  // the popup) shows stale until the next periodic ensure() call.
+  useEffect(() => {
+    if (open && characterId) {
+      void ensure(characterId)
+    }
+  }, [open, characterId, ensure])
 
   if (!open || !characterId) {
     return null

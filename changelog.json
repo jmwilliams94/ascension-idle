@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.134.3",
+    "date": "2026-09-06",
+    "changes": [
+      "Daily Quests popup now refreshes as soon as you open it, so progress from something you just did (like a Gold Donation) shows up immediately instead of waiting on a periodic check"
+    ]
+  },
+  {
     "version": "1.134.2",
     "date": "2026-09-06",
     "changes": [
