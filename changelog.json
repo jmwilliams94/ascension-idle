@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.134.7",
+    "date": "2026-09-06",
+    "changes": [
+      "Fixed a Zone Boss balance bug: 4 of the 8 bosses (Emberroot, Karthos, Skytalon, Twistpath Warden) had their 'weak' defense side end up tougher than their 'strong' side, making them harder to hit with their supposed weakness than with their specialty. Magic attackers should now hit these 4 bosses noticeably harder"
+    ]
+  },
+  {
     "version": "1.134.6",
     "date": "2026-09-06",
     "changes": [
