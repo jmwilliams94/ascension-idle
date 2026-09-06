@@ -3,7 +3,7 @@ import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import { DraggableInventorySlot } from './dragDrop'
 import { useIsDropTarget } from './dragDropContext'
 import GearEquipPopover from './GearEquipPopover'
-import TooltipActionPopover from './TooltipActionPopover'
+import TooltipActionPopover, { type TooltipActionPopoverAction } from './TooltipActionPopover'
 import { Button } from './ui/Button'
 import {
   buildGearTooltip,
@@ -228,7 +228,36 @@ interface InventoryPanelProps {
 // object-in-deps bug (v1.116.7) — subscribing to something that changes far
 // more often than what's actually being computed from it, at the top of a
 // component big enough that the re-render cost isn't free.
-function PotionUseButton({ potionType, onUse }: { potionType: PotionTypeId; onUse: () => void }) {
+// Click-opened, anchored right at the potion tile — same TooltipActionPopover
+// shell Bag/Bank deposit already use, replacing the old hover-tooltip-plus-
+// separate-below-grid-card flow so Use/Sell are reachable right where the
+// item is (2026-09-06, requested by the user: "that's not in the tooltip,
+// that's in a selected item section below the inventory"). Kept as its own
+// component (not inlined into InventoryPanel) so only this popover subscribes
+// to the live HP/MP that ticks every 100ms while combat runs in the
+// background (CombatEngine.tsx) — see the equivalent isolation reasoning this
+// replaced.
+function PotionActionPopover({
+  anchorRect,
+  potionType,
+  tooltip,
+  enableSelling,
+  sellLabel,
+  sellDisabled,
+  onUse,
+  onSell,
+  onClose,
+}: {
+  anchorRect: DOMRect
+  potionType: PotionTypeId
+  tooltip: ItemTooltipData
+  enableSelling: boolean
+  sellLabel: string
+  sellDisabled: boolean
+  onUse: () => void
+  onSell: () => void
+  onClose: () => void
+}) {
   const currentPlayerHp = useCombatStore((state) => state.currentPlayerHp)
   const maxPlayerHp = useCombatStore((state) => state.maxPlayerHp)
   const currentPlayerMp = useCombatStore((state) => state.currentPlayerMp)
@@ -237,24 +266,15 @@ function PotionUseButton({ potionType, onUse }: { potionType: PotionTypeId; onUs
   const type = POTION_TYPES[potionType]
   const hpFull = type.kind === 'hp' && maxPlayerHp > 0 && currentPlayerHp >= maxPlayerHp
   const mpFull = type.kind === 'mp' && maxPlayerMp > 0 && currentPlayerMp >= maxPlayerMp
-  const disabled = hpFull || mpFull
-  const label = hpFull ? 'HP already full' : mpFull ? 'MP already full' : 'Use'
+  const useDisabled = hpFull || mpFull
+  const useLabel = hpFull ? 'HP already full' : mpFull ? 'MP already full' : 'Use'
 
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      title={hpFull ? 'HP already full' : mpFull ? 'MP already full' : undefined}
-      onClick={onUse}
-      className={`mt-3 w-full rounded-lg border px-3 py-1.5 text-xs font-medium ${
-        disabled
-          ? 'cursor-not-allowed border-slate-800 text-slate-600'
-          : 'border-sky-500 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'
-      }`}
-    >
-      {label}
-    </button>
-  )
+  const actions: TooltipActionPopoverAction[] = [{ label: useLabel, onClick: onUse, disabled: useDisabled }]
+  if (enableSelling) {
+    actions.push({ label: sellLabel, onClick: onSell, disabled: sellDisabled })
+  }
+
+  return <TooltipActionPopover anchorRect={anchorRect} tooltip={tooltip} actions={actions} onClose={onClose} />
 }
 
 export default function InventoryPanel({
@@ -314,7 +334,7 @@ export default function InventoryPanel({
   const claimGearSnapshot = useGearSnapshotStore((state) => state.claimSnapshot)
   const showGearClaimPrompt = useGearClaimPromptStore((state) => state.show)
   const potionStacks = usePotionStore((state) => state.stacks)
-  const handlePotionUse = usePotionStore((state) => state.usePotion)
+  const consumePotion = usePotionStore((state) => state.usePotion)
   const sellPotionStack = usePotionStore((state) => state.sellStack)
   // Same "subscribe to the reactive data, not a stable selector-function
   // reference" fix as equippedIds above — myListings/mail entries, not
@@ -391,6 +411,12 @@ export default function InventoryPanel({
   const [experiencePotionPopoverAnchorRect, setExperiencePotionPopoverAnchorRect] = useState<DOMRect | null>(null)
   const [experiencePotionBusy, setExperiencePotionBusy] = useState(false)
   const [experiencePotionError, setExperiencePotionError] = useState<string | null>(null)
+  // HP/Mana Potion popover (2026-09-06, moved out of the old always-below-
+  // the-grid detail card, same "put it in the tooltip" request as Bundle's
+  // own move above) — own state, same shape as the other single-action
+  // popovers here except its actions come from PotionActionPopover (which
+  // also needs the live HP/MP to disable Use when full).
+  const [potionPopoverAnchorRect, setPotionPopoverAnchorRect] = useState<DOMRect | null>(null)
   // Money Bag / Gem Bag "Open" popover (Lucky Lad rewards expansion,
   // 2026-08-09) — same click-opened TooltipActionPopover shell as the Scroll
   // popover above, but takes precedence over equipPopoverEnabled/
@@ -435,7 +461,8 @@ export default function InventoryPanel({
       vipTokenPopoverAnchorRect !== null ||
       experienceOrbPopoverAnchorRect !== null ||
       experiencePotionPopoverAnchorRect !== null ||
-      bagPopoverAnchorRect !== null)
+      bagPopoverAnchorRect !== null ||
+      potionPopoverAnchorRect !== null)
 
   const visiblePotionStacks = potionStacks.filter((stack) => stack.count > 0)
 
@@ -690,6 +717,13 @@ export default function InventoryPanel({
   const closeExperiencePotionPopover = () => {
     setSelectedSlot(null)
     setExperiencePotionPopoverAnchorRect(null)
+  }
+
+  // Potion popover-only — dismiss action, also used after a successful
+  // Use/Sell from inside the popover.
+  const closePotionPopover = () => {
+    setSelectedSlot(null)
+    setPotionPopoverAnchorRect(null)
   }
 
   // Bag popover-only — dismiss action, also used after a successful Open
@@ -1134,7 +1168,12 @@ export default function InventoryPanel({
     if (typeof result.goldGained === 'number') {
       showGainToast({ label: 'Gold', amount: result.goldGained, icon: '💰', color: '#fbbf24' })
     }
-    setSelectedSlot(null)
+    closePotionPopover()
+  }
+
+  const handleUsePotion = (stackId: string) => {
+    void consumePotion(stackId)
+    closePotionPopover()
   }
 
   // Reused inside the Bank tab's currency popover too now (2026-08-07,
@@ -1366,6 +1405,7 @@ export default function InventoryPanel({
         <div className={`grid ${gridColsClass} gap-1.5`}>
           {visiblePotionStacks.map((stack) => {
             const type = POTION_TYPES[stack.potionType]
+            const isSelected = selectedSlot?.kind === 'potion' && selectedSlot.id === stack.id
             const potionTooltip: ItemTooltipData = {
               title: type.displayName,
               icon: type.kind === 'hp' ? '🧪' : '💧',
@@ -1376,21 +1416,26 @@ export default function InventoryPanel({
             }
 
             return (
-              <InventorySlot
+              <div
                 key={stack.id}
-                slotId={stack.id}
-                filled
-                sizeClassName={SLOT_SIZE_CLASS}
-                icon={type.kind === 'hp' ? '🧪' : '💧'}
-                iconSrc={type.iconSrc}
-                qualityColor={CONSUMABLE_COLOR}
-                label={`${type.displayName} (${stack.count}/${type.stackSize})`}
-                tooltip={potionTooltip}
-                badge={`${stack.count}/${type.stackSize}`}
-                selected={selectedSlot?.kind === 'potion' && selectedSlot.id === stack.id}
-                dimmed={dimmedFor(stack.id)}
-                onClick={() => toggleSlot({ kind: 'potion', id: stack.id })}
-              />
+                data-tooltip-action-anchor
+                onClick={(event) => setPotionPopoverAnchorRect(event.currentTarget.getBoundingClientRect())}
+              >
+                <InventorySlot
+                  slotId={stack.id}
+                  filled
+                  sizeClassName={SLOT_SIZE_CLASS}
+                  icon={type.kind === 'hp' ? '🧪' : '💧'}
+                  iconSrc={type.iconSrc}
+                  qualityColor={CONSUMABLE_COLOR}
+                  label={`${type.displayName} (${stack.count}/${type.stackSize})`}
+                  tooltip={isPopoverOpenForSelection(isSelected) ? undefined : potionTooltip}
+                  badge={`${stack.count}/${type.stackSize}`}
+                  selected={isSelected}
+                  dimmed={dimmedFor(stack.id)}
+                  onClick={() => toggleSlot({ kind: 'potion', id: stack.id })}
+                />
+              </div>
             )
           })}
 
@@ -2312,48 +2357,34 @@ export default function InventoryPanel({
         )}
       {bagError && <p className="text-xs text-amber-400">{bagError}</p>}
 
-      {selectedPotionStack && (
-        <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-3">
-          <div className="flex items-center gap-3">
-            <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-slate-700 bg-slate-800 p-1 text-lg"
-              style={{ borderColor: CONSUMABLE_COLOR, backgroundColor: `${CONSUMABLE_COLOR}22` }}
-            >
-              {POTION_TYPES[selectedPotionStack.potionType].iconSrc ? (
-                <img src={POTION_TYPES[selectedPotionStack.potionType].iconSrc} alt="" className="h-full w-full object-contain" />
-              ) : POTION_TYPES[selectedPotionStack.potionType].kind === 'hp' ? (
-                '🧪'
-              ) : (
-                '💧'
-              )}
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-200">{POTION_TYPES[selectedPotionStack.potionType].displayName}</p>
-              <p className="text-xs text-slate-300">{POTION_TYPES[selectedPotionStack.potionType].description}</p>
-              <p className="text-xs text-slate-300">
-                {selectedPotionStack.count} / {POTION_TYPES[selectedPotionStack.potionType].stackSize}
-              </p>
-            </div>
-          </div>
-
-          <PotionUseButton potionType={selectedPotionStack.potionType} onUse={() => void handlePotionUse(selectedPotionStack.id)} />
-
-          {enableSelling && (
-            <Button
-              variant="primary"
-              disabled={sellBusy}
-              onClick={() => void handlePotionSell(selectedPotionStack.id)}
-              className="mt-2 w-full"
-            >
-              {sellBusy
-                ? 'Selling…'
-                : `Sell Stack (${Math.round(
-                    POTION_TYPES[selectedPotionStack.potionType].price * 0.5 * selectedPotionStack.count,
-                  ).toLocaleString()} gold)`}
-            </Button>
-          )}
-          {sellError && <p className="mt-2 text-xs text-amber-400">{sellError}</p>}
-        </div>
+      {selectedPotionStack && potionPopoverAnchorRect && (
+        <PotionActionPopover
+          anchorRect={potionPopoverAnchorRect}
+          potionType={selectedPotionStack.potionType}
+          tooltip={{
+            title: POTION_TYPES[selectedPotionStack.potionType].displayName,
+            icon: POTION_TYPES[selectedPotionStack.potionType].kind === 'hp' ? '🧪' : '💧',
+            iconSrc: POTION_TYPES[selectedPotionStack.potionType].iconSrc,
+            iconColor: CONSUMABLE_COLOR,
+            lines: [
+              POTION_TYPES[selectedPotionStack.potionType].kind === 'hp' ? 'HP Potion' : 'Mana Potion',
+              `${selectedPotionStack.count} / ${POTION_TYPES[selectedPotionStack.potionType].stackSize}`,
+            ],
+            stats: [POTION_TYPES[selectedPotionStack.potionType].description],
+          }}
+          enableSelling={enableSelling}
+          sellLabel={
+            sellBusy
+              ? 'Selling…'
+              : `Sell Stack (${Math.round(
+                  POTION_TYPES[selectedPotionStack.potionType].price * 0.5 * selectedPotionStack.count,
+                ).toLocaleString()} gold)`
+          }
+          sellDisabled={sellBusy}
+          onUse={() => handleUsePotion(selectedPotionStack.id)}
+          onSell={() => void handlePotionSell(selectedPotionStack.id)}
+          onClose={closePotionPopover}
+        />
       )}
 
       {selectedItem &&

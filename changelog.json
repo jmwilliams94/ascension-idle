@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.133.6",
+    "date": "2026-09-06",
+    "changes": [
+      "Potion Use/Sell now open right at the potion in Inventory instead of in a separate section below the grid"
+    ]
+  },
+  {
     "version": "1.133.5",
     "date": "2026-09-06",
     "changes": [
