@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.134.2",
+    "date": "2026-09-06",
+    "changes": [
+      "Fixed the Daily Quests button causing the mobile bottom nav bar to come unstuck and drift while scrolling, and cleared up the button looking clipped against the nav bar"
+    ]
+  },
+  {
     "version": "1.134.1",
     "date": "2026-09-06",
     "changes": [
