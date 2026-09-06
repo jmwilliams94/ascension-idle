@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.135.5",
+    "date": "2026-09-06",
+    "changes": [
+      "The Daily Quests button now always stays visible so you can check progress on quests you're still working on — only the little ready-to-claim number now hides itself when nothing's claimable yet"
+    ]
+  },
+  {
     "version": "1.135.4",
     "date": "2026-09-06",
     "changes": [
