@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.135.2",
+    "date": "2026-09-06",
+    "changes": [
+      "The Shop's Repair tab can now repair individual items one at a time (with their own gold cost shown per item), instead of only the single lump-sum \"Repair All\" button"
+    ]
+  },
+  {
     "version": "1.135.1",
     "date": "2026-09-06",
     "changes": [

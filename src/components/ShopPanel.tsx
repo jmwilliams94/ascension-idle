@@ -304,7 +304,9 @@ export default function ShopPanel() {
   const items = useInventoryStore((state) => state.items)
 
   const repairBusy = useRepairStore((state) => state.busy)
+  const repairingItemId = useRepairStore((state) => state.repairingItemId)
   const repairAll = useRepairStore((state) => state.repairAll)
+  const repairItem = useRepairStore((state) => state.repairItem)
 
   const tab = useShopTabStore((state) => state.tab)
   const setTab = useShopTabStore((state) => state.setTab)
@@ -378,6 +380,26 @@ export default function ShopPanel() {
       return
     }
     setRepairResult({ success: true, message: `Repaired ${result.items_repaired ?? 0} item${result.items_repaired === 1 ? '' : 's'}.` })
+  }
+
+  // Per-item repair (2026-09-06, requested by the user, alongside the
+  // existing Repair All) — same result-handling shape as handleRepairAll,
+  // scoped to one item.
+  const handleRepairItem = async (itemId: string, itemName: string, cost: number) => {
+    const result = await repairItem(itemId)
+    if (!result.ok) {
+      setRepairResult({
+        success: false,
+        message:
+          result.error === 'already_full'
+            ? `${itemName} doesn't need repairing.`
+            : result.error === 'not_enough_gold'
+              ? `Need ${result.cost ?? cost} gold (have ${result.gold ?? gold}).`
+              : 'Something went wrong.',
+      })
+      return
+    }
+    setRepairResult({ success: true, message: `Repaired ${itemName}.` })
   }
 
   return (
@@ -591,27 +613,41 @@ export default function ShopPanel() {
               </p>
             ) : (
               <div className="max-h-64 space-y-2 overflow-y-auto">
-                {damagedItems.map(({ item, template, cost }) => (
-                  <div key={item.id} className="ascension-chip-frame">
-                    <div className="ascension-chip-inner flex items-center justify-between gap-2 p-2 text-xs">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <InventorySlot
-                          slotId={item.id}
-                          filled
-                          sizeClassName={SLOT_SIZE_CLASS}
-                          icon={getItemIcon(template.slot_type)}
-                          iconSrc={getGearIconSrc(template.name)}
-                          qualityColor={getQualityColor(item.quality_tier)}
-                          broken={(item.durability ?? 0) <= 0}
-                          label={template.name}
-                          tooltip={buildGearTooltip(item, template)}
-                        />
-                        <p className="truncate font-medium text-slate-200">{template.name}</p>
+                {damagedItems.map(({ item, template, cost }) => {
+                  const thisItemBusy = repairingItemId === item.id
+                  const canAffordThis = gold >= cost
+                  return (
+                    <div key={item.id} className="ascension-chip-frame">
+                      <div className="ascension-chip-inner flex items-center justify-between gap-2 p-2 text-xs">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <InventorySlot
+                            slotId={item.id}
+                            filled
+                            sizeClassName={SLOT_SIZE_CLASS}
+                            icon={getItemIcon(template.slot_type)}
+                            iconSrc={getGearIconSrc(template.name)}
+                            qualityColor={getQualityColor(item.quality_tier)}
+                            broken={(item.durability ?? 0) <= 0}
+                            label={template.name}
+                            tooltip={buildGearTooltip(item, template)}
+                          />
+                          <p className="truncate font-medium text-slate-200">{template.name}</p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <p className="text-slate-300">{cost}g</p>
+                          <Button
+                            variant="secondary"
+                            disabled={repairBusy || repairingItemId !== null || !canAffordThis}
+                            title={!canAffordThis ? `Need ${cost} gold (have ${gold}).` : undefined}
+                            onClick={() => void handleRepairItem(item.id, template.name, cost)}
+                          >
+                            {thisItemBusy ? 'Repairing…' : 'Repair'}
+                          </Button>
+                        </div>
                       </div>
-                      <p className="shrink-0 text-slate-300">{cost}g</p>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
 
@@ -621,7 +657,7 @@ export default function ShopPanel() {
 
             <Button
               variant="primary"
-              disabled={damagedItems.length === 0 || !canAffordRepair || repairBusy}
+              disabled={damagedItems.length === 0 || !canAffordRepair || repairBusy || repairingItemId !== null}
               title={damagedItems.length === 0 ? undefined : !canAffordRepair ? `Need ${repairTotalCost} gold (have ${gold}).` : undefined}
               onClick={() => void handleRepairAll()}
               className="w-full"
