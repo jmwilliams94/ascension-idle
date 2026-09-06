@@ -20,7 +20,7 @@ Per-character (not account-wide) — each character rolls 3 of 5 possible quest 
 
 Money Bag reward uses `pick_daily_quest_money_bag_class()` — the same relative weights as `pick_lucky_reward()`'s `money_bag` rows (classes 1-10: 12.66, 10.71, 6.25, 3.57, 5.5, 2.0, 0.7, 0.3, 0.3, 0.1), rolled against the raw unscaled sum (42.09) rather than renormalized to 100 first (mathematically identical, skips a scaling step). `grant_daily_quest_money_bag` duplicates `draw_lucky_ticket`'s money-bag branch (occupied-room check + `item_instances` insert) — a 3rd copy of that room-check block, kept duplicated like every existing copy.
 
-## RPCs (all in `20261228000000_daily_quests.sql`)
+## RPCs (all in `20260906042235_daily_quests.sql`)
 
 - `ensure_daily_quests(p_character_id)` — public, `security definer`, ownership-checked. Lazy roll-on-read: if no row exists or `reset_date` is stale, rerolls via `roll_daily_quests` first. Mirrors the `ensure_world_boss_spawn`/`ensure_gold_donation_pool` idiom rather than `pg_cron`.
 - `claim_daily_quest(p_character_id, p_slot, p_item_id?)` — public, `security definer`, ownership-checked, locks the character row for the whole claim. Validates completion (quality_order validates `p_item_id` live; others check `progress >= target`), grants the reward, marks the slot claimed. Returns the new absolute currency counts (`comet_scroll_count`, `fallen_star_scroll_count`, `lottery_ticket_count`) alongside the reward so the client can set them absolutely rather than guess a delta. quality_order's `exp` reward also returns `ball_count` (1/2/3/5, matching the submitted quality) so the client can render that many Experience Orb icons rather than just the raw EXP number.
