@@ -299,13 +299,13 @@ export default function ZoneBossCard({ characterId, emberColor = null }: { chara
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-        <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-center">
+        <div className="glass-tile-gold rounded-lg p-2 text-center">
           <p className="text-slate-300">Free attempts</p>
           <p className="text-sm font-medium text-slate-200">
             {freeRemaining} / {FREE_ATTEMPT_CAP}
           </p>
         </div>
-        <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-2 text-center">
+        <div className="glass-tile-gold rounded-lg p-2 text-center">
           <p className="text-slate-300">Paid attempts</p>
           <p className="text-sm font-medium text-slate-200">
             {paidRemaining} / {PAID_ATTEMPT_CAP}

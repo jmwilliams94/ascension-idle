@@ -768,6 +768,29 @@ a,
   box-shadow: 0 0 24px color-mix(in srgb, var(--ascension-gold) 30%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
+/* Static (non-interactive) counterpart of .btn-gold's idle glass-card look
+   (2026-09-08) — for read-only info tiles that should visually match the
+   new button chrome without any hover/press feedback, since they're not
+   clickable. First user: Zone Boss's Free/Paid attempts counters
+   (ZoneBossCard.tsx). Same border/background/blur as .btn-gold's resting
+   state, scaled down to a smaller drop shadow to suit a compact tile
+   rather than a full-size CTA; no ::before/::after sweep, no :hover/
+   :active rules at all. */
+.glass-tile-gold {
+  position: relative;
+  overflow: hidden;
+  border: 2px solid color-mix(in srgb, var(--ascension-gold) 30%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--ascension-gold) 15%, transparent) 0%,
+    rgba(15, 23, 42, 0.6) 55%,
+    rgba(0, 0, 0, 0.8) 100%
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
 /* Colored variant of .btn-gold's glass-card treatment (2026-08-14,
    updated 2026-09-08 for the glass-card pass) — LuckyLad's purple/emerald
    payment buttons, Salvage's per-tier Tempered/Infused/Radiant buttons,

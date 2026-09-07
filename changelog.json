@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.135.15",
+    "date": "2026-09-08",
+    "changes": [
+      "Zone Boss's Free/Paid attempts counters now match the new glass button style (no hover effect, they're not clickable)"
+    ]
+  },
+  {
     "version": "1.135.14",
     "date": "2026-09-08",
     "changes": [
