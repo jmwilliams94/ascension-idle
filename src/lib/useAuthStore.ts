@@ -14,7 +14,7 @@ interface AuthState {
   passwordRecovery: boolean
   signIn: (email: string, password: string, captchaToken?: string) => Promise<string | null>
   signUp: (email: string, password: string, captchaToken?: string) => Promise<string | null>
-  signOut: () => Promise<void>
+  signOut: (scope?: 'global' | 'local' | 'others') => Promise<void>
   requestPasswordReset: (email: string, captchaToken?: string) => Promise<string | null>
   updatePassword: (newPassword: string) => Promise<string | null>
 }
@@ -47,8 +47,14 @@ export const useAuthStore = create<AuthState>((set) => {
       const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo, captchaToken } })
       return error?.message ?? null
     },
-    signOut: async () => {
-      await supabase.auth.signOut()
+    // Defaults to Supabase's own default ('global' -- signs the account out
+    // of every session, not just this tab). Callers that only mean to get
+    // this tab out of the way (session-conflict handling) must pass 'local'
+    // explicitly, or they'll also revoke the session that's supposed to keep
+    // running elsewhere -- see App.tsx's evictedByOther effect and
+    // SessionConflictModal.tsx's handleCancel.
+    signOut: async (scope) => {
+      await supabase.auth.signOut(scope ? { scope } : undefined)
     },
     requestPasswordReset: async (email, captchaToken) => {
       // Same reasoning as signUp's emailRedirectTo above — must be set explicitly or

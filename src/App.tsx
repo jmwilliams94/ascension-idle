@@ -91,10 +91,15 @@ function App() {
   // GlobalActivityConnection.tsx's broadcast listener and
   // SessionConflictModal.tsx) -- sign this session out so it stops polling
   // combat. SessionEvictedToast (mounted below, outside GameShell) stays up
-  // through the resulting unmount to explain why.
+  // through the resulting unmount to explain why. Scope must be 'local' --
+  // this is the LOSING session; a default/global sign-out revokes the
+  // account's refresh tokens everywhere, including the winning session that
+  // just claimed current_session_id, breaking it (reported by the user:
+  // attacking Zone Boss failed with "Something went wrong" right after using
+  // this prompt to continue on a second device).
   useEffect(() => {
     if (evictedByOther) {
-      void useAuthStore.getState().signOut()
+      void useAuthStore.getState().signOut('local')
     }
   }, [evictedByOther])
 

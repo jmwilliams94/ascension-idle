@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.135.8",
+    "date": "2026-09-07",
+    "changes": [
+      "Fixed switching your account between devices (e.g. desktop to mobile) sometimes signing you out again immediately, breaking actions like attacking the Zone Boss with a generic \"Something went wrong\" error"
+    ]
+  },
+  {
     "version": "1.135.7",
     "date": "2026-09-07",
     "changes": [

@@ -26,7 +26,10 @@ export default function SessionConflictModal() {
 
   const handleCancel = async () => {
     setBusy(true)
-    await useAuthStore.getState().signOut()
+    // 'local' -- this tab is backing off in favor of the other, still-running
+    // session; a default/global sign-out would revoke that other session's
+    // tokens too instead of leaving it running.
+    await useAuthStore.getState().signOut('local')
     clearOtherSessions()
     setBusy(false)
   }
