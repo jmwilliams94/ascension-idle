@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.137.3",
+    "date": "2026-09-08",
+    "changes": [
+      "Tutorial: fixed getting stuck before Sockets by adding a step back to the Forge menu",
+      "Tutorial: the screen dim is now much lighter so the rest of the game stays visible"
+    ]
+  },
+  {
     "version": "1.137.2",
     "date": "2026-09-08",
     "changes": [

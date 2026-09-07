@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import { Button } from './ui/Button'
+import { useTutorialStore } from '../game/tutorial/useTutorialStore'
+import { TUTORIAL_STEP_IDS } from '../game/tutorial/tutorialSteps'
 
 interface ForgeTwoColumnLayoutProps {
   // Optional (2026-09-05) — ForgeStandardPanel omits it since GameShell's own
@@ -30,10 +32,26 @@ interface ForgeTwoColumnLayoutProps {
 // below `lg` puts the slots on top while stacked; `lg:order-1`/`lg:order-2`
 // restores the untouched inventory-left/slots-right column layout at `lg`+.
 export default function ForgeTwoColumnLayout({ title, onBack, inventory, children }: ForgeTwoColumnLayoutProps) {
+  // First-login tutorial (admin-only for now) — after the Quality Upgrade
+  // step, the tutorial needs the player back on ForgeHub (see ForgePanel.tsx)
+  // before it can spotlight the Sockets tile, since that tile doesn't exist
+  // in the DOM while a sub-panel like this one is open.
+  const isTutorialBackStep = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.forgeBackToHub))
+  const advanceTutorial = useTutorialStore((state) => state.advance)
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <Button variant="secondary" onClick={onBack}>
+        <Button
+          variant="secondary"
+          data-tutorial-id="forge-back"
+          onClick={() => {
+            onBack()
+            if (isTutorialBackStep) {
+              advanceTutorial()
+            }
+          }}
+        >
           ← Forge
         </Button>
         {title && <h2 className="font-heading text-gradient-steel text-sm font-black uppercase tracking-[0.15em]">{title}</h2>}

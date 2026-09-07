@@ -91,6 +91,11 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     dialogue: 'Tap Confirm to upgrade your weapon’s quality.',
   },
   {
+    id: 'forge-back-to-hub',
+    targetId: 'forge-back',
+    dialogue: 'Tap here to go back to the Forge menu.',
+  },
+  {
     id: 'forge-tile-sockets',
     targetId: 'forge-tile-sockets',
     dialogue: 'Your weapon just unlocked a socket! Tap Sockets to place a gem into it.',
@@ -137,6 +142,7 @@ export const TUTORIAL_STEP_IDS = {
   forgeSelectWeaponQuality: 'forge-select-weapon-quality',
   forgeMaterialFallenStar: 'forge-material-fallenstar',
   forgeConfirmQuality: 'forge-confirm-quality',
+  forgeBackToHub: 'forge-back-to-hub',
   forgeTileSockets: 'forge-tile-sockets',
   forgeSelectWeaponSockets: 'forge-select-weapon-sockets',
   forgeTapSocket: 'forge-tap-socket',

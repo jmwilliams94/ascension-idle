@@ -104,7 +104,7 @@ export default function TutorialOverlay() {
   // language as TermsAcceptanceModal.
   if (!step.targetId || !rect) {
     return createPortal(
-      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/80 p-4">{dialogue}</div>,
+      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/35 p-4">{dialogue}</div>,
       document.body,
     )
   }
@@ -122,14 +122,14 @@ export default function TutorialOverlay() {
           outside the spotlighted target are swallowed; the natural gap
           between them (the target's own rect) is never covered, so the real
           button underneath stays clickable exactly as normal. */}
-      <div className="pointer-events-auto absolute inset-x-0 top-0 bg-slate-950/80" style={{ height: Math.max(0, top) }} />
-      <div className="pointer-events-auto absolute inset-x-0 bottom-0 bg-slate-950/80" style={{ top: Math.max(0, bottom) }} />
+      <div className="pointer-events-auto absolute inset-x-0 top-0 bg-slate-950/35" style={{ height: Math.max(0, top) }} />
+      <div className="pointer-events-auto absolute inset-x-0 bottom-0 bg-slate-950/35" style={{ top: Math.max(0, bottom) }} />
       <div
-        className="pointer-events-auto absolute bg-slate-950/80"
+        className="pointer-events-auto absolute bg-slate-950/35"
         style={{ top: Math.max(0, top), height: Math.max(0, bottom - top), left: 0, width: Math.max(0, left) }}
       />
       <div
-        className="pointer-events-auto absolute bg-slate-950/80"
+        className="pointer-events-auto absolute bg-slate-950/35"
         style={{ top: Math.max(0, top), height: Math.max(0, bottom - top), left: Math.max(0, right), right: 0 }}
       />
 
