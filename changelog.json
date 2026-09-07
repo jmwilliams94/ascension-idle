@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.135.11",
+    "date": "2026-09-07",
+    "changes": [
+      "Fixed a build error that stopped the previous release from deploying"
+    ]
+  },
+  {
     "version": "1.135.10",
     "date": "2026-09-07",
     "changes": [

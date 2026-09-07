@@ -101,7 +101,7 @@ export default function FxTestPanel() {
 
             <div className="relative z-10 flex items-center gap-4">
               <div className="rounded-lg bg-gradient-to-br from-indigo-500/30 to-indigo-600/10 p-3 backdrop-blur-sm transition-all duration-300 group-hover:from-indigo-400/40 group-hover:to-indigo-500/20">
-                <NavIconGlyph icon={TAB_ICONS.equipment} sizeClassName="h-7 w-7" />
+                {TAB_ICONS.equipment && <NavIconGlyph icon={TAB_ICONS.equipment} sizeClassName="h-7 w-7" />}
               </div>
               <p className="flex-1 text-center font-heading text-lg font-bold uppercase tracking-[0.08em] text-indigo-300 drop-shadow-sm transition-colors duration-300 group-hover:text-indigo-200">
                 Equipment
