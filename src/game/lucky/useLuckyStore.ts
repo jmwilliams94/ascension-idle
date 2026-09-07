@@ -162,12 +162,31 @@ export interface DrawLuckyTicketResult {
   gems?: GemCounts
 }
 
+// First-login tutorial (admin-only for now — see CLAUDE.md). Deliberately a
+// much smaller shape than DrawLuckyTicketResult — tutorial_draw_lucky_ticket
+// only ever grants an Experience Potion, so it never returns the full
+// character-totals object (unlike DrawLuckyTicketResult's `character`,
+// which the real draw's post-processing reads gold/comet_count/etc. off of —
+// reusing that type here without those fields would be an easy foot-gun).
+export interface TutorialDrawResult {
+  ok: boolean
+  error?: 'not_admin' | 'not_owner' | 'invalid_card_index' | 'rpc_failed'
+  board?: LuckyReward[]
+  won_index?: number
+  experience_potion_count?: number
+  next_free_ticket_at?: string | null
+}
+
 interface LuckyState {
   // Epoch ms the free ticket next becomes available — null means it's
   // available right now (never claimed, or the 4h window has already passed).
   nextFreeTicketAt: number | null
   busy: boolean
   hydrate: (claimedAt: string | null) => void
+  // First-login tutorial only (admin-only for now) — guaranteed Experience
+  // Potion regardless of which of the 9 chests is tapped, see
+  // tutorial_draw_lucky_ticket.
+  tutorialDraw: (characterId: string, cardIndex: number) => Promise<TutorialDrawResult>
   // useTicket (2026-08-06, Achievements rework) — a third, independent
   // payment path alongside the free 4h cooldown and the 20-AP paid draw:
   // consumes 1 Lottery Ticket instead, bypassing both the cooldown and AP
@@ -192,6 +211,35 @@ export const useLuckyStore = create<LuckyState>((set, get) => ({
 
   hydrate: (claimedAt) => {
     set({ nextFreeTicketAt: claimedAt ? new Date(claimedAt).getTime() + LUCKY_FREE_TICKET_COOLDOWN_MS : null })
+  },
+
+  tutorialDraw: async (characterId, cardIndex) => {
+    if (get().busy) {
+      return { ok: false, error: 'rpc_failed' }
+    }
+
+    set({ busy: true })
+    const { data, error } = await supabase.rpc('tutorial_draw_lucky_ticket', {
+      p_character_id: characterId,
+      p_card_index: cardIndex,
+    })
+    set({ busy: false })
+
+    if (error) {
+      console.error('tutorial_draw_lucky_ticket call failed', error)
+      return { ok: false, error: 'rpc_failed' }
+    }
+
+    const result = data as TutorialDrawResult
+
+    if (result.next_free_ticket_at !== undefined) {
+      set({ nextFreeTicketAt: result.next_free_ticket_at ? new Date(result.next_free_ticket_at).getTime() : null })
+    }
+    if (result.ok && typeof result.experience_potion_count === 'number') {
+      useCurrencyStore.getState().setExperiencePotions(result.experience_potion_count)
+    }
+
+    return result
   },
 
   draw: async (characterId, cardIndex, useTicket = false) => {

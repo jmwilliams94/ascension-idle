@@ -1,4 +1,5 @@
 import { AscensionCard } from './ui/AscensionCard'
+import { useTutorialStore } from '../game/tutorial/useTutorialStore'
 
 export type ForgeMode = 'standard' | 'master' | 'composition' | 'salvage' | 'sockets' | 'enchant'
 
@@ -71,13 +72,27 @@ interface ForgeHubProps {
 }
 
 export default function ForgeHub({ onSelect }: ForgeHubProps) {
+  // First-login tutorial (admin-only for now) — 'forge-tile-standard'/
+  // 'forge-tile-sockets' are the only two step ids that ever match a real
+  // tile.mode here (see tutorialSteps.ts); every other tile's isStepActive
+  // call is always false, so this generically works for all six tiles
+  // without special-casing which one.
+  const isTutorialTileStep = useTutorialStore((state) => state.isStepActive)
+  const advanceTutorial = useTutorialStore((state) => state.advance)
+
   return (
     <div className="mx-auto grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-3">
       {FORGE_TILES.map((tile) => (
         <button
           key={tile.mode}
           type="button"
-          onClick={() => onSelect(tile.mode)}
+          data-tutorial-id={`forge-tile-${tile.mode}`}
+          onClick={() => {
+            onSelect(tile.mode)
+            if (isTutorialTileStep(`forge-tile-${tile.mode}`)) {
+              advanceTutorial()
+            }
+          }}
           className="group rounded-2xl text-left transition hover:-translate-y-0.5"
         >
           <AscensionCard

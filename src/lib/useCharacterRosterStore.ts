@@ -1,6 +1,31 @@
 import { create } from 'zustand'
 import { supabase } from './supabaseClient'
+import { useAuthStore } from './useAuthStore'
+import { ADMIN_EMAIL } from './adminConfig'
+import { useTutorialStore } from '../game/tutorial/useTutorialStore'
 import type { ClassId } from '../game/stats/classes'
+
+// First-login tutorial (admin-only for now — see CLAUDE.md). Cosmetic-only
+// check (see adminConfig.ts's own doc comment) — real enforcement of "admin
+// only" lives server-side in grant_tutorial_starter_kit itself. Read
+// directly off the store rather than via the useIsAdmin() hook since
+// createCharacter is a plain async action, not a component.
+async function grantTutorialKitAndMaybeStart(characterId: string): Promise<void> {
+  if (useAuthStore.getState().session?.user.email !== ADMIN_EMAIL) {
+    return
+  }
+
+  const { data, error } = await supabase.rpc('grant_tutorial_starter_kit', { p_character_id: characterId })
+
+  if (error) {
+    console.error('Failed to grant tutorial starter kit', error)
+    return
+  }
+
+  if ((data as { ok?: boolean } | null)?.ok) {
+    useTutorialStore.getState().startForCharacter(characterId)
+  }
+}
 
 export const MAX_CHARACTER_SLOTS = 5
 
@@ -111,6 +136,7 @@ export const useCharacterRosterStore = create<CharacterRosterState>((set) => ({
 
     if (classId === 'hunter' || classId === 'wuxia') {
       await grantStarterItems(data.id)
+      await grantTutorialKitAndMaybeStart(data.id)
     }
 
     set((state) => {

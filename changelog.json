@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.137.0",
+    "date": "2026-09-08",
+    "changes": [
+      "Added a guided first-login tutorial (admin-only for now, while it's being tested)"
+    ]
+  },
+  {
     "version": "1.136.0",
     "date": "2026-09-08",
     "changes": [

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import EquippedGearPicker from './EquippedGearPicker'
 import ForgeSocketSlot from './ForgeSocketSlot'
 import ForgeTwoColumnLayout from './ForgeTwoColumnLayout'
@@ -12,6 +12,8 @@ import { effectiveCurrencyAvailable } from '../game/items/forgeCosts'
 import { parseGemDragId, type GemTier, type GemTypeId } from '../game/items/gemTypes'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
+import { useTutorialStore } from '../game/tutorial/useTutorialStore'
+import { TUTORIAL_STEP_IDS } from '../game/tutorial/tutorialSteps'
 
 const MAX_SOCKETS = 2
 const ARMOR_SLOT_TYPES = ['ring', 'necklace', 'boots', 'hat', 'coat']
@@ -68,6 +70,17 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
   const unlockWeaponSocket = useForgeStore((state) => state.unlockWeaponSocket)
   const socketGem = useForgeStore((state) => state.socketGem)
 
+  // First-login tutorial (admin-only for now) — see tutorialSteps.ts. The
+  // socket the tutorial cares about is always socket 0, already unlocked for
+  // free by the earlier tutorial_level_upgrade call, so there's no "Unlock
+  // Socket" step here at all — just select the weapon, tap the socket, tap
+  // the gem, then Confirm.
+  const isTutorialSelectWeaponStep = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.forgeSelectWeaponSockets))
+  const isTutorialTapSocketStep = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.forgeTapSocket))
+  const isTutorialTapGemStep = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.forgeTapGem))
+  const isTutorialConfirmSocketStep = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.forgeConfirmSocket))
+  const advanceTutorial = useTutorialStore((state) => state.advance)
+
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [unlockError, setUnlockError] = useState<string | null>(null)
   const [socketError, setSocketError] = useState<string | null>(null)
@@ -92,6 +105,30 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
   const isArmor = selectedTemplate ? ARMOR_SLOT_TYPES.includes(selectedTemplate.slot_type) : false
   const maxed = socketCount >= MAX_SOCKETS
   const unlockCost = socketCount === 0 ? 1 : 5
+
+  // First-login tutorial (admin-only for now) — auto-advances the "select
+  // your weapon"/"tap the socket"/"tap the gem" steps the moment the real
+  // state they're guiding actually reaches the right shape (see
+  // tutorialSteps.ts). Confirm Socket itself advances from its own onClick
+  // below, alongside a real socketGem call — no tutorial-specific RPC needed
+  // there, socket_gem is already deterministic.
+  useEffect(() => {
+    if (selectedItem && isTutorialSelectWeaponStep) {
+      advanceTutorial()
+    }
+  }, [selectedItem, isTutorialSelectWeaponStep, advanceTutorial])
+
+  useEffect(() => {
+    if (selectedSocketIndex === 0 && isTutorialTapSocketStep) {
+      advanceTutorial()
+    }
+  }, [selectedSocketIndex, isTutorialTapSocketStep, advanceTutorial])
+
+  useEffect(() => {
+    if (pendingSocket && isTutorialTapGemStep) {
+      advanceTutorial()
+    }
+  }, [pendingSocket, isTutorialTapGemStep, advanceTutorial])
 
   const handleRemoveItem = () => {
     setSelectedItemId(null)
@@ -151,8 +188,13 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
     const result = await socketGem(selectedItem.id, pendingSocket.index, pendingSocket.gemId, pendingSocket.tier)
     if (!result.ok) {
       setSocketError(describeSocketFailure(result.error))
+      setPendingSocket(null)
+      return
     }
     setPendingSocket(null)
+    if (isTutorialConfirmSocketStep) {
+      advanceTutorial()
+    }
   }
 
   const handleTileDrop = (overTarget: string, id: string) => {
@@ -199,25 +241,35 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
         title="Sockets"
         onBack={onBack}
         inventory={
-          <InventoryPanel
-            columns={5}
-            reservedItemIds={selectedItemId ? [selectedItemId] : []}
-            onTileDrop={handleTileDrop}
-            isTileEligible={isTileEligible}
-            tapToPlaceEnabled
-          />
+          // data-tutorial-id wraps the whole grid, same reasoning as
+          // ForgeStandardPanel's own forge-inventory-grid — the Iris Gem tile
+          // is dynamically generated deep inside InventoryPanel's shared tile
+          // loop, so spotlighting the whole grid and auto-advancing off
+          // pendingSocket (see the effect above) is far more robust than
+          // threading a one-off id through that generic loop.
+          <div data-tutorial-id="forge-inventory-grid">
+            <InventoryPanel
+              columns={5}
+              reservedItemIds={selectedItemId ? [selectedItemId] : []}
+              onTileDrop={handleTileDrop}
+              isTileEligible={isTileEligible}
+              tapToPlaceEnabled
+            />
+          </div>
         }
       >
           <div className="flex items-start justify-center gap-6">
             <ForgeUpgradeSlot item={selectedItem} template={selectedTemplate} onRemove={handleRemoveItem} />
-            <ForgeSocketSlot
-              index={0}
-              unlocked={socketCount >= 1}
-              filledKey={selectedItem?.sockets[0] ?? null}
-              pendingGem={pendingSocket?.index === 0 ? pendingSocket : null}
-              selected={selectedSocketIndex === 0}
-              onSelect={() => setSelectedSocketIndex(0)}
-            />
+            <div data-tutorial-id="forge-socket-slot-0">
+              <ForgeSocketSlot
+                index={0}
+                unlocked={socketCount >= 1}
+                filledKey={selectedItem?.sockets[0] ?? null}
+                pendingGem={pendingSocket?.index === 0 ? pendingSocket : null}
+                selected={selectedSocketIndex === 0}
+                onSelect={() => setSelectedSocketIndex(0)}
+              />
+            </div>
             <ForgeSocketSlot
               index={1}
               unlocked={socketCount >= 2}
@@ -276,7 +328,13 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
                   Gems can never be removed once socketed. Confirm to lock this in.
                 </p>
                 <div className="flex items-center justify-center gap-2">
-                  <Button variant="primary" disabled={busy} onClick={() => void handleConfirmSocket()} className="flex-1">
+                  <Button
+                    variant="primary"
+                    data-tutorial-id="forge-confirm-socket"
+                    disabled={busy}
+                    onClick={() => void handleConfirmSocket()}
+                    className="flex-1"
+                  >
                     {busy ? 'Working…' : 'Confirm Socket'}
                   </Button>
                   <Button variant="secondary" disabled={busy} onClick={handleCancelSocket} className="flex-1">

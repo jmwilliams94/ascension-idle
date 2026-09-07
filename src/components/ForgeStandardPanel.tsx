@@ -31,6 +31,8 @@ import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { useMarketplaceStore } from '../game/marketplace/useMarketplaceStore'
 import { useMailStore } from '../game/marketplace/useMailStore'
 import { useVipAutomationStore } from '../game/vip/useVipAutomationStore'
+import { useTutorialStore } from '../game/tutorial/useTutorialStore'
+import { TUTORIAL_STEP_IDS } from '../game/tutorial/tutorialSteps'
 
 const RESULT_DISPLAY_MS = 2600
 
@@ -118,6 +120,21 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
   const levelUpgrade = useForgeStore((state) => state.levelUpgrade)
   const qualityUpgradeScroll = useForgeStore((state) => state.qualityUpgradeScroll)
   const levelUpgradeScroll = useForgeStore((state) => state.levelUpgradeScroll)
+  const tutorialLevelUpgrade = useForgeStore((state) => state.tutorialLevelUpgrade)
+  const tutorialQualityUpgrade = useForgeStore((state) => state.tutorialQualityUpgrade)
+
+  // First-login tutorial (admin-only for now) — see tutorialSteps.ts. Each
+  // "select your weapon"/"tap a Comet or Fallen Star" step auto-advances the
+  // moment the real UI state below reaches the right shape (watched via the
+  // effects further down), rather than needing a separate synthetic click
+  // target for every drag/tap sub-interaction.
+  const isTutorialSelectWeaponLevelStep = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.forgeSelectWeaponLevel))
+  const isTutorialSelectWeaponQualityStep = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.forgeSelectWeaponQuality))
+  const isTutorialMaterialCometStep = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.forgeMaterialComet))
+  const isTutorialMaterialFallenStarStep = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.forgeMaterialFallenStar))
+  const isTutorialConfirmLevelStep = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.forgeConfirmLevel))
+  const isTutorialConfirmQualityStep = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.forgeConfirmQuality))
+  const advanceTutorial = useTutorialStore((state) => state.advance)
 
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [materialEntries, setMaterialEntries] = useState<MaterialEntry[]>([])
@@ -153,6 +170,25 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
   // upgrade path as its loose-unit counterpart, but triggers the batch RPC
   // (10 chained attempts off one Scroll) instead of a single attempt.
   const isBatch = materialEntries.length > 0 && materialEntries[0].kind === 'currency' && Boolean(materialEntries[0].isScroll)
+
+  // First-login tutorial (admin-only for now) — auto-advances the "select
+  // your weapon"/"tap a Comet or Fallen Star" steps the moment the real
+  // Upgrade Slot / Material Slot state they're guiding actually reaches the
+  // right shape, rather than requiring a separate synthetic click target for
+  // the underlying drag/tap gesture (see tutorialSteps.ts).
+  useEffect(() => {
+    if (selectedItem && (isTutorialSelectWeaponLevelStep || isTutorialSelectWeaponQualityStep)) {
+      advanceTutorial()
+    }
+  }, [selectedItem, isTutorialSelectWeaponLevelStep, isTutorialSelectWeaponQualityStep, advanceTutorial])
+
+  useEffect(() => {
+    if (materialMode === 'level' && isTutorialMaterialCometStep) {
+      advanceTutorial()
+    } else if (materialMode === 'quality' && isTutorialMaterialFallenStarStep) {
+      advanceTutorial()
+    }
+  }, [materialMode, isTutorialMaterialCometStep, isTutorialMaterialFallenStarStep, advanceTutorial])
 
   useEffect(() => {
     if (!attemptResult) {
@@ -491,6 +527,28 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
       return
     }
 
+    // First-login tutorial (admin-only for now) — guaranteed success, no
+    // 'upgraded' boolean to branch on (see tutorial_level_upgrade/
+    // tutorial_quality_upgrade). tutorialLevelUpgrade also unlocks the
+    // weapon's socket 1 for free, bundled into the same call.
+    if ((materialMode === 'level' && isTutorialConfirmLevelStep) || (materialMode === 'quality' && isTutorialConfirmQualityStep)) {
+      setConfirmBusy(true)
+      const tutorialResult =
+        materialMode === 'level' ? await tutorialLevelUpgrade(selectedItem.id) : await tutorialQualityUpgrade(selectedItem.id)
+      setConfirmBusy(false)
+
+      if (!tutorialResult.ok) {
+        setAttemptResult({ success: false, message: describeFailure(tutorialResult.error) })
+        return
+      }
+
+      setAttemptResult({ success: true, message: 'Upgrade succeeded!' })
+      setSelectedItemId(null)
+      setMaterialEntries([])
+      advanceTutorial()
+      return
+    }
+
     setConfirmBusy(true)
     const result = isBatch
       ? materialMode === 'quality'
@@ -527,13 +585,22 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
       <ForgeTwoColumnLayout
         onBack={onBack}
         inventory={
-          <InventoryPanel
-            columns={5}
-            reservedItemIds={[...(selectedItemId ? [selectedItemId] : []), ...materialEntries.map((entry) => entry.id)]}
-            onTileDrop={handleTileDrop}
-            isTileEligible={isTileEligible}
-            tapToPlaceEnabled
-          />
+          // data-tutorial-id wraps the whole grid rather than one specific
+          // tile (see tutorialSteps.ts's forge-material-comet/-fallenstar
+          // steps) — the Comet/Fallen Star tiles are dynamically generated
+          // deep inside InventoryPanel's own shared tile-rendering loop, so
+          // spotlighting the whole grid and auto-advancing off materialMode
+          // (see the effect above) is far more robust than threading a
+          // one-off id through that generic loop.
+          <div data-tutorial-id="forge-inventory-grid">
+            <InventoryPanel
+              columns={5}
+              reservedItemIds={[...(selectedItemId ? [selectedItemId] : []), ...materialEntries.map((entry) => entry.id)]}
+              onTileDrop={handleTileDrop}
+              isTileEligible={isTileEligible}
+              tapToPlaceEnabled
+            />
+          </div>
         }
       >
         {/* Top-right of the panel (2026-09-05, per the user) — persistently
@@ -581,7 +648,12 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
               {confirmVisible ? (
                 <div className="flex flex-col items-center gap-2">
                   <div className="flex justify-center gap-2">
-                    <Button variant="primary" disabled={confirmBusy} onClick={() => void handleConfirm()}>
+                    <Button
+                      variant="primary"
+                      data-tutorial-id="forge-confirm"
+                      disabled={confirmBusy}
+                      onClick={() => void handleConfirm()}
+                    >
                       {confirmBusy ? 'Working…' : 'Confirm'}
                     </Button>
                     <Button variant="secondary" disabled={confirmBusy} onClick={() => setMaterialEntries([])}>

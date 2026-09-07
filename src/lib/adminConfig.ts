@@ -7,7 +7,11 @@ import { useAuthStore } from './useAuthStore'
 // compare auth.uid() against this same hardcoded email — a non-admin caller
 // hitting either RPC directly still gets rejected regardless of what this
 // hook returns.
-const ADMIN_EMAIL = 'jmwilliams94@icloud.com'
+// Exported (not just used internally) so non-component call sites — e.g.
+// useCharacterRosterStore's createCharacter, a plain async action rather
+// than a component that could use the useIsAdmin() hook below — can do the
+// same cosmetic check via useAuthStore.getState() directly.
+export const ADMIN_EMAIL = 'jmwilliams94@icloud.com'
 
 export function useIsAdmin(): boolean {
   return useAuthStore((state) => state.session?.user.email === ADMIN_EMAIL)

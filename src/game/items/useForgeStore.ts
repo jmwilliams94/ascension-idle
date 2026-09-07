@@ -245,10 +245,35 @@ interface LevelUpgradeScrollResult {
   socket_gained?: boolean
 }
 
+// First-login tutorial (admin-only for now — see CLAUDE.md). Deliberately
+// smaller than QualityUpgradeResult/LevelUpgradeResult — the tutorial RPCs
+// are deterministic (no 'upgraded' boolean to report) and don't touch
+// Scrolls/Bank, so those fields don't exist on the response.
+interface TutorialLevelUpgradeResult {
+  ok: boolean
+  error?: 'not_admin' | 'not_owner' | 'item_not_found' | 'not_enough_comets' | 'no_upgrade_path' | 'already_max_level'
+  level?: number
+  template_id?: string
+  comets_remaining?: number
+  sockets?: ItemInstance['sockets']
+}
+
+interface TutorialQualityUpgradeResult {
+  ok: boolean
+  error?: 'not_admin' | 'not_owner' | 'item_not_found' | 'not_enough_fallen_stars' | 'already_max_quality'
+  quality_tier?: string
+  fallen_stars_remaining?: number
+}
+
 interface ForgeState {
   busy: boolean
   qualityUpgrade: (itemId: string) => Promise<QualityUpgradeResult>
   levelUpgrade: (itemId: string) => Promise<LevelUpgradeResult>
+  // First-login tutorial only (admin-only for now) — guaranteed success,
+  // see tutorial_level_upgrade/tutorial_quality_upgrade. tutorialLevelUpgrade
+  // also bundles a free weapon socket-1 unlock into the same call.
+  tutorialLevelUpgrade: (itemId: string) => Promise<TutorialLevelUpgradeResult>
+  tutorialQualityUpgrade: (itemId: string) => Promise<TutorialQualityUpgradeResult>
   // Scroll batch variants (2026-08-13) -- same effect as qualityUpgrade/
   // levelUpgrade above but chains up to 10 attempts server-side off one
   // Scroll, see CLAUDE.md's Forge section for the full rules.
@@ -356,6 +381,61 @@ export const useForgeStore = create<ForgeState>((set) => ({
     }
     if (result.ok && typeof result.comet_bank_remaining === 'number') {
       usePlayerRecordStore.getState().setBankBalances({ bankComets: result.comet_bank_remaining })
+    }
+
+    return result
+  },
+
+  tutorialLevelUpgrade: async (itemId) => {
+    set({ busy: true })
+
+    const { data, error } = await supabase.rpc('tutorial_level_upgrade', { p_item_id: itemId })
+
+    set({ busy: false })
+
+    if (error) {
+      console.error('Tutorial level upgrade call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as TutorialLevelUpgradeResult
+
+    if (result.ok && typeof result.level === 'number') {
+      useInventoryStore.getState().patchItem(itemId, {
+        level: result.level,
+        ...(result.template_id ? { template_id: result.template_id } : {}),
+      })
+    }
+    if (result.ok && result.sockets) {
+      useInventoryStore.getState().patchItem(itemId, { sockets: result.sockets })
+      useFireworkStore.getState().fire()
+    }
+    if (result.ok && typeof result.comets_remaining === 'number') {
+      useCurrencyStore.getState().setComets(result.comets_remaining)
+    }
+
+    return result
+  },
+
+  tutorialQualityUpgrade: async (itemId) => {
+    set({ busy: true })
+
+    const { data, error } = await supabase.rpc('tutorial_quality_upgrade', { p_item_id: itemId })
+
+    set({ busy: false })
+
+    if (error) {
+      console.error('Tutorial quality upgrade call failed', error)
+      return { ok: false }
+    }
+
+    const result = data as TutorialQualityUpgradeResult
+
+    if (result.ok && result.quality_tier) {
+      useInventoryStore.getState().patchItem(itemId, { quality_tier: result.quality_tier })
+    }
+    if (result.ok && typeof result.fallen_stars_remaining === 'number') {
+      useCurrencyStore.getState().setFallenStars(result.fallen_stars_remaining)
     }
 
     return result

@@ -53,7 +53,14 @@ export default function EquippedGearPicker({ onSelect }: EquippedGearPickerProps
         const item = items.find((entry) => entry.id === itemId) ?? null
         const template = item ? (templates.find((t) => t.id === item.template_id) ?? null) : null
         return (
-          <div key={slot} className="flex flex-col items-center gap-1">
+          <div
+            key={slot}
+            className="flex flex-col items-center gap-1"
+            // First-login tutorial (admin-only for now) — every "select your
+            // weapon" step spotlights this same target regardless of which
+            // Forge screen it's on (see tutorialSteps.ts).
+            data-tutorial-id={slot === 'weapon' ? 'equip-weapon-picker' : undefined}
+          >
             <InventorySlot
               slotId={`equipped-${slot}`}
               filled={Boolean(item)}

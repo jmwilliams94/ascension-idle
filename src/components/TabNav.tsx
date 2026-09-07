@@ -7,6 +7,8 @@ import { useActiveEventEmberColor } from '../game/hud/useEventEmberColor'
 import { useLuckyFreeEmberColor } from '../game/hud/useLuckyFreeEmberColor'
 import { EventEmberBorder } from '../game/hud/eventEmberBorder'
 import { eventBorderTintStyle } from '../game/hud/eventEmberBorderData'
+import { useTutorialStore } from '../game/tutorial/useTutorialStore'
+import { TUTORIAL_STEP_IDS } from '../game/tutorial/tutorialSteps'
 
 const TAB_ITEMS: { id: TabId; label: string }[] = [
   { id: 'combat', label: 'Idling' },
@@ -38,11 +40,25 @@ function TabButton({ id, label, badge }: { id: TabId; label: string; badge?: num
   const active = activeTab === id
   const icon = TAB_ICONS[id]
 
+  // First-login tutorial (admin-only for now) — only the Forge tab is ever a
+  // spotlighted step here (Lucky's own nav button is LuckyTabButton below).
+  // Hook called unconditionally (rules-of-hooks) — the id === 'forge' check
+  // is applied afterward, not inside the hook call itself.
+  const isTutorialNavForgeStepActive = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.navForge))
+  const advanceTutorial = useTutorialStore((state) => state.advance)
+  const isTutorialForgeStep = id === 'forge' && isTutorialNavForgeStepActive
+
   return (
     <div className="relative">
       <button
         type="button"
-        onClick={() => setActiveTab(id)}
+        data-tutorial-id={id === 'forge' ? 'nav-forge' : undefined}
+        onClick={() => {
+          setActiveTab(id)
+          if (isTutorialForgeStep) {
+            advanceTutorial()
+          }
+        }}
         className={`${TAB_BUTTON_CLASS} w-full ${active ? 'btn-gold-active' : 'btn-gold'}`}
       >
         {icon && <NavIconGlyph icon={icon} sizeClassName="h-8 w-8" />}
@@ -106,11 +122,21 @@ function LuckyTabButton({ label }: { label: string }) {
   const icon = TAB_ICONS.lucky
   const emberColor = useLuckyFreeEmberColor()
 
+  // First-login tutorial (admin-only for now).
+  const isTutorialStepActive = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.navLucky))
+  const advanceTutorial = useTutorialStore((state) => state.advance)
+
   return (
     <div className="relative">
       <button
         type="button"
-        onClick={() => setActiveTab('lucky')}
+        data-tutorial-id="nav-lucky"
+        onClick={() => {
+          setActiveTab('lucky')
+          if (isTutorialStepActive) {
+            advanceTutorial()
+          }
+        }}
         className={`${TAB_BUTTON_CLASS} w-full ${active ? 'btn-gold-active' : 'btn-gold'}`}
         style={eventBorderTintStyle(emberColor)}
       >

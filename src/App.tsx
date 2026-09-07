@@ -6,9 +6,12 @@ import SessionEvictedToast from './components/SessionEvictedToast'
 import UpdateBanner from './components/UpdateBanner'
 import StaleClientNotice from './components/StaleClientNotice'
 import TermsAcceptanceModal from './components/TermsAcceptanceModal'
+import TutorialOverlay from './components/TutorialOverlay'
 import WhatsNewModal from './components/WhatsNewModal'
 import { LEGAL_VERSION } from './components/legal/legalShared'
 import { useAuthStore } from './lib/useAuthStore'
+import { useIsAdmin } from './lib/adminConfig'
+import { useTutorialStore } from './game/tutorial/useTutorialStore'
 import { useActiveCharacterStore, getStoredCharacterId, setStoredCharacterId } from './lib/useActiveCharacterStore'
 import { usePlayerRecordStore } from './lib/usePlayerRecordStore'
 import { useItemTemplatesStore } from './game/items/useItemTemplatesStore'
@@ -43,6 +46,14 @@ function App() {
   const setActiveCharacterId = useActiveCharacterStore((state) => state.setActiveCharacterId)
 
   const evictedByOther = useSessionConflictStore((state) => state.evictedByOther)
+
+  // First-login tutorial (admin-only for now — see CLAUDE.md). Real
+  // enforcement of the "admin only" rule lives server-side in the tutorial
+  // RPCs themselves; this is just the cosmetic gate deciding whether the
+  // overlay ever mounts at all, same convention as every other isAdmin
+  // check in this codebase (src/lib/adminConfig.ts).
+  const isAdmin = useIsAdmin()
+  const tutorialActive = useTutorialStore((state) => state.active)
 
   // Guards the one-time "resume last-played character" attempt below so it only
   // fires once per fresh mount (i.e. a real page load) — not every time
@@ -137,6 +148,7 @@ function App() {
       <StaleClientNotice />
       <SessionConflictModal />
       <SessionEvictedToast />
+      {isAdmin && tutorialActive && <TutorialOverlay />}
 
       <AuthGate>
         {userId && playerRecordLoaded && termsAcceptedVersion !== LEGAL_VERSION ? (

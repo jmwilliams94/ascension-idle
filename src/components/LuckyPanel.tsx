@@ -47,6 +47,8 @@ import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
 import { AscensionCard } from './ui/AscensionCard'
 import { Button } from './ui/Button'
+import { useTutorialStore } from '../game/tutorial/useTutorialStore'
+import { TUTORIAL_STEP_IDS } from '../game/tutorial/tutorialSteps'
 
 // Parses the gem type/tier back out of a gem_tempered_<id>/gem_ascended_<id>
 // reward kind (see useLuckyStore.ts's LuckyRewardKind for why the gem
@@ -359,6 +361,11 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   const nextFreeTicketAt = useLuckyStore((state) => state.nextFreeTicketAt)
   const busy = useLuckyStore((state) => state.busy)
   const draw = useLuckyStore((state) => state.draw)
+  const tutorialDraw = useLuckyStore((state) => state.tutorialDraw)
+  // First-login tutorial (admin-only for now).
+  const isTutorialFreeEntryStep = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.luckyFreeEntry))
+  const isTutorialBoardStep = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.luckyBoard))
+  const advanceTutorial = useTutorialStore((state) => state.advance)
   const drawBulk = useLuckyStore((state) => state.drawBulk)
   const revealBulkCard = useLuckyStore((state) => state.revealBulkCard)
   const ascensionPoints = usePlayerRecordStore((state) => state.ascensionPoints)
@@ -399,6 +406,22 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   const handleOpen = async (index: number) => {
     if (board || busy || !paymentChoice) return
     setError(null)
+
+    // First-login tutorial (admin-only for now) — guaranteed Experience
+    // Potion regardless of which chest is tapped, see tutorial_draw_lucky_ticket.
+    if (isTutorialBoardStep) {
+      const tutorialResult = await tutorialDraw(characterId, index)
+      if (!tutorialResult.ok || !tutorialResult.board || typeof tutorialResult.won_index !== 'number') {
+        setError("Couldn't draw a ticket — try again.")
+        return
+      }
+      setBoard(tutorialResult.board)
+      setWonIndex(tutorialResult.won_index)
+      setPaymentUsed('free')
+      advanceTutorial()
+      return
+    }
+
     const result = await draw(characterId, index, paymentChoice === 'lottery_ticket')
 
     if (!result.ok || !result.board || typeof result.won_index !== 'number') {
@@ -485,7 +508,10 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
           controls (2026-08-10, requested by the user) so header + chests +
           controls all fit on one mobile screen without scrolling, and so
           picking a payment method doesn't shift the chests around. */}
-      <div className={`mx-auto grid max-w-sm grid-cols-3 gap-2 ${paymentChoice || board ? '' : 'opacity-50'}`}>
+      <div
+        data-tutorial-id="lucky-board"
+        className={`mx-auto grid max-w-sm grid-cols-3 gap-2 ${paymentChoice || board ? '' : 'opacity-50'}`}
+      >
         {Array.from({ length: LUCKY_CARD_COUNT }, (_, index) => (
           <LuckyCard
             key={index}
@@ -542,8 +568,14 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
             </Button>
             <button
               type="button"
+              data-tutorial-id="lucky-free-entry"
               disabled={busy || !canAffordPoints}
-              onClick={() => setPaymentChoice('ascension_points')}
+              onClick={() => {
+                setPaymentChoice('ascension_points')
+                if (isTutorialFreeEntryStep) {
+                  advanceTutorial()
+                }
+              }}
               style={{ '--glow-bright': '#c084fc', '--glow-base': '#a855f7', '--glow-dark': '#7e22ce' } as CSSProperties}
               className="btn-glow flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-2.5 text-center font-heading text-sm font-bold uppercase leading-tight tracking-[0.12em] disabled:cursor-not-allowed lg:order-3"
             >
