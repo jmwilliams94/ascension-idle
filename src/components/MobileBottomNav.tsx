@@ -10,6 +10,8 @@ import { useLuckyFreeEmberColor } from '../game/hud/useLuckyFreeEmberColor'
 import { EventEmberBorder } from '../game/hud/eventEmberBorder'
 import { eventBorderTintStyle } from '../game/hud/eventEmberBorderData'
 import { APP_VERSION } from '../version'
+import { useTutorialStore } from '../game/tutorial/useTutorialStore'
+import { TUTORIAL_STEP_IDS } from '../game/tutorial/tutorialSteps'
 
 const BASE_URL = import.meta.env.BASE_URL
 // Cache-busts public/ art with a fixed filename — see navIcons.ts's own
@@ -110,10 +112,23 @@ function LuckyNavButton({ label }: { label: string }) {
   const icon = TAB_ICONS.lucky
   const emberColor = useLuckyFreeEmberColor()
 
+  // First-login tutorial (admin-only for now) — mirrors TabNav.tsx's
+  // LuckyTabButton (desktop), which is only CSS-hidden on mobile, not
+  // unmounted — see TutorialOverlay's measureTarget for why sharing the same
+  // data-tutorial-id across both is safe.
+  const isTutorialStepActive = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.navLucky))
+  const advanceTutorial = useTutorialStore((state) => state.advance)
+
   return (
     <button
       type="button"
-      onClick={() => setActiveTab('lucky')}
+      data-tutorial-id="nav-lucky"
+      onClick={() => {
+        setActiveTab('lucky')
+        if (isTutorialStepActive) {
+          advanceTutorial()
+        }
+      }}
       className="relative flex flex-[0.85] flex-col items-center justify-center rounded-lg py-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400/50"
     >
       <span
@@ -220,6 +235,18 @@ function TavernNavButton({ badges }: { badges: Partial<Record<TabId, number>> })
   const active = TAVERN_ITEMS.some((item) => item.id === activeTab)
   const totalBadge = Object.values(badges).reduce<number>((sum, value) => sum + (value ?? 0), 0)
 
+  // First-login tutorial (admin-only for now) — Forge sits inside this
+  // rollup on mobile rather than its own top-level nav button, so the
+  // 'nav-forge' step's spotlight target is shared by two real elements
+  // below: this Tavern toggle (visible first, gets the player to open the
+  // rollup) and the rolled-out Forge item (visible once expanded, actually
+  // advances the tutorial). TutorialOverlay's measureTarget picks whichever
+  // one currently has real size, so the spotlight naturally hops from one to
+  // the other as the rollup opens — no separate tutorial step needed, and
+  // desktop (a single direct Forge tab button) is unaffected.
+  const isTutorialNavForgeStepActive = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.navForge))
+  const advanceTutorial = useTutorialStore((state) => state.advance)
+
   useEffect(() => {
     if (!expanded) return undefined
     const handlePointerDown = (event: PointerEvent) => {
@@ -275,9 +302,13 @@ function TavernNavButton({ badges }: { badges: Partial<Record<TabId, number>> })
                     <button
                       key={item.id}
                       type="button"
+                      data-tutorial-id={item.id === 'forge' ? 'nav-forge' : undefined}
                       onClick={() => {
                         setActiveTab(item.id)
                         setExpanded(false)
+                        if (item.id === 'forge' && isTutorialNavForgeStepActive) {
+                          advanceTutorial()
+                        }
                       }}
                       className={`relative flex items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-left font-heading text-xs font-bold uppercase tracking-[0.06em] ${
                         activeTab === item.id ? 'bg-slate-300/10 text-slate-100' : 'text-slate-300 hover:bg-slate-800/80'
@@ -301,6 +332,7 @@ function TavernNavButton({ badges }: { badges: Partial<Record<TabId, number>> })
 
       <button
         type="button"
+        data-tutorial-id="nav-forge"
         onClick={() => setExpanded((current) => !current)}
         className="relative flex h-full w-full flex-col items-center justify-center rounded-lg py-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400/50"
       >

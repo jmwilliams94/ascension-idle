@@ -11,13 +11,24 @@ interface Rect {
   height: number
 }
 
+// Desktop (TabNav) and mobile (MobileBottomNav) each render their own real
+// nav buttons unconditionally — the inactive one is only CSS-hidden
+// (`hidden lg:grid` etc.), not unmounted, so both can share a data-tutorial-id
+// and both match this query at once. A CSS-hidden element's
+// getBoundingClientRect() is always {0,0,0,0}, so picking the first *visible*
+// (non-zero-size) match is enough to always land on the one actually on
+// screen — same reasoning covers Forge's mobile-only Tavern rollup, where
+// the Tavern toggle and the rolled-out Forge item share 'nav-forge' too (see
+// MobileBottomNav.tsx) and only one of the two exists/has size at a time.
 function measureTarget(targetId: string): Rect | null {
-  const el = document.querySelector(`[data-tutorial-id="${targetId}"]`)
-  if (!el) {
-    return null
+  const candidates = document.querySelectorAll(`[data-tutorial-id="${targetId}"]`)
+  for (const el of candidates) {
+    const rect = el.getBoundingClientRect()
+    if (rect.width > 0 || rect.height > 0) {
+      return { top: rect.top, left: rect.left, width: rect.width, height: rect.height }
+    }
   }
-  const rect = el.getBoundingClientRect()
-  return { top: rect.top, left: rect.left, width: rect.width, height: rect.height }
+  return null
 }
 
 // First-login tutorial spotlight (admin-only for now — see CLAUDE.md). No

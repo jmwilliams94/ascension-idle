@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.137.1",
+    "date": "2026-09-08",
+    "changes": [
+      "Fixed the admin-only first-login tutorial's spotlight not appearing correctly on mobile"
+    ]
+  },
+  {
     "version": "1.137.0",
     "date": "2026-09-08",
     "changes": [
