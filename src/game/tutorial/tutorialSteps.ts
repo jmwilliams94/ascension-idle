@@ -18,10 +18,21 @@
 // needs a moment to actually look at something (the revealed Lucky Lad
 // board, the socket-unlock celebration) rather than being yanked straight to
 // the next spotlight.
+//
+// `dialogue` is either one line (the common case) or an array of paragraphs
+// for the longer welcome/completion screens — TutorialOverlay renders each
+// entry as its own paragraph with normal spacing between them; an empty
+// string entry ('') renders as a blank spacer row for extra separation
+// between two paragraphs, rather than the usual paragraph gap. Completion's
+// '{weaponLevelPhrase}' placeholder is substituted at render time with the
+// real current level of the granted tutorial weapon (5 for Wuxia's Backsword
+// chain, 8 for Hunter's Bow chain), e.g. "level 5" — or "the required level"
+// if it can't be found — see TutorialOverlay.tsx.
 export interface TutorialStep {
   id: string
   targetId: string | null
-  dialogue: string
+  heading?: string
+  dialogue: string | string[]
   requiresManualAdvance?: boolean
 }
 
@@ -29,8 +40,13 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'welcome',
     targetId: null,
-    dialogue:
-      'Hi, I’m Jordan — the creator of Ascension Idle. I’ve always wanted to build my own idle game, but never quite found the time to do it justice, until AI came along. With a lot of help from Claude, that idea finally became this game: a blend of Melvor Idle’s steady progression and Conquer Online’s class fantasy, built as a genuine passion project. Welcome — I hope you enjoy playing it as much as I’ve enjoyed building it. Let’s walk through the basics.',
+    heading: 'Welcome',
+    dialogue: [
+      'Hi, I’m Jordan — the creator of Ascension Idle. I’ve always wanted to build my own idle game, but never quite found the time to do it justice, until AI came along.',
+      'With a lot of help from Claude, that idea finally became this game: a blend of Melvor Idle’s steady progression and Conquer Online’s class fantasy, built as a genuine passion project.',
+      '',
+      'Welcome — I hope you enjoy playing it as much as I’ve enjoyed building it. Let’s walk through the basics.',
+    ],
   },
   {
     id: 'nav-lucky',
@@ -127,8 +143,11 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'completion',
     targetId: null,
-    dialogue:
-      'That’s the basics! The weapon you just upgraded is sitting in your Inventory ready to equip whenever you like. Explore the rest of Ascension Idle at your own pace.',
+    dialogue: [
+      'That’s the basics! The weapon you just upgraded is waiting in your Inventory — it’ll be ready to equip once your character reaches {weaponLevelPhrase}.',
+      '',
+      'From here, it’s all about growing your character: take on events, chase down kills, and grind your way to the top. Explore the rest of Ascension Idle at your own pace!',
+    ],
   },
 ]
 

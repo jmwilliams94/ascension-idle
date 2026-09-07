@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.138.1",
+    "date": "2026-09-08",
+    "changes": [
+      "Tutorial: added a centered heading and better paragraph spacing to the welcome screen",
+      "Tutorial: the finish screen now correctly says the weapon needs your character's real level to equip, plus an encouragement to keep playing"
+    ]
+  },
+  {
     "version": "1.138.0",
     "date": "2026-09-08",
     "changes": [

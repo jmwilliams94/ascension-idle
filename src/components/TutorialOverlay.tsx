@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Button } from './ui/Button'
 import { useTutorialStore } from '../game/tutorial/useTutorialStore'
 import { TUTORIAL_STEPS } from '../game/tutorial/tutorialSteps'
+import { useInventoryStore } from '../game/items/useInventoryStore'
 
 interface Rect {
   top: number
@@ -94,8 +95,14 @@ function getVisibleViewportRect(): { top: number; left: number; bottom: number; 
 export default function TutorialOverlay() {
   const active = useTutorialStore((state) => state.active)
   const stepIndex = useTutorialStore((state) => state.stepIndex)
+  const weaponId = useTutorialStore((state) => state.weaponId)
   const advance = useTutorialStore((state) => state.advance)
   const skip = useTutorialStore((state) => state.skip)
+
+  // Completion's '{weaponLevelPhrase}' placeholder — the granted tutorial
+  // weapon's real, current level (see grant_tutorial_starter_kit/
+  // tutorial_level_upgrade), not a hardcoded 5-for-Wuxia/8-for-Hunter guess.
+  const tutorialWeaponLevel = useInventoryStore((state) => (weaponId ? state.items.find((item) => item.id === weaponId)?.level : undefined))
 
   const step = active ? TUTORIAL_STEPS[stepIndex] : null
   const [rect, setRect] = useState<Rect | null>(null)
@@ -133,10 +140,29 @@ export default function TutorialOverlay() {
   // better with more room than the short one-line guided-step prompts.
   const dialogueWidthClass = step.targetId === null ? 'max-w-md' : 'max-w-sm'
 
+  // dialogue is either one line or an array of paragraphs (see
+  // tutorialSteps.ts) — an empty-string entry is a blank spacer row rather
+  // than real text, for separating two paragraphs by more than the usual
+  // paragraph gap. {weaponLevelPhrase} only ever appears on the completion
+  // step.
+  const weaponLevelPhrase = typeof tutorialWeaponLevel === 'number' ? `level ${tutorialWeaponLevel}` : 'the required level'
+  const paragraphs = (Array.isArray(step.dialogue) ? step.dialogue : [step.dialogue]).map((line) =>
+    line.replace('{weaponLevelPhrase}', weaponLevelPhrase),
+  )
+
   const dialogue = (
     <div className={`ascension-card-frame is-tinted w-full ${dialogueWidthClass}`} style={TUTORIAL_TINT_STYLE}>
       <div className="ascension-card-inner space-y-3 p-4 text-center">
-        <p className="text-sm leading-relaxed text-slate-100">{step.dialogue}</p>
+        {step.heading && <h2 className="font-heading text-lg font-bold text-white">{step.heading}</h2>}
+        {paragraphs.map((line, index) =>
+          line === '' ? (
+            <div key={index} className="h-2" />
+          ) : (
+            <p key={index} className="text-sm leading-relaxed text-slate-100">
+              {line}
+            </p>
+          ),
+        )}
         {step.targetId === null || step.requiresManualAdvance ? (
           <Button variant="primary" onClick={() => advance()} className="w-full">
             {step.id === 'welcome' ? 'Get Started' : step.id === 'completion' ? 'Finish' : 'Continue'}

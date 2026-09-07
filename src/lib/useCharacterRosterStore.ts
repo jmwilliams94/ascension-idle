@@ -22,8 +22,9 @@ async function grantTutorialKitAndMaybeStart(characterId: string): Promise<void>
     return
   }
 
-  if ((data as { ok?: boolean } | null)?.ok) {
-    useTutorialStore.getState().startForCharacter(characterId)
+  const result = data as { ok?: boolean; weapon_id?: string | null } | null
+  if (result?.ok) {
+    useTutorialStore.getState().startForCharacter(characterId, result.weapon_id ?? null)
   }
 }
 

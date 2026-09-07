@@ -12,7 +12,13 @@ interface TutorialState {
   active: boolean
   characterId: string | null
   stepIndex: number
-  startForCharacter: (characterId: string) => void
+  // The item_instances id of the level-1 weapon grant_tutorial_starter_kit
+  // inserted into Inventory (see useCharacterRosterStore.ts) — kept here so
+  // the completion step can read its real, current level (5 for Wuxia's
+  // Backsword chain, 8 for Hunter's Bow chain) straight off live inventory
+  // state rather than hardcoding either number.
+  weaponId: string | null
+  startForCharacter: (characterId: string, weaponId: string | null) => void
   advance: () => void
   skip: () => void
   isStepActive: (id: string) => boolean
@@ -22,8 +28,9 @@ export const useTutorialStore = create<TutorialState>((set, get) => ({
   active: false,
   characterId: null,
   stepIndex: 0,
+  weaponId: null,
 
-  startForCharacter: (characterId) => set({ active: true, characterId, stepIndex: 0 }),
+  startForCharacter: (characterId, weaponId) => set({ active: true, characterId, weaponId, stepIndex: 0 }),
 
   advance: () =>
     set((state) => {
