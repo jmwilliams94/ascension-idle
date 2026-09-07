@@ -1,5 +1,12 @@
 import type { ReactNode } from 'react'
 
+// Bump this (and the "Last updated" strings in TermsContent.tsx/
+// PrivacyPolicyContent.tsx) whenever either doc has a legally-material change
+// -- TermsAcceptanceModal.tsx compares it against players.terms_accepted_version,
+// so a bump makes every account re-accept once on next login, same mechanism
+// as last_seen_version driving the What's New modal.
+export const LEGAL_VERSION = '2026-09-03'
+
 // Shared plain-text building blocks for the Privacy Policy/Terms content
 // (LegalPanel.tsx's Settings tab, LegalModal.tsx's unauthenticated login-page
 // modal) -- both read from the same section data so the two surfaces can

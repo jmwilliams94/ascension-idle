@@ -3,6 +3,7 @@ import { changelogEntriesForWhatsNew, type ChangelogEntry } from './changelog'
 import { compareVersions } from './semver'
 import { supabase } from './supabaseClient'
 import { APP_VERSION } from '../version'
+import { LEGAL_VERSION } from '../components/legal/legalShared'
 import { DEFAULT_GEAR_COMPOSITION_POINTS, type GearCompositionPoints } from '../game/items/forgeCosts'
 import type { CompositionStones } from '../game/items/useCompositionStore'
 import type { GemCounts } from '../game/items/gemTypes'
@@ -17,6 +18,10 @@ const DEFAULT_GEMS_BANKED: GemCounts = {}
 // apply to the whole account, not any one character.
 interface PlayerRow {
   last_seen_version: string | null
+  // Null = never accepted (every row created before this feature shipped, plus
+  // every genuinely new signup). Compared against LEGAL_VERSION, not just
+  // truthiness, so a future doc rewrite can force one re-prompt.
+  terms_accepted_version: string | null
   bank_gold: number
   bank_comets: number
   bank_fallen_stars: number
@@ -75,6 +80,9 @@ interface PlayerRecordState {
   // Entries to show in the "What's New" modal. Null means nothing to show (either
   // not loaded yet, already up to date, or already dismissed this session).
   whatsNewEntries: ChangelogEntry[] | null
+  // Drives TermsAcceptanceModal's gate in App.tsx -- compare against LEGAL_VERSION,
+  // not just truthiness (see PlayerRow's own comment above).
+  termsAcceptedVersion: string | null
   // Shared account-wide bank (the Bank tab's currency section) — deposited/
   // withdrawn via transfer_currency (see useBankStore), never written directly
   // by the client, same trust model as comets/fallen stars on the character row.
@@ -120,6 +128,11 @@ interface PlayerRecordState {
   notifyPvpTournament: boolean
   loadPlayerRecord: (userId: string) => Promise<void>
   dismissWhatsNew: (userId: string) => Promise<void>
+  // Records acceptance at LEGAL_VERSION. Returns false (leaving the modal up)
+  // if the write fails -- unlike dismissWhatsNew this can't optimistically
+  // clear local state first, since failing silently here would let the player
+  // into the game without a recorded acceptance.
+  acceptTerms: (userId: string) => Promise<boolean>
   // Reflects a successful transfer_currency RPC result in the local cache —
   // mirrors useCurrencyStore's setComets/setFallenStars pattern.
   setBankBalances: (patch: Partial<{ bankGold: number; bankComets: number; bankFallenStars: number }>) => void
@@ -154,6 +167,7 @@ interface PlayerRecordState {
 export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
   loaded: false,
   whatsNewEntries: null,
+  termsAcceptedVersion: null,
   bankGold: 0,
   bankComets: 0,
   bankFallenStars: 0,
@@ -179,7 +193,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
     const { data, error } = await supabase
       .from('players')
       .select(
-        'last_seen_version, bank_gold, bank_comets, bank_fallen_stars, unlocked_classes, lucky_free_ticket_claimed_at, ascension_points, bank_points, gear_composition_points, comet_bank_count, fallen_star_bank_count, vip_token_bank_count, experience_orb_bank_count, experience_potion_bank_count, composition_stones_banked, gems_banked, account_zone_attack_bonus_pct, account_zone_drop_bonus_pct, notify_zone_boss, notify_gold_donation, notify_lucky_ticket, notify_pvp_tournament',
+        'last_seen_version, terms_accepted_version, bank_gold, bank_comets, bank_fallen_stars, unlocked_classes, lucky_free_ticket_claimed_at, ascension_points, bank_points, gear_composition_points, comet_bank_count, fallen_star_bank_count, vip_token_bank_count, experience_orb_bank_count, experience_potion_bank_count, composition_stones_banked, gems_banked, account_zone_attack_bonus_pct, account_zone_drop_bonus_pct, notify_zone_boss, notify_gold_donation, notify_lucky_ticket, notify_pvp_tournament',
       )
       .eq('id', userId)
       .maybeSingle<PlayerRow>()
@@ -205,6 +219,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
       set({
         loaded: true,
         whatsNewEntries: null,
+        termsAcceptedVersion: null,
         bankGold: 0,
         bankComets: 0,
         bankFallenStars: 0,
@@ -232,6 +247,7 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
     useLuckyStore.getState().hydrate(data.lucky_free_ticket_claimed_at)
 
     set({
+      termsAcceptedVersion: data.terms_accepted_version,
       bankGold: data.bank_gold,
       bankComets: data.bank_comets,
       bankFallenStars: data.bank_fallen_stars,
@@ -277,6 +293,21 @@ export const usePlayerRecordStore = create<PlayerRecordState>((set) => ({
     if (error) {
       console.error('Failed to record last seen version', error)
     }
+  },
+
+  acceptTerms: async (userId) => {
+    const { error } = await supabase
+      .from('players')
+      .update({ terms_accepted_version: LEGAL_VERSION, terms_accepted_at: new Date().toISOString() })
+      .eq('id', userId)
+
+    if (error) {
+      console.error('Failed to record terms acceptance', error)
+      return false
+    }
+
+    set({ termsAcceptedVersion: LEGAL_VERSION })
+    return true
   },
 
   setBankBalances: (patch) => set(patch),

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.136.0",
+    "date": "2026-09-08",
+    "changes": [
+      "Added a one-time Terms & Conditions / Privacy Policy acceptance popup on first login"
+    ]
+  },
+  {
     "version": "1.135.16",
     "date": "2026-09-08",
     "changes": [

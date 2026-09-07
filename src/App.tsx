@@ -5,7 +5,9 @@ import SessionConflictModal from './components/SessionConflictModal'
 import SessionEvictedToast from './components/SessionEvictedToast'
 import UpdateBanner from './components/UpdateBanner'
 import StaleClientNotice from './components/StaleClientNotice'
+import TermsAcceptanceModal from './components/TermsAcceptanceModal'
 import WhatsNewModal from './components/WhatsNewModal'
+import { LEGAL_VERSION } from './components/legal/legalShared'
 import { useAuthStore } from './lib/useAuthStore'
 import { useActiveCharacterStore, getStoredCharacterId, setStoredCharacterId } from './lib/useActiveCharacterStore'
 import { usePlayerRecordStore } from './lib/usePlayerRecordStore'
@@ -30,6 +32,8 @@ function App() {
   const userId = session?.user.id
 
   const loadPlayerRecord = usePlayerRecordStore((state) => state.loadPlayerRecord)
+  const playerRecordLoaded = usePlayerRecordStore((state) => state.loaded)
+  const termsAcceptedVersion = usePlayerRecordStore((state) => state.termsAcceptedVersion)
   const whatsNewEntries = usePlayerRecordStore((state) => state.whatsNewEntries)
   const dismissWhatsNew = usePlayerRecordStore((state) => state.dismissWhatsNew)
   const loadTemplates = useItemTemplatesStore((state) => state.loadTemplates)
@@ -135,8 +139,14 @@ function App() {
       <SessionEvictedToast />
 
       <AuthGate>
-        {userId && whatsNewEntries && whatsNewEntries.length > 0 && (
-          <WhatsNewModal entries={whatsNewEntries} onDismiss={() => dismissWhatsNew(userId)} />
+        {userId && playerRecordLoaded && termsAcceptedVersion !== LEGAL_VERSION ? (
+          <TermsAcceptanceModal userId={userId} />
+        ) : (
+          userId &&
+          whatsNewEntries &&
+          whatsNewEntries.length > 0 && (
+            <WhatsNewModal entries={whatsNewEntries} onDismiss={() => dismissWhatsNew(userId)} />
+          )
         )}
 
         <Suspense
