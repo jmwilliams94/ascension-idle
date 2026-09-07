@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.135.9",
+    "date": "2026-09-07",
+    "changes": [
+      "Bless (Enchantress) and socketed Bastion Gem damage reduction now actually work in PvP duels and offline/AFK combat, not just while watching a fight live"
+    ]
+  },
+  {
     "version": "1.135.8",
     "date": "2026-09-07",
     "changes": [

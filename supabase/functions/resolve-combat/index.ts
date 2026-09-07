@@ -312,11 +312,10 @@ function compositionBonusStat(
 // damageReductionPct's own comment) — sockets were already fetched for the
 // other three gems, so this was free once incoming damage had somewhere to
 // apply it. Multiple gems of the same type across different gear pieces
-// stack additively. Enchantress "Bless" (item_instances.enchant.blessPct) is
-// a separate, still-unmirrored bonus — the gather query doesn't select
-// `enchant` at all, a known, disclosed gap (Bastion-geared characters get an
-// accurate survivability estimate here, Bless-geared ones get a slightly
-// pessimistic one).
+// stack additively. Enchantress "Bless" (item_instances.enchant.blessPct) now
+// mirrors this too (2026-09-07, gather query gained `enchant` in
+// 20261218000000_bless_bastion_damage_reduction_server_side.sql) — see
+// blessDamageReductionPct below.
 const GEM_PERCENT_BY_TIER: Record<'drake' | 'ember' | 'iris' | 'bastion', Record<string, number>> = {
   drake: { normal: 5, tempered: 10, ascended: 15 },
   ember: { normal: 5, tempered: 10, ascended: 15 },
@@ -923,6 +922,7 @@ interface EquippedItemRow {
   slot_type: string
   required_level: number
   sockets: (string | null)[]
+  enchant: { hp?: number; blessPct?: number } | null
 }
 
 interface GatherStateResult {
@@ -1429,6 +1429,11 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // Socketed Bastion gem bonus % (Damage Reduction) — feeds damageReductionPct
   // below, see the player-survivability cycle model further down.
   let bastionBonusPct = 0
+  // Enchantress "Bless" bonus % (item_instances.enchant.blessPct, Damage
+  // Reduction) — summed across every equipped item, same field
+  // equipmentBonus.ts's computeEquipmentBonus reads client-side. Also feeds
+  // damageReductionPct below, alongside bastionBonusPct.
+  let blessDamageReductionPct = 0
 
   // Durability decay results for this window (see computeMaxDurability above)
   // — collected here, applied via resolve_combat_apply_results' own
@@ -1464,6 +1469,7 @@ async function handleResolveCombat(req: Request): Promise<Response> {
     emberBonusPct += sumSocketedGemBonusPct(item.sockets, 'ember')
     irisBonusPct += sumSocketedGemBonusPct(item.sockets, 'iris')
     bastionBonusPct += sumSocketedGemBonusPct(item.sockets, 'bastion')
+    blessDamageReductionPct += item.enchant?.blessPct ?? 0
   }
 
   const derived = computeDerivedStats(attributes, equipmentBonus)
@@ -1563,15 +1569,14 @@ async function handleResolveCombat(req: Request): Promise<Response> {
   // per-instance livesNeeded/fightDurationMs calc below, same deterministic
   // EV approach as before (no RNG re-added), just evaluated per real
   // instance now instead of once against a blended-average HP. Enchantress
-  // "Bless" (item_instances.enchant.blessPct) isn't folded into
-  // damageReductionPct here — the gather query doesn't select `enchant` — a
-  // small, disclosed gap (a Bless-geared character's real survival odds are
-  // slightly better than this estimates).
+  // "Bless" now folds into damageReductionPct alongside bastionBonusPct
+  // (2026-09-07 — the gather query previously didn't select `enchant`, a
+  // disclosed gap, now closed).
   const effectivePlayerDefense = Math.round(
     derived.physicalDefense * PLAYER_DEFENSE_MULTIPLIER_BY_COLOR[getLevelDiffColor(character.level, monster.level)],
   )
   const incomingHitChance = 1 - Math.min(derived.dodge * DODGE_CHANCE_PER_POINT, MAX_DODGE_CHANCE)
-  const damageReductionPct = bastionBonusPct
+  const damageReductionPct = bastionBonusPct + blessDamageReductionPct
   const expectedIncomingDamagePerHit = applyDamageReduction(
     resolvePhysicalDamage(monster.attack_damage, effectivePlayerDefense) *
       deepBlackDamageMultiplier(character.level, monster.level),

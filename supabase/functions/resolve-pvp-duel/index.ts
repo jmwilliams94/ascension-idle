@@ -24,14 +24,26 @@
 // plan): magicAttack/magicDefense (no class skills participate — every
 // class deals physical-formula damage only), dodge/dexterity hit-chance
 // (the guessing game IS the accuracy layer — a landed guess always deals
-// damage), Bastion/Bless damage reduction (not part of the confirmed
-// design), account-wide zone attack bonus (PvP has no zone), and gear
+// damage), account-wide zone attack bonus (PvP has no zone), and gear
 // durability decay (a duel is a handful of discrete actions, not an
 // elapsed-time window).
 //
+// Bastion (socketed gem) / Bless (Enchantress) damage reduction WAS on this
+// exclusion list too, but that was an oversight rather than a real design
+// call — both are real, gold/gem-cost-backed defensive investments (Bless
+// specifically costs an Ascended Bastion Gem per step) and there's no reason
+// a duel should ignore them while every PvE combat path (live and, since
+// 2026-09-07, offline resolve-combat) honors them. Added 2026-09-07 (see
+// 20261218000000_bless_bastion_damage_reduction_server_side.sql, which added
+// `enchant` to this function's own gather query) — the DEFENDER's (the
+// player being guessed against) summed Bastion socket % + Bless enchant %
+// now reduces potentialDamage, applied post-mitigation via
+// applyDamageReduction, same ordering combatResolver.ts uses for PvE.
+//
 // PVP_DAMAGE_MULTIPLIER (0.5) is applied strictly after the shared PvE
-// formula returns — confirmed by the user after a live self-mirror test
-// (see plan) showed the raw PvE numbers ending duels in 2-3 hits.
+// formula (including the new damage-reduction step) returns — confirmed by
+// the user after a live self-mirror test (see plan) showed the raw PvE
+// numbers ending duels in 2-3 hits.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
@@ -165,9 +177,12 @@ function compositionBonusStat(
   return Math.round(base * COMPOSITION_BONUS_PCT_PER_TIER * compositionLevel)
 }
 
-// Mirrors src/game/items/gemCatalog.ts — only Drake (Physical Attack) is
-// read; Ember/Bastion/Iris have no role in PvP per the file header.
+// Mirrors src/game/items/gemCatalog.ts — Drake (Physical Attack, attacker
+// side) and, since 2026-09-07, Bastion (Damage Reduction, defender side) are
+// read. Ember/Iris still have no role in PvP (no magic-formula damage, no
+// EXP awarded) per the file header.
 const DRAKE_PERCENT_BY_TIER: Record<string, number> = { normal: 5, tempered: 10, ascended: 15 }
+const BASTION_PERCENT_BY_TIER: Record<string, number> = { normal: 5, tempered: 10, ascended: 15 }
 
 function sumDrakeBonusPct(sockets: (string | null)[] | undefined): number {
   let total = 0
@@ -180,12 +195,50 @@ function sumDrakeBonusPct(sockets: (string | null)[] | undefined): number {
   return total
 }
 
+function sumBastionBonusPct(sockets: (string | null)[] | undefined): number {
+  let total = 0
+  for (const socket of sockets ?? []) {
+    if (!socket) continue
+    const match = /^bastion_(normal|tempered|ascended)$/.exec(socket)
+    if (!match) continue
+    total += BASTION_PERCENT_BY_TIER[match[1]] ?? 0
+  }
+  return total
+}
+
 const MIN_DAMAGE_PERCENT_OF_ATTACK = 0.1
 
 function resolvePhysicalDamage(attack: number, defense: number): number {
   const mitigated = attack - defense
   const floor = Math.round(attack * MIN_DAMAGE_PERCENT_OF_ATTACK)
   return Math.max(mitigated, floor, 1)
+}
+
+// Mirrors combatResolver.ts's applyDamageReduction/MAX_DAMAGE_REDUCTION_PCT
+// — Bastion (socketed gem) + Bless (Enchantress, item_instances.enchant.
+// blessPct) stack additively into one reductionPct, applied post-mitigation
+// (after resolvePhysicalDamage), same ordering/cap as every other combat
+// path in this game.
+const MAX_DAMAGE_REDUCTION_PCT = 90
+
+function applyDamageReduction(damage: number, reductionPct: number): number {
+  const clampedPct = Math.min(Math.max(reductionPct, 0), MAX_DAMAGE_REDUCTION_PCT)
+  return Math.max(1, Math.round(damage * (1 - clampedPct / 100)))
+}
+
+// Defender's summed Bastion socket % + Bless enchant % across equipped gear
+// — same "broken gear contributes nothing" rule as attack/defense above.
+function computeDefenderDamageReductionPct(equippedItems: EquippedItemRow[]): number {
+  let bastionBonusPct = 0
+  let blessDamageReductionPct = 0
+
+  for (const item of equippedItems) {
+    if ((item.durability ?? 0) <= 0) continue
+    bastionBonusPct += sumBastionBonusPct(item.sockets)
+    blessDamageReductionPct += item.enchant?.blessPct ?? 0
+  }
+
+  return bastionBonusPct + blessDamageReductionPct
 }
 
 // Mirrors src/game/combat/combatResolver.ts's damageRangeFromMidpoint/rollDamageInRange.
@@ -212,6 +265,7 @@ interface EquippedItemRow {
   base_stats: Record<string, number>
   slot_type: string
   sockets: (string | null)[]
+  enchant: { hp?: number; blessPct?: number } | null
 }
 
 // Attacker's rolled physical attack — composition bonus folded in unscaled,
@@ -380,7 +434,10 @@ async function handlePvpDuelAction(req: Request): Promise<Response> {
     }
     const rolledAttack = rollAttackerDamage(myCharacter, myEquippedItems ?? [])
     const defense = computeDefenderPhysicalDefense(opponentEquippedItems ?? [])
-    potentialDamage = Math.max(1, Math.round(resolvePhysicalDamage(rolledAttack, defense) * PVP_DAMAGE_MULTIPLIER))
+    const mitigatedDamage = resolvePhysicalDamage(rolledAttack, defense)
+    const defenderDamageReductionPct = computeDefenderDamageReductionPct(opponentEquippedItems ?? [])
+    const reducedDamage = applyDamageReduction(mitigatedDamage, defenderDamageReductionPct)
+    potentialDamage = Math.max(1, Math.round(reducedDamage * PVP_DAMAGE_MULTIPLIER))
   }
 
   const { data: applyData, error: applyError } = await db.rpc('pvp_duel_apply_action', {
