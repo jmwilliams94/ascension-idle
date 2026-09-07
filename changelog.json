@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.135.10",
+    "date": "2026-09-07",
+    "changes": [
+      "Added a Settings > FX button style example for developers to preview"
+    ]
+  },
+  {
     "version": "1.135.9",
     "date": "2026-09-07",
     "changes": [
