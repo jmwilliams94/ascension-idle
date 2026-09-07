@@ -84,13 +84,9 @@ export default function TutorialOverlay() {
     <div className="ascension-card-frame w-full max-w-sm">
       <div className="ascension-card-inner space-y-3 p-4 text-center">
         <p className="text-sm leading-relaxed text-slate-100">{step.dialogue}</p>
-        {step.targetId === null ? (
-          <Button
-            variant="primary"
-            onClick={() => (step.id === 'completion' ? skip() : advance())}
-            className="w-full"
-          >
-            {step.id === 'completion' ? 'Finish' : 'Get Started'}
+        {step.targetId === null || step.requiresManualAdvance ? (
+          <Button variant="primary" onClick={() => advance()} className="w-full">
+            {step.id === 'welcome' ? 'Get Started' : step.id === 'completion' ? 'Finish' : 'Continue'}
           </Button>
         ) : null}
         <button

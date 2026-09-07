@@ -397,9 +397,16 @@ export default function LuckyPanel({ characterId }: { characterId: string }) {
   }, [])
 
   const freeAvailable = !nextFreeTicketAt || nextFreeTicketAt <= now
-  const pointsCost = freeAvailable ? 0 : LUCKY_TICKET_AP_COST
+  // First-login tutorial (admin-only for now) — tutorial_draw_lucky_ticket
+  // never checks or spends AP, it's always free, but an admin testing
+  // repeatedly will usually have already claimed their own real free ticket
+  // recently, so freeAvailable/pointsCost would otherwise show a real "20 AP"
+  // cost here that doesn't reflect what actually happens on tap. Force the
+  // display (not the real cooldown state — nextFreeTicketAt is untouched) to
+  // read "Free" whenever this step is guiding the tap.
+  const pointsCost = freeAvailable || isTutorialFreeEntryStep ? 0 : LUCKY_TICKET_AP_COST
   const canAffordTicket = lotteryTickets >= 1
-  const canAffordPoints = freeAvailable || ascensionPoints >= LUCKY_TICKET_AP_COST
+  const canAffordPoints = freeAvailable || isTutorialFreeEntryStep || ascensionPoints >= LUCKY_TICKET_AP_COST
   const canAffordBulk = ascensionPoints >= LUCKY_BULK_AP_COST
   const canAffordBulkTickets = lotteryTickets >= LUCKY_BULK_TICKET_COST
 

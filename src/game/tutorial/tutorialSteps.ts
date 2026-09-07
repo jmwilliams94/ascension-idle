@@ -4,16 +4,23 @@
 // element — no synthetic/fake buttons anywhere) and dims everything else.
 // `targetId: null` is the two full-dim, no-cutout steps (welcome/completion).
 //
-// Several steps deliberately reuse the same `targetId` (e.g. 'equip-weapon-
-// picker' shows up 3 times, 'forge-confirm' twice) — only one instance of
-// any of these is ever mounted at once (whichever Forge sub-panel is
-// currently open), so there's no ambiguity, and the different `id`s below
-// are what components actually branch on (see useTutorialStore's
-// isStepActive) to know which tutorial-guaranteed RPC to call.
+// Several steps deliberately reuse the same `targetId` (e.g.
+// 'forge-inventory-grid' shows up 5 times, 'forge-confirm' twice) — only one
+// instance of any of these is ever mounted at once (whichever Forge
+// sub-panel is currently open), so there's no ambiguity, and the different
+// `id`s below are what components actually branch on (see
+// useTutorialStore's isStepActive) to know which tutorial-guaranteed RPC to
+// call.
+//
+// `requiresManualAdvance` steps show a "Continue" button in the dialogue box
+// instead of auto-advancing off some real UI state — used where the player
+// needs a moment to actually look at something (the revealed Lucky Lad
+// board) rather than being yanked straight to the next spotlight.
 export interface TutorialStep {
   id: string
   targetId: string | null
   dialogue: string
+  requiresManualAdvance?: boolean
 }
 
 export const TUTORIAL_STEPS: TutorialStep[] = [
@@ -38,9 +45,15 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     dialogue: 'Tap any chest to open it.',
   },
   {
+    id: 'lucky-board-reveal',
+    targetId: 'lucky-board',
+    dialogue: 'Here’s what was on the board! You won an Experience Potion.',
+    requiresManualAdvance: true,
+  },
+  {
     id: 'nav-forge',
     targetId: 'nav-forge',
-    dialogue: 'Nice! Now let’s visit the Forge to strengthen your weapon. Tap here.',
+    dialogue: 'Nice! Now let’s visit the Forge to strengthen a weapon. Tap here.',
   },
   {
     id: 'forge-tile-standard',
@@ -49,8 +62,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     id: 'forge-select-weapon-level',
-    targetId: 'equip-weapon-picker',
-    dialogue: 'Tap your weapon to select it for upgrading.',
+    targetId: 'forge-inventory-grid',
+    dialogue: 'A fresh weapon is waiting in your Inventory. Tap it to select it for upgrading.',
   },
   {
     id: 'forge-material-comet',
@@ -64,7 +77,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     id: 'forge-select-weapon-quality',
-    targetId: 'equip-weapon-picker',
+    targetId: 'forge-inventory-grid',
     dialogue: 'Let’s also improve its quality. Tap your weapon again to select it.',
   },
   {
@@ -84,7 +97,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     id: 'forge-select-weapon-sockets',
-    targetId: 'equip-weapon-picker',
+    targetId: 'forge-inventory-grid',
     dialogue: 'Tap your weapon to select it.',
   },
   {
@@ -105,7 +118,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'completion',
     targetId: null,
-    dialogue: 'That’s the basics! Your weapon is stronger and ready to go. Explore the rest of Ascension Idle at your own pace.',
+    dialogue:
+      'That’s the basics! The weapon you just upgraded is sitting in your Inventory ready to equip whenever you like. Explore the rest of Ascension Idle at your own pace.',
   },
 ]
 
@@ -114,6 +128,7 @@ export const TUTORIAL_STEP_IDS = {
   navLucky: 'nav-lucky',
   luckyFreeEntry: 'lucky-free-entry',
   luckyBoard: 'lucky-board',
+  luckyBoardReveal: 'lucky-board-reveal',
   navForge: 'nav-forge',
   forgeTileStandard: 'forge-tile-standard',
   forgeSelectWeaponLevel: 'forge-select-weapon-level',

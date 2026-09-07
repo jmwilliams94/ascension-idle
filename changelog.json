@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.137.2",
+    "date": "2026-09-08",
+    "changes": [
+      "Tutorial: the Lucky Lad board now stays visible after opening a chest instead of jumping straight to the next step",
+      "Tutorial: the weapon upgrade steps now use a fresh weapon from Inventory instead of the character's real equipped weapon"
+    ]
+  },
+  {
     "version": "1.137.1",
     "date": "2026-09-08",
     "changes": [
