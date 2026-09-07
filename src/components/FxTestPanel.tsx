@@ -87,30 +87,23 @@ export default function FxTestPanel() {
       <div className="border-t border-slate-800 pt-4">
         <h3 className="text-sm font-semibold text-white">Button Concept — Uiverse Glass Card</h3>
         <p className="mt-1 text-xs text-slate-300">
-          A pasted Uiverse.io button concept (by Itskrish01), re-themed as an Equipment button example — Discord icon
-          swapped for the real Equipment nav icon, name centered in our heading font. Not wired to anything, just a
-          preview.
+          A pasted Uiverse.io button concept (by Itskrish01), re-themed as an Equipment button example — recolored
+          from the original purple to our silver/white palette (same gradient/opacity structure), icon above the
+          name matching our existing nav buttons. Not wired to anything, just a preview.
         </p>
         <div className="mt-2 max-w-sm">
           <button
             type="button"
-            className="group relative w-full cursor-pointer overflow-hidden rounded-2xl border-2 border-indigo-500/30 bg-gradient-to-br from-indigo-900/40 via-neutral-900/60 to-black/80 p-4 shadow-2xl backdrop-blur-xl transition-all duration-500 ease-out hover:scale-[1.02] hover:-translate-y-1 hover:border-indigo-400/60 hover:shadow-2xl hover:shadow-indigo-500/30 active:scale-95"
+            className="group relative w-full cursor-pointer overflow-hidden rounded-2xl border-2 border-slate-300/30 bg-gradient-to-br from-white/10 via-neutral-900/60 to-black/80 p-4 shadow-2xl backdrop-blur-xl transition-all duration-500 ease-out hover:scale-[1.02] hover:-translate-y-1 hover:border-slate-200/60 hover:shadow-2xl hover:shadow-slate-300/30 active:scale-95"
           >
-            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-indigo-400/30 to-transparent transition-transform duration-1000 ease-out group-hover:translate-x-full" />
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-indigo-400/20 to-indigo-500/10 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-1000 ease-out group-hover:translate-x-full" />
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-slate-300/10 via-white/20 to-slate-300/10 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
 
-            <div className="relative z-10 flex items-center gap-4">
-              <div className="rounded-lg bg-gradient-to-br from-indigo-500/30 to-indigo-600/10 p-3 backdrop-blur-sm transition-all duration-300 group-hover:from-indigo-400/40 group-hover:to-indigo-500/20">
-                {TAB_ICONS.equipment && <NavIconGlyph icon={TAB_ICONS.equipment} sizeClassName="h-7 w-7" />}
-              </div>
-              <p className="flex-1 text-center font-heading text-lg font-bold uppercase tracking-[0.08em] text-indigo-300 drop-shadow-sm transition-colors duration-300 group-hover:text-indigo-200">
+            <div className="relative z-10 flex flex-col items-center justify-center gap-1.5">
+              {TAB_ICONS.equipment && <NavIconGlyph icon={TAB_ICONS.equipment} sizeClassName="h-8 w-8" />}
+              <p className="text-center font-heading text-sm font-bold uppercase tracking-[0.08em] text-slate-100 drop-shadow-sm transition-colors duration-300 group-hover:text-white">
                 Equipment
               </p>
-              <div className="opacity-40 transition-all duration-300 group-hover:translate-x-1 group-hover:opacity-100">
-                <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" className="h-5 w-5 text-indigo-400">
-                  <path d="M9 5l7 7-7 7" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"></path>
-                </svg>
-              </div>
             </div>
           </button>
         </div>

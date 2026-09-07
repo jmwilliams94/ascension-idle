@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.135.12",
+    "date": "2026-09-08",
+    "changes": [
+      "Tweaked the Settings > FX button style example (icon layout, colors)"
+    ]
+  },
+  {
     "version": "1.135.11",
     "date": "2026-09-07",
     "changes": [
