@@ -529,197 +529,215 @@ a,
   }
 }
 
-/* Gold CTA button — dark-gold idle state, full gradient + glow on hover.
-   Layout/sizing (padding, rounding, tracking) stays as Tailwind utility
-   classes on the consuming <button>; this class only owns the color
-   treatment, same split-of-concerns as .accent-glow. Richer idle gradient,
-   glassy inset top highlight, and the same overflow:hidden + ::before/
-   ::after light-sweep as .btn-steel/.btn-glow below (2026-08-28, Prism
-   Obsidian & Light Sweep pass — this is the FIGHT/Buy/Confirm/Claim/Equip
-   button, the single most-visible CTA app-wide, so it gets the full
-   treatment by default). Corner shape is left to whatever Tailwind
-   rounding class the consumer applies (rounded-lg, rounded-xl, rounded-full
-   for the Idling FAB), not forced here.
+/* Gold ("silver") CTA button — translucent glass-card chrome (2026-09-08
+   pass, replacing the earlier opaque dark-idle/bright-invert-on-hover
+   look, piloted as a static preview in Settings > FX before rolling out
+   app-wide): blurred tinted panel, border/glow strengthen + scale/lift on
+   hover, a tint overlay fades in, a light sweep animates across. Layout/
+   sizing (padding, rounding, tracking) stays as Tailwind utility classes
+   on the consuming <button>; this class only owns the color/glass
+   treatment. This is the FIGHT/Buy/Confirm/Claim/Equip button, the single
+   most-visible CTA app-wide.
 
    EXCEPTION — TabNav's Idling/LuckyLad tabs, MobileBottomNav's FAB, and
    CombatPage's Events sub-tab all host <EventEmberBorder>, whose particles
    anchor outside their parent's own box by design (see eventEmberBorder.tsx)
-   — overflow:hidden would cut them off. An earlier pass (2026-08-16) had
-   those three call sites add a now-removed .btn-ember-safe class alongside
-   .btn-gold/.btn-gold-active whenever their event-color prop was set, which
-   dropped overflow:hidden but ALSO stripped the ::before/::after glass
-   highlight + hover light-sweep below — so the button visibly lost its
-   normal chrome exactly while an event was making it glow (reported by the
-   user 2026-08-28). Fixed the same way AscensionCard.tsx already solved the
-   identical problem for .ascension-card-frame: EventEmberBorder renders as
-   an unclipped sibling in an outer `position: relative` wrapper instead of
-   a child of the button, so .btn-gold/.btn-gold-active keep their normal
-   overflow:hidden + sweep unconditionally, with no opt-out class needed. */
+   — overflow:hidden would cut them off, so EventEmberBorder renders as an
+   unclipped sibling in an outer `position: relative` wrapper instead of a
+   child of the button. This class keeps position:relative + overflow:hidden
+   unconditionally — no ember opt-out class needed. */
 .btn-gold {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-  border: 1px solid var(--ascension-gold);
+  border: 2px solid color-mix(in srgb, var(--ascension-gold) 30%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--ascension-gold) 15%, transparent) 0%,
+    rgba(15, 23, 42, 0.6) 55%,
+    rgba(0, 0, 0, 0.8) 100%
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   color: var(--ascension-gold-bright);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  transition: all 0.25s ease;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: transform 0.5s ease-out, box-shadow 0.5s ease-out, border-color 0.5s ease-out;
 }
 
 .btn-gold::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: -10%;
-  right: -10%;
-  height: 45%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 100%);
-  border-radius: 0 0 50% 50%;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--ascension-gold) 10%, transparent) 0%,
+    color-mix(in srgb, var(--ascension-gold-bright) 20%, transparent) 50%,
+    color-mix(in srgb, var(--ascension-gold) 10%, transparent) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.5s ease-out;
   pointer-events: none;
 }
 
 .btn-gold::after {
   content: '';
   position: absolute;
-  top: -50%;
-  left: -60%;
-  width: 40%;
-  height: 200%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-  transform: rotate(25deg);
-  transition: left 0.6s ease;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transform: translateX(-100%);
+  transition: transform 1s ease-out;
   pointer-events: none;
 }
 
 /* Hover-only rules are gated behind (hover: hover) — on touch devices a tap
    sets :hover and it can stay "stuck" lit until the user taps elsewhere
    (no real pointer to un-hover it), reported as buttons randomly staying
-   lit up. Real mouse/trackpad input still gets the full hover treatment. */
+   lit up. Real mouse/trackpad input still gets the full hover treatment;
+   :active (below) covers touch press feedback instead. */
 @media (hover: hover) {
-  .btn-gold:hover:not(:disabled)::after {
-    left: 120%;
+  .btn-gold:hover:not(:disabled) {
+    transform: scale(1.02) translateY(-4px);
+    border-color: color-mix(in srgb, var(--ascension-gold-bright) 60%, transparent);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55), 0 0 32px color-mix(in srgb, var(--ascension-gold) 30%, transparent);
   }
 
-  .btn-gold:hover:not(:disabled) {
-    background: linear-gradient(180deg, var(--ascension-gold-bright) 0%, var(--ascension-gold) 60%, var(--ascension-gold-dark) 100%);
-    color: var(--ascension-ink);
-    box-shadow: 0 0 24px rgba(255, 255, 255, 0.75);
+  .btn-gold:hover:not(:disabled)::before {
+    opacity: 1;
   }
+
+  .btn-gold:hover:not(:disabled)::after {
+    transform: translateX(100%);
+  }
+}
+
+.btn-gold:active:not(:disabled) {
+  transform: scale(0.95);
 }
 
 .btn-gold:disabled {
   opacity: 0.4;
 }
 
-/* Steel counterpart of .btn-gold — for Button's `secondary` variant
-   (Cancel/Back/neutral actions). Previously a flat `border-slate-700`
-   with no ascension chrome at all, which read as "unstyled" next to any
-   gold CTA beside it (Forge's Back button, Loot Holding's Store All) —
-   this gives it the same idle-dark/hover-bright-gradient-plus-glow
-   treatment as .btn-gold, just on the steel token ramp. */
-/* Unlike .btn-gold above, .btn-steel never hosts EventEmberBorder (steel is
-   Cancel/Back/neutral-only, per Button.tsx), so it's free to take the full
-   Prism Obsidian & Light Sweep treatment: overflow:hidden + a soft top
-   highlight (::before) + a diagonal shine that sweeps across on hover
-   (::after, off-screen at rest, animated to `left: 120%`). */
+/* Steel counterpart of .btn-gold — same glass-card treatment as above, on
+   the steel token ramp instead of gold. For Button's `secondary` variant
+   (Cancel/Back/neutral actions, Forge's Back button, Loot Holding's Store
+   All). Never hosts EventEmberBorder (steel is Cancel/Back/neutral-only,
+   per Button.tsx), so no ember-sibling concern here. */
 .btn-steel {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(180deg, #242e3a 0%, #10151b 100%);
-  border: 1px solid var(--ascension-steel-dark);
-  color: var(--ascension-steel);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  transition: all 0.25s ease;
+  border: 2px solid color-mix(in srgb, var(--ascension-steel) 30%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--ascension-steel) 15%, transparent) 0%,
+    rgba(15, 23, 42, 0.6) 55%,
+    rgba(0, 0, 0, 0.8) 100%
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: var(--ascension-steel-bright);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: transform 0.5s ease-out, box-shadow 0.5s ease-out, border-color 0.5s ease-out;
 }
 
 .btn-steel::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: -10%;
-  right: -10%;
-  height: 45%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 100%);
-  border-radius: 0 0 50% 50%;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--ascension-steel) 10%, transparent) 0%,
+    color-mix(in srgb, var(--ascension-steel-bright) 20%, transparent) 50%,
+    color-mix(in srgb, var(--ascension-steel) 10%, transparent) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.5s ease-out;
   pointer-events: none;
 }
 
 .btn-steel::after {
   content: '';
   position: absolute;
-  top: -50%;
-  left: -60%;
-  width: 40%;
-  height: 200%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
-  transform: rotate(25deg);
-  transition: left 0.6s ease;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transform: translateX(-100%);
+  transition: transform 1s ease-out;
   pointer-events: none;
 }
 
 @media (hover: hover) {
-  .btn-steel:hover:not(:disabled)::after {
-    left: 120%;
+  .btn-steel:hover:not(:disabled) {
+    transform: scale(1.02) translateY(-4px);
+    border-color: color-mix(in srgb, var(--ascension-steel-bright) 60%, transparent);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55), 0 0 32px color-mix(in srgb, var(--ascension-steel) 30%, transparent);
   }
 
-  .btn-steel:hover:not(:disabled) {
-    background: linear-gradient(180deg, var(--ascension-steel-bright) 0%, var(--ascension-steel) 60%, var(--ascension-steel-dark) 100%);
-    color: var(--ascension-ink);
-    box-shadow: 0 0 20px rgba(192, 209, 227, 0.6);
+  .btn-steel:hover:not(:disabled)::before {
+    opacity: 1;
   }
+
+  .btn-steel:hover:not(:disabled)::after {
+    transform: translateX(100%);
+  }
+}
+
+.btn-steel:active:not(:disabled) {
+  transform: scale(0.95);
 }
 
 .btn-steel:disabled {
   opacity: 0.4;
 }
 
-/* Permanently-lit variant of .btn-gold's :hover gradient (2026-08-16) — for
-   nav buttons, where the "active tab" needs to sit in the same lit state
-   .btn-gold only reaches on hover, without fighting that rule's own
-   specificity (:hover:not(:disabled) already beats a second plain class).
-   Applied instead of .btn-gold, never alongside it, so there's nothing to
-   override. Shares .btn-gold's overflow:hidden + ::before/::after sweep
-   pseudo-elements (both selectors are combined into the rules above/below
-   this one) — the sweep still plays on hover even though the base gradient
-   is already bright, unconditionally now (see the EventEmberBorder
+/* Permanently-lit variant of .btn-gold's hover state (2026-08-16, updated
+   2026-09-08 for the glass-card treatment) — for nav buttons, where the
+   "active tab" needs to sit in the same lit state .btn-gold only reaches
+   on hover. Applied instead of .btn-gold, never alongside it. Shares
+   .btn-gold's overflow:hidden + ::before/::after (tint + sweep) pseudo-
+   elements — the sweep still replays on hover (see the EventEmberBorder
    exception note above .btn-gold — no opt-out class needed here either). */
 .btn-gold-active {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(180deg, var(--ascension-gold-bright) 0%, var(--ascension-gold) 60%, var(--ascension-gold-dark) 100%);
-  border: 1px solid var(--ascension-gold);
-  color: var(--ascension-ink);
-  box-shadow: 0 0 16px rgba(255, 255, 255, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  transition: all 0.25s ease;
+  border: 2px solid color-mix(in srgb, var(--ascension-gold-bright) 60%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--ascension-gold) 15%, transparent) 0%,
+    rgba(15, 23, 42, 0.6) 55%,
+    rgba(0, 0, 0, 0.8) 100%
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: var(--ascension-gold-bright);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55), 0 0 32px color-mix(in srgb, var(--ascension-gold) 30%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: transform 0.5s ease-out, box-shadow 0.5s ease-out;
 }
 
 .btn-gold-active::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: -10%;
-  right: -10%;
-  height: 45%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 100%);
-  border-radius: 0 0 50% 50%;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--ascension-gold) 10%, transparent) 0%,
+    color-mix(in srgb, var(--ascension-gold-bright) 20%, transparent) 50%,
+    color-mix(in srgb, var(--ascension-gold) 10%, transparent) 100%
+  );
   pointer-events: none;
 }
 
 .btn-gold-active::after {
   content: '';
   position: absolute;
-  top: -50%;
-  left: -60%;
-  width: 40%;
-  height: 200%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
-  transform: rotate(25deg);
-  transition: left 0.6s ease;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transform: translateX(-100%);
+  transition: transform 1s ease-out;
   pointer-events: none;
 }
 
 @media (hover: hover) {
   .btn-gold-active:hover::after {
-    left: 120%;
+    transform: translateX(100%);
   }
 }
 
@@ -737,121 +755,129 @@ a,
   box-shadow: 0 0 14px rgba(255, 255, 255, 0.45);
 }
 
-/* Colored variant of .btn-gold's idle-dark/hover-bright-gradient-plus-glow
-   treatment (2026-08-14, requested by the user — LuckyLad's purple/emerald
-   payment buttons and Salvage's per-tier Tempered/Infused/Radiant buttons
-   should get the same press feedback .btn-gold gives Fight/Buy/Confirm, just
-   in their own color). One shared rule rather than one class per color — the
-   three gradient stops and glow color come from --glow-bright/--glow-base/
-   --glow-dark, set inline per button. Fires on :active as well as :hover
-   (unlike .btn-gold, which only needs :hover since it's the sole always-
-   present CTA) so it reads as a real press on touch, where :hover alone can
-   linger after the tap instead of releasing. */
-/* Idle background is tinted toward the button's own --glow-base via
-   color-mix (2026-08-28) rather than the old flat neutral dark, so it reads
-   as "a dark version of its own color" the way .btn-gold/.btn-steel's idle
-   gradients do — same Prism Obsidian & Light Sweep treatment as .btn-steel,
-   no ember-hosting concern here either (LuckyLad payment buttons/Salvage
-   tier buttons, never a nav tab). */
+/* Colored variant of .btn-gold's glass-card treatment (2026-08-14,
+   updated 2026-09-08 for the glass-card pass) — LuckyLad's purple/emerald
+   payment buttons, Salvage's per-tier Tempered/Infused/Radiant buttons,
+   VIP, and similar get the same treatment .btn-gold gives Fight/Buy/
+   Confirm, just in their own color. One shared rule rather than one class
+   per color — the gradient stops and glow color come from --glow-bright/
+   --glow-base/--glow-dark, set inline per button. Fires on :active as well
+   as :hover (unlike .btn-gold, gated to desktop-only hover) so it reads as
+   a real press on touch, where :hover alone can linger after the tap
+   instead of releasing. Never hosts EventEmberBorder (LuckyLad payment/
+   Salvage tier buttons, never a nav tab). */
 .btn-glow {
   position: relative;
   overflow: hidden;
+  border: 2px solid color-mix(in srgb, var(--glow-base) 30%, transparent);
   background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--glow-base) 22%, #14141c) 0%,
-    color-mix(in srgb, var(--glow-base) 10%, #08080c) 100%
+    135deg,
+    color-mix(in srgb, var(--glow-base) 15%, transparent) 0%,
+    rgba(15, 23, 42, 0.6) 55%,
+    rgba(0, 0, 0, 0.8) 100%
   );
-  border: 1px solid var(--glow-base);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   color: var(--glow-bright);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.35);
-  transition: all 0.2s ease;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
 }
 
 .btn-glow::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: -10%;
-  right: -10%;
-  height: 45%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 100%);
-  border-radius: 0 0 50% 50%;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--glow-base) 10%, transparent) 0%,
+    color-mix(in srgb, var(--glow-bright) 20%, transparent) 50%,
+    color-mix(in srgb, var(--glow-base) 10%, transparent) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
   pointer-events: none;
 }
 
 .btn-glow::after {
   content: '';
   position: absolute;
-  top: -50%;
-  left: -60%;
-  width: 40%;
-  height: 200%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
-  transform: rotate(25deg);
-  transition: left 0.6s ease;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease-out;
   pointer-events: none;
-}
-
-.btn-glow:hover:not(:disabled)::after,
-.btn-glow:active:not(:disabled)::after {
-  left: 120%;
 }
 
 .btn-glow:hover:not(:disabled),
 .btn-glow:active:not(:disabled) {
-  background: linear-gradient(180deg, var(--glow-bright) 0%, var(--glow-base) 60%, var(--glow-dark) 100%);
-  color: var(--ascension-ink);
-  box-shadow: 0 0 24px var(--glow-base);
+  transform: scale(1.02) translateY(-2px);
+  border-color: color-mix(in srgb, var(--glow-bright) 60%, transparent);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55), 0 0 24px var(--glow-base);
+}
+
+.btn-glow:hover:not(:disabled)::before,
+.btn-glow:active:not(:disabled)::before {
+  opacity: 1;
+}
+
+.btn-glow:hover:not(:disabled)::after,
+.btn-glow:active:not(:disabled)::after {
+  transform: translateX(100%);
 }
 
 .btn-glow:disabled {
   opacity: 0.4;
 }
 
-/* Permanently-lit variant of .btn-glow's :hover/:active gradient (2026-08-29)
-   — same relationship .btn-gold-active has to .btn-gold above, just on the
-   --glow-* custom properties instead of the fixed gold ramp. For a toggle
-   whose "on" state should sit in the same lit look .btn-glow only reaches on
-   hover/press. Applied instead of .btn-glow, never alongside it. First user:
-   Forge's Auto-Repeat toggle. */
+/* Permanently-lit variant of .btn-glow's hover/active state (2026-08-29,
+   updated 2026-09-08) — same relationship .btn-gold-active has to
+   .btn-gold above, just on the --glow-* custom properties instead of the
+   fixed gold ramp. For a toggle whose "on" state should sit in the same
+   lit look .btn-glow only reaches on hover/press. Applied instead of
+   .btn-glow, never alongside it. First user: Forge's Auto-Repeat toggle. */
 .btn-glow-active {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(180deg, var(--glow-bright) 0%, var(--glow-base) 60%, var(--glow-dark) 100%);
-  border: 1px solid var(--glow-base);
-  color: var(--ascension-ink);
-  box-shadow: 0 0 24px var(--glow-base), inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  transition: all 0.25s ease;
+  border: 2px solid color-mix(in srgb, var(--glow-bright) 60%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--glow-base) 15%, transparent) 0%,
+    rgba(15, 23, 42, 0.6) 55%,
+    rgba(0, 0, 0, 0.8) 100%
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: var(--glow-bright);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55), 0 0 24px var(--glow-base), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: transform 0.5s ease-out, box-shadow 0.5s ease-out;
 }
 
 .btn-glow-active::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: -10%;
-  right: -10%;
-  height: 45%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 100%);
-  border-radius: 0 0 50% 50%;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--glow-base) 10%, transparent) 0%,
+    color-mix(in srgb, var(--glow-bright) 20%, transparent) 50%,
+    color-mix(in srgb, var(--glow-base) 10%, transparent) 100%
+  );
   pointer-events: none;
 }
 
 .btn-glow-active::after {
   content: '';
   position: absolute;
-  top: -50%;
-  left: -60%;
-  width: 40%;
-  height: 200%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
-  transform: rotate(25deg);
-  transition: left 0.6s ease;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transform: translateX(-100%);
+  transition: transform 1s ease-out;
   pointer-events: none;
 }
 
 @media (hover: hover) {
   .btn-glow-active:hover::after {
-    left: 120%;
+    transform: translateX(100%);
   }
 }
 

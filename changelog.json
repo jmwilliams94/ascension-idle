@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.135.13",
+    "date": "2026-09-08",
+    "changes": [
+      "Buttons across the whole game now use a translucent glass-card style with a soft glow and light sweep on hover/press, each keeping its own colour (gold, steel, and every event/tier colour)"
+    ]
+  },
+  {
     "version": "1.135.12",
     "date": "2026-09-08",
     "changes": [
