@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.137.4",
+    "date": "2026-09-08",
+    "changes": [
+      "Tutorial: fixed the Inventory spotlight drawing over the top of the mobile nav bar instead of stopping where the visible content actually ends"
+    ]
+  },
+  {
     "version": "1.137.3",
     "date": "2026-09-08",
     "changes": [

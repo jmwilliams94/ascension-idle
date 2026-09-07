@@ -419,6 +419,12 @@ export default function MobileBottomNav() {
   return (
     <nav
       ref={navRef}
+      // First-login tutorial (admin-only for now) — lets TutorialOverlay
+      // clamp a spotlighted target's rect against this fixed-position bar's
+      // own bounds, so the spotlight cutout/glow never extends into the
+      // area a scrollable panel (e.g. Forge's Inventory grid) visually
+      // continues underneath this fixed nav.
+      data-fixed-chrome="bottom"
       className="ascension-edge-t fixed inset-x-0 bottom-0 z-40 rounded-b-[3rem] bg-[linear-gradient(180deg,_var(--ascension-ink-soft)_0%,_var(--ascension-ink)_100%)] lg:hidden"
       // translateZ(0) (2026-08-19, reported by the user: nav bar drifting
       // upward with the page mid-scroll on mobile) forces this onto its own

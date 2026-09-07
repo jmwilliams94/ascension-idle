@@ -20,12 +20,46 @@ interface Rect {
 // screen — same reasoning covers Forge's mobile-only Tavern rollup, where
 // the Tavern toggle and the rolled-out Forge item share 'nav-forge' too (see
 // MobileBottomNav.tsx) and only one of the two exists/has size at a time.
+// Clamps a target's rect against any real, currently-visible fixed-position
+// chrome it may visually continue underneath — e.g. mobile's fixed bottom
+// nav bar (marked data-fixed-chrome="bottom", see MobileBottomNav.tsx),
+// which a scrollable panel like Forge's Inventory grid extends past in
+// normal document flow. Without this, the spotlight (portaled well above
+// everything, so it can dim the whole app) would draw its cutout/glow ring
+// straight through the nav bar instead of stopping where the visible
+// content actually ends — reported as the highlight "appearing over the top
+// of the nav bar."
+function clampToFixedChrome(el: Element, rect: Rect): Rect {
+  const bottomChrome = document.querySelector('[data-fixed-chrome="bottom"]')
+  // Skip entirely when the target itself lives inside the chrome (e.g.
+  // spotlighting the nav bar's own Lucky/Forge buttons) — those are meant
+  // to draw over the chrome, not be clamped against it.
+  if (!bottomChrome || bottomChrome === el || bottomChrome.contains(el)) {
+    return rect
+  }
+  const chromeRect = bottomChrome.getBoundingClientRect()
+  if (chromeRect.width === 0 && chromeRect.height === 0) {
+    return rect
+  }
+  const clampedBottom = Math.min(rect.top + rect.height, chromeRect.top)
+  return { ...rect, height: Math.max(0, clampedBottom - rect.top) }
+}
+
+// Desktop (TabNav) and mobile (MobileBottomNav) each render their own real
+// nav buttons unconditionally — the inactive one is only CSS-hidden
+// (`hidden lg:grid` etc.), not unmounted, so both can share a data-tutorial-id
+// and both match this query at once. A CSS-hidden element's
+// getBoundingClientRect() is always {0,0,0,0}, so picking the first *visible*
+// (non-zero-size) match is enough to always land on the one actually on
+// screen — same reasoning covers Forge's mobile-only Tavern rollup, where
+// the Tavern toggle and the rolled-out Forge item share 'nav-forge' too (see
+// MobileBottomNav.tsx) and only one of the two exists/has size at a time.
 function measureTarget(targetId: string): Rect | null {
   const candidates = document.querySelectorAll(`[data-tutorial-id="${targetId}"]`)
   for (const el of candidates) {
     const rect = el.getBoundingClientRect()
     if (rect.width > 0 || rect.height > 0) {
-      return { top: rect.top, left: rect.left, width: rect.width, height: rect.height }
+      return clampToFixedChrome(el, { top: rect.top, left: rect.left, width: rect.width, height: rect.height })
     }
   }
   return null
