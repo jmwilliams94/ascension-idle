@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.135.14",
+    "date": "2026-09-08",
+    "changes": [
+      "Fixed the mobile nav's Equipment/LuckyLad/Tavern/Achievements buttons still using the old style when selected"
+    ]
+  },
+  {
     "version": "1.135.13",
     "date": "2026-09-08",
     "changes": [

@@ -744,15 +744,28 @@ a,
 /* Compact active-state pill for MobileBottomNav's four side tabs
    (2026-08-28 redesign, requested by the user — the bar read as "a row of
    boxed buttons" competing with the Idling FAB for visual weight instead of
-   one cohesive bar). Same bright gradient/glow as .btn-gold-active but with
-   no border and sized to hug just the icon+label content (rounded-lg,
+   one cohesive bar), sized to hug just the icon+label content (rounded-lg,
    applied to an inner span, not the full-height/width tap-target button)
    instead of stretching edge-to-edge — the idle state has no background at
-   all, just muted text, so only the active tab shows any box whatsoever. */
+   all, just muted text, so only the active tab shows any box whatsoever.
+   Same glass-card treatment as .btn-gold-active (2026-09-08 pass — this was
+   missed in the first app-wide rollout since it's a separate class, not one
+   of the .btn-* family, reported by the user as "still the old design" on
+   Equipment/LuckyLad/Tavern/Achievements' selected state). No ::before/
+   ::after sweep here (this is a static "currently active" indicator, not a
+   hover surface) — just the same tinted-glass background/border/glow. */
 .nav-pill-active {
-  background: linear-gradient(180deg, var(--ascension-gold-bright) 0%, var(--ascension-gold) 60%, var(--ascension-gold-dark) 100%);
-  color: var(--ascension-ink);
-  box-shadow: 0 0 14px rgba(255, 255, 255, 0.45);
+  border: 2px solid color-mix(in srgb, var(--ascension-gold-bright) 60%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--ascension-gold) 15%, transparent) 0%,
+    rgba(15, 23, 42, 0.6) 55%,
+    rgba(0, 0, 0, 0.8) 100%
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: var(--ascension-gold-bright);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--ascension-gold) 30%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 /* Colored variant of .btn-gold's glass-card treatment (2026-08-14,
