@@ -2,7 +2,8 @@
 // step spotlights one real button via its `targetId` (matched against a
 // `data-tutorial-id` attribute already sitting on that real, production
 // element — no synthetic/fake buttons anywhere) and dims everything else.
-// `targetId: null` is the two full-dim, no-cutout steps (welcome/completion).
+// `targetId: null` is the full-dim, no-cutout steps (welcome/completion/the
+// socket celebration).
 //
 // Several steps deliberately reuse the same `targetId` (e.g.
 // 'forge-inventory-grid' shows up 5 times, 'forge-confirm' twice) — only one
@@ -15,7 +16,8 @@
 // `requiresManualAdvance` steps show a "Continue" button in the dialogue box
 // instead of auto-advancing off some real UI state — used where the player
 // needs a moment to actually look at something (the revealed Lucky Lad
-// board) rather than being yanked straight to the next spotlight.
+// board, the socket-unlock celebration) rather than being yanked straight to
+// the next spotlight.
 export interface TutorialStep {
   id: string
   targetId: string | null
@@ -27,7 +29,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'welcome',
     targetId: null,
-    dialogue: 'Welcome to Ascension Idle! Let’s walk through a few of the basics.',
+    dialogue:
+      'Hi, I’m Jordan — the creator of Ascension Idle. I’ve always wanted to build my own idle game, but never quite found the time to do it justice, until AI came along. With a lot of help from Claude, that idea finally became this game: a blend of Melvor Idle’s steady progression and Conquer Online’s class fantasy, built as a genuine passion project. Welcome — I hope you enjoy playing it as much as I’ve enjoyed building it. Let’s walk through the basics.',
   },
   {
     id: 'nav-lucky',
@@ -76,6 +79,12 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     dialogue: 'Tap Confirm to upgrade your weapon’s level.',
   },
   {
+    id: 'forge-socket-celebration',
+    targetId: null,
+    dialogue: 'Oh my! Did you see those fireworks? You were lucky and just obtained a socket in your weapon!',
+    requiresManualAdvance: true,
+  },
+  {
     id: 'forge-select-weapon-quality',
     targetId: 'forge-inventory-grid',
     dialogue: 'Let’s also improve its quality. Tap your weapon again to select it.',
@@ -106,14 +115,9 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     dialogue: 'Tap your weapon to select it.',
   },
   {
-    id: 'forge-tap-socket',
-    targetId: 'forge-socket-slot-0',
-    dialogue: 'Tap the socket.',
-  },
-  {
-    id: 'forge-tap-gem',
-    targetId: 'forge-inventory-grid',
-    dialogue: 'Now tap your Iris Gem to place it into the socket.',
+    id: 'forge-drag-gem-to-socket',
+    targetId: 'forge-sockets-drag-area',
+    dialogue: 'Drag your Iris Gem straight onto the socket to place it.',
   },
   {
     id: 'forge-confirm-socket',
@@ -139,14 +143,14 @@ export const TUTORIAL_STEP_IDS = {
   forgeSelectWeaponLevel: 'forge-select-weapon-level',
   forgeMaterialComet: 'forge-material-comet',
   forgeConfirmLevel: 'forge-confirm-level',
+  forgeSocketCelebration: 'forge-socket-celebration',
   forgeSelectWeaponQuality: 'forge-select-weapon-quality',
   forgeMaterialFallenStar: 'forge-material-fallenstar',
   forgeConfirmQuality: 'forge-confirm-quality',
   forgeBackToHub: 'forge-back-to-hub',
   forgeTileSockets: 'forge-tile-sockets',
   forgeSelectWeaponSockets: 'forge-select-weapon-sockets',
-  forgeTapSocket: 'forge-tap-socket',
-  forgeTapGem: 'forge-tap-gem',
+  forgeDragGemToSocket: 'forge-drag-gem-to-socket',
   forgeConfirmSocket: 'forge-confirm-socket',
   completion: 'completion',
 } as const

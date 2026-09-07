@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { Button } from './ui/Button'
 import { useTutorialStore } from '../game/tutorial/useTutorialStore'
@@ -11,15 +11,13 @@ interface Rect {
   height: number
 }
 
-// Desktop (TabNav) and mobile (MobileBottomNav) each render their own real
-// nav buttons unconditionally — the inactive one is only CSS-hidden
-// (`hidden lg:grid` etc.), not unmounted, so both can share a data-tutorial-id
-// and both match this query at once. A CSS-hidden element's
-// getBoundingClientRect() is always {0,0,0,0}, so picking the first *visible*
-// (non-zero-size) match is enough to always land on the one actually on
-// screen — same reasoning covers Forge's mobile-only Tavern rollup, where
-// the Tavern toggle and the rolled-out Forge item share 'nav-forge' too (see
-// MobileBottomNav.tsx) and only one of the two exists/has size at a time.
+// Red border (distinct from every other semantic tint in the app — VIP
+// violet, announcements green, etc.) marks a dialogue box as tutorial
+// content specifically, never confusable with a real gameplay panel. Same
+// reusable .is-tinted mechanism VipStatusHud etc. already use (see
+// index.css) rather than a bespoke border.
+const TUTORIAL_TINT_STYLE = { '--ascension-tint': '#ef4444' } as CSSProperties
+
 // Clamps a target's rect against any real, currently-visible fixed-position
 // chrome it may visually continue underneath — e.g. mobile's fixed bottom
 // nav bar (marked data-fixed-chrome="bottom", see MobileBottomNav.tsx),
@@ -63,6 +61,23 @@ function measureTarget(targetId: string): Rect | null {
     }
   }
   return null
+}
+
+// window.innerHeight/innerWidth (and the `fixed inset-0` wrapper's own CSS
+// sizing below) track the *layout* viewport, which on mobile can be taller
+// than what's actually painted right now (browser chrome sliding in/out) —
+// window.visualViewport tracks the real visible area when the browser
+// supports it, in the same coordinate space getBoundingClientRect() uses
+// (hence offsetTop/offsetLeft, not just width/height). Used to keep the glow
+// ring/cutout from ever drawing past the edge of the screen that's actually
+// visible right now — reported: the ring around Lucky Lad/Tavern's nav
+// buttons had its bottom edge cut off on mobile.
+function getVisibleViewportRect(): { top: number; left: number; bottom: number; right: number } {
+  const vv = window.visualViewport
+  if (!vv) {
+    return { top: 0, left: 0, bottom: window.innerHeight, right: window.innerWidth }
+  }
+  return { top: vv.offsetTop, left: vv.offsetLeft, bottom: vv.offsetTop + vv.height, right: vv.offsetLeft + vv.width }
 }
 
 // First-login tutorial spotlight (admin-only for now — see CLAUDE.md). No
@@ -114,8 +129,12 @@ export default function TutorialOverlay() {
     return null
   }
 
+  // Longer, informational dialogue (the welcome intro, completion) reads
+  // better with more room than the short one-line guided-step prompts.
+  const dialogueWidthClass = step.targetId === null ? 'max-w-md' : 'max-w-sm'
+
   const dialogue = (
-    <div className="ascension-card-frame w-full max-w-sm">
+    <div className={`ascension-card-frame is-tinted w-full ${dialogueWidthClass}`} style={TUTORIAL_TINT_STYLE}>
       <div className="ascension-card-inner space-y-3 p-4 text-center">
         <p className="text-sm leading-relaxed text-slate-100">{step.dialogue}</p>
         {step.targetId === null || step.requiresManualAdvance ? (
@@ -143,12 +162,13 @@ export default function TutorialOverlay() {
     )
   }
 
-  const PAD = 8
-  const top = rect.top - PAD
-  const left = rect.left - PAD
-  const bottom = rect.top + rect.height + PAD
-  const right = rect.left + rect.width + PAD
-  const dialogueBelow = bottom < window.innerHeight - 160
+  const PAD = 5
+  const visible = getVisibleViewportRect()
+  const top = Math.max(visible.top, rect.top - PAD)
+  const left = Math.max(visible.left, rect.left - PAD)
+  const bottom = Math.min(visible.bottom, rect.top + rect.height + PAD)
+  const right = Math.min(visible.right, rect.left + rect.width + PAD)
+  const dialogueBelow = bottom < visible.bottom - 160
 
   return createPortal(
     <div className="pointer-events-none fixed inset-0 z-[70]">
@@ -167,10 +187,12 @@ export default function TutorialOverlay() {
         style={{ top: Math.max(0, top), height: Math.max(0, bottom - top), left: Math.max(0, right), right: 0 }}
       />
 
-      {/* Glowing gold ring around the target — visual only, never intercepts clicks. */}
+      {/* Glowing gold ring around the target — visual only, never intercepts
+          clicks. Sized from the clamped top/left/bottom/right (not the raw
+          rect+PAD) so it can never draw past the edge of the visible screen. */}
       <div
         className="pointer-events-none absolute rounded-xl border-2 border-amber-400 shadow-[0_0_18px_rgba(212,175,55,0.65)]"
-        style={{ top: Math.max(0, top), left: Math.max(0, left), width: rect.width + PAD * 2, height: rect.height + PAD * 2 }}
+        style={{ top, left, width: Math.max(0, right - left), height: Math.max(0, bottom - top) }}
       />
 
       <div
@@ -178,7 +200,7 @@ export default function TutorialOverlay() {
         style={
           dialogueBelow
             ? { top: bottom + 12, left: 0, right: 0 }
-            : { bottom: window.innerHeight - top + 12, left: 0, right: 0 }
+            : { bottom: visible.bottom - top + 12, left: 0, right: 0 }
         }
       >
         {dialogue}

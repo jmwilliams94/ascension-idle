@@ -73,11 +73,11 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
   // First-login tutorial (admin-only for now) — see tutorialSteps.ts. The
   // socket the tutorial cares about is always socket 0, already unlocked for
   // free by the earlier tutorial_level_upgrade call, so there's no "Unlock
-  // Socket" step here at all — just select the weapon, tap the socket, tap
-  // the gem, then Confirm.
+  // Socket" step here at all — just select the weapon, drag the gem straight
+  // onto the socket (same real drag-and-drop path this screen already
+  // supports, no separate "tap the socket first" requirement), then Confirm.
   const isTutorialSelectWeaponStep = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.forgeSelectWeaponSockets))
-  const isTutorialTapSocketStep = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.forgeTapSocket))
-  const isTutorialTapGemStep = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.forgeTapGem))
+  const isTutorialDragGemStep = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.forgeDragGemToSocket))
   const isTutorialConfirmSocketStep = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.forgeConfirmSocket))
   const advanceTutorial = useTutorialStore((state) => state.advance)
 
@@ -107,7 +107,7 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
   const unlockCost = socketCount === 0 ? 1 : 5
 
   // First-login tutorial (admin-only for now) — auto-advances the "select
-  // your weapon"/"tap the socket"/"tap the gem" steps the moment the real
+  // your weapon"/"drag the gem onto the socket" steps the moment the real
   // state they're guiding actually reaches the right shape (see
   // tutorialSteps.ts). Confirm Socket itself advances from its own onClick
   // below, alongside a real socketGem call — no tutorial-specific RPC needed
@@ -119,16 +119,10 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
   }, [selectedItem, isTutorialSelectWeaponStep, advanceTutorial])
 
   useEffect(() => {
-    if (selectedSocketIndex === 0 && isTutorialTapSocketStep) {
+    if (pendingSocket && isTutorialDragGemStep) {
       advanceTutorial()
     }
-  }, [selectedSocketIndex, isTutorialTapSocketStep, advanceTutorial])
-
-  useEffect(() => {
-    if (pendingSocket && isTutorialTapGemStep) {
-      advanceTutorial()
-    }
-  }, [pendingSocket, isTutorialTapGemStep, advanceTutorial])
+  }, [pendingSocket, isTutorialDragGemStep, advanceTutorial])
 
   const handleRemoveItem = () => {
     setSelectedItemId(null)
@@ -237,6 +231,12 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
 
   return (
     <DragDropProvider>
+      {/* First-login tutorial (admin-only for now) — spans both the
+          Inventory grid and the socket slots, since a real drag gesture
+          needs both its pick-up point and its drop point inside the same
+          spotlighted (un-dimmed) area — see TutorialOverlay.tsx, which only
+          ever carves one cutout at a time. */}
+      <div data-tutorial-id="forge-sockets-drag-area">
       <ForgeTwoColumnLayout
         title="Sockets"
         onBack={onBack}
@@ -260,16 +260,14 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
       >
           <div className="flex items-start justify-center gap-6">
             <ForgeUpgradeSlot item={selectedItem} template={selectedTemplate} onRemove={handleRemoveItem} />
-            <div data-tutorial-id="forge-socket-slot-0">
-              <ForgeSocketSlot
-                index={0}
-                unlocked={socketCount >= 1}
-                filledKey={selectedItem?.sockets[0] ?? null}
-                pendingGem={pendingSocket?.index === 0 ? pendingSocket : null}
-                selected={selectedSocketIndex === 0}
-                onSelect={() => setSelectedSocketIndex(0)}
-              />
-            </div>
+            <ForgeSocketSlot
+              index={0}
+              unlocked={socketCount >= 1}
+              filledKey={selectedItem?.sockets[0] ?? null}
+              pendingGem={pendingSocket?.index === 0 ? pendingSocket : null}
+              selected={selectedSocketIndex === 0}
+              onSelect={() => setSelectedSocketIndex(0)}
+            />
             <ForgeSocketSlot
               index={1}
               unlocked={socketCount >= 2}
@@ -348,6 +346,7 @@ export default function ForgeSocketsTab({ onBack }: ForgeSocketsTabProps) {
             {socketError && <p className="text-center text-[11px] text-red-400">{socketError}</p>}
           </div>
       </ForgeTwoColumnLayout>
+      </div>
     </DragDropProvider>
   )
 }

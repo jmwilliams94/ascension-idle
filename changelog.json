@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.138.0",
+    "date": "2026-09-08",
+    "changes": [
+      "Tutorial: dialogue bubbles now have a distinct red border",
+      "Tutorial: socketing a gem is now a single drag straight onto the socket, matching the real Forge screen",
+      "Tutorial: fixed the nav bar highlight being cut off at the bottom edge on mobile",
+      "Tutorial: added a celebration moment when the weapon's socket unlocks, before moving on to the quality upgrade",
+      "Tutorial: rewrote the welcome screen with an introduction from the game's creator"
+    ]
+  },
+  {
     "version": "1.137.4",
     "date": "2026-09-08",
     "changes": [
