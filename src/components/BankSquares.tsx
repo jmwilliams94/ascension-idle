@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { usePlayerRecordStore } from '../lib/usePlayerRecordStore'
 import BankActionModal from './BankActionModal'
 import { AscensionCard } from './ui/AscensionCard'
@@ -270,8 +270,6 @@ function Square({
   onClick: () => void
 }) {
   const hasIcon = Boolean(icon || iconSrc)
-  const borderColor = selected ? undefined : accentColor
-  const backgroundColor = selected ? undefined : accentColor ? `${accentColor}14` : undefined
 
   const content = (
     <>
@@ -292,39 +290,29 @@ function Square({
     </>
   )
 
-  if (selected) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        title={hasIcon ? label : undefined}
-        className="relative flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border border-slate-300 bg-slate-300/10 p-2 text-center"
-      >
-        {content}
-      </button>
-    )
-  }
-
-  if (hasIcon) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        title={label}
-        style={{ borderColor, backgroundColor }}
-        className="relative flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border p-2 text-center hover:brightness-125"
-      >
-        {content}
-      </button>
-    )
-  }
+  // accentColor (Comets/Fallen Stars) drives .btn-glow's own --glow-* custom
+  // properties instead of a bespoke inline border/background — same
+  // color-mix-from-a-single-hex trick as the gem-tier tiles below, so any
+  // future accent color works without hand-picking a 3-stop ramp for it.
+  const glowStyle = accentColor
+    ? ({
+        '--glow-bright': `color-mix(in srgb, ${accentColor} 55%, white)`,
+        '--glow-base': accentColor,
+        '--glow-dark': `color-mix(in srgb, ${accentColor} 55%, black)`,
+      } as CSSProperties)
+    : undefined
+  const stateClass = accentColor ? (selected ? 'btn-glow-active' : 'btn-glow') : selected ? 'btn-gold-active' : 'btn-gold'
 
   return (
-    <div className="ascension-chip-frame is-interactive relative aspect-square">
-      <button type="button" onClick={onClick} className="ascension-chip-inner flex h-full w-full flex-col items-center justify-center gap-1 p-2 text-center">
-        {content}
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      title={hasIcon ? label : undefined}
+      style={glowStyle}
+      className={`relative flex aspect-square flex-col items-center justify-center gap-1 rounded-xl p-2 text-center ${stateClass}`}
+    >
+      {content}
+    </button>
   )
 }
 
@@ -393,44 +381,28 @@ function CurrencyPanel({
   return (
     <div className="space-y-3">
       <div className="flex gap-1.5">
-        {mode === 'deposit' ? (
-          <button type="button" className="flex-1 rounded-lg border border-slate-300 bg-slate-300/10 px-3 py-1.5 text-xs font-medium text-slate-100">
-            Deposit
-          </button>
-        ) : (
-          <div className="ascension-chip-frame is-interactive flex-1">
-            <button
-              type="button"
-              onClick={() => {
-                setMode('deposit')
-                setAmount(0)
-                setError(null)
-              }}
-              className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-slate-100"
-            >
-              Deposit
-            </button>
-          </div>
-        )}
-        {mode === 'withdraw' ? (
-          <button type="button" className="flex-1 rounded-lg border border-slate-300 bg-slate-300/10 px-3 py-1.5 text-xs font-medium text-slate-100">
-            Withdraw
-          </button>
-        ) : (
-          <div className="ascension-chip-frame is-interactive flex-1">
-            <button
-              type="button"
-              onClick={() => {
-                setMode('withdraw')
-                setAmount(0)
-                setError(null)
-              }}
-              className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-slate-100"
-            >
-              Withdraw
-            </button>
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={() => {
+            setMode('deposit')
+            setAmount(0)
+            setError(null)
+          }}
+          className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-medium ${mode === 'deposit' ? 'btn-gold-active' : 'btn-gold'}`}
+        >
+          Deposit
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setMode('withdraw')
+            setAmount(0)
+            setError(null)
+          }}
+          className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-medium ${mode === 'withdraw' ? 'btn-gold-active' : 'btn-gold'}`}
+        >
+          Withdraw
+        </button>
       </div>
 
       <div className="flex items-center justify-between text-[11px] text-slate-300">
@@ -562,36 +534,20 @@ function CometFallenStarPanel({
   return (
     <div className="space-y-3">
       <div className="flex gap-1.5">
-        {mode === 'individual' ? (
-          <button type="button" className="flex-1 rounded-lg border border-slate-300 bg-slate-300/10 px-3 py-1.5 text-xs font-medium text-slate-100">
-            Individual
-          </button>
-        ) : (
-          <div className="ascension-chip-frame is-interactive flex-1">
-            <button
-              type="button"
-              onClick={() => setModeAndReset('individual')}
-              className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-slate-100"
-            >
-              Individual
-            </button>
-          </div>
-        )}
-        {mode === 'scroll' ? (
-          <button type="button" className="flex-1 rounded-lg border border-slate-300 bg-slate-300/10 px-3 py-1.5 text-xs font-medium text-slate-100">
-            Scroll
-          </button>
-        ) : (
-          <div className="ascension-chip-frame is-interactive flex-1">
-            <button
-              type="button"
-              onClick={() => setModeAndReset('scroll')}
-              className="ascension-chip-inner w-full px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-slate-100"
-            >
-              Scroll
-            </button>
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={() => setModeAndReset('individual')}
+          className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-medium ${mode === 'individual' ? 'btn-gold-active' : 'btn-gold'}`}
+        >
+          Individual
+        </button>
+        <button
+          type="button"
+          onClick={() => setModeAndReset('scroll')}
+          className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-medium ${mode === 'scroll' ? 'btn-gold-active' : 'btn-gold'}`}
+        >
+          Scroll
+        </button>
       </div>
 
       <p className="text-[11px] text-slate-300">Bank: {bank.toLocaleString()}</p>
@@ -743,16 +699,10 @@ function GearPointsPanel({
         <p className="text-xs text-slate-300">Choose a gear type to spend its points pool.</p>
         <div className="grid grid-cols-2 gap-1.5">
           {GEAR_SLOT_TYPES.map((type) => (
-            <div key={type} className="ascension-chip-frame is-interactive">
-              <button
-                type="button"
-                onClick={() => setSlotType(type)}
-                className="ascension-chip-inner w-full px-2.5 py-2 text-left text-xs font-medium text-slate-300 hover:text-slate-100"
-              >
-                <span className="block">{formatGearSlotLabel(type)}</span>
-                <span className="block text-[10px] font-normal text-slate-300">{gearCompositionPoints[type].toLocaleString()} pts</span>
-              </button>
-            </div>
+            <button key={type} type="button" onClick={() => setSlotType(type)} className="btn-gold w-full rounded-lg px-2.5 py-2 text-left text-xs font-medium">
+              <span className="block">{formatGearSlotLabel(type)}</span>
+              <span className="block text-[10px] font-normal text-slate-300">{gearCompositionPoints[type].toLocaleString()} pts</span>
+            </button>
           ))}
         </div>
       </div>
@@ -958,27 +908,16 @@ function GemsPanel({
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-4 gap-1.5">
-        {GEM_TYPE_ORDER.map((id) =>
-          gemId === id ? (
-            <button
-              key={id}
-              type="button"
-              className="rounded-lg border border-slate-300 bg-slate-300/10 px-2 py-1.5 text-[11px] font-medium text-slate-100"
-            >
-              {GEM_TYPES[id].displayName.replace(' Gem', '')}
-            </button>
-          ) : (
-            <div key={id} className="ascension-chip-frame is-interactive">
-              <button
-                type="button"
-                onClick={() => setGemId(id)}
-                className="ascension-chip-inner w-full px-2 py-1.5 text-[11px] font-medium text-slate-300 hover:text-slate-100"
-              >
-                {GEM_TYPES[id].displayName.replace(' Gem', '')}
-              </button>
-            </div>
-          ),
-        )}
+        {GEM_TYPE_ORDER.map((id) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setGemId(id)}
+            className={`rounded-lg px-2 py-1.5 text-[11px] font-medium ${gemId === id ? 'btn-gold-active' : 'btn-gold'}`}
+          >
+            {GEM_TYPES[id].displayName.replace(' Gem', '')}
+          </button>
+        ))}
       </div>
 
       {/* One tile per tier, quantity shown underneath each (2026-08-14,
@@ -1004,16 +943,22 @@ function GemsPanel({
             </>
           )
 
-          return tier === t ? (
-            <button key={t} type="button" className="flex flex-col items-center gap-1 rounded-xl border border-slate-300 bg-slate-300/10 p-2">
+          const glowStyle = {
+            '--glow-bright': `color-mix(in srgb, ${tierColor} 55%, white)`,
+            '--glow-base': tierColor,
+            '--glow-dark': `color-mix(in srgb, ${tierColor} 55%, black)`,
+          } as CSSProperties
+
+          return (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTier(t)}
+              style={glowStyle}
+              className={`flex flex-col items-center gap-1 rounded-xl p-2 ${tier === t ? 'btn-glow-active' : 'btn-glow'}`}
+            >
               {iconBlock}
             </button>
-          ) : (
-            <div key={t} className="ascension-chip-frame is-interactive">
-              <button type="button" onClick={() => setTier(t)} className="ascension-chip-inner flex w-full flex-col items-center gap-1 p-2">
-                {iconBlock}
-              </button>
-            </div>
           )
         })}
       </div>

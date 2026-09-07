@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.135.16",
+    "date": "2026-09-08",
+    "changes": [
+      "Bank screen's Character/Account toggle and every button under Account Bank now use the new glass button style",
+      "Empty inventory/storage slots are now a neutral grey with a silver dotted outline"
+    ]
+  },
+  {
     "version": "1.135.15",
     "date": "2026-09-08",
     "changes": [
