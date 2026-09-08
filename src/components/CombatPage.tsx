@@ -36,6 +36,8 @@ import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
 import { DragDropProvider } from './dragDrop'
 import { useFxStore } from '../game/fx/useFxStore'
+import { useTutorialStore } from '../game/tutorial/useTutorialStore'
+import { TUTORIAL_STEP_IDS } from '../game/tutorial/tutorialSteps'
 
 // Matches getLevelDiffColor's tiers — White is an even match, Green means the
 // character comfortably outlevels the monster (reduced EXP), Red/Black mean
@@ -267,7 +269,7 @@ function TrackedLabel({ children }: { children: string }) {
 // handleFight).
 function CombatModeSwitcher({ mode, onChange }: { mode: CombatMode; onChange: (mode: CombatMode) => void }) {
   return (
-    <div className="grid grid-cols-4 gap-2">
+    <div className="grid grid-cols-4 gap-2" data-tutorial-id="combat-mode-switcher">
       <button
         type="button"
         onClick={() => onChange('hunting')}
@@ -353,6 +355,18 @@ export default function CombatPage() {
   const characterName = useCharacterRecordStore((state) => state.characterName)
   const characterId = useActiveCharacterStore((state) => state.characterId)
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
+
+  // First-login tutorial (admin-only for now) — auto-advances the "Tap
+  // Fight" step the instant real combat actually starts (isFighting flips
+  // true synchronously inside handleFight's start() call below, well before
+  // any server resolve round-trip) — see tutorialSteps.ts.
+  const isTutorialFightStep = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.combatFight))
+  const advanceTutorial = useTutorialStore((state) => state.advance)
+  useEffect(() => {
+    if (isFighting && isTutorialFightStep) {
+      advanceTutorial()
+    }
+  }, [isFighting, isTutorialFightStep, advanceTutorial])
 
   // Mirrors useCombatStore.runTick's own activeSkill re-derivation (class +
   // level re-validated, never trusts equippedSkillId at face value) — used
@@ -691,6 +705,7 @@ export default function CombatPage() {
         {mode === 'pvp' && characterId && <PvpDuelBoard characterId={characterId} />}
 
         {mode === 'hunting' && activeType && (
+          <div data-tutorial-id="combat-player-stats">
           <AscensionCard>
             {/* Doubled from the shared .text-heading-label 0.7rem base
                 (2026-08-14, requested by the user) — inline style, not a
@@ -755,9 +770,11 @@ export default function CombatPage() {
               )}
             </div>
           </AscensionCard>
+          </div>
         )}
 
         {mode === 'hunting' && (
+        <div data-tutorial-id="combat-zone-monster">
         <AscensionCard title="Zone & Monster">
           <div className="mt-2 flex flex-wrap gap-3">
             <label className="text-heading-label min-w-[140px] flex-1">
@@ -812,6 +829,7 @@ export default function CombatPage() {
 
           <Button
             variant="primary"
+            data-tutorial-id="combat-fight-button"
             disabled={!dropdownMonsterId || (isFighting && monsterTypeId === dropdownMonsterId)}
             onClick={() => dropdownMonsterId && handleFight(dropdownMonsterId)}
             className="mt-3 w-full"
@@ -819,6 +837,7 @@ export default function CombatPage() {
             {isFighting && monsterTypeId === dropdownMonsterId ? 'Fighting' : 'Fight'}
           </Button>
         </AscensionCard>
+        </div>
         )}
 
         <AscensionCard>
@@ -845,6 +864,7 @@ export default function CombatPage() {
         {mode === 'mining' && characterId && <MiningModePanel characterId={characterId} />}
 
         {mode === 'hunting' ? (
+        <div data-tutorial-id="combat-zone-monster">
         <AscensionCard title="Zone & Monster">
           <div className="mt-2 flex flex-wrap gap-3">
             <label className="text-heading-label min-w-[160px] flex-1">
@@ -899,6 +919,7 @@ export default function CombatPage() {
 
           <Button
             variant="primary"
+            data-tutorial-id="combat-fight-button"
             disabled={!dropdownMonsterId || (isFighting && monsterTypeId === dropdownMonsterId)}
             onClick={() => dropdownMonsterId && handleFight(dropdownMonsterId)}
             className="mt-3 w-full"
@@ -906,6 +927,7 @@ export default function CombatPage() {
             {isFighting && monsterTypeId === dropdownMonsterId ? 'Fighting' : 'Fight'}
           </Button>
         </AscensionCard>
+        </div>
         ) : mode === 'events' ? (
           // Explicit mode check (was a bare hunting?A:B ternary, which leaked
           // this into Mining mode too, stacked below MiningModePanel above —
@@ -916,6 +938,7 @@ export default function CombatPage() {
         ) : null}
 
         {mode === 'hunting' && activeType && (
+          <div data-tutorial-id="combat-player-stats">
           <AscensionCard>
             {/* Doubled from the shared .text-heading-label 0.7rem base
                 (2026-08-14, requested by the user) — inline style, not a
@@ -977,6 +1000,7 @@ export default function CombatPage() {
               )}
             </div>
           </AscensionCard>
+          </div>
         )}
 
         {mode === 'hunting' && activeType && (

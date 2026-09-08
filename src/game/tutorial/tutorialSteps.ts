@@ -141,6 +141,36 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     dialogue: 'Tap Confirm Socket to lock it in.',
   },
   {
+    id: 'nav-idling',
+    targetId: 'nav-idling',
+    dialogue: 'Great weapon! Let’s put it to use — tap Idling to head out and fight.',
+  },
+  {
+    id: 'combat-mode-switcher',
+    targetId: 'combat-mode-switcher',
+    dialogue:
+      'This switches your character between Hunting and Mining. Only one of your characters can Hunt at a time — any other character on your account can Mine for gems here instead while this one’s off fighting.',
+    requiresManualAdvance: true,
+  },
+  {
+    id: 'combat-zone-monster',
+    targetId: 'combat-zone-monster',
+    dialogue: 'Pick which Zone and Monster to fight here — each zone has its own level range and rewards.',
+    requiresManualAdvance: true,
+  },
+  {
+    id: 'combat-fight',
+    targetId: 'combat-fight-button',
+    dialogue: 'Tap Fight to start hunting!',
+  },
+  {
+    id: 'combat-player-stats',
+    targetId: 'combat-player-stats',
+    dialogue:
+      'You’re hunting now! Your Health (HP) is shown here, and your Mana (MP) below it if your class uses any. Kills earn Gold, EXP, and loot automatically, even while you’re away.',
+    requiresManualAdvance: true,
+  },
+  {
     id: 'completion',
     targetId: null,
     dialogue: [
@@ -171,5 +201,10 @@ export const TUTORIAL_STEP_IDS = {
   forgeSelectWeaponSockets: 'forge-select-weapon-sockets',
   forgeDragGemToSocket: 'forge-drag-gem-to-socket',
   forgeConfirmSocket: 'forge-confirm-socket',
+  navIdling: 'nav-idling',
+  combatModeSwitcher: 'combat-mode-switcher',
+  combatZoneMonster: 'combat-zone-monster',
+  combatFight: 'combat-fight',
+  combatPlayerStats: 'combat-player-stats',
   completion: 'completion',
 } as const

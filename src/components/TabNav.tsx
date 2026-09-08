@@ -95,11 +95,21 @@ function IdlingTabButton({ label }: { label: string }) {
   const icon = TAB_ICONS.combat
   const emberColor = useActiveEventEmberColor()
 
+  // First-login tutorial (admin-only for now).
+  const isTutorialStepActive = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.navIdling))
+  const advanceTutorial = useTutorialStore((state) => state.advance)
+
   return (
     <div className="relative">
       <button
         type="button"
-        onClick={() => setActiveTab('combat')}
+        data-tutorial-id="nav-idling"
+        onClick={() => {
+          setActiveTab('combat')
+          if (isTutorialStepActive) {
+            advanceTutorial()
+          }
+        }}
         className={`${TAB_BUTTON_CLASS} w-full ${active ? 'btn-gold-active' : 'btn-gold'}`}
         style={eventBorderTintStyle(emberColor)}
       >

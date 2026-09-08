@@ -197,8 +197,23 @@ function IdlingNavButton() {
   const icon = TAB_ICONS.combat
   const emberColor = useActiveEventEmberColor()
 
+  // First-login tutorial (admin-only for now) — mirrors TabNav.tsx's
+  // IdlingTabButton, only CSS-hidden on mobile, not unmounted.
+  const isTutorialStepActive = useTutorialStore((state) => state.isStepActive(TUTORIAL_STEP_IDS.navIdling))
+  const advanceTutorial = useTutorialStore((state) => state.advance)
+
   return (
-    <button type="button" onClick={() => setActiveTab('combat')} className="flex w-24 flex-none flex-col items-center justify-center">
+    <button
+      type="button"
+      data-tutorial-id="nav-idling"
+      onClick={() => {
+        setActiveTab('combat')
+        if (isTutorialStepActive) {
+          advanceTutorial()
+        }
+      }}
+      className="flex w-24 flex-none flex-col items-center justify-center"
+    >
       <span className="relative flex h-20 w-24 items-center justify-center">
         <span
           className={`absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 shadow-lg ${

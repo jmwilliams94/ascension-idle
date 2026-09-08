@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.139.0",
+    "date": "2026-09-08",
+    "changes": [
+      "Tutorial: added a new section teaching the Idling/Hunting screen — Hunting vs Mining, picking a Zone and Monster, HP/MP, and actually starting a real fight with Fight"
+    ]
+  },
+  {
     "version": "1.138.1",
     "date": "2026-09-08",
     "changes": [
