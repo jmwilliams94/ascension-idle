@@ -66,15 +66,6 @@ export default function SettingsModal({ characterId, onClose }: { characterId: s
   // ToggleRow.tsx) was deleted rather than left as dead UI.
   const sections: SettingsSection[] = [
     { id: 'effects', label: 'Item Effects', content: <ItemEffectGallery /> },
-    {
-      id: 'fx',
-      label: 'FX',
-      content: (
-        <Suspense fallback={<p className="text-sm text-slate-300">Loading…</p>}>
-          <FxTestPanel />
-        </Suspense>
-      ),
-    },
     { id: 'changelog', label: 'Changelog', content: <ChangelogEntries entries={changelogNewestFirst()} /> },
     { id: 'plans', label: 'Plans', content: <PlanPanel /> },
     {
@@ -86,17 +77,6 @@ export default function SettingsModal({ characterId, onClose }: { characterId: s
     { id: 'bugs', label: 'Bug Reports', content: <BugReportPanel characterId={characterId} />, badge: bugsBadge },
     { id: 'notifications', label: 'Notifications', content: <NotificationsSettingsPanel /> },
     { id: 'legal', label: 'Legal', content: <LegalPanel /> },
-    // Rendering (2026-08-20, requested by the user) -- dev/debug tab for
-    // testing GLB model loading, not gameplay UI. See RenderingTestPanel.tsx.
-    {
-      id: 'rendering',
-      label: 'Rendering',
-      content: (
-        <Suspense fallback={<p className="text-sm text-slate-300">Loading…</p>}>
-          <RenderingTestPanel />
-        </Suspense>
-      ),
-    },
     // "Get VIP" (2026-09-03) — real-money VIP Token purchase via Stripe.
     // Un-gated 2026-09-07 now that live payments are confirmed working; was
     // isAdmin-gated only while Stripe was still being wired up/tested.
@@ -105,6 +85,31 @@ export default function SettingsModal({ characterId, onClose }: { characterId: s
     // hardcoded admin account (see useIsAdmin's own doc comment); real
     // enforcement lives server-side in the RPCs it calls, this is cosmetic.
     ...(isAdmin ? [{ id: 'admin', label: 'Admin', content: <AdminMailSection /> }] : []),
+    // FX (2026-08-29) and Rendering (2026-08-20) — dev/debug preview tabs,
+    // not gameplay UI. Restricted to admin 2026-09-08 (both are unfinished/
+    // unwired tooling, no reason for regular players to see them).
+    ...(isAdmin
+      ? [
+          {
+            id: 'fx',
+            label: 'FX',
+            content: (
+              <Suspense fallback={<p className="text-sm text-slate-300">Loading…</p>}>
+                <FxTestPanel />
+              </Suspense>
+            ),
+          },
+          {
+            id: 'rendering',
+            label: 'Rendering',
+            content: (
+              <Suspense fallback={<p className="text-sm text-slate-300">Loading…</p>}>
+                <RenderingTestPanel />
+              </Suspense>
+            ),
+          },
+        ]
+      : []),
   ]
 
   const [activeSectionId, setActiveSectionId] = useState(sections[0].id)

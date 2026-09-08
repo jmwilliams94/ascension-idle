@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.140.1",
+    "date": "2026-09-08",
+    "changes": [
+      "Moved the FX and Rendering preview tabs in Settings to admin-only (they're internal dev tools, not finished features)"
+    ]
+  },
+  {
     "version": "1.140.0",
     "date": "2026-09-08",
     "changes": [
