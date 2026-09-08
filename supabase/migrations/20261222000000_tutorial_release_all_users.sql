@@ -1,0 +1,285 @@
+-- First-login tutorial goes live for all accounts (previously admin-only
+-- for testing, see 20261220000000_first_login_tutorial.sql's own header).
+-- Two changes, same shape for all 4 tutorial RPCs:
+--
+-- 1. Drops the `if not public.is_admin() then return ...` hard gate from
+--    each of grant_tutorial_starter_kit/tutorial_level_upgrade/
+--    tutorial_quality_upgrade/tutorial_draw_lucky_ticket -- any
+--    authenticated account can now call them (still subject to their own
+--    existing not_owner/ownership checks).
+-- 2. grant_tutorial_starter_kit's v_repeatable flips true -> false, so
+--    players.tutorial_completed_at (stamped at grant time, not completion
+--    time -- set the instant a character is created, regardless of whether
+--    the player finishes or skips) becomes a real one-time-per-*account*
+--    gate: creating a second character never re-grants the kit or
+--    re-triggers the tutorial once an account has been granted it once,
+--    same account-wide semantics Skip Tutorial's own confirm dialog now
+--    states explicitly (see TutorialOverlay.tsx).
+begin;
+
+-- ============================================================================
+-- 1. grant_tutorial_starter_kit
+-- ============================================================================
+create or replace function public.grant_tutorial_starter_kit(p_character_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_account_id uuid;
+  v_class text;
+  -- Flip back to true only for a future testing pass -- see this
+  -- migration's own header for what that reverts.
+  v_repeatable constant boolean := false;
+  v_already_completed timestamptz;
+  v_gems jsonb;
+  v_weapon_name text;
+  v_template record;
+  v_weapon_id uuid;
+begin
+  select account_id, class into v_account_id, v_class from public.characters where id = p_character_id;
+  if v_account_id is null or v_account_id <> auth.uid() then
+    return jsonb_build_object('ok', false, 'error', 'not_owner');
+  end if;
+
+  select tutorial_completed_at into v_already_completed from public.players where id = v_account_id for update;
+  if not v_repeatable and v_already_completed is not null then
+    return jsonb_build_object('ok', false, 'error', 'already_granted');
+  end if;
+
+  select gems into v_gems from public.characters where id = p_character_id for update;
+  v_gems := jsonb_set(coalesce(v_gems, '{}'::jsonb), array['iris_normal'], to_jsonb(coalesce((v_gems ->> 'iris_normal')::integer, 0) + 1));
+
+  update public.characters
+  set gems = v_gems, comet_count = comet_count + 1, fallen_star_count = fallen_star_count + 1
+  where id = p_character_id;
+
+  v_weapon_name := case v_class when 'hunter' then 'Lucky Bow' when 'wuxia' then 'Lucky Backsword' else null end;
+
+  if v_weapon_name is not null then
+    select id, required_level, slot_type into v_template from public.item_templates where name = v_weapon_name;
+    if found then
+      insert into public.item_instances (template_id, owner_id, quality_tier, level, sockets, durability)
+      values (
+        v_template.id, p_character_id, 'normal', v_template.required_level, '[]'::jsonb,
+        coalesce(public.compute_max_durability(v_template.slot_type, v_template.required_level), 0)
+      )
+      returning id into v_weapon_id;
+    end if;
+  end if;
+
+  update public.players set tutorial_completed_at = now() where id = v_account_id;
+
+  return jsonb_build_object('ok', true, 'gems', v_gems, 'weapon_id', v_weapon_id);
+end;
+$$;
+
+revoke all on function public.grant_tutorial_starter_kit(uuid) from public;
+grant execute on function public.grant_tutorial_starter_kit(uuid) to authenticated;
+
+-- ============================================================================
+-- 2. tutorial_level_upgrade
+-- ============================================================================
+create or replace function public.tutorial_level_upgrade(p_item_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_character_id uuid;
+  v_account_id uuid;
+  v_template_id uuid;
+  v_item_family text;
+  v_slot_type text;
+  v_required_level integer;
+  v_next_template_id uuid;
+  v_next_required_level integer;
+  v_sockets jsonb;
+  v_comets integer;
+begin
+  select owner_id, template_id, coalesce(sockets, '[]'::jsonb)
+  into v_character_id, v_template_id, v_sockets
+  from public.item_instances
+  where id = p_item_id
+  for update;
+
+  if not found then
+    return jsonb_build_object('ok', false, 'error', 'item_not_found');
+  end if;
+
+  select account_id, comet_count into v_account_id, v_comets
+  from public.characters
+  where id = v_character_id
+  for update;
+
+  if v_account_id is null or v_account_id <> auth.uid() then
+    return jsonb_build_object('ok', false, 'error', 'not_owner');
+  end if;
+
+  if v_comets < 1 then
+    return jsonb_build_object('ok', false, 'error', 'not_enough_comets');
+  end if;
+
+  select item_family, required_level, slot_type into v_item_family, v_required_level, v_slot_type
+  from public.item_templates
+  where id = v_template_id;
+
+  if v_item_family is null then
+    return jsonb_build_object('ok', false, 'error', 'no_upgrade_path');
+  end if;
+
+  select id, required_level into v_next_template_id, v_next_required_level
+  from public.item_templates
+  where item_family = public.upgrade_chain_family(v_item_family) and required_level > v_required_level
+  order by required_level asc
+  limit 1;
+
+  if v_next_template_id is null then
+    return jsonb_build_object('ok', false, 'error', 'already_max_level');
+  end if;
+
+  update public.characters set comet_count = comet_count - 1 where id = v_character_id
+  returning comet_count into v_comets;
+
+  update public.item_instances
+  set template_id = v_next_template_id, level = v_next_required_level
+  where id = p_item_id;
+
+  if v_slot_type = 'weapon' and jsonb_array_length(v_sockets) = 0 then
+    update public.item_instances
+    set sockets = v_sockets || 'null'::jsonb
+    where id = p_item_id
+    returning sockets into v_sockets;
+  end if;
+
+  return jsonb_build_object(
+    'ok', true,
+    'level', v_next_required_level,
+    'template_id', v_next_template_id,
+    'comets_remaining', v_comets,
+    'sockets', v_sockets
+  );
+end;
+$$;
+
+revoke all on function public.tutorial_level_upgrade(uuid) from public;
+grant execute on function public.tutorial_level_upgrade(uuid) to authenticated;
+
+-- ============================================================================
+-- 3. tutorial_quality_upgrade
+-- ============================================================================
+create or replace function public.tutorial_quality_upgrade(p_item_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_character_id uuid;
+  v_account_id uuid;
+  v_current_tier text;
+  v_next_tier text;
+  v_fallen_stars integer;
+begin
+  select owner_id, quality_tier into v_character_id, v_current_tier
+  from public.item_instances
+  where id = p_item_id
+  for update;
+
+  if not found then
+    return jsonb_build_object('ok', false, 'error', 'item_not_found');
+  end if;
+
+  select account_id, fallen_star_count into v_account_id, v_fallen_stars
+  from public.characters
+  where id = v_character_id
+  for update;
+
+  if v_account_id is null or v_account_id <> auth.uid() then
+    return jsonb_build_object('ok', false, 'error', 'not_owner');
+  end if;
+
+  if v_fallen_stars < 1 then
+    return jsonb_build_object('ok', false, 'error', 'not_enough_fallen_stars');
+  end if;
+
+  v_next_tier := case v_current_tier
+    when 'normal' then 'tempered'
+    when 'tempered' then 'infused'
+    when 'infused' then 'radiant'
+    when 'radiant' then 'ascended'
+    else null
+  end;
+
+  if v_next_tier is null then
+    return jsonb_build_object('ok', false, 'error', 'already_max_quality');
+  end if;
+
+  update public.characters set fallen_star_count = fallen_star_count - 1 where id = v_character_id
+  returning fallen_star_count into v_fallen_stars;
+
+  update public.item_instances set quality_tier = v_next_tier where id = p_item_id;
+
+  return jsonb_build_object('ok', true, 'quality_tier', v_next_tier, 'fallen_stars_remaining', v_fallen_stars);
+end;
+$$;
+
+revoke all on function public.tutorial_quality_upgrade(uuid) from public;
+grant execute on function public.tutorial_quality_upgrade(uuid) to authenticated;
+
+-- ============================================================================
+-- 4. tutorial_draw_lucky_ticket
+-- ============================================================================
+create or replace function public.tutorial_draw_lucky_ticket(p_character_id uuid, p_card_index integer)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_account_id uuid;
+  v_board jsonb := '[]'::jsonb;
+  v_experience_potion_count integer;
+  i integer;
+begin
+  if p_card_index is null or p_card_index < 0 or p_card_index > 8 then
+    return jsonb_build_object('ok', false, 'error', 'invalid_card_index');
+  end if;
+
+  select account_id into v_account_id from public.characters where id = p_character_id for update;
+  if v_account_id is null or v_account_id <> auth.uid() then
+    return jsonb_build_object('ok', false, 'error', 'not_owner');
+  end if;
+
+  -- Row-locked for symmetry with draw_lucky_ticket, even though this
+  -- function doesn't branch on the existing value -- it always claims the
+  -- free ticket.
+  perform 1 from public.players where id = v_account_id for update;
+
+  for i in 0..8 loop
+    v_board := v_board || jsonb_build_array(public.pick_lucky_reward());
+  end loop;
+
+  v_board := jsonb_set(v_board, array[p_card_index::text], jsonb_build_object('kind', 'experience_potion', 'amount', 1));
+
+  update public.players set lucky_free_ticket_claimed_at = now() where id = v_account_id;
+
+  update public.characters set experience_potion_count = experience_potion_count + 1 where id = p_character_id
+  returning experience_potion_count into v_experience_potion_count;
+
+  return jsonb_build_object(
+    'ok', true,
+    'board', v_board,
+    'won_index', p_card_index,
+    'experience_potion_count', v_experience_potion_count,
+    'next_free_ticket_at', now() + interval '4 hours'
+  );
+end;
+$$;
+
+revoke all on function public.tutorial_draw_lucky_ticket(uuid, integer) from public;
+grant execute on function public.tutorial_draw_lucky_ticket(uuid, integer) to authenticated;
+
+commit;

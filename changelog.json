@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.140.0",
+    "date": "2026-09-08",
+    "changes": [
+      "New players now get a one-time guided tutorial covering Lucky Lad, upgrading and socketing a weapon at the Forge, and starting your first Hunt",
+      "Added a confirmation when skipping the tutorial, since it's a one-time, account-wide offer"
+    ]
+  },
+  {
     "version": "1.139.0",
     "date": "2026-09-08",
     "changes": [

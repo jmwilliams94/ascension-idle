@@ -106,6 +106,17 @@ export default function TutorialOverlay() {
 
   const step = active ? TUTORIAL_STEPS[stepIndex] : null
   const [rect, setRect] = useState<Rect | null>(null)
+  // Skip is permanent per account — grant_tutorial_starter_kit stamps
+  // players.tutorial_completed_at at grant time (character creation), not
+  // completion time, so skipping already can't let the tutorial reappear on
+  // a future character either. One lightweight confirm (not a "don't ask
+  // again" checkbox — there's no recurring prompt to opt out of) guards
+  // against an accidental tap costing the player this onboarding for good.
+  const [confirmingSkip, setConfirmingSkip] = useState(false)
+
+  useEffect(() => {
+    setConfirmingSkip(false)
+  }, [step])
 
   useEffect(() => {
     if (!step || !step.targetId) {
@@ -153,28 +164,47 @@ export default function TutorialOverlay() {
   const dialogue = (
     <div className={`ascension-card-frame is-tinted w-full ${dialogueWidthClass}`} style={TUTORIAL_TINT_STYLE}>
       <div className="ascension-card-inner space-y-3 p-4 text-center">
-        {step.heading && <h2 className="font-heading text-lg font-bold text-white">{step.heading}</h2>}
-        {paragraphs.map((line, index) =>
-          line === '' ? (
-            <div key={index} className="h-2" />
-          ) : (
-            <p key={index} className="text-sm leading-relaxed text-slate-100">
-              {line}
+        {confirmingSkip ? (
+          <>
+            <p className="text-sm leading-relaxed text-slate-100">
+              Skip the tutorial? This is a one-time tutorial for your account — skipping now means it won’t show
+              again, even on future characters.
             </p>
-          ),
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => setConfirmingSkip(false)} className="flex-1">
+                Keep Going
+              </Button>
+              <Button variant="danger" onClick={() => skip()} className="flex-1">
+                Skip For Good
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            {step.heading && <h2 className="font-heading text-lg font-bold text-white">{step.heading}</h2>}
+            {paragraphs.map((line, index) =>
+              line === '' ? (
+                <div key={index} className="h-2" />
+              ) : (
+                <p key={index} className="text-sm leading-relaxed text-slate-100">
+                  {line}
+                </p>
+              ),
+            )}
+            {step.targetId === null || step.requiresManualAdvance ? (
+              <Button variant="primary" onClick={() => advance()} className="w-full">
+                {step.id === 'welcome' ? 'Get Started' : step.id === 'completion' ? 'Finish' : 'Continue'}
+              </Button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setConfirmingSkip(true)}
+              className="block w-full text-center text-xs text-slate-500 transition hover:text-slate-300"
+            >
+              Skip Tutorial
+            </button>
+          </>
         )}
-        {step.targetId === null || step.requiresManualAdvance ? (
-          <Button variant="primary" onClick={() => advance()} className="w-full">
-            {step.id === 'welcome' ? 'Get Started' : step.id === 'completion' ? 'Finish' : 'Continue'}
-          </Button>
-        ) : null}
-        <button
-          type="button"
-          onClick={() => skip()}
-          className="block w-full text-center text-xs text-slate-500 transition hover:text-slate-300"
-        >
-          Skip Tutorial
-        </button>
       </div>
     </div>
   )

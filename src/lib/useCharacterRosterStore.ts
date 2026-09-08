@@ -1,20 +1,13 @@
 import { create } from 'zustand'
 import { supabase } from './supabaseClient'
-import { useAuthStore } from './useAuthStore'
-import { ADMIN_EMAIL } from './adminConfig'
 import { useTutorialStore } from '../game/tutorial/useTutorialStore'
 import type { ClassId } from '../game/stats/classes'
 
-// First-login tutorial (admin-only for now — see CLAUDE.md). Cosmetic-only
-// check (see adminConfig.ts's own doc comment) — real enforcement of "admin
-// only" lives server-side in grant_tutorial_starter_kit itself. Read
-// directly off the store rather than via the useIsAdmin() hook since
-// createCharacter is a plain async action, not a component.
+// First-login tutorial — live for all accounts (v1.140.0), one-time per
+// account (grant_tutorial_starter_kit's own v_repeatable gate, keyed off
+// players.tutorial_completed_at). A no-op on any repeat call for an account
+// that's already been granted it once, including via a brand new character.
 async function grantTutorialKitAndMaybeStart(characterId: string): Promise<void> {
-  if (useAuthStore.getState().session?.user.email !== ADMIN_EMAIL) {
-    return
-  }
-
   const { data, error } = await supabase.rpc('grant_tutorial_starter_kit', { p_character_id: characterId })
 
   if (error) {
