@@ -39,7 +39,15 @@ export default function ForgeTwoColumnLayout({ title, onBack, inventory, childre
   const advanceTutorial = useTutorialStore((state) => state.advance)
 
   return (
-    <div className="space-y-4">
+    // break-inside-avoid (2026-09-09) — GameShell now wraps the active tab's
+    // content in a CSS multi-column layout on desktop (two equal columns,
+    // overflow into column two); every Forge sub-panel is one tightly-
+    // coupled interactive unit (upgrade/material/socket slots side by side)
+    // that must never get visually cut in half at a column break, so it
+    // stays a single unsplittable block — see GameShell.tsx's own comment on
+    // that container for the tradeoff this implies (a panel like this one
+    // simply renders in column one, with column two left empty next to it).
+    <div className="space-y-4 break-inside-avoid">
       <div className="flex items-center gap-3">
         <Button
           variant="secondary"

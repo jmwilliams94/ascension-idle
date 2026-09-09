@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.141.4",
+    "date": "2026-09-09",
+    "changes": [
+      "Desktop: content now flows into two equal columns that stretch across to the Inventory panel, instead of one narrow scrolling column",
+      "Desktop: the Inventory panel moved from the bottom-right corner to the top-right, directly under the status row"
+    ]
+  },
+  {
     "version": "1.141.3",
     "date": "2026-09-09",
     "changes": [

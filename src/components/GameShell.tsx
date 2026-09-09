@@ -689,96 +689,145 @@ export default function GameShell({ characterId }: { characterId: string }) {
           whatever's at the bottom of the page's content. Unchanged at `lg`+,
           where the bottom nav doesn't render at all.
 
-          lg:flex (2026-09-09): TabNav is now a vertical icon-only sidebar
-          (see TabNav.tsx) down the left edge of this row instead of a
-          horizontal bar above the content — <main> itself no longer scrolls;
-          it just lays out sidebar + content side by side. Below `lg` this is
-          a no-op (TabNav renders nothing there; mobile keeps its normal
+          lg:flex (2026-09-09): three items side by side — TabNav (a vertical
+          icon-only sidebar, see TabNav.tsx), the scrolling content column,
+          and the Inventory dock (moved here from a `fixed` bottom-right
+          overlay, per the user — it's now a real flex column instead, top-
+          right/right-edge, directly below the status row above). Default
+          flexbox `align-items: stretch` (no override needed) makes all three
+          match <main>'s own height — the sidebar and dock both need that to
+          stay visible/full-height, and it's why the middle column needs its
+          own `lg:min-h-0` below (stretch gives it a definite height; without
+          min-h-0 a flex item's default min-height:auto would let its content
+          force it taller instead of actually respecting that height and
+          scrolling internally). <main> itself no longer scrolls — it just
+          lays out these three side by side. Below `lg` this is all a no-op
+          (TabNav and the dock render nothing there; mobile keeps its normal
           full-page scroll and single-column flow). */}
       <main className="px-6 pb-24 pt-4 lg:flex lg:min-h-0 lg:flex-1 lg:gap-4 lg:pb-6">
         <TabNav />
 
-        {/* This inner wrapper is the ONE scrolling region on desktop now
-            that the root shell is lg:h-screen/lg:overflow-hidden and <main>
-            itself is a non-scrolling flex row — everything that can grow
-            tall (a long Forge/Achievements/Marketplace tab) scrolls inside
-            here instead of scrolling the whole page. lg:min-w-0 lets it
-            actually shrink to the flex row's remaining width instead of
-            growing to fit its own content (the usual flex-item
-            min-width:auto trap). */}
+        {/* This is the ONE scrolling region on desktop now that the root
+            shell is lg:h-screen/lg:overflow-hidden and <main> itself is a
+            non-scrolling flex row — everything that can grow tall (a long
+            Forge/Achievements/Marketplace tab) scrolls inside here instead
+            of scrolling the whole page. lg:min-w-0 lets it actually shrink
+            to the flex row's remaining width instead of growing to fit its
+            own content (the usual flex-item min-width:auto trap). */}
         <div className="lg:min-h-0 lg:min-w-0 lg:flex-1 lg:overflow-y-auto">
-          {/* Desktop UI overhaul (2026-09-09): content width reduced from
-              the page's own max-w (things read as too spread out at 100rem
-              once the sidebar/dock ate into the usable width anyway) and
-              left-aligned (lg:mx-0) rather than centered in the remaining
-              space, so it sits right up against the sidebar rather than
-              floating in the middle of the gap. `lg:pr-[--inventory-dock-width]`
-              reserves clearance on the right so it doesn't run underneath
-              the fixed Inventory dock (a plain content column, not a grid,
-              since the dock is fixed-positioned and no longer a real layout
-              column) — the dock width is a CSS custom property (set once, on
-              the root element) rather than the same literal typed twice, so
-              this reservation can never silently drift out of sync with the
-              dock's own width. */}
-          <div className="mx-auto max-w-6xl space-y-4 lg:mx-0 lg:pr-[var(--inventory-dock-width)]">
+          {/* Desktop UI overhaul (2026-09-09): no max-w/mx-auto at `lg`+
+              anymore — this column now fills the exact remaining space
+              between the sidebar and the Inventory dock (both real flex
+              siblings now, not a fixed overlay needing a manual padding
+              reservation), so "two equal columns that stretch to the
+              inventory" (below) has the full width to work with instead of
+              being capped short of it. Below `lg` there's no sidebar/dock
+              to fill space between, so this is just a plain block. */}
+          <div className="space-y-4 lg:w-full">
             {/* Renders nothing when there's no pet to celebrate — safe to
                 mount unconditionally, same as every other HUD element here. */}
             <PetToast />
             <HuntingTakeoverToast />
 
             <AscensionCard title={TAB_TITLES[activeTab]} titleSize="large">
-              {activeTab === 'combat' && <CombatPage />}
-              {activeTab === 'equipment' && <EquipmentTabPage />}
-              {activeTab === 'forge' && <ForgePanel />}
-              {activeTab === 'marketplace' && <MarketplacePanel />}
-              {activeTab === 'shop' && <ShopPanel />}
-              {activeTab === 'bank' && <BankPanel characterId={characterId} />}
-              {activeTab === 'achievements' && <AchievementsPanel characterId={characterId} accountId={accountId} />}
-              {activeTab === 'lucky' && <LuckyPanel characterId={characterId} />}
+              {/* Two equal-width CSS columns at `lg`+ (native multi-column,
+                  per the user) — content flows to fill column one, then
+                  overflows into column two, rather than one long column
+                  needing a tall scroll. Each tab below marks its own root
+                  break-inside-avoid so a single tightly-coupled interactive
+                  layout (Forge's slots, a fight UI, ...) never gets visually
+                  cut in half at the column break — for a tab that's just one
+                  such block, this means it simply renders in column one with
+                  column two left empty, which is the accepted tradeoff for
+                  tabs that aren't actually "too long" to need a second
+                  column. Equipment is the one exception (see
+                  EquipmentTabPage.tsx): its three panels are marked
+                  individually instead of as one shared block, so they can
+                  actually distribute across both columns. */}
+              <div className="lg:columns-2 lg:gap-6">
+                {activeTab === 'combat' && (
+                  <div className="break-inside-avoid">
+                    <CombatPage />
+                  </div>
+                )}
+                {activeTab === 'equipment' && <EquipmentTabPage />}
+                {activeTab === 'forge' && (
+                  <div className="break-inside-avoid">
+                    <ForgePanel />
+                  </div>
+                )}
+                {activeTab === 'marketplace' && (
+                  <div className="break-inside-avoid">
+                    <MarketplacePanel />
+                  </div>
+                )}
+                {activeTab === 'shop' && (
+                  <div className="break-inside-avoid">
+                    <ShopPanel />
+                  </div>
+                )}
+                {activeTab === 'bank' && (
+                  <div className="break-inside-avoid">
+                    <BankPanel characterId={characterId} />
+                  </div>
+                )}
+                {activeTab === 'achievements' && (
+                  <div className="break-inside-avoid">
+                    <AchievementsPanel characterId={characterId} accountId={accountId} />
+                  </div>
+                )}
+                {activeTab === 'lucky' && (
+                  <div className="break-inside-avoid">
+                    <LuckyPanel characterId={characterId} />
+                  </div>
+                )}
+              </div>
             </AscensionCard>
           </div>
         </div>
-      </main>
 
-      {/* Persistent (desktop-only) Inventory dock — fixed to the bottom-right
-          corner of the viewport (per the user's explicit ask), not a sticky
-          grid column, so it stays put regardless of scroll position. Width
-          scales with the viewport (clamp between 18rem and 26rem, tracking
-          22% of viewport width in between) rather than a flat pixel value,
-          per the user's "nothing is really scaling depending on screen
-          size" — set as a CSS custom property so <main>'s own right-padding
-          reservation above always matches it exactly. max-h/overflow-y-auto
-          is a safety net for short viewports; the grid itself (40 cells, 5
-          columns) is ~34rem tall and fits without scrolling on any normal
-          desktop height. Own DragDropProvider (separate from each Forge
-          sub-panel's local one) since this grid conditionally renders
-          draggable tiles whenever a Forge sub-panel registers an
-          onTileDrop — see InventoryPanel's own onTileDrop-gated
-          DraggableInventorySlot usage. Cross-tree dragging still works
-          despite the two panels sitting in different DragDropProvider trees:
-          drop-zone hit-testing (dragDropContext.ts's queryDropZoneRects) is a
-          plain DOM query, not scoped to React context, so a drag started
-          here still finds Forge's `data-drop-zone` targets rendered under
-          its own provider. */}
-      <div className="hidden lg:fixed lg:bottom-6 lg:right-6 lg:z-30 lg:block lg:max-h-[calc(100vh-3rem)] lg:w-[var(--inventory-dock-width)] lg:overflow-y-auto">
-        <DragDropProvider>
-          <AscensionCard title="Inventory">
-            <div data-tutorial-id="forge-inventory-grid">
-              <InventoryPanel
-                columns={5}
-                enableSelling={activeTab === 'shop'}
-                enableBankDeposit
-                equipPopoverEnabled
-                enableCompareToggle
-                tapToPlaceEnabled
-                reservedItemIds={forgeDropTarget?.reservedItemIds ?? []}
-                onTileDrop={forgeDropTarget?.onTileDrop}
-                isTileEligible={forgeDropTarget?.isTileEligible}
-              />
-            </div>
-          </AscensionCard>
-        </DragDropProvider>
-      </div>
+        {/* Persistent (desktop-only) Inventory dock — a real flex column now
+            (moved here 2026-09-09, per the user, from a `fixed` bottom-right
+            overlay) so it sits top-right: directly below the status row
+            above, along the right edge, stretched to <main>'s own height by
+            the row's default `align-items: stretch`. lg:min-h-0 lets it
+            actually respect that stretched height and scroll internally
+            (lg:overflow-y-auto) instead of growing taller than it — same
+            reasoning as the scroll column's own min-h-0 above. Width scales
+            with the viewport (clamp between 18rem and 26rem, tracking 22% of
+            viewport width in between) rather than a flat pixel value, per
+            the user's "nothing is really scaling depending on screen size"
+            — the CSS custom property is set once, on the root element.
+            Own DragDropProvider (separate from each Forge sub-panel's local
+            one) since this grid conditionally renders draggable tiles
+            whenever a Forge sub-panel registers an onTileDrop — see
+            InventoryPanel's own onTileDrop-gated DraggableInventorySlot
+            usage. Cross-tree dragging still works despite the two panels
+            sitting in different DragDropProvider trees: drop-zone
+            hit-testing (dragDropContext.ts's queryDropZoneRects) is a plain
+            DOM query, not scoped to React context, so a drag started here
+            still finds Forge's `data-drop-zone` targets rendered under its
+            own provider. */}
+        <div className="hidden lg:block lg:min-h-0 lg:w-[var(--inventory-dock-width)] lg:shrink-0 lg:overflow-y-auto">
+          <DragDropProvider>
+            <AscensionCard title="Inventory">
+              <div data-tutorial-id="forge-inventory-grid">
+                <InventoryPanel
+                  columns={5}
+                  enableSelling={activeTab === 'shop'}
+                  enableBankDeposit
+                  equipPopoverEnabled
+                  enableCompareToggle
+                  tapToPlaceEnabled
+                  reservedItemIds={forgeDropTarget?.reservedItemIds ?? []}
+                  onTileDrop={forgeDropTarget?.onTileDrop}
+                  isTileEligible={forgeDropTarget?.isTileEligible}
+                />
+              </div>
+            </AscensionCard>
+          </DragDropProvider>
+        </div>
+      </main>
 
       <MobileBottomNav />
     </div>
