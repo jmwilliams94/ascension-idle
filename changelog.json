@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.141.7",
+    "date": "2026-09-10",
+    "changes": [
+      "Gold Donation Event now has real scene art instead of a placeholder coin emoji"
+    ]
+  },
+  {
     "version": "1.141.6",
     "date": "2026-09-10",
     "changes": [

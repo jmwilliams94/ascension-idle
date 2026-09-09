@@ -78,9 +78,12 @@ export default function GoldDonationCard({
         )}
       </div>
 
-      <div className="mt-3 flex h-32 w-32 items-center justify-center rounded-2xl border-2 border-slate-700 bg-gradient-to-br from-amber-900 to-slate-950 text-5xl">
-        💰
-      </div>
+      <div
+        role="img"
+        aria-label="Gold Donation Event"
+        className="mt-3 aspect-[16/9] w-full overflow-hidden rounded-2xl border-2 border-slate-700 bg-slate-950 bg-cover bg-center"
+        style={{ backgroundImage: `url(${import.meta.env.BASE_URL}events/gold-donation.webp)` }}
+      />
 
       {!pool ? (
         <p className="mt-3 text-center text-sm text-slate-300">Loading…</p>
