@@ -52,7 +52,7 @@ export default function ZoneBossRewardsInfoModal({
           <li>You get a share of each pool above equal to the % of the boss's HP you personally damaged — deal 20% of its HP, get 20% of every pool.</li>
           <li>No character can ever deal more than 34% of a boss's HP, so killing any boss takes damage from at least 3 different characters.</li>
           <li>Everyone who attacks at least once also gets 1 Lottery Ticket, on top of any pool share.</li>
-          <li>If a boss's window ends without dying, only the HP that was actually damaged pays out — the rest of the pool goes unclaimed, not to whoever showed up.</li>
+          <li>If a boss's window ends without dying, everyone's share is scaled up so the full pool still gets paid out — still capped at 34% each, so a slice can go unclaimed only if too few characters showed up to soak it all up.</li>
           <li>Tougher bosses in later zones have bigger reward pools.</li>
         </ul>
       </div>

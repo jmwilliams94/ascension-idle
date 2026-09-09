@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.141.6",
+    "date": "2026-09-10",
+    "changes": [
+      "Zone Boss: if the boss's fight window ends without it dying, everyone's reward share now scales up so the full reward pool still gets paid out, instead of leaving the un-dealt portion unclaimed",
+      "No single character's share can still ever exceed 34% of the pool — a boss that only draws 1-2 real attackers before timing out may still leave a small leftover unclaimed"
+    ]
+  },
+  {
     "version": "1.141.5",
     "date": "2026-09-09",
     "changes": [
