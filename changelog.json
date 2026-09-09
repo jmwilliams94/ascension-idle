@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.141.3",
+    "date": "2026-09-09",
+    "changes": [
+      "Desktop: navigation moved to a vertical icon-only sidebar on the left, freeing up the top of the page",
+      "Desktop: the main content area is narrower and sits to the right of the new sidebar, below the status row",
+      "The global announcement banner now has much more room before its text gets cut off"
+    ]
+  },
+  {
     "version": "1.141.2",
     "date": "2026-09-09",
     "changes": [

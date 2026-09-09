@@ -26,8 +26,12 @@ const TAB_ITEMS: { id: TabId; label: string }[] = [
 // for the idle state, .btn-gold-active in place of it (never alongside) for
 // whichever tab is currently open, since .btn-gold-active is the permanently-
 // lit variant of .btn-gold's own :hover state.
-const TAB_BUTTON_CLASS =
-  'flex flex-col items-center justify-center gap-1.5 rounded-xl px-3 py-3 text-sm font-heading font-bold uppercase tracking-[0.08em]'
+//
+// Square icon-only buttons (2026-09-09, per the user — the left-hand sidebar
+// redesign): aspect-square so each button's height always matches its own
+// width (the sidebar column's fixed width — see the outer container below),
+// no more flex-col + label underneath.
+const TAB_BUTTON_CLASS = 'flex aspect-square w-full items-center justify-center rounded-xl'
 
 // badge (2026-08-06, Achievements rework) — a small count bubble in the
 // corner, currently only used for the Achievements tab (claimable tier
@@ -52,6 +56,8 @@ function TabButton({ id, label, badge }: { id: TabId; label: string; badge?: num
     <div className="relative">
       <button
         type="button"
+        title={label}
+        aria-label={label}
         data-tutorial-id={id === 'forge' ? 'nav-forge' : undefined}
         onClick={() => {
           setActiveTab(id)
@@ -59,10 +65,9 @@ function TabButton({ id, label, badge }: { id: TabId; label: string; badge?: num
             advanceTutorial()
           }
         }}
-        className={`${TAB_BUTTON_CLASS} w-full ${active ? 'btn-gold-active' : 'btn-gold'}`}
+        className={`${TAB_BUTTON_CLASS} ${active ? 'btn-gold-active' : 'btn-gold'}`}
       >
-        {icon && <NavIconGlyph icon={icon} sizeClassName="h-8 w-8" />}
-        <span>{label}</span>
+        {icon && <NavIconGlyph icon={icon} sizeClassName="h-10 w-10" />}
       </button>
       {Boolean(badge) && (
         <span className="pointer-events-none absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border border-slate-900 bg-amber-500 px-1 text-[10px] font-bold text-slate-950">
@@ -103,6 +108,8 @@ function IdlingTabButton({ label }: { label: string }) {
     <div className="relative">
       <button
         type="button"
+        title={label}
+        aria-label={label}
         data-tutorial-id="nav-idling"
         onClick={() => {
           setActiveTab('combat')
@@ -110,11 +117,10 @@ function IdlingTabButton({ label }: { label: string }) {
             advanceTutorial()
           }
         }}
-        className={`${TAB_BUTTON_CLASS} w-full ${active ? 'btn-gold-active' : 'btn-gold'}`}
+        className={`${TAB_BUTTON_CLASS} ${active ? 'btn-gold-active' : 'btn-gold'}`}
         style={eventBorderTintStyle(emberColor)}
       >
-        {icon && <NavIconGlyph icon={icon} sizeClassName="h-8 w-8" />}
-        <span>{label}</span>
+        {icon && <NavIconGlyph icon={icon} sizeClassName="h-10 w-10" />}
       </button>
       <EventEmberBorder color={emberColor} />
     </div>
@@ -140,6 +146,8 @@ function LuckyTabButton({ label }: { label: string }) {
     <div className="relative">
       <button
         type="button"
+        title={label}
+        aria-label={label}
         data-tutorial-id="nav-lucky"
         onClick={() => {
           setActiveTab('lucky')
@@ -147,25 +155,26 @@ function LuckyTabButton({ label }: { label: string }) {
             advanceTutorial()
           }
         }}
-        className={`${TAB_BUTTON_CLASS} w-full ${active ? 'btn-gold-active' : 'btn-gold'}`}
+        className={`${TAB_BUTTON_CLASS} ${active ? 'btn-gold-active' : 'btn-gold'}`}
         style={eventBorderTintStyle(emberColor)}
       >
-        {icon && <NavIconGlyph icon={icon} sizeClassName="h-8 w-8" />}
-        <span>{label}</span>
+        {icon && <NavIconGlyph icon={icon} sizeClassName="h-10 w-10" />}
       </button>
       <EventEmberBorder color={emberColor} />
     </div>
   )
 }
 
-// Desktop-only (`hidden lg:grid` — mobile has its own fixed bottom nav bar
-// entirely, MobileBottomNav.tsx). Desktopified version of that bar (2026-08-03,
-// confirmed with the user): same icon art, but all 8 tabs shown flat rather
-// than mobile's Town rollup grouping — desktop has the horizontal room
-// mobile doesn't, so the space-saving rollup isn't needed here. Combat
-// (labeled "Idling") renders via its own IdlingTabButton (2026-08-16, so it
-// alone subscribes to the event embers) rather than the generic TabButton
-// every other tab uses.
+// Desktop-only (`hidden lg:flex` — mobile has its own fixed bottom nav bar
+// entirely, MobileBottomNav.tsx). Vertical icon-only sidebar (2026-09-09,
+// per the user — supersedes the earlier horizontal 8-across row above the
+// content: same icon art, no labels, bigger icons, square buttons), rendered
+// down the left edge of the content area in GameShell rather than above it.
+// All 8 tabs shown flat, same as the row version did — desktop has the
+// vertical room mobile doesn't, so the space-saving Town rollup mobile uses
+// isn't needed here. Combat (labeled "Idling") renders via its own
+// IdlingTabButton (2026-08-16, so it alone subscribes to the event embers)
+// rather than the generic TabButton every other tab uses.
 export default function TabNav() {
   const characterKills = useAchievementsStore((state) => state.characterKills)
   const accountKills = useAchievementsStore((state) => state.accountKills)
@@ -185,7 +194,7 @@ export default function TabNav() {
   const mailBadge = countUnreadMail(mailEntries)
 
   return (
-    <div className="hidden grid-cols-8 gap-2 lg:grid">
+    <div className="hidden lg:flex lg:w-20 lg:shrink-0 lg:flex-col lg:gap-2">
       {TAB_ITEMS.map((item) =>
         item.id === 'combat' ? (
           <IdlingTabButton key={item.id} label={item.label} />

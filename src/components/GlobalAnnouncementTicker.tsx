@@ -235,7 +235,12 @@ export default function GlobalAnnouncementTicker() {
   }
 
   return (
-    <div className="relative min-w-0 max-w-full shrink sm:max-w-sm">
+    // sm:max-w-sm was sized for the old cramped top HUD row (competing for
+    // space with ExpBar/warnings/PlayersOnlineHud in a width-constrained
+    // row) — truncated real announcement text far more than necessary. The
+    // top row is full viewport width now (2026-09-09), so this gets much
+    // more room on desktop before falling back to `truncate`.
+    <div className="relative min-w-0 max-w-full shrink sm:max-w-sm lg:max-w-2xl">
       <div
         className="ascension-chip-frame is-tinted"
         style={{ '--ascension-tint': '#22c55e' } as CSSProperties}

@@ -689,40 +689,54 @@ export default function GameShell({ characterId }: { characterId: string }) {
           whatever's at the bottom of the page's content. Unchanged at `lg`+,
           where the bottom nav doesn't render at all.
 
-          lg:min-h-0/lg:flex-1/lg:overflow-y-auto (2026-09-09): this is the
-          ONE scrolling region on desktop now that the root shell is
-          lg:h-screen/lg:overflow-hidden — everything that can grow tall
-          (a long Forge/Achievements/Marketplace tab) scrolls inside here
-          instead of scrolling the whole page. Below `lg` this is a no-op —
-          mobile keeps its normal full-page scroll. */}
-      <main className="px-6 pb-24 pt-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pb-6">
-        {/* Desktop UI overhaul (2026-09-09): main tab content shifts left at
-            `lg`+ — `lg:pr-[--inventory-dock-width]` reserves clearance on
-            the right so it doesn't run underneath the fixed Inventory dock
-            below (a plain content column, not a grid, since the dock is
-            fixed-positioned and no longer a real layout column). Below `lg`
-            this padding doesn't apply and nothing here changes. The dock
-            width is a CSS custom property (set once, right below) rather
-            than the same literal typed twice, so this reservation can never
-            silently drift out of sync with the dock's own width. */}
-        <div className="mx-auto max-w-[100rem] space-y-4 lg:pr-[var(--inventory-dock-width)]">
-          {/* Renders nothing when there's no pet to celebrate — safe to mount
-              unconditionally, same as every other HUD element here. */}
-          <PetToast />
-          <HuntingTakeoverToast />
+          lg:flex (2026-09-09): TabNav is now a vertical icon-only sidebar
+          (see TabNav.tsx) down the left edge of this row instead of a
+          horizontal bar above the content — <main> itself no longer scrolls;
+          it just lays out sidebar + content side by side. Below `lg` this is
+          a no-op (TabNav renders nothing there; mobile keeps its normal
+          full-page scroll and single-column flow). */}
+      <main className="px-6 pb-24 pt-4 lg:flex lg:min-h-0 lg:flex-1 lg:gap-4 lg:pb-6">
+        <TabNav />
 
-          <TabNav />
+        {/* This inner wrapper is the ONE scrolling region on desktop now
+            that the root shell is lg:h-screen/lg:overflow-hidden and <main>
+            itself is a non-scrolling flex row — everything that can grow
+            tall (a long Forge/Achievements/Marketplace tab) scrolls inside
+            here instead of scrolling the whole page. lg:min-w-0 lets it
+            actually shrink to the flex row's remaining width instead of
+            growing to fit its own content (the usual flex-item
+            min-width:auto trap). */}
+        <div className="lg:min-h-0 lg:min-w-0 lg:flex-1 lg:overflow-y-auto">
+          {/* Desktop UI overhaul (2026-09-09): content width reduced from
+              the page's own max-w (things read as too spread out at 100rem
+              once the sidebar/dock ate into the usable width anyway) and
+              left-aligned (lg:mx-0) rather than centered in the remaining
+              space, so it sits right up against the sidebar rather than
+              floating in the middle of the gap. `lg:pr-[--inventory-dock-width]`
+              reserves clearance on the right so it doesn't run underneath
+              the fixed Inventory dock (a plain content column, not a grid,
+              since the dock is fixed-positioned and no longer a real layout
+              column) — the dock width is a CSS custom property (set once, on
+              the root element) rather than the same literal typed twice, so
+              this reservation can never silently drift out of sync with the
+              dock's own width. */}
+          <div className="mx-auto max-w-6xl space-y-4 lg:mx-0 lg:pr-[var(--inventory-dock-width)]">
+            {/* Renders nothing when there's no pet to celebrate — safe to
+                mount unconditionally, same as every other HUD element here. */}
+            <PetToast />
+            <HuntingTakeoverToast />
 
-          <AscensionCard title={TAB_TITLES[activeTab]} titleSize="large">
-            {activeTab === 'combat' && <CombatPage />}
-            {activeTab === 'equipment' && <EquipmentTabPage />}
-            {activeTab === 'forge' && <ForgePanel />}
-            {activeTab === 'marketplace' && <MarketplacePanel />}
-            {activeTab === 'shop' && <ShopPanel />}
-            {activeTab === 'bank' && <BankPanel characterId={characterId} />}
-            {activeTab === 'achievements' && <AchievementsPanel characterId={characterId} accountId={accountId} />}
-            {activeTab === 'lucky' && <LuckyPanel characterId={characterId} />}
-          </AscensionCard>
+            <AscensionCard title={TAB_TITLES[activeTab]} titleSize="large">
+              {activeTab === 'combat' && <CombatPage />}
+              {activeTab === 'equipment' && <EquipmentTabPage />}
+              {activeTab === 'forge' && <ForgePanel />}
+              {activeTab === 'marketplace' && <MarketplacePanel />}
+              {activeTab === 'shop' && <ShopPanel />}
+              {activeTab === 'bank' && <BankPanel characterId={characterId} />}
+              {activeTab === 'achievements' && <AchievementsPanel characterId={characterId} accountId={accountId} />}
+              {activeTab === 'lucky' && <LuckyPanel characterId={characterId} />}
+            </AscensionCard>
+          </div>
         </div>
       </main>
 
