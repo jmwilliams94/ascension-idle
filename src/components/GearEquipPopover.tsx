@@ -46,14 +46,24 @@ interface GearEquipPopoverProps {
   // and keeps the in-popover Compare button below.
   autoCompare?: boolean
   // Desktop UI overhaul (2026-09-09) — the persistent Inventory panel
-  // combines equipPopoverEnabled with enableBankDeposit/enableSelling (every
-  // Forge/Equipment/Bank/Shop embedding used to only ever pass one), so a
-  // gear tile's Deposit/Bank/Sell actions need a home once Equip already
-  // owns the click. Rendered as extra buttons below the Equip/Compare row,
-  // reusing the same TooltipActionPopoverAction shape every other popover
-  // in InventoryPanel already builds its actions from. Empty/omitted
-  // everywhere else (no visual change for existing callers).
+  // combines equipPopoverEnabled with enableBankDeposit (every Forge/
+  // Equipment/Bank embedding used to only ever pass one), so a gear tile's
+  // Deposit/Bank actions need a home once Equip already owns the click.
+  // Rendered as extra buttons below the Equip/Compare row, reusing the same
+  // TooltipActionPopoverAction shape every other popover in InventoryPanel
+  // already builds its actions from. Empty/omitted everywhere else (no
+  // visual change for existing callers).
   extraActions?: TooltipActionPopoverAction[]
+  // Desktop UI overhaul (2026-09-09, per the user) — whenever the page
+  // already has its own page-level Compare toggle (enableCompareToggle,
+  // rendered above the grid), this popover's own per-tile Compare button is
+  // a redundant second way to reach the same thing, so it's hidden entirely
+  // regardless of whether the page-level toggle happens to be on or off
+  // right now (autoCompare only covers the "toggle is currently on" half of
+  // that — this covers the "toggle exists at all" half). false/omitted
+  // everywhere else (Combat page's mobile embedding has no page-level
+  // toggle, so it keeps this button as its only way to compare).
+  hideCompareButton?: boolean
 }
 
 export default function GearEquipPopover({
@@ -67,6 +77,7 @@ export default function GearEquipPopover({
   onClose,
   autoCompare = false,
   extraActions = [],
+  hideCompareButton = false,
 }: GearEquipPopoverProps) {
   const [comparing, setComparing] = useState(false)
   const effectiveComparing = autoCompare ? Boolean(compareTooltip) : comparing
@@ -139,7 +150,7 @@ export default function GearEquipPopover({
         >
           {equipLabel}
         </button>
-        {!autoCompare && compareTooltip && !alreadyEquipped && (
+        {!autoCompare && !hideCompareButton && compareTooltip && !alreadyEquipped && (
           <button
             type="button"
             onClick={() => setComparing((current) => !current)}

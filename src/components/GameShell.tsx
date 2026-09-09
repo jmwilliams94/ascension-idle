@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState, type CSSProperties } from 'react'
 import CombatEngine from '../game/combat/CombatEngine'
 import RowCombatEngine from '../game/combat/RowCombatEngine'
 import MiningEngine from '../game/mining/MiningEngine'
@@ -490,8 +490,23 @@ export default function GameShell({ characterId }: { characterId: string }) {
   usePersistGameState(characterId, loaded)
 
   return (
-    <div className="ascension-page-bg min-h-screen text-slate-100">
-      <header className="ascension-edge-b bg-[linear-gradient(180deg,_var(--ascension-ink-soft)_0%,_var(--ascension-ink)_100%)]">
+    // lg:flex/lg:h-screen/lg:overflow-hidden (2026-09-09, per the user): the
+    // desktop layout fills the viewport exactly and doesn't scroll as a
+    // page — only <main> below scrolls internally (lg:overflow-y-auto). Left
+    // untouched below `lg` (plain min-h-screen page scroll, mobile's normal
+    // behavior) since mobile browser chrome (address bar auto-hide) and PWA
+    // pull-to-refresh both depend on real page-level scroll, not an inner
+    // scroll container.
+    <div
+      className="ascension-page-bg min-h-screen text-slate-100 lg:flex lg:h-screen lg:flex-col lg:overflow-hidden"
+      // --inventory-dock-width: set once here (a shared ancestor of both
+      // <main>'s right-padding reservation and the dock itself, further
+      // down) so the two can never drift out of sync — a custom property
+      // set inline only reaches descendants, and the dock and <main> are
+      // siblings, not one inside the other.
+      style={{ '--inventory-dock-width': 'clamp(18rem, 22vw, 26rem)' } as CSSProperties}
+    >
+      <header className="ascension-edge-b shrink-0 bg-[linear-gradient(180deg,_var(--ascension-ink-soft)_0%,_var(--ascension-ink)_100%)]">
         {/* Single row at every viewport size — no flex-wrap. "Idle Combat"
             removed entirely (it was redundant with the tab the player is
             already on). Revised again 2026-08-14: the 2026-08-02 "no
@@ -637,41 +652,60 @@ export default function GameShell({ characterId }: { characterId: string }) {
       <VipAutomationEngine />
       <PotionAutoUseEngine />
 
+      {/* Top status row (ExpBar/warnings/Players Online/chat) — pulled out of
+          <main> and given its own minimal top padding + full viewport width
+          (2026-09-09, per the user: "less padding on top" + "stretch across
+          the length of the window"). No max-w/mx-auto here on purpose, unlike
+          <main> below — this row doesn't reserve space for the Inventory
+          dock either, since the dock is bottom-anchored and never reaches
+          this far up the page. */}
+      <div className="shrink-0 px-6 pt-3">
+        {/* Single flex-wrap row, same as it always was on desktop (lg+) —
+            everything fits on one line there and that layout was never
+            broken, so it's left untouched at that breakpoint. Below `lg`,
+            the warning badges (Quiver/Inventory-full) plus PlayersOnlineHud
+            could previously end up competing with ChatAndAnnouncements for
+            the same line, shoving things onto a 3rd wrapped line even with
+            nothing actually wrong (reported by the user, mobile only). The
+            `basis-full lg:hidden` spacer below is a forced line-break that
+            only exists below `lg` — it makes ChatAndAnnouncements start a
+            fresh line of its own there, without duplicating any component
+            or touching the lg+ single-row layout at all. */}
+        <div className="flex flex-wrap items-center gap-3">
+          <ExpBar />
+          <QuiverWarningHud />
+          <InventoryFullWarningHud />
+          <KnockoutHud />
+          <VipStatusHud />
+          <ExperiencePotionHud />
+          <PlayersOnlineHud />
+          <div className="h-0 basis-full lg:hidden" aria-hidden="true" />
+          <ChatAndAnnouncements />
+        </div>
+      </div>
+
       {/* pb-24 (was pb-6, matched by py-6 on lg): clearance for
           MobileBottomNav's fixed bar below `lg` — without it, the bar covers
           whatever's at the bottom of the page's content. Unchanged at `lg`+,
-          where the bottom nav doesn't render at all. */}
-      <main className="mx-auto max-w-[100rem] px-6 pb-24 pt-6 lg:pb-6">
-        {/* Desktop UI overhaul (2026-09-09): main tab content shifts left at
-            `lg`+ — `lg:pr-[27rem]` reserves clearance on the right so it
-            doesn't run underneath the fixed Inventory dock below (a plain
-            content column, not a grid, since the dock is fixed-positioned
-            and no longer a real layout column). Below `lg` this padding
-            doesn't apply and nothing here changes. */}
-        <div className="space-y-4 lg:pr-[27rem]">
-          {/* Single flex-wrap row, same as it always was on desktop (lg+) —
-              everything fits on one line there and that layout was never
-              broken, so it's left untouched at that breakpoint. Below `lg`,
-              the warning badges (Quiver/Inventory-full) plus PlayersOnlineHud
-              could previously end up competing with ChatAndAnnouncements for
-              the same line, shoving things onto a 3rd wrapped line even with
-              nothing actually wrong (reported by the user, mobile only). The
-              `basis-full lg:hidden` spacer below is a forced line-break that
-              only exists below `lg` — it makes ChatAndAnnouncements start a
-              fresh line of its own there, without duplicating any component
-              or touching the lg+ single-row layout at all. */}
-          <div className="flex flex-wrap items-center gap-3">
-            <ExpBar />
-            <QuiverWarningHud />
-            <InventoryFullWarningHud />
-            <KnockoutHud />
-            <VipStatusHud />
-            <ExperiencePotionHud />
-            <PlayersOnlineHud />
-            <div className="h-0 basis-full lg:hidden" aria-hidden="true" />
-            <ChatAndAnnouncements />
-          </div>
+          where the bottom nav doesn't render at all.
 
+          lg:min-h-0/lg:flex-1/lg:overflow-y-auto (2026-09-09): this is the
+          ONE scrolling region on desktop now that the root shell is
+          lg:h-screen/lg:overflow-hidden — everything that can grow tall
+          (a long Forge/Achievements/Marketplace tab) scrolls inside here
+          instead of scrolling the whole page. Below `lg` this is a no-op —
+          mobile keeps its normal full-page scroll. */}
+      <main className="px-6 pb-24 pt-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pb-6">
+        {/* Desktop UI overhaul (2026-09-09): main tab content shifts left at
+            `lg`+ — `lg:pr-[--inventory-dock-width]` reserves clearance on
+            the right so it doesn't run underneath the fixed Inventory dock
+            below (a plain content column, not a grid, since the dock is
+            fixed-positioned and no longer a real layout column). Below `lg`
+            this padding doesn't apply and nothing here changes. The dock
+            width is a CSS custom property (set once, right below) rather
+            than the same literal typed twice, so this reservation can never
+            silently drift out of sync with the dock's own width. */}
+        <div className="mx-auto max-w-[100rem] space-y-4 lg:pr-[var(--inventory-dock-width)]">
           {/* Renders nothing when there's no pet to celebrate — safe to mount
               unconditionally, same as every other HUD element here. */}
           <PetToast />
@@ -694,26 +728,31 @@ export default function GameShell({ characterId }: { characterId: string }) {
 
       {/* Persistent (desktop-only) Inventory dock — fixed to the bottom-right
           corner of the viewport (per the user's explicit ask), not a sticky
-          grid column, so it stays put regardless of scroll position.
-          max-h/overflow-y-auto is a safety net for short viewports; the grid
-          itself (40 cells, 5 columns) is ~34rem tall and fits without
-          scrolling on any normal desktop height. Own DragDropProvider
-          (separate from each Forge sub-panel's local one) since this grid
-          conditionally renders draggable tiles whenever a Forge sub-panel
-          registers an onTileDrop — see InventoryPanel's own onTileDrop-gated
+          grid column, so it stays put regardless of scroll position. Width
+          scales with the viewport (clamp between 18rem and 26rem, tracking
+          22% of viewport width in between) rather than a flat pixel value,
+          per the user's "nothing is really scaling depending on screen
+          size" — set as a CSS custom property so <main>'s own right-padding
+          reservation above always matches it exactly. max-h/overflow-y-auto
+          is a safety net for short viewports; the grid itself (40 cells, 5
+          columns) is ~34rem tall and fits without scrolling on any normal
+          desktop height. Own DragDropProvider (separate from each Forge
+          sub-panel's local one) since this grid conditionally renders
+          draggable tiles whenever a Forge sub-panel registers an
+          onTileDrop — see InventoryPanel's own onTileDrop-gated
           DraggableInventorySlot usage. Cross-tree dragging still works
           despite the two panels sitting in different DragDropProvider trees:
           drop-zone hit-testing (dragDropContext.ts's queryDropZoneRects) is a
           plain DOM query, not scoped to React context, so a drag started
           here still finds Forge's `data-drop-zone` targets rendered under
           its own provider. */}
-      <div className="hidden lg:fixed lg:bottom-6 lg:right-6 lg:z-30 lg:block lg:max-h-[calc(100vh-3rem)] lg:w-[26rem] lg:overflow-y-auto">
+      <div className="hidden lg:fixed lg:bottom-6 lg:right-6 lg:z-30 lg:block lg:max-h-[calc(100vh-3rem)] lg:w-[var(--inventory-dock-width)] lg:overflow-y-auto">
         <DragDropProvider>
           <AscensionCard title="Inventory">
             <div data-tutorial-id="forge-inventory-grid">
               <InventoryPanel
                 columns={5}
-                enableSelling
+                enableSelling={activeTab === 'shop'}
                 enableBankDeposit
                 equipPopoverEnabled
                 enableCompareToggle

@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.141.2",
+    "date": "2026-09-09",
+    "changes": [
+      "Desktop: the top status row (level bar, players online, chat) now spans the full width of the window with less padding above it",
+      "Desktop: the whole page now fits your screen without scrolling — only the main panel scrolls internally when its content is tall",
+      "Desktop: the Inventory panel now resizes with your window instead of staying a fixed size",
+      "Removed the redundant Compare and Sell buttons from the Inventory panel's item popup — Compare already has its own toggle above the grid, and Sell moved back to the Shop"
+    ]
+  },
+  {
     "version": "1.141.1",
     "date": "2026-09-09",
     "changes": [
