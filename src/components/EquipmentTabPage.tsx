@@ -12,36 +12,30 @@ import { AscensionCard } from './ui/AscensionCard'
 // redundant with the full paper-doll directly below it, and freeing that space
 // let EquipmentPanel's own slot tiles grow larger (see EquipmentPanel).
 //
-// Inventory added (2026-08-03, confirmed with the user) — its own card,
-// reusing the same InventoryPanel every other tab shares. equipPopoverEnabled
-// (the tap-to-Equip popover, see GearEquipPopover) is on here same as
-// CombatPage's own copies — this page is specifically about managing gear,
-// so it's an even more natural fit here than on Combat.
+// Inventory (2026-08-03, confirmed with the user) used to get its own card
+// here, reusing the same InventoryPanel every other tab shares —
+// equipPopoverEnabled (the tap-to-Equip popover, see GearEquipPopover) and
+// enableCompareToggle (a page-level "Compare" toggle: while on, hovering a
+// gear tile shows it side-by-side against whatever's equipped in the same
+// slot) were Equipment-tab-only, since this page is specifically about
+// managing gear.
 //
-// Two-column layout (2026-08-13, requested by the user — supersedes the
-// earlier single stacked column): paper-doll + Stats on the left, Inventory
-// on the right, same `grid gap-6 lg:grid-cols-2` responsive pattern the
-// Forge/Bank/Shop tabs already use (ForgeTwoColumnLayout.tsx), stacking
-// vertically below `lg`. No order-1/order-2 reordering needed here (unlike
-// Forge's own version of this layout) — Equipment/Stats already precede
-// Inventory in the markup, which is also the desired stacked order.
-// enableCompareToggle (also 2026-08-13) adds a page-level "Compare" toggle
-// above the Inventory grid — while on, hovering a gear tile shows it
-// side-by-side against whatever's equipped in the same slot, replacing the
-// old per-tile "open the popover, then press Compare" flow (see
-// InventoryPanel's own doc comment on that prop). Equipment-tab-only, by
-// design — CombatPage's own Inventory copies don't pass this.
+// Desktop UI overhaul (2026-09-09): that Inventory grid moved out to
+// GameShell's persistent right column, which passes both
+// equipPopoverEnabled/enableCompareToggle unconditionally now — so this page
+// is single-column at `lg`+. The InventoryPanel below only renders below
+// `lg`, where the persistent grid doesn't exist yet.
 export default function EquipmentTabPage() {
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <div className="space-y-4">
-        <EquipmentPanel />
-        <StatsPanel />
-        <SkillsPanel />
+    <div className="space-y-4">
+      <EquipmentPanel />
+      <StatsPanel />
+      <SkillsPanel />
+      <div className="lg:hidden">
+        <AscensionCard>
+          <InventoryPanel columns={5} equipPopoverEnabled enableCompareToggle />
+        </AscensionCard>
       </div>
-      <AscensionCard>
-        <InventoryPanel columns={5} equipPopoverEnabled enableCompareToggle />
-      </AscensionCard>
     </div>
   )
 }

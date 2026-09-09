@@ -25,6 +25,7 @@ import {
   previewQualityUpgradeCost,
 } from '../game/items/forgeCosts'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
+import { useForgeDropTargetStore } from '../game/items/useForgeDropTargetStore'
 import { useForgeStore } from '../game/items/useForgeStore'
 import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
@@ -416,6 +417,22 @@ export default function ForgeStandardPanel({ onBack }: ForgeStandardPanelProps) 
       handleDropMaterial(id)
     }
   }
+
+  // Registers this panel's own drop handling with the persistent (desktop)
+  // Inventory grid in GameShell's right column — see
+  // useForgeDropTargetStore's own doc comment. No dependency array: this
+  // should stay in sync with every render (selectedItemId/materialEntries/
+  // autoRepeat all feed into the closures below), and unregisters on
+  // unmount so a different Forge sub-panel (or leaving Forge entirely)
+  // doesn't inherit stale handlers.
+  useEffect(() => {
+    useForgeDropTargetStore.getState().setForgeDropTarget({
+      onTileDrop: handleTileDrop,
+      reservedItemIds: [...(selectedItemId ? [selectedItemId] : []), ...materialEntries.map((entry) => entry.id)],
+      isTileEligible,
+    })
+    return () => useForgeDropTargetStore.getState().clearForgeDropTarget()
+  })
 
   const isMaxQuality = selectedItem?.quality_tier === 'ascended'
   const nextLevelTemplate = selectedTemplate ? findNextTemplateInChain(templates, selectedTemplate) : null

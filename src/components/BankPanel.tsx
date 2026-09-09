@@ -19,13 +19,19 @@ type BankView = 'inventory' | 'storage'
 // BankSquares (the right column) is always rendered regardless of which
 // side the toggle is on — it shows account-wide totals independent of
 // whether the main area is currently showing Inventory or Storage.
+//
+// Desktop UI overhaul (2026-09-09): the Inventory grid moved out to
+// GameShell's persistent right column (with enableBankDeposit always on
+// there too) — so at `lg`+ this tab always shows Storage directly, and the
+// Character/Account toggle only renders below `lg`, where the Inventory
+// grid still needs a home of its own.
 export default function BankPanel({ characterId }: { characterId: string }) {
   const characterName = useCharacterRecordStore((state) => state.characterName)
   const [view, setView] = useState<BankView>('inventory')
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2 lg:max-w-xs">
+      <div className="grid grid-cols-2 gap-2 lg:hidden lg:max-w-xs">
         <button
           type="button"
           onClick={() => setView('inventory')}
@@ -56,13 +62,18 @@ export default function BankPanel({ characterId }: { characterId: string }) {
           of DOM order. */}
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
         <div className="min-w-0 order-2 lg:order-1">
-          {view === 'inventory' ? (
-            <AscensionCard>
-              <InventoryPanel columns={5} enableBankDeposit />
-            </AscensionCard>
-          ) : (
+          <div className="lg:hidden">
+            {view === 'inventory' ? (
+              <AscensionCard>
+                <InventoryPanel columns={5} enableBankDeposit />
+              </AscensionCard>
+            ) : (
+              <BankGrid characterId={characterId} />
+            )}
+          </div>
+          <div className="hidden lg:block">
             <BankGrid characterId={characterId} />
-          )}
+          </div>
         </div>
 
         <div className="min-w-0 order-1 lg:order-2">
@@ -72,7 +83,9 @@ export default function BankPanel({ characterId }: { characterId: string }) {
               only banked gear) when a withdrawal landed in their Character
               Inventory instead. Auto-switching to the Character view right
               when something new lands there makes the result impossible to
-              miss, on top of the clearer toast wording below. */}
+              miss, on top of the clearer toast wording below. Desktop
+              always shows the persistent right-column Inventory already, so
+              this callback is a no-op there (view stays unused at `lg`+). */}
           <BankSquares characterId={characterId} onWithdrawLandedInInventory={() => setView('inventory')} />
         </div>
       </div>

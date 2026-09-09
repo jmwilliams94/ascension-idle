@@ -2482,33 +2482,83 @@ export default function InventoryPanel({
         )
       })()}
 
-      {equipPopoverEnabled && selectedItem && popoverAnchorRect && (
-        <GearEquipPopover
-          anchorRect={popoverAnchorRect}
-          tooltip={buildGearTooltip(selectedItem, selectedTemplate)}
-          compareTooltip={compareTooltip}
-          alreadyEquipped={isEquipped(selectedItem.id)}
-          canEquip={!isEquipped(selectedItem.id) && isEquippableSlot && meetsLevelRequirement && meetsClassRequirement}
-          equipLabel={
-            isEquipped(selectedItem.id)
-              ? 'Equipped'
-              : !isEquippableSlot
-                ? 'Not wearable yet'
-                : !meetsClassRequirement
-                  ? `${requiredClassLabel} only`
-                  : !meetsLevelRequirement
-                    ? `Requires level ${selectedTemplate?.required_level}`
-                    : 'Equip'
-          }
-          onEquip={() => {
-            if (selectedTemplate && meetsLevelRequirement && meetsClassRequirement) {
-              handleEquip(selectedTemplate, selectedItem)
+      {equipPopoverEnabled &&
+        selectedItem &&
+        popoverAnchorRect &&
+        (() => {
+          // Desktop UI overhaul (2026-09-09) — the persistent Inventory panel
+          // passes equipPopoverEnabled alongside enableBankDeposit/
+          // enableSelling (no earlier caller combined these), so Deposit/
+          // Bank/Sell need to ride along as extra buttons on this same
+          // popover rather than their own separate popover/card, which the
+          // tile's click routing above never reaches once equipPopoverEnabled
+          // wins. Mirrors handleBankGear's own composition_level > 0 &&
+          // !locked gate and the old below-grid Sell card's own
+          // durability-scaled price — see those for why.
+          const selectedMaxDurability = selectedTemplate
+            ? computeMaxDurability(selectedTemplate.slot_type, selectedTemplate.required_level)
+            : null
+          const selectedDurabilityFraction = selectedMaxDurability
+            ? Math.min(1, (selectedItem.durability ?? 0) / selectedMaxDurability)
+            : 1
+          const extraActions: TooltipActionPopoverAction[] = []
+          if (enableBankDeposit) {
+            extraActions.push(
+              {
+                label: bankDepositBusy ? 'Depositing…' : 'Deposit',
+                onClick: () => void handleBankDepositItem(selectedItem.id),
+                disabled: bankDepositBusy,
+              },
+              { label: 'Deposit All', onClick: () => void handleBankDepositAllGear(), disabled: bankDepositBusy },
+            )
+            if (selectedItem.composition_level > 0 && !selectedItem.locked) {
+              extraActions.push(
+                { label: bankDepositBusy ? 'Banking…' : 'Bank', onClick: () => void handleBankGear(selectedItem.id), disabled: bankDepositBusy },
+                { label: 'Bank All', onClick: () => void handleBankAllGear(), disabled: bankDepositBusy },
+              )
             }
-          }}
-          onClose={closeGearPopover}
-          autoCompare={enableCompareToggle && compareMode}
-        />
-      )}
+          }
+          if (enableSelling) {
+            extraActions.push({
+              label: selectedItem.locked
+                ? 'Locked'
+                : sellBusy
+                  ? 'Selling…'
+                  : `Sell (${previewSellPrice(selectedTemplate?.price ?? 0, selectedItem.quality_tier, selectedDurabilityFraction)} gold)`,
+              onClick: () => void handleSell(selectedItem),
+              disabled: isEquipped(selectedItem.id) || sellBusy || selectedItem.locked,
+            })
+          }
+
+          return (
+            <GearEquipPopover
+              anchorRect={popoverAnchorRect}
+              tooltip={buildGearTooltip(selectedItem, selectedTemplate)}
+              compareTooltip={compareTooltip}
+              alreadyEquipped={isEquipped(selectedItem.id)}
+              canEquip={!isEquipped(selectedItem.id) && isEquippableSlot && meetsLevelRequirement && meetsClassRequirement}
+              equipLabel={
+                isEquipped(selectedItem.id)
+                  ? 'Equipped'
+                  : !isEquippableSlot
+                    ? 'Not wearable yet'
+                    : !meetsClassRequirement
+                      ? `${requiredClassLabel} only`
+                      : !meetsLevelRequirement
+                        ? `Requires level ${selectedTemplate?.required_level}`
+                        : 'Equip'
+              }
+              onEquip={() => {
+                if (selectedTemplate && meetsLevelRequirement && meetsClassRequirement) {
+                  handleEquip(selectedTemplate, selectedItem)
+                }
+              }}
+              onClose={closeGearPopover}
+              autoCompare={enableCompareToggle && compareMode}
+              extraActions={extraActions}
+            />
+          )
+        })()}
 
       {enableBankDeposit && selectedItem && bankPopoverAnchorRect && (
         <TooltipActionPopover

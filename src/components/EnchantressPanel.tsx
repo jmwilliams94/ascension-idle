@@ -15,6 +15,7 @@ import {
   type GemTier,
   type GemTypeId,
 } from '../game/items/gemTypes'
+import { useForgeDropTargetStore } from '../game/items/useForgeDropTargetStore'
 import { useForgeStore } from '../game/items/useForgeStore'
 import { useInventoryStore } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
@@ -228,6 +229,17 @@ export default function EnchantressPanel({ onBack }: EnchantressPanelProps) {
 
     return parsed !== null
   }
+
+  // See useForgeDropTargetStore's doc comment — registers this panel's own
+  // drop handling with the persistent (desktop) Inventory grid.
+  useEffect(() => {
+    useForgeDropTargetStore.getState().setForgeDropTarget({
+      onTileDrop: handleTileDrop,
+      reservedItemIds: selectedItemId ? [selectedItemId] : [],
+      isTileEligible,
+    })
+    return () => useForgeDropTargetStore.getState().clearForgeDropTarget()
+  })
 
   const handleBless = async () => {
     if (!selectedItem || !blessGem || blessing || isBlessMaxed) {

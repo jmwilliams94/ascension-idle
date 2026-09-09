@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { motion } from 'framer-motion'
 import ForgeTwoColumnLayout from './ForgeTwoColumnLayout'
 import InventoryPanel from './InventoryPanel'
@@ -17,6 +17,7 @@ import {
   QUALITY_COLORS,
 } from '../game/items/equipmentBonus'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
+import { useForgeDropTargetStore } from '../game/items/useForgeDropTargetStore'
 import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemTemplatesStore'
 import { useMarketplaceStore } from '../game/marketplace/useMarketplaceStore'
@@ -245,6 +246,17 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
     const item = items.find((entry) => entry.id === dragId)
     return item !== undefined && !item.locked
   }
+
+  // See useForgeDropTargetStore's doc comment — registers this panel's own
+  // drop handling with the persistent (desktop) Inventory grid.
+  useEffect(() => {
+    useForgeDropTargetStore.getState().setForgeDropTarget({
+      onTileDrop: handleTileDrop,
+      reservedItemIds: selectedItemId ? [selectedItemId] : [],
+      isTileEligible,
+    })
+    return () => useForgeDropTargetStore.getState().clearForgeDropTarget()
+  })
 
   const handleSalvage = () => {
     if (!selectedItem || phase !== 'idle') {

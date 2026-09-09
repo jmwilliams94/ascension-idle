@@ -19,8 +19,10 @@ import ChatAndAnnouncements from './ChatAndAnnouncements'
 import ChatOverlay from './ChatOverlay'
 import CharacterLoadoutModal from './CharacterLoadoutModal'
 import CombatPage from './CombatPage'
+import { DragDropProvider } from './dragDrop'
 import EquipmentTabPage from './EquipmentTabPage'
 import ExpBar from './ExpBar'
+import InventoryPanel from './InventoryPanel'
 import PetToast from './PetToast'
 import HuntingTakeoverToast from './HuntingTakeoverToast'
 import GainToastHost from './GainToastHost'
@@ -67,6 +69,7 @@ import { useLootHoldingStore } from '../game/items/useLootHoldingStore'
 import { useAchievementsStore } from '../game/achievements/useAchievementsStore'
 import { useMarketplaceStore } from '../game/marketplace/useMarketplaceStore'
 import { useMailStore } from '../game/marketplace/useMailStore'
+import { useForgeDropTargetStore } from '../game/items/useForgeDropTargetStore'
 import { useTabStore, type TabId } from '../game/hud/useTabStore'
 import { AscensionCard } from './ui/AscensionCard'
 import { useZoneStore } from '../game/zones/useZoneStore'
@@ -139,6 +142,11 @@ export default function GameShell({ characterId }: { characterId: string }) {
   const activeTab = useTabStore((state) => state.activeTab)
   const accountId = session?.user.id
   const isAdmin = useIsAdmin()
+  // Persistent (desktop) Inventory panel below — whichever Forge sub-panel is
+  // currently mounted registers its own drop handling here (see
+  // useForgeDropTargetStore.ts); every other tab leaves it null, so the
+  // panel just renders as a plain non-draggable browse-only grid there.
+  const forgeDropTarget = useForgeDropTargetStore((state) => state.target)
 
   // Return leg of the Stripe VIP Token purchase redirect (stripe-checkout's
   // success_url/cancel_url, see VipShopPanel.tsx) -- runs once on mount, not
@@ -497,7 +505,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
             2026-08-29 with plain thin grey fade-lines, per the user's own
             request — no glow/pulse animation on these, a calmer flanking
             accent rather than a lit ornament. */}
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
+        <div className="mx-auto flex max-w-[100rem] items-center justify-between gap-3 px-4 py-4 sm:px-6">
           <h1 className="font-heading flex items-center gap-2.5 text-xl font-black tracking-[0.15em] uppercase sm:text-2xl">
             <span className="h-px w-6 shrink-0 bg-gradient-to-r from-transparent to-slate-500 sm:w-8" />
             <span className="text-gradient-steel">ASCENSION</span>
@@ -633,47 +641,95 @@ export default function GameShell({ characterId }: { characterId: string }) {
           MobileBottomNav's fixed bar below `lg` — without it, the bar covers
           whatever's at the bottom of the page's content. Unchanged at `lg`+,
           where the bottom nav doesn't render at all. */}
-      <main className="mx-auto max-w-7xl space-y-4 px-6 pb-24 pt-6 lg:pb-6">
-        {/* Single flex-wrap row, same as it always was on desktop (lg+) —
-            everything fits on one line there and that layout was never
-            broken, so it's left untouched at that breakpoint. Below `lg`,
-            the warning badges (Quiver/Inventory-full) plus PlayersOnlineHud
-            could previously end up competing with ChatAndAnnouncements for
-            the same line, shoving things onto a 3rd wrapped line even with
-            nothing actually wrong (reported by the user, mobile only). The
-            `basis-full lg:hidden` spacer below is a forced line-break that
-            only exists below `lg` — it makes ChatAndAnnouncements start a
-            fresh line of its own there, without duplicating any component
-            or touching the lg+ single-row layout at all. */}
-        <div className="flex flex-wrap items-center gap-3">
-          <ExpBar />
-          <QuiverWarningHud />
-          <InventoryFullWarningHud />
-          <KnockoutHud />
-          <VipStatusHud />
-          <ExperiencePotionHud />
-          <PlayersOnlineHud />
-          <div className="h-0 basis-full lg:hidden" aria-hidden="true" />
-          <ChatAndAnnouncements />
+      <main className="mx-auto max-w-[100rem] px-6 pb-24 pt-6 lg:pb-6">
+        {/* Desktop UI overhaul (2026-09-09): the main tab content shifts into
+            its own left column at `lg`+, with a new persistent Inventory
+            column to its right — the 40-slot grid that used to be embedded
+            separately inside Equipment/Bank/every Forge sub-panel now lives
+            here once, shared across every tab (see InventoryPanel below and
+            useForgeDropTargetStore.ts for how Forge still wires its own drop
+            handling to it). Below `lg` this is just a single stacked column
+            (`lg:grid` only applies at that breakpoint) — mobile is
+            unaffected, and still gets its own per-tab Inventory embeds
+            (Equipment/Bank/Forge sub-panels each keep a `lg:hidden` copy). */}
+        <div className="lg:grid lg:grid-cols-[1fr_26rem] lg:items-start lg:gap-6">
+          <div className="min-w-0 space-y-4">
+            {/* Single flex-wrap row, same as it always was on desktop (lg+) —
+                everything fits on one line there and that layout was never
+                broken, so it's left untouched at that breakpoint. Below `lg`,
+                the warning badges (Quiver/Inventory-full) plus PlayersOnlineHud
+                could previously end up competing with ChatAndAnnouncements for
+                the same line, shoving things onto a 3rd wrapped line even with
+                nothing actually wrong (reported by the user, mobile only). The
+                `basis-full lg:hidden` spacer below is a forced line-break that
+                only exists below `lg` — it makes ChatAndAnnouncements start a
+                fresh line of its own there, without duplicating any component
+                or touching the lg+ single-row layout at all. */}
+            <div className="flex flex-wrap items-center gap-3">
+              <ExpBar />
+              <QuiverWarningHud />
+              <InventoryFullWarningHud />
+              <KnockoutHud />
+              <VipStatusHud />
+              <ExperiencePotionHud />
+              <PlayersOnlineHud />
+              <div className="h-0 basis-full lg:hidden" aria-hidden="true" />
+              <ChatAndAnnouncements />
+            </div>
+
+            {/* Renders nothing when there's no pet to celebrate — safe to mount
+                unconditionally, same as every other HUD element here. */}
+            <PetToast />
+            <HuntingTakeoverToast />
+
+            <TabNav />
+
+            <AscensionCard title={TAB_TITLES[activeTab]} titleSize="large">
+              {activeTab === 'combat' && <CombatPage />}
+              {activeTab === 'equipment' && <EquipmentTabPage />}
+              {activeTab === 'forge' && <ForgePanel />}
+              {activeTab === 'marketplace' && <MarketplacePanel />}
+              {activeTab === 'shop' && <ShopPanel />}
+              {activeTab === 'bank' && <BankPanel characterId={characterId} />}
+              {activeTab === 'achievements' && <AchievementsPanel characterId={characterId} accountId={accountId} />}
+              {activeTab === 'lucky' && <LuckyPanel characterId={characterId} />}
+            </AscensionCard>
+          </div>
+
+          {/* sticky top-6: stays in view while the (often much taller) left
+              column scrolls — self-start keeps it from stretching to match
+              the grid row's height (Grid's default align-items: stretch
+              would otherwise pin its height to the left column's, breaking
+              `sticky`). Own DragDropProvider (separate from each Forge
+              sub-panel's local one) since this grid conditionally renders
+              draggable tiles whenever a Forge sub-panel registers an
+              onTileDrop — see InventoryPanel's own onTileDrop-gated
+              DraggableInventorySlot usage. Cross-tree dragging still works
+              despite the two panels sitting in different DragDropProvider
+              trees: drop-zone hit-testing (dragDropContext.ts's
+              queryDropZoneRects) is a plain DOM query, not scoped to React
+              context, so a drag started here still finds Forge's
+              `data-drop-zone` targets rendered under its own provider. */}
+          <div className="hidden lg:sticky lg:top-6 lg:block">
+            <DragDropProvider>
+              <AscensionCard title="Inventory">
+                <div data-tutorial-id="forge-inventory-grid">
+                  <InventoryPanel
+                    columns={5}
+                    enableSelling
+                    enableBankDeposit
+                    equipPopoverEnabled
+                    enableCompareToggle
+                    tapToPlaceEnabled
+                    reservedItemIds={forgeDropTarget?.reservedItemIds ?? []}
+                    onTileDrop={forgeDropTarget?.onTileDrop}
+                    isTileEligible={forgeDropTarget?.isTileEligible}
+                  />
+                </div>
+              </AscensionCard>
+            </DragDropProvider>
+          </div>
         </div>
-
-        {/* Renders nothing when there's no pet to celebrate — safe to mount
-            unconditionally, same as every other HUD element here. */}
-        <PetToast />
-        <HuntingTakeoverToast />
-
-        <TabNav />
-
-        <AscensionCard title={TAB_TITLES[activeTab]} titleSize="large">
-          {activeTab === 'combat' && <CombatPage />}
-          {activeTab === 'equipment' && <EquipmentTabPage />}
-          {activeTab === 'forge' && <ForgePanel />}
-          {activeTab === 'marketplace' && <MarketplacePanel />}
-          {activeTab === 'shop' && <ShopPanel />}
-          {activeTab === 'bank' && <BankPanel characterId={characterId} />}
-          {activeTab === 'achievements' && <AchievementsPanel characterId={characterId} accountId={accountId} />}
-          {activeTab === 'lucky' && <LuckyPanel characterId={characterId} />}
-        </AscensionCard>
       </main>
 
       <MobileBottomNav />

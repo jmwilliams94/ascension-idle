@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import CompareTooltipRow from './CompareTooltipRow'
+import type { TooltipActionPopoverAction } from './TooltipActionPopover'
 import type { ItemTooltipData } from '../game/items/itemTooltip'
 import { clampTooltipLeft, clampTooltipVertical, guessTooltipVertical } from '../lib/tooltipViewportClamp'
 
@@ -44,6 +45,15 @@ interface GearEquipPopoverProps {
   // grid instead. Combat page's own embedding omits this (defaults to false)
   // and keeps the in-popover Compare button below.
   autoCompare?: boolean
+  // Desktop UI overhaul (2026-09-09) — the persistent Inventory panel
+  // combines equipPopoverEnabled with enableBankDeposit/enableSelling (every
+  // Forge/Equipment/Bank/Shop embedding used to only ever pass one), so a
+  // gear tile's Deposit/Bank/Sell actions need a home once Equip already
+  // owns the click. Rendered as extra buttons below the Equip/Compare row,
+  // reusing the same TooltipActionPopoverAction shape every other popover
+  // in InventoryPanel already builds its actions from. Empty/omitted
+  // everywhere else (no visual change for existing callers).
+  extraActions?: TooltipActionPopoverAction[]
 }
 
 export default function GearEquipPopover({
@@ -56,6 +66,7 @@ export default function GearEquipPopover({
   onEquip,
   onClose,
   autoCompare = false,
+  extraActions = [],
 }: GearEquipPopoverProps) {
   const [comparing, setComparing] = useState(false)
   const effectiveComparing = autoCompare ? Boolean(compareTooltip) : comparing
@@ -138,6 +149,21 @@ export default function GearEquipPopover({
           </button>
         )}
       </div>
+      {extraActions.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap gap-1.5 rounded-lg border border-slate-700 bg-slate-950/95 p-1.5 shadow-xl shadow-black/50">
+          {extraActions.map((action) => (
+            <button
+              key={action.label}
+              type="button"
+              disabled={action.disabled}
+              onClick={action.onClick}
+              className="flex-1 rounded-md border border-slate-600 px-2 py-1 text-xs font-medium text-slate-300 hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>,
     document.body,
   )

@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.141.0",
+    "date": "2026-09-09",
+    "changes": [
+      "Desktop: the Inventory grid is now a single panel that stays on screen on the right side of the page, instead of a separate copy inside Equipment, Bank, and every Forge screen",
+      "Desktop: equip, sell, and deposit-to-Bank are all available at once from that panel, right from the same item"
+    ]
+  },
+  {
     "version": "1.140.1",
     "date": "2026-09-08",
     "changes": [
