@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.141.5",
+    "date": "2026-09-09",
+    "changes": [
+      "Reverted the automatic two-column content reflow — it was stretching the Idling screen oddly",
+      "Equipment now uses a real two-column layout instead (gear on the left, stats and skills on the right)",
+      "Every other screen is back to one plain, readable column"
+    ]
+  },
+  {
     "version": "1.141.4",
     "date": "2026-09-09",
     "changes": [

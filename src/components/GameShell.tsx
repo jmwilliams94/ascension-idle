@@ -715,73 +715,35 @@ export default function GameShell({ characterId }: { characterId: string }) {
             to the flex row's remaining width instead of growing to fit its
             own content (the usual flex-item min-width:auto trap). */}
         <div className="lg:min-h-0 lg:min-w-0 lg:flex-1 lg:overflow-y-auto">
-          {/* Desktop UI overhaul (2026-09-09): no max-w/mx-auto at `lg`+
-              anymore — this column now fills the exact remaining space
-              between the sidebar and the Inventory dock (both real flex
-              siblings now, not a fixed overlay needing a manual padding
-              reservation), so "two equal columns that stretch to the
-              inventory" (below) has the full width to work with instead of
-              being capped short of it. Below `lg` there's no sidebar/dock
-              to fill space between, so this is just a plain block. */}
-          <div className="space-y-4 lg:w-full">
+          {/* Reverted (2026-09-09, same day — reported by the user as
+              disliked): the native CSS multi-column wrapper that used to sit
+              here treated each tab as one solid block by default, and
+              several tabs (Combat/Idling especially — it has its own
+              internal `lg:grid-cols-2` desktop layout, built assuming
+              something close to full column width) overflowed the half-width
+              column CSS multi-column assigned them, reading as "stretched"
+              rather than usefully split. Back to one plain column, capped at
+              max-w-6xl so it doesn't feel over-wide now that it's not
+              sharing space with a second column. If a specific tab's own
+              *inner* sections should sit side by side, that needs a real,
+              hand-built grid inside that tab's own component (see
+              EquipmentTabPage.tsx's EquipmentPanel/StatsPanel/SkillsPanel
+              for the shape of that) — not a page-wide auto-reflow. */}
+          <div className="mx-auto max-w-6xl space-y-4 lg:mx-0">
             {/* Renders nothing when there's no pet to celebrate — safe to
                 mount unconditionally, same as every other HUD element here. */}
             <PetToast />
             <HuntingTakeoverToast />
 
             <AscensionCard title={TAB_TITLES[activeTab]} titleSize="large">
-              {/* Two equal-width CSS columns at `lg`+ (native multi-column,
-                  per the user) — content flows to fill column one, then
-                  overflows into column two, rather than one long column
-                  needing a tall scroll. Each tab below marks its own root
-                  break-inside-avoid so a single tightly-coupled interactive
-                  layout (Forge's slots, a fight UI, ...) never gets visually
-                  cut in half at the column break — for a tab that's just one
-                  such block, this means it simply renders in column one with
-                  column two left empty, which is the accepted tradeoff for
-                  tabs that aren't actually "too long" to need a second
-                  column. Equipment is the one exception (see
-                  EquipmentTabPage.tsx): its three panels are marked
-                  individually instead of as one shared block, so they can
-                  actually distribute across both columns. */}
-              <div className="lg:columns-2 lg:gap-6">
-                {activeTab === 'combat' && (
-                  <div className="break-inside-avoid">
-                    <CombatPage />
-                  </div>
-                )}
-                {activeTab === 'equipment' && <EquipmentTabPage />}
-                {activeTab === 'forge' && (
-                  <div className="break-inside-avoid">
-                    <ForgePanel />
-                  </div>
-                )}
-                {activeTab === 'marketplace' && (
-                  <div className="break-inside-avoid">
-                    <MarketplacePanel />
-                  </div>
-                )}
-                {activeTab === 'shop' && (
-                  <div className="break-inside-avoid">
-                    <ShopPanel />
-                  </div>
-                )}
-                {activeTab === 'bank' && (
-                  <div className="break-inside-avoid">
-                    <BankPanel characterId={characterId} />
-                  </div>
-                )}
-                {activeTab === 'achievements' && (
-                  <div className="break-inside-avoid">
-                    <AchievementsPanel characterId={characterId} accountId={accountId} />
-                  </div>
-                )}
-                {activeTab === 'lucky' && (
-                  <div className="break-inside-avoid">
-                    <LuckyPanel characterId={characterId} />
-                  </div>
-                )}
-              </div>
+              {activeTab === 'combat' && <CombatPage />}
+              {activeTab === 'equipment' && <EquipmentTabPage />}
+              {activeTab === 'forge' && <ForgePanel />}
+              {activeTab === 'marketplace' && <MarketplacePanel />}
+              {activeTab === 'shop' && <ShopPanel />}
+              {activeTab === 'bank' && <BankPanel characterId={characterId} />}
+              {activeTab === 'achievements' && <AchievementsPanel characterId={characterId} accountId={accountId} />}
+              {activeTab === 'lucky' && <LuckyPanel characterId={characterId} />}
             </AscensionCard>
           </div>
         </div>

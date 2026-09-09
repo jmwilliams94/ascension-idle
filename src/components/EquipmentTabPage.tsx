@@ -26,25 +26,26 @@ import { AscensionCard } from './ui/AscensionCard'
 // InventoryPanel below only renders below `lg`, where the persistent grid
 // doesn't exist yet.
 //
-// GameShell wraps the active tab's content in a CSS multi-column layout at
-// `lg`+ (two equal columns, overflow into column two) — each of the three
-// panels here is marked break-inside-avoid so none of them gets visually cut
-// in half at a column break, but the panels themselves are deliberately NOT
-// wrapped in one shared break-inside-avoid block (unlike most other tabs),
-// since they're three genuinely independent cards that can safely land in
-// different columns — e.g. EquipmentPanel (tall) filling column one while
-// StatsPanel/SkillsPanel flow into column two.
+// Two-column layout (2026-09-09, revised same day — a page-wide CSS
+// multi-column auto-reflow was tried first and reported by the user as
+// producing a worse result than not splitting at all; this is a real,
+// hand-built `lg:grid-cols-2` instead, so it's exactly EquipmentPanel in
+// column one and Stats+Skills in column two, deterministically, not
+// "wherever the browser's reflow algorithm happens to put them"): the
+// paper-doll is the one panel worth a full column to itself, so it doesn't
+// share; Stats and Skills are shorter and pair naturally in the other
+// column. If this page's content changes shape later, don't reach for an
+// auto-reflow shortcut again — see GameShell.tsx's own comment on why that
+// was reverted.
 export default function EquipmentTabPage() {
   return (
     <div className="space-y-4">
-      <div className="break-inside-avoid">
+      <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
         <EquipmentPanel />
-      </div>
-      <div className="break-inside-avoid">
-        <StatsPanel />
-      </div>
-      <div className="break-inside-avoid">
-        <SkillsPanel />
+        <div className="space-y-4">
+          <StatsPanel />
+          <SkillsPanel />
+        </div>
       </div>
       <div className="lg:hidden">
         <AscensionCard>
