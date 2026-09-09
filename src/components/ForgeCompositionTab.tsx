@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import CompositionLoadBar from './CompositionLoadBar'
 import EquippedGearPicker from './EquippedGearPicker'
 import ForgeCompositionPanel from './ForgeCompositionPanel'
@@ -7,7 +7,7 @@ import ForgeTwoColumnLayout from './ForgeTwoColumnLayout'
 import ForgeUpgradeSlot from './ForgeUpgradeSlot'
 import { DragDropProvider } from './dragDrop'
 import InventoryPanel from './InventoryPanel'
-import { useForgeDropTargetStore } from '../game/items/useForgeDropTargetStore'
+import { useRegisterForgeDropTarget } from '../game/items/useForgeDropTargetStore'
 import {
   compositionPointValue,
   estimateCompositionFeedAnimationMs,
@@ -171,16 +171,13 @@ export default function ForgeCompositionTab({ onBack }: ForgeCompositionTabProps
     return item !== undefined && !item.locked
   }
 
-  // See useForgeDropTargetStore's doc comment — registers this panel's own
-  // drop handling with the persistent (desktop) Inventory grid.
-  useEffect(() => {
-    useForgeDropTargetStore.getState().setForgeDropTarget({
-      onTileDrop: handleTileDrop,
-      reservedItemIds: [...(selectedItemId ? [selectedItemId] : []), ...materialEntries.map((entry) => entry.id)],
-      isTileEligible,
-    })
-    return () => useForgeDropTargetStore.getState().clearForgeDropTarget()
-  })
+  // Registers this panel's own drop handling with the persistent (desktop)
+  // Inventory grid — see useForgeDropTargetStore's doc comment for why this
+  // goes through a ref-backed hook rather than a plain effect.
+  useRegisterForgeDropTarget(handleTileDrop, isTileEligible, [
+    ...(selectedItemId ? [selectedItemId] : []),
+    ...materialEntries.map((entry) => entry.id),
+  ])
 
   const handleFeed = async () => {
     if (!selectedItem) {

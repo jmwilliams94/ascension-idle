@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.141.1",
+    "date": "2026-09-09",
+    "changes": [
+      "Fixed every Forge screen showing a blank page",
+      "Desktop: the Inventory panel now sits fixed in the bottom-right corner of the screen instead of scrolling with the page",
+      "Desktop: removed the now-redundant Inventory grid from the Idling and Shop screens"
+    ]
+  },
+  {
     "version": "1.141.0",
     "date": "2026-09-09",
     "changes": [

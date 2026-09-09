@@ -858,9 +858,18 @@ export default function CombatPage() {
         </AscensionCard>
       </div>
 
-      {/* Desktop layout (`lg` and up) — unchanged from before this step. */}
-      <div className="hidden gap-4 lg:grid lg:grid-cols-2">
+      {/* Desktop layout (`lg` and up). Single column now (2026-09-09) — this
+          used to be a 2-column grid with the Inventory grid filling column 2;
+          that grid is now the persistent panel in GameShell's own right
+          column instead (redundant here, removed per the user), so column 2
+          had nothing left in it worth keeping as a separate track.
+          CombatModeSwitcher moved up here from the old column 2 (it was the
+          only other thing there) since mode affects this column's own
+          content (MiningModePanel vs. Zone & Monster) either way. */}
+      <div className="hidden lg:block">
       <div className="space-y-4">
+        <CombatModeSwitcher mode={mode} onChange={setMode} />
+
         {mode === 'mining' && characterId && <MiningModePanel characterId={characterId} />}
 
         {mode === 'hunting' ? (
@@ -1082,17 +1091,6 @@ export default function CombatPage() {
             </div>
           </div>
         )}
-      </div>
-
-      <div className="space-y-4">
-        <CombatModeSwitcher mode={mode} onChange={setMode} />
-
-        {/* Gold/EXP row removed (2026-08-14, requested by the user) —
-            redundant with ExpBar in GameShell's persistent top strip, same
-            reasoning the mobile layout above already used to skip it. */}
-        <AscensionCard>
-          <InventoryPanel columns={5} equipPopoverEnabled onTileDrop={mode === 'mining' ? handleMiningTileDrop : undefined} />
-        </AscensionCard>
       </div>
       </div>
     </DragDropProvider>

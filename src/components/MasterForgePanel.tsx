@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { DragDropProvider } from './dragDrop'
 import EquippedGearPicker from './EquippedGearPicker'
 import ForgePreviewSlot from './ForgePreviewSlot'
@@ -16,7 +16,7 @@ import {
   previewMasterForgeCost,
   previewMasterForgeWeaponLevelCost,
 } from '../game/items/forgeCosts'
-import { useForgeDropTargetStore } from '../game/items/useForgeDropTargetStore'
+import { useRegisterForgeDropTarget } from '../game/items/useForgeDropTargetStore'
 import { useForgeStore } from '../game/items/useForgeStore'
 import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore } from '../game/items/useItemTemplatesStore'
@@ -136,16 +136,10 @@ export default function MasterForgePanel({ onBack }: MasterForgePanelProps) {
     }
   }
 
-  // See useForgeDropTargetStore's doc comment — registers this panel's own
-  // drop handling with the persistent (desktop) Inventory grid.
-  useEffect(() => {
-    useForgeDropTargetStore.getState().setForgeDropTarget({
-      onTileDrop: handleTileDrop,
-      reservedItemIds: selectedItemId ? [selectedItemId] : [],
-      isTileEligible,
-    })
-    return () => useForgeDropTargetStore.getState().clearForgeDropTarget()
-  })
+  // Registers this panel's own drop handling with the persistent (desktop)
+  // Inventory grid — see useForgeDropTargetStore's doc comment for why this
+  // goes through a ref-backed hook rather than a plain effect.
+  useRegisterForgeDropTarget(handleTileDrop, isTileEligible, selectedItemId ? [selectedItemId] : [])
 
   const nextLevelTemplate =
     upgradeType === 'level' && selectedTemplate ? findNextTemplateInChain(templates, selectedTemplate) : null

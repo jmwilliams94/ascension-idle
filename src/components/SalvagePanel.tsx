@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { motion } from 'framer-motion'
 import ForgeTwoColumnLayout from './ForgeTwoColumnLayout'
 import InventoryPanel from './InventoryPanel'
@@ -17,7 +17,7 @@ import {
   QUALITY_COLORS,
 } from '../game/items/equipmentBonus'
 import { useEquipmentStore } from '../game/items/useEquipmentStore'
-import { useForgeDropTargetStore } from '../game/items/useForgeDropTargetStore'
+import { useRegisterForgeDropTarget } from '../game/items/useForgeDropTargetStore'
 import { useInventoryStore, type ItemInstance } from '../game/items/useInventoryStore'
 import { useItemTemplatesStore, type ItemTemplate } from '../game/items/useItemTemplatesStore'
 import { useMarketplaceStore } from '../game/marketplace/useMarketplaceStore'
@@ -247,16 +247,10 @@ export default function SalvagePanel({ onBack }: SalvagePanelProps) {
     return item !== undefined && !item.locked
   }
 
-  // See useForgeDropTargetStore's doc comment — registers this panel's own
-  // drop handling with the persistent (desktop) Inventory grid.
-  useEffect(() => {
-    useForgeDropTargetStore.getState().setForgeDropTarget({
-      onTileDrop: handleTileDrop,
-      reservedItemIds: selectedItemId ? [selectedItemId] : [],
-      isTileEligible,
-    })
-    return () => useForgeDropTargetStore.getState().clearForgeDropTarget()
-  })
+  // Registers this panel's own drop handling with the persistent (desktop)
+  // Inventory grid — see useForgeDropTargetStore's doc comment for why this
+  // goes through a ref-backed hook rather than a plain effect.
+  useRegisterForgeDropTarget(handleTileDrop, isTileEligible, selectedItemId ? [selectedItemId] : [])
 
   const handleSalvage = () => {
     if (!selectedItem || phase !== 'idle') {

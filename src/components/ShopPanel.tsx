@@ -403,7 +403,13 @@ export default function ShopPanel() {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    // Single column at lg+ (2026-09-09) — this used to be a 2-column grid
+    // with the Inventory grid filling column 2; that grid is now the
+    // persistent panel in GameShell's own right column instead (redundant
+    // here, removed per the user), so column 2 has nothing left in it. The
+    // Inventory grid below still renders below `lg`, where the persistent
+    // panel doesn't exist.
+    <div className="grid gap-4">
       <div className="min-w-0 space-y-3">
         {/* One row of 5 (2026-08-14, requested by the user) — was grid-cols-3,
             which wrapped the 5 tabs onto two uneven rows. Capped + centered at
@@ -669,9 +675,11 @@ export default function ShopPanel() {
         </AscensionCard>
       </div>
 
-      <AscensionCard className="min-w-0">
-        <InventoryPanel columns={5} enableSelling />
-      </AscensionCard>
+      <div className="lg:hidden">
+        <AscensionCard className="min-w-0">
+          <InventoryPanel columns={5} enableSelling />
+        </AscensionCard>
+      </div>
     </div>
   )
 }

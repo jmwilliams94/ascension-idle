@@ -642,95 +642,90 @@ export default function GameShell({ characterId }: { characterId: string }) {
           whatever's at the bottom of the page's content. Unchanged at `lg`+,
           where the bottom nav doesn't render at all. */}
       <main className="mx-auto max-w-[100rem] px-6 pb-24 pt-6 lg:pb-6">
-        {/* Desktop UI overhaul (2026-09-09): the main tab content shifts into
-            its own left column at `lg`+, with a new persistent Inventory
-            column to its right — the 40-slot grid that used to be embedded
-            separately inside Equipment/Bank/every Forge sub-panel now lives
-            here once, shared across every tab (see InventoryPanel below and
-            useForgeDropTargetStore.ts for how Forge still wires its own drop
-            handling to it). Below `lg` this is just a single stacked column
-            (`lg:grid` only applies at that breakpoint) — mobile is
-            unaffected, and still gets its own per-tab Inventory embeds
-            (Equipment/Bank/Forge sub-panels each keep a `lg:hidden` copy). */}
-        <div className="lg:grid lg:grid-cols-[1fr_26rem] lg:items-start lg:gap-6">
-          <div className="min-w-0 space-y-4">
-            {/* Single flex-wrap row, same as it always was on desktop (lg+) —
-                everything fits on one line there and that layout was never
-                broken, so it's left untouched at that breakpoint. Below `lg`,
-                the warning badges (Quiver/Inventory-full) plus PlayersOnlineHud
-                could previously end up competing with ChatAndAnnouncements for
-                the same line, shoving things onto a 3rd wrapped line even with
-                nothing actually wrong (reported by the user, mobile only). The
-                `basis-full lg:hidden` spacer below is a forced line-break that
-                only exists below `lg` — it makes ChatAndAnnouncements start a
-                fresh line of its own there, without duplicating any component
-                or touching the lg+ single-row layout at all. */}
-            <div className="flex flex-wrap items-center gap-3">
-              <ExpBar />
-              <QuiverWarningHud />
-              <InventoryFullWarningHud />
-              <KnockoutHud />
-              <VipStatusHud />
-              <ExperiencePotionHud />
-              <PlayersOnlineHud />
-              <div className="h-0 basis-full lg:hidden" aria-hidden="true" />
-              <ChatAndAnnouncements />
-            </div>
-
-            {/* Renders nothing when there's no pet to celebrate — safe to mount
-                unconditionally, same as every other HUD element here. */}
-            <PetToast />
-            <HuntingTakeoverToast />
-
-            <TabNav />
-
-            <AscensionCard title={TAB_TITLES[activeTab]} titleSize="large">
-              {activeTab === 'combat' && <CombatPage />}
-              {activeTab === 'equipment' && <EquipmentTabPage />}
-              {activeTab === 'forge' && <ForgePanel />}
-              {activeTab === 'marketplace' && <MarketplacePanel />}
-              {activeTab === 'shop' && <ShopPanel />}
-              {activeTab === 'bank' && <BankPanel characterId={characterId} />}
-              {activeTab === 'achievements' && <AchievementsPanel characterId={characterId} accountId={accountId} />}
-              {activeTab === 'lucky' && <LuckyPanel characterId={characterId} />}
-            </AscensionCard>
+        {/* Desktop UI overhaul (2026-09-09): main tab content shifts left at
+            `lg`+ — `lg:pr-[27rem]` reserves clearance on the right so it
+            doesn't run underneath the fixed Inventory dock below (a plain
+            content column, not a grid, since the dock is fixed-positioned
+            and no longer a real layout column). Below `lg` this padding
+            doesn't apply and nothing here changes. */}
+        <div className="space-y-4 lg:pr-[27rem]">
+          {/* Single flex-wrap row, same as it always was on desktop (lg+) —
+              everything fits on one line there and that layout was never
+              broken, so it's left untouched at that breakpoint. Below `lg`,
+              the warning badges (Quiver/Inventory-full) plus PlayersOnlineHud
+              could previously end up competing with ChatAndAnnouncements for
+              the same line, shoving things onto a 3rd wrapped line even with
+              nothing actually wrong (reported by the user, mobile only). The
+              `basis-full lg:hidden` spacer below is a forced line-break that
+              only exists below `lg` — it makes ChatAndAnnouncements start a
+              fresh line of its own there, without duplicating any component
+              or touching the lg+ single-row layout at all. */}
+          <div className="flex flex-wrap items-center gap-3">
+            <ExpBar />
+            <QuiverWarningHud />
+            <InventoryFullWarningHud />
+            <KnockoutHud />
+            <VipStatusHud />
+            <ExperiencePotionHud />
+            <PlayersOnlineHud />
+            <div className="h-0 basis-full lg:hidden" aria-hidden="true" />
+            <ChatAndAnnouncements />
           </div>
 
-          {/* sticky top-6: stays in view while the (often much taller) left
-              column scrolls — self-start keeps it from stretching to match
-              the grid row's height (Grid's default align-items: stretch
-              would otherwise pin its height to the left column's, breaking
-              `sticky`). Own DragDropProvider (separate from each Forge
-              sub-panel's local one) since this grid conditionally renders
-              draggable tiles whenever a Forge sub-panel registers an
-              onTileDrop — see InventoryPanel's own onTileDrop-gated
-              DraggableInventorySlot usage. Cross-tree dragging still works
-              despite the two panels sitting in different DragDropProvider
-              trees: drop-zone hit-testing (dragDropContext.ts's
-              queryDropZoneRects) is a plain DOM query, not scoped to React
-              context, so a drag started here still finds Forge's
-              `data-drop-zone` targets rendered under its own provider. */}
-          <div className="hidden lg:sticky lg:top-6 lg:block">
-            <DragDropProvider>
-              <AscensionCard title="Inventory">
-                <div data-tutorial-id="forge-inventory-grid">
-                  <InventoryPanel
-                    columns={5}
-                    enableSelling
-                    enableBankDeposit
-                    equipPopoverEnabled
-                    enableCompareToggle
-                    tapToPlaceEnabled
-                    reservedItemIds={forgeDropTarget?.reservedItemIds ?? []}
-                    onTileDrop={forgeDropTarget?.onTileDrop}
-                    isTileEligible={forgeDropTarget?.isTileEligible}
-                  />
-                </div>
-              </AscensionCard>
-            </DragDropProvider>
-          </div>
+          {/* Renders nothing when there's no pet to celebrate — safe to mount
+              unconditionally, same as every other HUD element here. */}
+          <PetToast />
+          <HuntingTakeoverToast />
+
+          <TabNav />
+
+          <AscensionCard title={TAB_TITLES[activeTab]} titleSize="large">
+            {activeTab === 'combat' && <CombatPage />}
+            {activeTab === 'equipment' && <EquipmentTabPage />}
+            {activeTab === 'forge' && <ForgePanel />}
+            {activeTab === 'marketplace' && <MarketplacePanel />}
+            {activeTab === 'shop' && <ShopPanel />}
+            {activeTab === 'bank' && <BankPanel characterId={characterId} />}
+            {activeTab === 'achievements' && <AchievementsPanel characterId={characterId} accountId={accountId} />}
+            {activeTab === 'lucky' && <LuckyPanel characterId={characterId} />}
+          </AscensionCard>
         </div>
       </main>
+
+      {/* Persistent (desktop-only) Inventory dock — fixed to the bottom-right
+          corner of the viewport (per the user's explicit ask), not a sticky
+          grid column, so it stays put regardless of scroll position.
+          max-h/overflow-y-auto is a safety net for short viewports; the grid
+          itself (40 cells, 5 columns) is ~34rem tall and fits without
+          scrolling on any normal desktop height. Own DragDropProvider
+          (separate from each Forge sub-panel's local one) since this grid
+          conditionally renders draggable tiles whenever a Forge sub-panel
+          registers an onTileDrop — see InventoryPanel's own onTileDrop-gated
+          DraggableInventorySlot usage. Cross-tree dragging still works
+          despite the two panels sitting in different DragDropProvider trees:
+          drop-zone hit-testing (dragDropContext.ts's queryDropZoneRects) is a
+          plain DOM query, not scoped to React context, so a drag started
+          here still finds Forge's `data-drop-zone` targets rendered under
+          its own provider. */}
+      <div className="hidden lg:fixed lg:bottom-6 lg:right-6 lg:z-30 lg:block lg:max-h-[calc(100vh-3rem)] lg:w-[26rem] lg:overflow-y-auto">
+        <DragDropProvider>
+          <AscensionCard title="Inventory">
+            <div data-tutorial-id="forge-inventory-grid">
+              <InventoryPanel
+                columns={5}
+                enableSelling
+                enableBankDeposit
+                equipPopoverEnabled
+                enableCompareToggle
+                tapToPlaceEnabled
+                reservedItemIds={forgeDropTarget?.reservedItemIds ?? []}
+                onTileDrop={forgeDropTarget?.onTileDrop}
+                isTileEligible={forgeDropTarget?.isTileEligible}
+              />
+            </div>
+          </AscensionCard>
+        </DragDropProvider>
+      </div>
 
       <MobileBottomNav />
     </div>
