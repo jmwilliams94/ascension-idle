@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type CSSProperties } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import CombatEngine from '../game/combat/CombatEngine'
 import RowCombatEngine from '../game/combat/RowCombatEngine'
 import MiningEngine from '../game/mining/MiningEngine'
@@ -497,29 +497,7 @@ export default function GameShell({ characterId }: { characterId: string }) {
     // behavior) since mobile browser chrome (address bar auto-hide) and PWA
     // pull-to-refresh both depend on real page-level scroll, not an inner
     // scroll container.
-    <div
-      className="ascension-page-bg min-h-screen text-slate-100 lg:flex lg:h-screen lg:flex-col lg:overflow-hidden"
-      // --inventory-dock-width (recalibrated 2026-09-10, reported by the
-      // user: on a 1920px-ish 24" display the dock "takes up far too much
-      // space and doesn't scale down well"). The old clamp(18rem, 22vw,
-      // 26rem) hit its own 26rem ceiling at any viewport ≳1890px CSS
-      // pixels — which covers nearly every real desktop screen, 24"
-      // 1920x1080 included — so it rendered at its *largest* size almost
-      // universally instead of actually tracking viewport width; the 18rem
-      // floor was also narrower than the grid's own real minimum content
-      // width (5 columns × 4rem tiles + gaps + card padding ≈ 24rem), so it
-      // could never safely be reached anyway. This one stays near its floor
-      // through ordinary desktop widths (~24.5rem at 1920px) and only grows
-      // toward its ceiling on genuinely wide/ultrawide screens (27rem by
-      // ~3200px). Set once here (a shared value, referenced by the dock's
-      // own width further down) so it has one place to tune. Note: the
-      // *tile* size itself (SLOT_SIZE_CLASS, InventorySlot.tsx) is still
-      // fixed, not fluid — it's a shared constant used well beyond this one
-      // panel (every Forge slot, the drag ghost, ...), so genuinely
-      // shrinking the tiles themselves on narrow screens would need a
-      // broader, separate change, not attempted here.
-      style={{ '--inventory-dock-width': 'clamp(24rem, 20rem + 3.75vw, 27rem)' } as CSSProperties}
-    >
+    <div className="ascension-page-bg min-h-screen text-slate-100 lg:flex lg:h-screen lg:flex-col lg:overflow-hidden">
       <header className="ascension-edge-b shrink-0 bg-[linear-gradient(180deg,_var(--ascension-ink-soft)_0%,_var(--ascension-ink)_100%)]">
         {/* Single row at every viewport size — no flex-wrap. "Idle Combat"
             removed entirely (it was redundant with the tab the player is
@@ -762,19 +740,24 @@ export default function GameShell({ characterId }: { characterId: string }) {
           </div>
         </div>
 
-        {/* Persistent (desktop-only) Inventory dock — a real flex column now
-            (moved here 2026-09-09, per the user, from a `fixed` bottom-right
-            overlay) so it sits top-right: directly below the status row
-            above, along the right edge, stretched to <main>'s own height by
-            the row's default `align-items: stretch`. lg:min-h-0 lets it
-            actually respect that stretched height and scroll internally
-            (lg:overflow-y-auto) instead of growing taller than it — same
-            reasoning as the scroll column's own min-h-0 above. Width scales
-            with the viewport (clamp between 18rem and 26rem, tracking 22% of
-            viewport width in between) rather than a flat pixel value, per
-            the user's "nothing is really scaling depending on screen size"
-            — the CSS custom property is set once, on the root element.
-            Own DragDropProvider (separate from each Forge sub-panel's local
+        {/* Persistent (desktop-only) Inventory dock — a real flex column
+            (not a `fixed` overlay) so it sits top-right: directly below the
+            status row above, along the right edge, stretched to <main>'s own
+            height by the row's default `align-items: stretch`. lg:min-h-0
+            lets it actually respect that stretched height and scroll
+            internally (lg:overflow-y-auto) instead of growing taller than it
+            — same reasoning as the scroll column's own min-h-0 above.
+            No explicit width here (2026-09-10, revised — per the user,
+            "happy for the inventory slot size to scale down with screen
+            size") — fluidTileSize below shrinks the tiles themselves (and
+            the grid's own column tracks) as the viewport narrows, so this
+            wrapper is deliberately left to size itself intrinsically to
+            that already-responsive grid's own natural width, rather than
+            tracking a second, independently-tuned width formula that could
+            disagree with it (an earlier pass tried exactly that — a
+            standalone clamp() on this wrapper — and it forced the container
+            wider than the now-smaller grid actually needed). Own
+            DragDropProvider (separate from each Forge sub-panel's local
             one) since this grid conditionally renders draggable tiles
             whenever a Forge sub-panel registers an onTileDrop — see
             InventoryPanel's own onTileDrop-gated DraggableInventorySlot
@@ -784,12 +767,13 @@ export default function GameShell({ characterId }: { characterId: string }) {
             DOM query, not scoped to React context, so a drag started here
             still finds Forge's `data-drop-zone` targets rendered under its
             own provider. */}
-        <div className="hidden lg:block lg:min-h-0 lg:w-[var(--inventory-dock-width)] lg:shrink-0 lg:overflow-y-auto">
+        <div className="hidden lg:block lg:min-h-0 lg:shrink-0 lg:overflow-y-auto">
           <DragDropProvider>
             <AscensionCard title="Inventory">
               <div data-tutorial-id="forge-inventory-grid">
                 <InventoryPanel
                   columns={5}
+                  fluidTileSize
                   enableSelling={activeTab === 'shop'}
                   enableBankDeposit
                   equipPopoverEnabled

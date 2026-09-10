@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import InventorySlot, { SLOT_SIZE_CLASS } from './InventorySlot'
 import { DraggableInventorySlot } from './dragDrop'
 import { useIsDropTarget } from './dragDropContext'
@@ -216,6 +216,22 @@ interface InventoryPanelProps {
   // vs. "Comets/Fallen Stars/Scrolls only, right now" without this
   // component needing to know anything about Forge's own two-phase flow.
   isTileEligible?: (dragId: string) => boolean
+  // Fluid tile sizing (2026-09-10, requested by the user for the desktop
+  // persistent panel specifically — "happy for the inventory slot size to
+  // scale down with screen size... because we're doing this to just
+  // desktop it should be fine"). When true, every tile (gear, stones,
+  // gems, currencies, potions, empty slots — all of them, not just gear)
+  // renders at `var(--inventory-tile-size)` instead of the shared fixed
+  // SLOT_SIZE_CLASS (InventorySlot.tsx, h-14/w-14 → lg:h-16/w-16), and the
+  // grid's own column tracks match it so tiles and tracks can never drift
+  // out of sync. The CSS custom property itself is set inline on this
+  // component's own root below, scoped to just this instance — every other
+  // InventoryPanel embedding (Forge/Equipment/Bank's mobile-only copies,
+  // Combat, Marketplace, Shop) keeps the fixed size unchanged, since
+  // SLOT_SIZE_CLASS is shared well beyond this one panel (every Forge
+  // slot, the drag ghost, ...) and the user only asked for this on the
+  // desktop dock, not everywhere at once.
+  fluidTileSize?: boolean
 }
 
 // Isolated so only this tiny button subscribes to the live HP/MP that ticks
@@ -287,8 +303,14 @@ export default function InventoryPanel({
   enableCompareToggle = false,
   tapToPlaceEnabled = false,
   isTileEligible,
+  fluidTileSize = false,
 }: InventoryPanelProps) {
   const dimmedFor = (dragId: string) => (isTileEligible ? !isTileEligible(dragId) : false)
+  // See fluidTileSize's own doc comment above. Bounds picked so the tile
+  // floor (2.25rem) is still comfortably tappable/legible and the ceiling
+  // (4rem) matches the existing fixed SLOT_SIZE_CLASS max, so nothing looks
+  // bigger than it used to — only smaller, on narrower desktop widths.
+  const tileSizeClass = fluidTileSize ? 'h-[var(--inventory-tile-size)] w-[var(--inventory-tile-size)]' : SLOT_SIZE_CLASS
   const items = useInventoryStore((state) => state.items)
   const sellItem = useInventoryStore((state) => state.sellItem)
   const openRewardItem = useInventoryStore((state) => state.openRewardItem)
@@ -651,13 +673,20 @@ export default function InventoryPanel({
 
   // Fixed-size tracks (not grid-cols-N's equal-fraction columns) so tiles stay a
   // consistent size regardless of how wide the surrounding column/page is — matches
-  // SLOT_SIZE_CLASS (InventorySlot.tsx), and the same sizes Forge's Upgrade/Fuel
-  // slots use. Responsive to match: 3.5rem tracks below `lg` (matching h-14/w-14),
-  // 4rem at `lg` and up (matching h-16/w-16, unchanged from before this was
-  // responsive). Tailwind needs each literal spelled out somewhere so its scanner
-  // picks it up — a template-literal class name wouldn't be found at build time.
-  const gridColsClass =
-    columns === 5
+  // tileSizeClass (SLOT_SIZE_CLASS by default; InventorySlot.tsx), and the same
+  // sizes Forge's Upgrade/Fuel slots use. Responsive to match: 3.5rem tracks below
+  // `lg` (matching h-14/w-14), 4rem at `lg` and up (matching h-16/w-16). Tailwind
+  // needs each literal spelled out somewhere so its scanner picks it up — a
+  // template-literal class name wouldn't be found at build time. fluidTileSize
+  // swaps the `lg`+ track to the same var(--inventory-tile-size) the tiles
+  // themselves use instead of the flat 4rem, so tracks and tiles can never drift
+  // apart — no `lg:` prefix needed there since fluidTileSize is only ever used in
+  // an already-desktop-only context (see its own doc comment).
+  const gridColsClass = fluidTileSize
+    ? columns === 5
+      ? 'grid-cols-[repeat(5,3.5rem)] lg:grid-cols-[repeat(5,var(--inventory-tile-size))]'
+      : 'grid-cols-[repeat(8,3.5rem)] lg:grid-cols-[repeat(8,var(--inventory-tile-size))]'
+    : columns === 5
       ? 'grid-cols-[repeat(5,3.5rem)] lg:grid-cols-[repeat(5,4rem)]'
       : 'grid-cols-[repeat(8,3.5rem)] lg:grid-cols-[repeat(8,4rem)]'
 
@@ -1344,7 +1373,16 @@ export default function InventoryPanel({
   }
 
   return (
-    <div className="space-y-4">
+    <div
+      className="space-y-4"
+      // --inventory-tile-size (fluidTileSize only): scales each tile — and
+      // the grid's own column tracks, see gridColsClass — down from the
+      // usual fixed 4rem as the viewport narrows. Floor (2.25rem) stays
+      // legible/tappable; ceiling (4rem) matches the fixed size everywhere
+      // else, so this only ever makes tiles smaller, never bigger, than
+      // before. Set once here so every descendant tile shares one value.
+      style={fluidTileSize ? ({ '--inventory-tile-size': 'clamp(2.25rem, 0.5rem + 2.1875vw, 4rem)' } as CSSProperties) : undefined}
+    >
       <div>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs uppercase tracking-wide text-slate-300">
@@ -1424,7 +1462,7 @@ export default function InventoryPanel({
                 <InventorySlot
                   slotId={stack.id}
                   filled
-                  sizeClassName={SLOT_SIZE_CLASS}
+                  sizeClassName={tileSizeClass}
                   icon={type.kind === 'hp' ? '🧪' : '💧'}
                   iconSrc={type.iconSrc}
                   qualityColor={CONSUMABLE_COLOR}
@@ -1441,7 +1479,7 @@ export default function InventoryPanel({
 
           {stoneTiles.map(({ tier, dragId }) => {
             if (reservedItemIds.includes(dragId)) {
-              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={tileSizeClass} />
             }
 
             const isSelected = selectedSlot?.kind === 'stone' && selectedSlot.dragId === dragId
@@ -1449,7 +1487,7 @@ export default function InventoryPanel({
             const commonProps = {
               slotId: dragId,
               filled: true as const,
-              sizeClassName: SLOT_SIZE_CLASS,
+              sizeClassName: tileSizeClass,
               icon: '🔷',
               iconSrc: getStoneIconSrc(tier),
               iconSizeClassName: 'h-3/5 w-3/5',
@@ -1501,7 +1539,7 @@ export default function InventoryPanel({
 
           {gemTiles.map(({ gemId, tier, dragId }) => {
             if (reservedItemIds.includes(dragId)) {
-              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={tileSizeClass} />
             }
 
             const isSelected = selectedSlot?.kind === 'gem' && selectedSlot.dragId === dragId
@@ -1511,7 +1549,7 @@ export default function InventoryPanel({
             const commonProps = {
               slotId: dragId,
               filled: true as const,
-              sizeClassName: SLOT_SIZE_CLASS,
+              sizeClassName: tileSizeClass,
               icon: '💎',
               iconSrc: gemIconSrc,
               qualityColor: gemColor,
@@ -1564,7 +1602,7 @@ export default function InventoryPanel({
 
           {cometTiles.map(({ dragId }) => {
             if (reservedItemIds.includes(dragId)) {
-              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={tileSizeClass} />
             }
 
             const isSelected = selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId
@@ -1572,7 +1610,7 @@ export default function InventoryPanel({
             const commonProps = {
               slotId: dragId,
               filled: true as const,
-              sizeClassName: SLOT_SIZE_CLASS,
+              sizeClassName: tileSizeClass,
               iconSrc: COMET_ICON_SRC,
               qualityColor: MATERIAL_COLOR,
               label: 'Comet',
@@ -1631,7 +1669,7 @@ export default function InventoryPanel({
 
           {fallenStarTiles.map(({ dragId }) => {
             if (reservedItemIds.includes(dragId)) {
-              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={tileSizeClass} />
             }
 
             const isSelected = selectedSlot?.kind === 'currency' && selectedSlot.dragId === dragId
@@ -1639,7 +1677,7 @@ export default function InventoryPanel({
             const commonProps = {
               slotId: dragId,
               filled: true as const,
-              sizeClassName: SLOT_SIZE_CLASS,
+              sizeClassName: tileSizeClass,
               iconSrc: FALLEN_STAR_ICON_SRC,
               qualityColor: FALLEN_STAR_COLOR,
               label: 'Fallen Star',
@@ -1697,7 +1735,7 @@ export default function InventoryPanel({
 
           {cometScrollTiles.map(({ dragId }) => {
             if (reservedItemIds.includes(dragId)) {
-              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={tileSizeClass} />
             }
 
             const isSelected = selectedSlot?.kind === 'scroll' && selectedSlot.dragId === dragId
@@ -1705,7 +1743,7 @@ export default function InventoryPanel({
             const commonProps = {
               slotId: dragId,
               filled: true as const,
-              sizeClassName: SLOT_SIZE_CLASS,
+              sizeClassName: tileSizeClass,
               iconSrc: COMET_SCROLL_ICON_SRC,
               qualityColor: MATERIAL_COLOR,
               label: 'Comet Scroll',
@@ -1747,7 +1785,7 @@ export default function InventoryPanel({
 
           {fallenStarScrollTiles.map(({ dragId }) => {
             if (reservedItemIds.includes(dragId)) {
-              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={tileSizeClass} />
             }
 
             const isSelected = selectedSlot?.kind === 'scroll' && selectedSlot.dragId === dragId
@@ -1755,7 +1793,7 @@ export default function InventoryPanel({
             const commonProps = {
               slotId: dragId,
               filled: true as const,
-              sizeClassName: SLOT_SIZE_CLASS,
+              sizeClassName: tileSizeClass,
               iconSrc: FALLEN_STAR_SCROLL_ICON_SRC,
               qualityColor: FALLEN_STAR_COLOR,
               label: 'Fallen Star Scroll',
@@ -1801,7 +1839,7 @@ export default function InventoryPanel({
 
           {cometBoxTiles.map(({ dragId }) => {
             if (reservedItemIds.includes(dragId)) {
-              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={tileSizeClass} />
             }
 
             const isSelected = selectedSlot?.kind === 'comet_box' && selectedSlot.dragId === dragId
@@ -1809,7 +1847,7 @@ export default function InventoryPanel({
             const commonProps = {
               slotId: dragId,
               filled: true as const,
-              sizeClassName: SLOT_SIZE_CLASS,
+              sizeClassName: tileSizeClass,
               iconSrc: COMET_BOX_ICON_SRC,
               qualityColor: MATERIAL_COLOR,
               label: 'Comet Box',
@@ -1844,7 +1882,7 @@ export default function InventoryPanel({
 
           {vipTokenTiles.map(({ dragId }) => {
             if (reservedItemIds.includes(dragId)) {
-              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={tileSizeClass} />
             }
 
             const isSelected = selectedSlot?.kind === 'vip_token' && selectedSlot.dragId === dragId
@@ -1852,7 +1890,7 @@ export default function InventoryPanel({
             const commonProps = {
               slotId: dragId,
               filled: true as const,
-              sizeClassName: SLOT_SIZE_CLASS,
+              sizeClassName: tileSizeClass,
               icon: '👑',
               iconSrc: VIP_TOKEN_ICON_SRC,
               qualityColor: VIP_TOKEN_COLOR,
@@ -1888,7 +1926,7 @@ export default function InventoryPanel({
 
           {experienceOrbTiles.map(({ dragId }) => {
             if (reservedItemIds.includes(dragId)) {
-              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={tileSizeClass} />
             }
 
             const isSelected = selectedSlot?.kind === 'experience_orb' && selectedSlot.dragId === dragId
@@ -1896,7 +1934,7 @@ export default function InventoryPanel({
             const commonProps = {
               slotId: dragId,
               filled: true as const,
-              sizeClassName: SLOT_SIZE_CLASS,
+              sizeClassName: tileSizeClass,
               icon: '🔮',
               iconSrc: EXPERIENCE_ORB_ICON_SRC,
               qualityColor: CONSUMABLE_COLOR,
@@ -1932,7 +1970,7 @@ export default function InventoryPanel({
 
           {experiencePotionTiles.map(({ dragId }) => {
             if (reservedItemIds.includes(dragId)) {
-              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+              return <InventorySlot key={dragId} slotId={dragId} filled={false} sizeClassName={tileSizeClass} />
             }
 
             const isSelected = selectedSlot?.kind === 'experience_potion' && selectedSlot.dragId === dragId
@@ -1940,7 +1978,7 @@ export default function InventoryPanel({
             const commonProps = {
               slotId: dragId,
               filled: true as const,
-              sizeClassName: SLOT_SIZE_CLASS,
+              sizeClassName: tileSizeClass,
               icon: '🧪',
               iconSrc: EXPERIENCE_POTION_ICON_SRC,
               qualityColor: CONSUMABLE_COLOR,
@@ -1976,7 +2014,7 @@ export default function InventoryPanel({
 
           {visibleItems.map((item) => {
             if (reservedItemIds.includes(item.id)) {
-              return <InventorySlot key={item.id} slotId={item.id} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+              return <InventorySlot key={item.id} slotId={item.id} filled={false} sizeClassName={tileSizeClass} />
             }
 
             const template = templates.find((entry) => entry.id === item.template_id)
@@ -2002,7 +2040,7 @@ export default function InventoryPanel({
             const commonProps = {
               slotId: item.id,
               filled: true as const,
-              sizeClassName: SLOT_SIZE_CLASS,
+              sizeClassName: tileSizeClass,
               qualityColor,
               icon,
               iconSrc,
@@ -2124,7 +2162,7 @@ export default function InventoryPanel({
           })}
 
           {Array.from({ length: emptySlotCount }, (_, index) => (
-            <InventorySlot key={`empty-${index}`} slotId={`empty-${index}`} filled={false} sizeClassName={SLOT_SIZE_CLASS} />
+            <InventorySlot key={`empty-${index}`} slotId={`empty-${index}`} filled={false} sizeClassName={tileSizeClass} />
           ))}
         </div>
         </div>

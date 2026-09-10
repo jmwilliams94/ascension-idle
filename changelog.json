@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.141.10",
+    "date": "2026-09-10",
+    "changes": [
+      "Desktop: the Inventory panel's item slots now shrink with your window size instead of staying a fixed size"
+    ]
+  },
+  {
     "version": "1.141.9",
     "date": "2026-09-10",
     "changes": [
