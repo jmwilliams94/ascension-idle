@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.141.12",
+    "date": "2026-09-10",
+    "changes": [
+      "Desktop: removed a leftover width cap that was leaving a large empty gap between the main content and the Inventory panel"
+    ]
+  },
+  {
     "version": "1.141.11",
     "date": "2026-09-10",
     "changes": [

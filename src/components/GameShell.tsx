@@ -714,14 +714,21 @@ export default function GameShell({ characterId }: { characterId: string }) {
               internal `lg:grid-cols-2` desktop layout, built assuming
               something close to full column width) overflowed the half-width
               column CSS multi-column assigned them, reading as "stretched"
-              rather than usefully split. Back to one plain column, capped at
-              max-w-6xl so it doesn't feel over-wide now that it's not
-              sharing space with a second column. If a specific tab's own
-              *inner* sections should sit side by side, that needs a real,
-              hand-built grid inside that tab's own component (see
+              rather than usefully split. Back to one plain column — no
+              max-w cap at `lg`+ anymore (2026-09-10, removed — reported by
+              the user as a large dead gap between this column and the
+              Inventory dock; a `max-w-6xl` cap here, being `rem`-based,
+              also shrank further once the fluid root font-size landed,
+              widening that gap rather than closing it). This column is
+              already bounded by the flex row itself (sidebar width + the
+              dock's own width on the other side), so there's no need for a
+              second, independent width limit on top of that — if a specific
+              tab's own *inner* sections should sit side by side, that needs
+              a real, hand-built grid inside that tab's own component (see
               EquipmentTabPage.tsx's EquipmentPanel/StatsPanel/SkillsPanel
-              for the shape of that) — not a page-wide auto-reflow. */}
-          <div className="mx-auto max-w-6xl space-y-4 lg:mx-0">
+              for the shape of that), not a page-wide auto-reflow or an
+              outer cap. */}
+          <div className="space-y-4">
             {/* Renders nothing when there's no pet to celebrate — safe to
                 mount unconditionally, same as every other HUD element here. */}
             <PetToast />
