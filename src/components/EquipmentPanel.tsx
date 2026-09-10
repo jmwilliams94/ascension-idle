@@ -183,7 +183,26 @@ export default function EquipmentPanel() {
 
   return (
     <div className="space-y-4">
-      <AscensionCard title={characterName || 'Character'} sparkleColor={sparkleColor}>
+      <AscensionCard
+        // Bigger than AscensionCard's own default title size (2026-09-10,
+        // requested by the user) — titleSize="large" is reserved for
+        // GameShell's own page-identity heading (see
+        // CLAUDE.visual-design.md's "Page-level framing" note), so this
+        // bumps just this one title via a styled span inside the ReactNode
+        // `title` prop instead of touching AscensionCard's shared sizing.
+        title={<span className="text-lg lg:text-xl">{characterName || 'Character'}</span>}
+        sparkleColor={sparkleColor}
+      >
+      {/* Level badge, top-left corner of this card (2026-09-10, requested by
+          the user — "Lvl 130" in the app's own heading font). Absolutely
+          positioned against .ascension-card-frame (position: relative,
+          index.css) rather than folded into AscensionCard's own centered
+          title row, so it doesn't disturb that shared header's layout. */}
+      <span className="ascension-chip-frame absolute left-3 top-3 z-10">
+        <span className="ascension-chip-inner font-heading text-gradient-steel block px-2 py-1 text-[10px] font-black uppercase tracking-[0.1em]">
+          Lvl {characterLevel}
+        </span>
+      </span>
       <div
         className="mx-auto grid max-w-sm gap-x-2 gap-y-3 lg:gap-x-3 lg:gap-y-4"
         style={{

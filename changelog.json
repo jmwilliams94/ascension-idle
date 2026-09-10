@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.141.9",
+    "date": "2026-09-10",
+    "changes": [
+      "Equipment: character name is bigger, and a \"Lvl\" badge now shows in the top-left corner of the gear panel",
+      "Hunting: an EXP bar now shows directly under your HP bar",
+      "Desktop: the Inventory panel no longer sits oversized on smaller/lower-resolution monitors"
+    ]
+  },
+  {
     "version": "1.141.8",
     "date": "2026-09-10",
     "changes": [

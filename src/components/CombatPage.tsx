@@ -10,7 +10,7 @@ import { useCombatStore } from '../game/combat/useCombatStore'
 import { resolveCombat, touchCombatLastResolvedAt, claimHuntingSlot } from '../game/combat/resolveCombat'
 import { useHuntingTakeoverToastStore } from '../game/combat/useHuntingTakeoverToastStore'
 import { getLevelDiffColor } from '../game/combat/combatResolver'
-import { useProgressionStore } from '../game/stats/useProgressionStore'
+import { MAX_CHARACTER_LEVEL, requiredExpForLevel, useProgressionStore } from '../game/stats/useProgressionStore'
 import { useCharacterStore } from '../game/stats/useCharacterStore'
 import { useCharacterRecordStore } from '../lib/useCharacterRecordStore'
 import { useActiveCharacterStore } from '../lib/useActiveCharacterStore'
@@ -352,6 +352,16 @@ export default function CombatPage() {
   const clearCombat = useCombatStore((state) => state.clear)
 
   const characterLevel = useProgressionStore((state) => state.level)
+  // EXP bar under the player HP bar (2026-09-10, requested by the user) —
+  // same predictedLevel/predictedExp pair ExpBar.tsx's own top-HUD-strip
+  // readout uses, so the two always agree; this is a second, Hunting-local
+  // mirror of just the level/progress portion (not Gold/AP, which stay
+  // top-strip-only — this card is about combat vitals, not currency).
+  const predictedLevel = useProgressionStore((state) => state.predictedLevel)
+  const predictedExp = useProgressionStore((state) => state.predictedExp)
+  const isMaxCharacterLevel = predictedLevel >= MAX_CHARACTER_LEVEL
+  const requiredExp = requiredExpForLevel(predictedLevel)
+  const expPercent = isMaxCharacterLevel ? 100 : requiredExp > 0 ? Math.min(100, (predictedExp / requiredExp) * 100) : 100
   const characterName = useCharacterRecordStore((state) => state.characterName)
   const characterId = useActiveCharacterStore((state) => state.characterId)
   const selectedClassId = useCharacterStore((state) => state.selectedClassId)
@@ -740,6 +750,27 @@ export default function CombatPage() {
               </AnimatePresence>
             </div>
 
+            {/* EXP bar (2026-09-10, requested by the user — a Hunting-local
+                mirror of the top HUD strip's own level/progress readout,
+                right under the HP bar where you're actually watching combat).
+                Gold/AP stay top-strip-only; this is level/progress only. */}
+            <div className="mt-2">
+              <p className="text-xs text-slate-300">
+                Lv {predictedLevel} — {isMaxCharacterLevel ? 'MAX' : `${expPercent.toFixed(2)}%`}
+              </p>
+              <div className="mt-1">
+                {/* At max level requiredExp may be 0 — HpBar treats max<=0 as
+                    an empty (0%) bar, so force a full one instead of letting
+                    "MAX" visually read as empty. */}
+                <HpBar
+                  current={isMaxCharacterLevel ? 1 : predictedExp}
+                  max={isMaxCharacterLevel ? 1 : requiredExp}
+                  barColorClass={isMaxCharacterLevel ? 'bg-amber-400' : 'bg-emerald-500'}
+                  healFlashColorClass={isMaxCharacterLevel ? 'bg-amber-200' : 'bg-emerald-300'}
+                />
+              </div>
+            </div>
+
             {/* MP bar (2026-11) — MP was already a real, drained resource for
                 Wuxia's Thunder skill (see useCombatStore.runTick's 'no-mana'
                 gate) but had no visible bar anywhere, so a Wuxia player had no
@@ -980,6 +1011,27 @@ export default function CombatPage() {
                   </motion.div>
                 ))}
               </AnimatePresence>
+            </div>
+
+            {/* EXP bar (2026-09-10, requested by the user — a Hunting-local
+                mirror of the top HUD strip's own level/progress readout,
+                right under the HP bar where you're actually watching combat).
+                Gold/AP stay top-strip-only; this is level/progress only. */}
+            <div className="mt-2">
+              <p className="text-xs text-slate-300">
+                Lv {predictedLevel} — {isMaxCharacterLevel ? 'MAX' : `${expPercent.toFixed(2)}%`}
+              </p>
+              <div className="mt-1">
+                {/* At max level requiredExp may be 0 — HpBar treats max<=0 as
+                    an empty (0%) bar, so force a full one instead of letting
+                    "MAX" visually read as empty. */}
+                <HpBar
+                  current={isMaxCharacterLevel ? 1 : predictedExp}
+                  max={isMaxCharacterLevel ? 1 : requiredExp}
+                  barColorClass={isMaxCharacterLevel ? 'bg-amber-400' : 'bg-emerald-500'}
+                  healFlashColorClass={isMaxCharacterLevel ? 'bg-amber-200' : 'bg-emerald-300'}
+                />
+              </div>
             </div>
 
             {activeSkill && (

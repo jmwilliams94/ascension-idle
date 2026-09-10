@@ -499,12 +499,26 @@ export default function GameShell({ characterId }: { characterId: string }) {
     // scroll container.
     <div
       className="ascension-page-bg min-h-screen text-slate-100 lg:flex lg:h-screen lg:flex-col lg:overflow-hidden"
-      // --inventory-dock-width: set once here (a shared ancestor of both
-      // <main>'s right-padding reservation and the dock itself, further
-      // down) so the two can never drift out of sync — a custom property
-      // set inline only reaches descendants, and the dock and <main> are
-      // siblings, not one inside the other.
-      style={{ '--inventory-dock-width': 'clamp(18rem, 22vw, 26rem)' } as CSSProperties}
+      // --inventory-dock-width (recalibrated 2026-09-10, reported by the
+      // user: on a 1920px-ish 24" display the dock "takes up far too much
+      // space and doesn't scale down well"). The old clamp(18rem, 22vw,
+      // 26rem) hit its own 26rem ceiling at any viewport ≳1890px CSS
+      // pixels — which covers nearly every real desktop screen, 24"
+      // 1920x1080 included — so it rendered at its *largest* size almost
+      // universally instead of actually tracking viewport width; the 18rem
+      // floor was also narrower than the grid's own real minimum content
+      // width (5 columns × 4rem tiles + gaps + card padding ≈ 24rem), so it
+      // could never safely be reached anyway. This one stays near its floor
+      // through ordinary desktop widths (~24.5rem at 1920px) and only grows
+      // toward its ceiling on genuinely wide/ultrawide screens (27rem by
+      // ~3200px). Set once here (a shared value, referenced by the dock's
+      // own width further down) so it has one place to tune. Note: the
+      // *tile* size itself (SLOT_SIZE_CLASS, InventorySlot.tsx) is still
+      // fixed, not fluid — it's a shared constant used well beyond this one
+      // panel (every Forge slot, the drag ghost, ...), so genuinely
+      // shrinking the tiles themselves on narrow screens would need a
+      // broader, separate change, not attempted here.
+      style={{ '--inventory-dock-width': 'clamp(24rem, 20rem + 3.75vw, 27rem)' } as CSSProperties}
     >
       <header className="ascension-edge-b shrink-0 bg-[linear-gradient(180deg,_var(--ascension-ink-soft)_0%,_var(--ascension-ink)_100%)]">
         {/* Single row at every viewport size — no flex-wrap. "Idle Combat"
