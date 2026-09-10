@@ -1377,11 +1377,16 @@ export default function InventoryPanel({
       className="space-y-4"
       // --inventory-tile-size (fluidTileSize only): scales each tile — and
       // the grid's own column tracks, see gridColsClass — down from the
-      // usual fixed 4rem as the viewport narrows. Floor (2.25rem) stays
-      // legible/tappable; ceiling (4rem) matches the fixed size everywhere
+      // usual fixed 4rem (64px) as the viewport narrows. Floor (36px) stays
+      // legible/tappable; ceiling (64px) matches the fixed size everywhere
       // else, so this only ever makes tiles smaller, never bigger, than
       // before. Set once here so every descendant tile shares one value.
-      style={fluidTileSize ? ({ '--inventory-tile-size': 'clamp(2.25rem, 0.5rem + 2.1875vw, 4rem)' } as CSSProperties) : undefined}
+      // Deliberately flat px, not rem (2026-09-10) — index.css separately
+      // scales the root font-size on desktop now, and since that's a second,
+      // independent vw-driven knob, leaving this in rem would compound the
+      // two (root shrinks → the rem values here shrink again on top of
+      // their own vw term) and shrink tiles further than actually tuned.
+      style={fluidTileSize ? ({ '--inventory-tile-size': 'clamp(36px, 8px + 2.1875vw, 64px)' } as CSSProperties) : undefined}
     >
       <div>
         <div className="flex flex-wrap items-center justify-between gap-2">

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.141.11",
+    "date": "2026-09-10",
+    "changes": [
+      "Desktop: overall UI sizing now scales down a bit on smaller/lower-resolution screens instead of staying a fixed size everywhere"
+    ]
+  },
+  {
     "version": "1.141.10",
     "date": "2026-09-10",
     "changes": [

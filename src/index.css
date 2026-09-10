@@ -36,6 +36,33 @@ html {
   touch-action: manipulation;
 }
 
+/* Fluid root font-size (2026-09-10, desktop only — per the user, comparing
+   two screenshots of the same screen: identical fixed-rem sizing looked
+   "too big" on a 24" ~1920x1080 display and "much nicer" on a 27"
+   ~2560x1300 one, since every rem-based size in the app renders at the same
+   literal pixel value no matter how many actual pixels the screen has to
+   spare — a lower-resolution screen has less room, so the same fixed sizing
+   reads as visually larger/more cramped there. Virtually everything here
+   (Tailwind's own utility classes included) is sized in rem, so scaling the
+   root itself is one high-leverage lever instead of hand-tuning every
+   container individually. Ceiling (16px) is the existing default — nothing
+   renders bigger than it already did — reached at ~2560px+ width (matching
+   the "nice" 27" screenshot); floor (13px) only applies at the narrow end
+   of ordinary desktop widths. Scoped to `lg`+ (1024px, matching Tailwind's
+   own breakpoint) — mobile isn't part of this ask and already renders fine
+   at the flat default. Media query breakpoints themselves are unaffected by
+   this (`@media (min-width: ...)` resolves against the browser's own
+   default font size, not this rule's result, so there's no risk of this
+   circularly shifting where `lg:`/`xl:` classes themselves kick in).
+   GameShell's persistent Inventory dock deliberately does NOT use rem for
+   its own --inventory-tile-size (InventoryPanel.tsx) — that's a second,
+   independent vw-driven scale, kept in flat px so the two don't compound. */
+@media (min-width: 1024px) {
+  html {
+    font-size: clamp(13px, 10px + 0.25vw, 16px);
+  }
+}
+
 /* Only ever visible as the rubber-band overscroll color at the very top/
    bottom edges of the screen (the app's own GameShell div covers
    everything else). Tried a light-top/dark-bottom gradient here (fixed-px,
