@@ -714,21 +714,23 @@ export default function GameShell({ characterId }: { characterId: string }) {
               internal `lg:grid-cols-2` desktop layout, built assuming
               something close to full column width) overflowed the half-width
               column CSS multi-column assigned them, reading as "stretched"
-              rather than usefully split. Back to one plain column — no
-              max-w cap at `lg`+ anymore (2026-09-10, removed — reported by
-              the user as a large dead gap between this column and the
-              Inventory dock; a `max-w-6xl` cap here, being `rem`-based,
-              also shrank further once the fluid root font-size landed,
-              widening that gap rather than closing it). This column is
-              already bounded by the flex row itself (sidebar width + the
-              dock's own width on the other side), so there's no need for a
-              second, independent width limit on top of that — if a specific
-              tab's own *inner* sections should sit side by side, that needs
-              a real, hand-built grid inside that tab's own component (see
+              rather than usefully split. Back to one plain column, capped —
+              removing the cap entirely (2026-09-10, briefly) overcorrected:
+              reported by the user as content (the Gold Donation Event's
+              banner image, specifically) now stretching edge to edge, way
+              too wide. `max-w-[1152px]` restores roughly the same size the
+              earlier `max-w-6xl` rendered at by default, but as a flat px
+              value rather than `rem` — `rem` is why that original cap
+              quietly shrank (and widened the gap next to the dock) the
+              moment the fluid root font-size landed; a flat px cap can't do
+              that, so this stays a fixed, predictable size regardless of
+              root font-size or viewport. If a specific tab's own *inner*
+              sections should sit side by side, that needs a real,
+              hand-built grid inside that tab's own component (see
               EquipmentTabPage.tsx's EquipmentPanel/StatsPanel/SkillsPanel
-              for the shape of that), not a page-wide auto-reflow or an
-              outer cap. */}
-          <div className="space-y-4">
+              for the shape of that), not a page-wide auto-reflow or a
+              wider/narrower version of this outer cap. */}
+          <div className="mx-auto max-w-[1152px] space-y-4 lg:mx-0">
             {/* Renders nothing when there's no pet to celebrate — safe to
                 mount unconditionally, same as every other HUD element here. */}
             <PetToast />

@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.141.13",
+    "date": "2026-09-11",
+    "changes": [
+      "Desktop: fixed the main content area stretching edge to edge — it now has a sensible fixed max width again"
+    ]
+  },
+  {
     "version": "1.141.12",
     "date": "2026-09-10",
     "changes": [
