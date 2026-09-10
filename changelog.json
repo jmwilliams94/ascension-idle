@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.141.8",
+    "date": "2026-09-10",
+    "changes": [
+      "Daily Quests: the \"turn in a quality item\" quest no longer asks for a Quiver, since Quivers can't be re-obtained if you give one up"
+    ]
+  },
+  {
     "version": "1.141.7",
     "date": "2026-09-10",
     "changes": [
