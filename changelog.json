@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.142.0",
+    "date": "2026-09-12",
+    "changes": [
+      "Added a Greybox tab in Settings (admin-only, early dev tool) with two throwaway prototypes for a possible future manual combat mode: a 2.5D side-scroller and a simple 3D top-down style, no real rewards or gameplay wiring yet"
+    ]
+  },
+  {
     "version": "1.141.13",
     "date": "2026-09-11",
     "changes": [

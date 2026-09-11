@@ -27,6 +27,9 @@ const RenderingTestPanel = lazy(() => import('./RenderingTestPanel'))
 // same way the comment above warns about; caught while investigating an
 // unrelated deploy failure).
 const FxTestPanel = lazy(() => import('./FxTestPanel'))
+// Lazy for the same reason again — GreyboxPanel pulls in ArcheroGreybox,
+// which itself lazy-loads the three/@react-three stack (see that file).
+const GreyboxPanel = lazy(() => import('../game/greybox/GreyboxPanel'))
 
 interface SettingsSection {
   id: string
@@ -85,9 +88,11 @@ export default function SettingsModal({ characterId, onClose }: { characterId: s
     // hardcoded admin account (see useIsAdmin's own doc comment); real
     // enforcement lives server-side in the RPCs it calls, this is cosmetic.
     ...(isAdmin ? [{ id: 'admin', label: 'Admin', content: <AdminMailSection /> }] : []),
-    // FX (2026-08-29) and Rendering (2026-08-20) — dev/debug preview tabs,
-    // not gameplay UI. Restricted to admin 2026-09-08 (both are unfinished/
-    // unwired tooling, no reason for regular players to see them).
+    // FX (2026-08-29), Rendering (2026-08-20), and Greybox (2026-09-12) —
+    // dev/debug preview tabs, not gameplay UI. Restricted to admin (all three
+    // are unfinished/unwired tooling, no reason for regular players to see
+    // them). Greybox specifically is two throwaway movement/combat
+    // prototypes with no real rewards or server writes — see GreyboxPanel.tsx.
     ...(isAdmin
       ? [
           {
@@ -105,6 +110,15 @@ export default function SettingsModal({ characterId, onClose }: { characterId: s
             content: (
               <Suspense fallback={<p className="text-sm text-slate-300">Loading…</p>}>
                 <RenderingTestPanel />
+              </Suspense>
+            ),
+          },
+          {
+            id: 'greybox',
+            label: 'Greybox',
+            content: (
+              <Suspense fallback={<p className="text-sm text-slate-300">Loading…</p>}>
+                <GreyboxPanel />
               </Suspense>
             ),
           },
