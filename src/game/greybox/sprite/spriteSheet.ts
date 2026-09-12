@@ -61,7 +61,14 @@ export async function loadSpriteSheet(jsonUrl: string): Promise<SpriteSheet> {
     tags[tag.name] = { from: tag.from, to: tag.to, direction: tag.direction as SpriteTagDirection }
   }
 
-  const imageUrl = new URL(data.meta.image, jsonUrl).toString()
+  // `new URL(relative, base)` requires `base` to already be absolute (a bare
+  // root-relative path like "/greybox/character-base.json" doesn't qualify
+  // on its own and throws "Invalid URL") -- resolving jsonUrl against
+  // location.href first guarantees a real absolute base. This threw on
+  // every load (desktop included), silently rejecting the sheet promise, so
+  // the game always fell back to the flat-rectangle placeholder.
+  const absoluteJsonUrl = new URL(jsonUrl, window.location.href)
+  const imageUrl = new URL(data.meta.image, absoluteJsonUrl).toString()
   const image = await loadImage(imageUrl)
 
   return { image, frames, tags }

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type MutableRefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll'
 import { loadSpriteSheet, type SpriteSheet } from './sprite/spriteSheet'
@@ -86,9 +86,41 @@ function drawParallaxLayer(
   }
 }
 
+// Touch/mouse d-pad button (2026-09-12, requested by the user -- the
+// keyboard-only controls didn't work at all on mobile). Shares the same
+// `keys` Set the keyboard listeners already feed into (via a ref so this
+// component's own render cycle can reach the effect's local Set), so the
+// physics loop below doesn't need to know or care which input source is
+// active. Pointer events (not touch/mouse separately) so this works
+// identically for a mouse-drag test on desktop and a real finger on mobile.
+function TouchButton({ label, keyCode, keysRef }: { label: string; keyCode: string; keysRef: MutableRefObject<Set<string>> }) {
+  const press = () => keysRef.current.add(keyCode)
+  const release = () => keysRef.current.delete(keyCode)
+  return (
+    <button
+      type="button"
+      onPointerDown={(event) => {
+        event.preventDefault()
+        press()
+      }}
+      onPointerUp={release}
+      onPointerLeave={release}
+      onPointerCancel={release}
+      className="flex h-16 w-16 select-none items-center justify-center rounded-full border border-slate-500 bg-slate-900/70 text-2xl text-slate-100 active:bg-slate-700/80"
+      style={{ touchAction: 'none' }}
+    >
+      {label}
+    </button>
+  )
+}
+
 export default function SideScrollerGreybox({ onExit }: { onExit: () => void }) {
   useLockBodyScroll()
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  // Shared with the physics-loop effect below (which reads/writes real key
+  // codes into this same Set) so the on-screen touch buttons and the
+  // keyboard listeners are indistinguishable to the game loop.
+  const keysRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     const canvasEl = canvasRef.current
@@ -115,7 +147,7 @@ export default function SideScrollerGreybox({ onExit }: { onExit: () => void }) 
     }
     window.addEventListener('resize', resize)
 
-    const keys = new Set<string>()
+    const keys = keysRef.current
     const onKeyDown = (event: KeyboardEvent) => keys.add(event.code)
     const onKeyUp = (event: KeyboardEvent) => keys.delete(event.code)
     window.addEventListener('keydown', onKeyDown)
@@ -339,6 +371,17 @@ export default function SideScrollerGreybox({ onExit }: { onExit: () => void }) 
       >
         Exit (Esc)
       </button>
+      {/* Touch controls -- tapping an enemy to attack already works without
+          anything extra (a tap synthesizes a real click event), so only
+          movement needed an on-screen control. Shown unconditionally
+          (harmless on desktop, and this is an admin-only greybox tool). */}
+      <div className="absolute bottom-6 left-6 flex gap-3">
+        <TouchButton label="◀" keyCode="ArrowLeft" keysRef={keysRef} />
+        <TouchButton label="▶" keyCode="ArrowRight" keysRef={keysRef} />
+      </div>
+      <div className="absolute bottom-6 right-6">
+        <TouchButton label="⤒" keyCode="Space" keysRef={keysRef} />
+      </div>
     </div>,
     document.body,
   )

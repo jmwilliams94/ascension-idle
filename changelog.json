@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.142.2",
+    "date": "2026-09-12",
+    "changes": [
+      "Fixed the Greybox side-scroller's character sprite never loading (always fell back to a plain yellow box) and added on-screen left/right/jump touch buttons for mobile"
+    ]
+  },
+  {
     "version": "1.142.1",
     "date": "2026-09-12",
     "changes": [
