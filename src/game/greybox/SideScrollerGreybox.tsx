@@ -1,13 +1,35 @@
 import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll'
+import { loadSpriteSheet, type SpriteSheet } from './sprite/spriteSheet'
+import { createAnimatorState, currentFrameRect, setAnimatorTag, stepAnimator } from './sprite/spriteAnimator'
 
 // Greybox prototype #1 (2026-09-12, requested by the user) -- a 2.5D-feel
 // side-scroller: parallax depth layers, jump/move platforming, click an
 // enemy within melee range to kill it for gold + a burst of "loot beans".
-// Pure Canvas2D, no sprites/animation -- this is only for feeling out
-// whether manual jump-around-and-kill combat is fun before any of it is
-// wired to real game state. Not gameplay UI -- see GreyboxPanel.tsx.
+// Pure Canvas2D -- this is only for feeling out whether manual
+// jump-around-and-kill combat is fun before any of it is wired to real game
+// state. Not gameplay UI -- see GreyboxPanel.tsx.
+//
+// Character is a real animated sprite now (2026-09-12) -- the base
+// "undergarment"/no-gear look, drawn in Aseprite at 32x48px (2:3, per the
+// user) with idle/walk/jump/fall/attack tags, exported to
+// public/greybox/character-base.png(+.json). Gear-layer sprites (weapon/
+// coat/hat) are a deliberately separate, later step -- see the
+// project_greybox_combat_prototypes memory. Drawn with
+// `ctx.imageSmoothingEnabled = false` and an integer SPRITE_SCALE for crisp
+// pixels, rather than the full fixed-virtual-resolution+letterbox approach
+// discussed for this project -- that's a bigger change to how this canvas
+// sizes itself (currently 1:1 with the real viewport, like the parallax/
+// enemy rendering already here) and wasn't needed just to prove the
+// animation pipeline; revisit if real-device testing shows sizing issues.
+
+const SPRITE_FRAME_WIDTH = 32
+const SPRITE_FRAME_HEIGHT = 48
+const SPRITE_SCALE = 3
+const PLAYER_WIDTH = SPRITE_FRAME_WIDTH * SPRITE_SCALE
+const PLAYER_HEIGHT = SPRITE_FRAME_HEIGHT * SPRITE_SCALE
+const ATTACK_ANIM_DURATION_MS = 300
 
 interface Enemy {
   id: number
@@ -38,7 +60,6 @@ const MOVE_SPEED = 320
 const JUMP_VELOCITY = -720
 const GROUND_Y = 460
 const LEVEL_WIDTH = 4000
-const PLAYER_SIZE = 36
 const ATTACK_RANGE = 70
 const ATTACK_COOLDOWN_MS = 350
 const ENEMY_SIZE = 30
@@ -100,7 +121,14 @@ export default function SideScrollerGreybox({ onExit }: { onExit: () => void }) 
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
 
-    const player = { x: 200, y: GROUND_Y - PLAYER_SIZE, vy: 0, onGround: true, facing: 1, lastAttack: 0 }
+    const player = { x: 200, y: GROUND_Y - PLAYER_HEIGHT, vy: 0, onGround: true, facing: 1, lastAttack: 0 }
+    let sheet: SpriteSheet | null = null
+    const animator = createAnimatorState('idle')
+    loadSpriteSheet('/greybox/character-base.json')
+      .then((loaded) => {
+        sheet = loaded
+      })
+      .catch((error) => console.error('[Greybox] failed to load character sprite', error))
     let cameraX = 0
     let enemies: Enemy[] = []
     let lootBeans: LootBean[] = []
@@ -175,11 +203,17 @@ export default function SideScrollerGreybox({ onExit }: { onExit: () => void }) 
 
       player.vy += GRAVITY * dt
       player.y += player.vy * dt
-      if (player.y >= GROUND_Y - PLAYER_SIZE) {
-        player.y = GROUND_Y - PLAYER_SIZE
+      if (player.y >= GROUND_Y - PLAYER_HEIGHT) {
+        player.y = GROUND_Y - PLAYER_HEIGHT
         player.vy = 0
         player.onGround = true
       }
+
+      const isMovingHorizontally = keys.has('ArrowLeft') || keys.has('KeyA') || keys.has('ArrowRight') || keys.has('KeyD')
+      const isAttacking = time - player.lastAttack < ATTACK_ANIM_DURATION_MS
+      const animTag = isAttacking ? 'attack' : !player.onGround ? (player.vy < 0 ? 'jump' : 'fall') : isMovingHorizontally ? 'walk' : 'idle'
+      setAnimatorTag(animator, animTag)
+      if (sheet) stepAnimator(sheet, animator, dt * 1000)
 
       cameraX = Math.max(0, Math.min(LEVEL_WIDTH - width, player.x - width / 2))
 
@@ -231,10 +265,23 @@ export default function SideScrollerGreybox({ onExit }: { onExit: () => void }) 
       }
 
       const psx = player.x - cameraX
-      ctx.fillStyle = '#f5c542'
-      ctx.fillRect(psx - PLAYER_SIZE / 2, player.y, PLAYER_SIZE, PLAYER_SIZE)
-      ctx.fillStyle = '#1a1a1a'
-      ctx.fillRect(psx + (player.facing > 0 ? 6 : -14), player.y + 8, 8, 8)
+      const frame = sheet ? currentFrameRect(sheet, animator) : null
+      if (sheet && frame) {
+        ctx.imageSmoothingEnabled = false
+        ctx.save()
+        if (player.facing < 0) {
+          ctx.translate(psx, 0)
+          ctx.scale(-1, 1)
+          ctx.drawImage(sheet.image, frame.x, frame.y, frame.w, frame.h, -PLAYER_WIDTH / 2, player.y, PLAYER_WIDTH, PLAYER_HEIGHT)
+        } else {
+          ctx.drawImage(sheet.image, frame.x, frame.y, frame.w, frame.h, psx - PLAYER_WIDTH / 2, player.y, PLAYER_WIDTH, PLAYER_HEIGHT)
+        }
+        ctx.restore()
+      } else {
+        // Fallback while the sprite sheet is still loading (first frame or two).
+        ctx.fillStyle = '#f5c542'
+        ctx.fillRect(psx - PLAYER_WIDTH / 2, player.y, PLAYER_WIDTH, PLAYER_HEIGHT)
+      }
 
       for (const bean of lootBeans) {
         const alpha = Math.max(0, 1 - (time - bean.born) / LOOT_BEAN_LIFETIME_MS)

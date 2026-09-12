@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.142.1",
+    "date": "2026-09-12",
+    "changes": [
+      "Greybox tab's side-scroller prototype now has a real animated pixel-art character (idle/walk/jump/fall/attack) instead of a flat rectangle -- still admin-only, no gear visuals yet, not tied to any real reward"
+    ]
+  },
+  {
     "version": "1.142.0",
     "date": "2026-09-12",
     "changes": [
